@@ -28,6 +28,7 @@ from src.config_loader import (
     get_model_config,
     get_visualization_config,
 )
+from src.env import get_results_dir
 
 
 def make_markers(trades, version_key, color, marker_shape="arrowUp"):
@@ -134,10 +135,10 @@ def select_fields(df):
     return out
 
 
-def export_version(version_key, model_cfg, base_dir, viz_dir):
+def export_version(version_key, model_cfg, results_dir, viz_dir):
     """Export a single model version's trades to JSON files."""
     # Determine trades CSV path
-    trades_csv = os.path.join(base_dir, "results", f"trades_{version_key}.csv")
+    trades_csv = os.path.join(results_dir, f"trades_{version_key}.csv")
     if not os.path.exists(trades_csv):
         print(f"  ⚠ Skipping {version_key}: {trades_csv} not found")
         return None
@@ -256,6 +257,7 @@ def main():
     args = parser.parse_args()
 
     base_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")
+    results_dir = get_results_dir()
     viz_dir = os.path.join(base_dir, "visualization")
 
     # Determine which models to export
@@ -278,7 +280,7 @@ def main():
 
     exported = []
     for vk, mcfg in models_to_export.items():
-        result = export_version(vk, mcfg, base_dir, viz_dir)
+        result = export_version(vk, mcfg, results_dir, viz_dir)
         if result:
             exported.append(result)
 

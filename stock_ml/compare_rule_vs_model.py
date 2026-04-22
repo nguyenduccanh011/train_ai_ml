@@ -106,8 +106,8 @@ def print_summary(s):
 
 
 def main():
-    data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                            "..", "portable_data", "vn_stock_ai_dataset_cleaned")
+    from src.env import resolve_data_dir
+    data_dir = resolve_data_dir("../portable_data/vn_stock_ai_dataset_cleaned")
 
     config = {
         "data": {"data_dir": data_dir},

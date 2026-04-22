@@ -4,6 +4,8 @@ Config loader — reads models.yaml and base.yaml, provides helper functions.
 import os
 import yaml
 
+from src.env import resolve_data_dir, get_results_dir
+
 
 _CONFIG_CACHE = {}
 
@@ -120,8 +122,7 @@ def get_pipeline_symbols(symbols_arg="", min_rows_override=None):
 
     from src.data.loader import DataLoader
 
-    base = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
-    abs_data_dir = os.path.normpath(os.path.join(base, data_dir))
+    abs_data_dir = resolve_data_dir(data_dir)
     loader = DataLoader(abs_data_dir)
 
     if symbols_arg and symbols_arg.strip():

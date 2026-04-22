@@ -41,9 +41,10 @@ import src.safe_io  # noqa: F401 — fix UnicodeEncodeError on Windows console
 from src.config_loader import (
     get_active_models, get_model_config, get_pipeline_symbols, load_config,
 )
+from src.env import resolve_data_dir, get_results_dir
 
 
-RESULTS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "results")
+RESULTS_DIR = get_results_dir()
 
 
 def get_backtest_function(strategy_key):
@@ -90,8 +91,7 @@ def _build_predictions(symbols_list, feature_set, device):
 
     pipeline_cfg = load_config().get("pipeline", {})
     data_dir = pipeline_cfg.get("data_dir", "../portable_data/vn_stock_ai_dataset_cleaned")
-    base = os.path.dirname(os.path.abspath(__file__))
-    abs_data_dir = os.path.normpath(os.path.join(base, data_dir))
+    abs_data_dir = resolve_data_dir(data_dir)
 
     config = {
         "split": {
@@ -198,8 +198,7 @@ def _run_rule_backtest_fair(symbols_list):
 
     pipeline_cfg = load_config().get("pipeline", {})
     data_dir = pipeline_cfg.get("data_dir", "../portable_data/vn_stock_ai_dataset_cleaned")
-    base = os.path.dirname(os.path.abspath(__file__))
-    abs_data_dir = os.path.normpath(os.path.join(base, data_dir))
+    abs_data_dir = resolve_data_dir(data_dir)
 
     config = {
         "split": {

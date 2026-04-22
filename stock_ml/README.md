@@ -75,6 +75,7 @@ stock_ml/
 |   +-- base.yaml                # Cau hinh training device (gpu/cpu/auto)
 |
 +-- src/                          # Core ML pipeline (shared code)
+|   +-- env.py                    # Auto-detect local/Colab, resolve paths
 |   +-- config_loader.py          # Doc models.yaml, cung cap helper functions
 |   +-- safe_io.py                # Fix UnicodeEncodeError tren Windows console
 |   +-- data/
@@ -124,6 +125,7 @@ stock_ml/
 |
 +-- model_manager.py              # CLI quan ly model (list/compare/retire/add)
 +-- run_pipeline.py               # Pipeline runner thong nhat (shared ML cache)
++-- colab_setup.py                # 1-click setup cho Google Colab
 |
 +-- run_v27.py                    # V27 backtest function + standalone runner
 +-- run_v26.py                    # V26 backtest function + runner
@@ -471,6 +473,170 @@ visualization/
 +-- data_rule/              # Rule overlay
     +-- ...
 ```
+
+## Google Colab — Hybrid Workflow
+
+He thong ho tro chay tren ca **local** (RTX 3060) va **Google Colab** (T4/A100). Code tu dong detect moi truong va chuyen path phu hop.
+
+### Kien truc
+
+```
++----------------------------------------------------------+
+|               GitHub (source of truth)                    |
+|   stock_ml/src/*, config/*, run_*.py, requirements.txt   |
+|   CHI CODE — khong data, khong model, khong results      |
++---------------------------+------------------------------+
+                            |
+                +-----------+-----------+
+                v                       v
++---------------------+     +---------------------------+
+|   Local (RTX 3060)  |     |   Colab (T4/A100)         |
+|                     |     |                           |
+|   git pull          |     |   git clone/pull          |
+|   data: local disk  |     |   data: Mount Drive       |
+|   dev & debug       |     |   train nang              |
+|   train nho         |     |   batch backtest all      |
++--------+------------+     +----------+----------------+
+         |                              |
+         v                              v
++----------------------------------------------------------+
+|            Google Drive (shared storage)                   |
+|   stock_ml_hub/portable_data/ + results/ + models/       |
++----------------------------------------------------------+
+```
+
+### Khi nao dung Local, khi nao dung Colab?
+
+| Task | Local (3060) | Colab |
+|------|-------------|-------|
+| Dev/debug strategy moi | Chay 1-2 symbol nhanh | |
+| Train 1 model (v27) | OK neu LightGBM/XGBoost | Neu can deep learning |
+| **Chay ALL models so sanh** | | **Colab** — `--all` |
+| **Feature ablation toan bo** | | **Colab** |
+| **Batch backtest 200+ symbols x 7 models** | | **Colab** |
+| Export JSON cho dashboard | Local (nhe) | |
+
+### Buoc 1: Upload data len Google Drive (1 lan duy nhat)
+
+Tren may local, nen data:
+```bash
+cd portable_data
+tar -czf vn_stock_ai_dataset_cleaned.tar.gz vn_stock_ai_dataset_cleaned/
+```
+
+Upload file `.tar.gz` len Google Drive:
+- Tao thu muc: `MyDrive/stock_ml_hub/portable_data/`
+- Upload `vn_stock_ai_dataset_cleaned.tar.gz` vao do
+
+### Buoc 2: Lan dau tren Colab — Setup
+
+Mo Colab, tao notebook moi, paste 3 cell:
+
+**Cell 1 — Clone repo:**
+```python
+!git clone https://github.com/nguyenduccanh011/train_ai_ml.git /content/repo
+%cd /content/repo/stock_ml
+```
+
+**Cell 2 — Setup (mount Drive, install deps, check data):**
+```python
+%run colab_setup.py
+```
+
+**Cell 3 — Giai nen data (chi lan dau):**
+```python
+!cd /content/drive/MyDrive/stock_ml_hub/portable_data && tar -xzf vn_stock_ai_dataset_cleaned.tar.gz
+```
+
+### Buoc 3: Chay pipeline tren Colab
+
+```python
+# Chay tat ca active models
+!python run_pipeline.py --all
+
+# Chay model cu the
+!python run_pipeline.py --version v27
+
+# So sanh models
+!python run_pipeline.py --version v27 --compare v26,v25,v24,rule
+
+# Feature ablation
+!python run_feature_ablation.py
+```
+
+Results tu dong luu vao `MyDrive/stock_ml_hub/results/` tren Drive.
+
+### Buoc 4: Lay results ve local
+
+Vao Drive > `stock_ml_hub/results/` > tai cac file CSV can thiet ve `stock_ml/results/` tren local.
+Hoac cai Google Drive for Desktop de tu sync.
+
+### Lan sau dung Colab (khong can upload data lai)
+
+Chi can 2 cell:
+
+```python
+# Cell 1 — Pull latest code + setup
+!git clone https://github.com/nguyenduccanh011/train_ai_ml.git /content/repo 2>/dev/null || git -C /content/repo pull --ff-only
+%cd /content/repo/stock_ml
+%run colab_setup.py
+
+# Cell 2 — Run
+!python run_pipeline.py --all
+```
+
+Data da nam san tren Drive, mount la dung ngay.
+
+### Auto-detect moi truong
+
+Code tu dong detect local/Colab thong qua `src/env.py`:
+
+```python
+from src.env import is_colab, resolve_data_dir, get_results_dir
+
+is_colab()         # True tren Colab, False tren local
+resolve_data_dir() # Tra ve Drive path tren Colab, local path tren may
+get_results_dir()  # Tra ve Drive results/ tren Colab, local results/ tren may
+```
+
+Override bang environment variable neu can:
+```bash
+export STOCK_DATA_DIR="/custom/path/to/data"
+export STOCK_RESULTS_DIR="/custom/path/to/results"
+```
+
+### Cau truc Google Drive
+
+```
+MyDrive/stock_ml_hub/
++-- portable_data/
+|   +-- vn_stock_ai_dataset_cleaned/     # Data OHLCV (upload 1 lan)
+|   +-- vn_stock_ai_dataset_cleaned.tar.gz  # File nen goc
++-- results/                              # Backtest results (tu Colab)
+|   +-- trades_v27.csv
+|   +-- trades_v27.meta.json
+|   +-- ...
++-- models/                               # Model weights (neu can luu)
+    +-- lightgbm_fold1.pkl
+    +-- ...
+```
+
+### MCP Colab (tuong tac tu local)
+
+Du an co cau hinh MCP Colab (`colab-mcp`) cho phep Claude Code tuong tac truc tiep voi Colab notebook tu local. Cau hinh trong `.claude/settings.json`:
+
+```json
+{
+  "mcpServers": {
+    "colab-mcp": {
+      "command": "uvx",
+      "args": ["git+https://github.com/googlecolab/colab-mcp"]
+    }
+  }
+}
+```
+
+**Luu y:** Khi dung MCP Colab, can mo notebook tren trinh duyet truoc, sau do goi `open_colab_browser_connection` de ket noi. Sau khi ket noi, cac tool execute se available (co the can restart Claude Code session de refresh tool list).
 
 ## Du lieu
 

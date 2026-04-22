@@ -1,0 +1,42 @@
+# Full feature set - Phase 3
+_inherit: technical.yaml
+
+feature_groups:
+  price_action:
+    enabled: true
+  volume:
+    enabled: true
+  moving_averages:
+    enabled: true
+  momentum:
+    enabled: true
+  trend:
+    enabled: true
+  volatility:
+    enabled: true
+  volume_advanced:
+    enabled: true
+
+  market_context:
+    enabled: true
+    features:
+      - vnindex_return_1d
+      - vnindex_return_5d
+      - vnindex_sma20_ratio
+      - vnindex_rsi_14
+      - vnindex_volatility_20d
+      - hnxindex_return_1d
+      - stock_beta_60d
+      - stock_corr_vnindex_60d
+      - market_breadth_proxy
+      - vn30f_basis  # futures premium/discount
+
+  regime:
+    enabled: true
+    features:
+      - market_regime_20d    # bull/bear/sideways based on VNIndex
+      - sector_momentum      # relative strength vs market
+      - days_since_52w_high
+      - days_since_52w_low
+      - distance_from_52w_high
+      - distance_from_52w_low

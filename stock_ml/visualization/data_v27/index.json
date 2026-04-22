@@ -1,0 +1,2208 @@
+{
+  "symbols": [
+    {
+      "symbol": "SDA",
+      "v27_trades": 17,
+      "v27_pnl": 840.7,
+      "v27_wr": 35.3
+    },
+    {
+      "symbol": "CTP",
+      "v27_trades": 16,
+      "v27_pnl": 644.8,
+      "v27_wr": 50.0
+    },
+    {
+      "symbol": "CEO",
+      "v27_trades": 35,
+      "v27_pnl": 564.0,
+      "v27_wr": 31.4
+    },
+    {
+      "symbol": "APS",
+      "v27_trades": 24,
+      "v27_pnl": 503.5,
+      "v27_wr": 41.7
+    },
+    {
+      "symbol": "VOS",
+      "v27_trades": 28,
+      "v27_pnl": 458.4,
+      "v27_wr": 39.3
+    },
+    {
+      "symbol": "QCG",
+      "v27_trades": 27,
+      "v27_pnl": 429.6,
+      "v27_wr": 37.0
+    },
+    {
+      "symbol": "IDJ",
+      "v27_trades": 34,
+      "v27_pnl": 409.5,
+      "v27_wr": 32.4
+    },
+    {
+      "symbol": "TNT",
+      "v27_trades": 29,
+      "v27_pnl": 393.0,
+      "v27_wr": 31.0
+    },
+    {
+      "symbol": "CTS",
+      "v27_trades": 35,
+      "v27_pnl": 350.0,
+      "v27_wr": 54.3
+    },
+    {
+      "symbol": "DGW",
+      "v27_trades": 37,
+      "v27_pnl": 339.2,
+      "v27_wr": 45.9
+    },
+    {
+      "symbol": "VND",
+      "v27_trades": 33,
+      "v27_pnl": 329.7,
+      "v27_wr": 51.5
+    },
+    {
+      "symbol": "SHS",
+      "v27_trades": 30,
+      "v27_pnl": 322.5,
+      "v27_wr": 53.3
+    },
+    {
+      "symbol": "DIG",
+      "v27_trades": 35,
+      "v27_pnl": 309.3,
+      "v27_wr": 40.0
+    },
+    {
+      "symbol": "TSC",
+      "v27_trades": 26,
+      "v27_pnl": 304.0,
+      "v27_wr": 50.0
+    },
+    {
+      "symbol": "API",
+      "v27_trades": 24,
+      "v27_pnl": 281.8,
+      "v27_wr": 33.3
+    },
+    {
+      "symbol": "LCG",
+      "v27_trades": 31,
+      "v27_pnl": 281.6,
+      "v27_wr": 51.6
+    },
+    {
+      "symbol": "LDG",
+      "v27_trades": 26,
+      "v27_pnl": 280.4,
+      "v27_wr": 34.6
+    },
+    {
+      "symbol": "MCG",
+      "v27_trades": 16,
+      "v27_pnl": 277.9,
+      "v27_wr": 31.2
+    },
+    {
+      "symbol": "DCM",
+      "v27_trades": 30,
+      "v27_pnl": 277.3,
+      "v27_wr": 56.7
+    },
+    {
+      "symbol": "G36",
+      "v27_trades": 29,
+      "v27_pnl": 275.3,
+      "v27_wr": 51.7
+    },
+    {
+      "symbol": "DHT",
+      "v27_trades": 19,
+      "v27_pnl": 273.6,
+      "v27_wr": 52.6
+    },
+    {
+      "symbol": "EVG",
+      "v27_trades": 33,
+      "v27_pnl": 272.0,
+      "v27_wr": 45.5
+    },
+    {
+      "symbol": "VIC",
+      "v27_trades": 28,
+      "v27_pnl": 271.0,
+      "v27_wr": 42.9
+    },
+    {
+      "symbol": "SJS",
+      "v27_trades": 26,
+      "v27_pnl": 266.1,
+      "v27_wr": 69.2
+    },
+    {
+      "symbol": "SCI",
+      "v27_trades": 23,
+      "v27_pnl": 262.3,
+      "v27_wr": 47.8
+    },
+    {
+      "symbol": "HSG",
+      "v27_trades": 33,
+      "v27_pnl": 261.3,
+      "v27_wr": 51.5
+    },
+    {
+      "symbol": "VC2",
+      "v27_trades": 20,
+      "v27_pnl": 258.5,
+      "v27_wr": 60.0
+    },
+    {
+      "symbol": "ORS",
+      "v27_trades": 28,
+      "v27_pnl": 257.2,
+      "v27_wr": 53.6
+    },
+    {
+      "symbol": "HAH",
+      "v27_trades": 36,
+      "v27_pnl": 256.5,
+      "v27_wr": 61.1
+    },
+    {
+      "symbol": "PVL",
+      "v27_trades": 8,
+      "v27_pnl": 256.0,
+      "v27_wr": 25.0
+    },
+    {
+      "symbol": "LPB",
+      "v27_trades": 30,
+      "v27_pnl": 253.0,
+      "v27_wr": 50.0
+    },
+    {
+      "symbol": "HHS",
+      "v27_trades": 32,
+      "v27_pnl": 252.9,
+      "v27_wr": 46.9
+    },
+    {
+      "symbol": "VDS",
+      "v27_trades": 25,
+      "v27_pnl": 252.8,
+      "v27_wr": 60.0
+    },
+    {
+      "symbol": "BSI",
+      "v27_trades": 37,
+      "v27_pnl": 250.3,
+      "v27_wr": 56.8
+    },
+    {
+      "symbol": "AGR",
+      "v27_trades": 32,
+      "v27_pnl": 249.4,
+      "v27_wr": 50.0
+    },
+    {
+      "symbol": "VCI",
+      "v27_trades": 36,
+      "v27_pnl": 246.7,
+      "v27_wr": 58.3
+    },
+    {
+      "symbol": "FTS",
+      "v27_trades": 39,
+      "v27_pnl": 246.3,
+      "v27_wr": 48.7
+    },
+    {
+      "symbol": "VIG",
+      "v27_trades": 23,
+      "v27_pnl": 244.5,
+      "v27_wr": 43.5
+    },
+    {
+      "symbol": "HUT",
+      "v27_trades": 32,
+      "v27_pnl": 244.3,
+      "v27_wr": 46.9
+    },
+    {
+      "symbol": "NHA",
+      "v27_trades": 28,
+      "v27_pnl": 242.4,
+      "v27_wr": 42.9
+    },
+    {
+      "symbol": "HID",
+      "v27_trades": 26,
+      "v27_pnl": 239.5,
+      "v27_wr": 53.8
+    },
+    {
+      "symbol": "TTN",
+      "v27_trades": 26,
+      "v27_pnl": 239.4,
+      "v27_wr": 53.8
+    },
+    {
+      "symbol": "TIG",
+      "v27_trades": 33,
+      "v27_pnl": 237.4,
+      "v27_wr": 48.5
+    },
+    {
+      "symbol": "CMS",
+      "v27_trades": 13,
+      "v27_pnl": 233.6,
+      "v27_wr": 30.8
+    },
+    {
+      "symbol": "NKG",
+      "v27_trades": 38,
+      "v27_pnl": 233.5,
+      "v27_wr": 47.4
+    },
+    {
+      "symbol": "VPH",
+      "v27_trades": 18,
+      "v27_pnl": 228.7,
+      "v27_wr": 50.0
+    },
+    {
+      "symbol": "L14",
+      "v27_trades": 32,
+      "v27_pnl": 228.6,
+      "v27_wr": 50.0
+    },
+    {
+      "symbol": "MHC",
+      "v27_trades": 25,
+      "v27_pnl": 226.8,
+      "v27_wr": 44.0
+    },
+    {
+      "symbol": "SSI",
+      "v27_trades": 37,
+      "v27_pnl": 224.9,
+      "v27_wr": 45.9
+    },
+    {
+      "symbol": "SHB",
+      "v27_trades": 32,
+      "v27_pnl": 223.7,
+      "v27_wr": 34.4
+    },
+    {
+      "symbol": "MCH",
+      "v27_trades": 23,
+      "v27_pnl": 223.1,
+      "v27_wr": 65.2
+    },
+    {
+      "symbol": "MBS",
+      "v27_trades": 37,
+      "v27_pnl": 221.0,
+      "v27_wr": 51.4
+    },
+    {
+      "symbol": "VC7",
+      "v27_trades": 26,
+      "v27_pnl": 221.0,
+      "v27_wr": 34.6
+    },
+    {
+      "symbol": "DLG",
+      "v27_trades": 26,
+      "v27_pnl": 220.8,
+      "v27_wr": 34.6
+    },
+    {
+      "symbol": "C69",
+      "v27_trades": 27,
+      "v27_pnl": 220.1,
+      "v27_wr": 25.9
+    },
+    {
+      "symbol": "SMC",
+      "v27_trades": 31,
+      "v27_pnl": 219.9,
+      "v27_wr": 51.6
+    },
+    {
+      "symbol": "JVC",
+      "v27_trades": 23,
+      "v27_pnl": 217.9,
+      "v27_wr": 52.2
+    },
+    {
+      "symbol": "HAR",
+      "v27_trades": 28,
+      "v27_pnl": 217.4,
+      "v27_wr": 42.9
+    },
+    {
+      "symbol": "GKM",
+      "v27_trades": 24,
+      "v27_pnl": 214.9,
+      "v27_wr": 29.2
+    },
+    {
+      "symbol": "ELC",
+      "v27_trades": 34,
+      "v27_pnl": 213.0,
+      "v27_wr": 47.1
+    },
+    {
+      "symbol": "TDC",
+      "v27_trades": 27,
+      "v27_pnl": 208.3,
+      "v27_wr": 44.4
+    },
+    {
+      "symbol": "TNI",
+      "v27_trades": 21,
+      "v27_pnl": 204.2,
+      "v27_wr": 42.9
+    },
+    {
+      "symbol": "HQC",
+      "v27_trades": 29,
+      "v27_pnl": 202.4,
+      "v27_wr": 51.7
+    },
+    {
+      "symbol": "VIB",
+      "v27_trades": 28,
+      "v27_pnl": 202.0,
+      "v27_wr": 46.4
+    },
+    {
+      "symbol": "HAG",
+      "v27_trades": 35,
+      "v27_pnl": 200.4,
+      "v27_wr": 42.9
+    },
+    {
+      "symbol": "VRC",
+      "v27_trades": 21,
+      "v27_pnl": 198.7,
+      "v27_wr": 42.9
+    },
+    {
+      "symbol": "VSC",
+      "v27_trades": 25,
+      "v27_pnl": 198.5,
+      "v27_wr": 48.0
+    },
+    {
+      "symbol": "CSV",
+      "v27_trades": 34,
+      "v27_pnl": 197.7,
+      "v27_wr": 55.9
+    },
+    {
+      "symbol": "HVN",
+      "v27_trades": 31,
+      "v27_pnl": 192.7,
+      "v27_wr": 41.9
+    },
+    {
+      "symbol": "DGC",
+      "v27_trades": 38,
+      "v27_pnl": 192.3,
+      "v27_wr": 39.5
+    },
+    {
+      "symbol": "KDM",
+      "v27_trades": 12,
+      "v27_pnl": 191.5,
+      "v27_wr": 50.0
+    },
+    {
+      "symbol": "TLH",
+      "v27_trades": 27,
+      "v27_pnl": 186.9,
+      "v27_wr": 44.4
+    },
+    {
+      "symbol": "SGP",
+      "v27_trades": 30,
+      "v27_pnl": 183.3,
+      "v27_wr": 50.0
+    },
+    {
+      "symbol": "VCR",
+      "v27_trades": 16,
+      "v27_pnl": 181.7,
+      "v27_wr": 43.8
+    },
+    {
+      "symbol": "DPG",
+      "v27_trades": 40,
+      "v27_pnl": 179.5,
+      "v27_wr": 47.5
+    },
+    {
+      "symbol": "SCR",
+      "v27_trades": 36,
+      "v27_pnl": 179.4,
+      "v27_wr": 55.6
+    },
+    {
+      "symbol": "DBC",
+      "v27_trades": 37,
+      "v27_pnl": 179.1,
+      "v27_wr": 43.2
+    },
+    {
+      "symbol": "DRI",
+      "v27_trades": 36,
+      "v27_pnl": 178.1,
+      "v27_wr": 52.8
+    },
+    {
+      "symbol": "ITA",
+      "v27_trades": 25,
+      "v27_pnl": 178.1,
+      "v27_wr": 36.0
+    },
+    {
+      "symbol": "PDR",
+      "v27_trades": 33,
+      "v27_pnl": 177.5,
+      "v27_wr": 48.5
+    },
+    {
+      "symbol": "KLB",
+      "v27_trades": 21,
+      "v27_pnl": 176.8,
+      "v27_wr": 52.4
+    },
+    {
+      "symbol": "HLD",
+      "v27_trades": 21,
+      "v27_pnl": 171.7,
+      "v27_wr": 76.2
+    },
+    {
+      "symbol": "C47",
+      "v27_trades": 25,
+      "v27_pnl": 168.1,
+      "v27_wr": 44.0
+    },
+    {
+      "symbol": "HCM",
+      "v27_trades": 38,
+      "v27_pnl": 167.5,
+      "v27_wr": 55.3
+    },
+    {
+      "symbol": "GEX",
+      "v27_trades": 35,
+      "v27_pnl": 167.3,
+      "v27_wr": 54.3
+    },
+    {
+      "symbol": "DAG",
+      "v27_trades": 17,
+      "v27_pnl": 165.9,
+      "v27_wr": 35.3
+    },
+    {
+      "symbol": "TCM",
+      "v27_trades": 25,
+      "v27_pnl": 164.3,
+      "v27_wr": 44.0
+    },
+    {
+      "symbol": "HPG",
+      "v27_trades": 34,
+      "v27_pnl": 164.1,
+      "v27_wr": 47.1
+    },
+    {
+      "symbol": "DDV",
+      "v27_trades": 26,
+      "v27_pnl": 163.5,
+      "v27_wr": 46.2
+    },
+    {
+      "symbol": "APG",
+      "v27_trades": 31,
+      "v27_pnl": 162.1,
+      "v27_wr": 45.2
+    },
+    {
+      "symbol": "KSQ",
+      "v27_trades": 19,
+      "v27_pnl": 161.7,
+      "v27_wr": 26.3
+    },
+    {
+      "symbol": "PET",
+      "v27_trades": 39,
+      "v27_pnl": 161.1,
+      "v27_wr": 53.8
+    },
+    {
+      "symbol": "GVR",
+      "v27_trades": 39,
+      "v27_pnl": 160.3,
+      "v27_wr": 38.5
+    },
+    {
+      "symbol": "AFX",
+      "v27_trades": 19,
+      "v27_pnl": 156.8,
+      "v27_wr": 52.6
+    },
+    {
+      "symbol": "PVB",
+      "v27_trades": 32,
+      "v27_pnl": 155.5,
+      "v27_wr": 46.9
+    },
+    {
+      "symbol": "BCG",
+      "v27_trades": 23,
+      "v27_pnl": 154.7,
+      "v27_wr": 52.2
+    },
+    {
+      "symbol": "ADS",
+      "v27_trades": 22,
+      "v27_pnl": 154.0,
+      "v27_wr": 54.5
+    },
+    {
+      "symbol": "TLD",
+      "v27_trades": 26,
+      "v27_pnl": 153.6,
+      "v27_wr": 46.2
+    },
+    {
+      "symbol": "SHI",
+      "v27_trades": 22,
+      "v27_pnl": 149.9,
+      "v27_wr": 18.2
+    },
+    {
+      "symbol": "VHG",
+      "v27_trades": 21,
+      "v27_pnl": 149.0,
+      "v27_wr": 23.8
+    },
+    {
+      "symbol": "HCD",
+      "v27_trades": 38,
+      "v27_pnl": 148.3,
+      "v27_wr": 42.1
+    },
+    {
+      "symbol": "IDC",
+      "v27_trades": 30,
+      "v27_pnl": 148.0,
+      "v27_wr": 40.0
+    },
+    {
+      "symbol": "VNE",
+      "v27_trades": 29,
+      "v27_pnl": 148.0,
+      "v27_wr": 44.8
+    },
+    {
+      "symbol": "IDI",
+      "v27_trades": 27,
+      "v27_pnl": 146.7,
+      "v27_wr": 48.1
+    },
+    {
+      "symbol": "PC1",
+      "v27_trades": 36,
+      "v27_pnl": 146.5,
+      "v27_wr": 52.8
+    },
+    {
+      "symbol": "LSS",
+      "v27_trades": 28,
+      "v27_pnl": 145.5,
+      "v27_wr": 50.0
+    },
+    {
+      "symbol": "TVB",
+      "v27_trades": 24,
+      "v27_pnl": 142.5,
+      "v27_wr": 54.2
+    },
+    {
+      "symbol": "VGS",
+      "v27_trades": 36,
+      "v27_pnl": 140.5,
+      "v27_wr": 41.7
+    },
+    {
+      "symbol": "NBC",
+      "v27_trades": 22,
+      "v27_pnl": 139.4,
+      "v27_wr": 59.1
+    },
+    {
+      "symbol": "LAS",
+      "v27_trades": 33,
+      "v27_pnl": 139.1,
+      "v27_wr": 51.5
+    },
+    {
+      "symbol": "CTR",
+      "v27_trades": 33,
+      "v27_pnl": 138.8,
+      "v27_wr": 57.6
+    },
+    {
+      "symbol": "MST",
+      "v27_trades": 35,
+      "v27_pnl": 138.0,
+      "v27_wr": 54.3
+    },
+    {
+      "symbol": "SLS",
+      "v27_trades": 24,
+      "v27_pnl": 136.3,
+      "v27_wr": 54.2
+    },
+    {
+      "symbol": "ASM",
+      "v27_trades": 34,
+      "v27_pnl": 135.7,
+      "v27_wr": 38.2
+    },
+    {
+      "symbol": "PLC",
+      "v27_trades": 35,
+      "v27_pnl": 133.1,
+      "v27_wr": 54.3
+    },
+    {
+      "symbol": "ITQ",
+      "v27_trades": 19,
+      "v27_pnl": 132.8,
+      "v27_wr": 31.6
+    },
+    {
+      "symbol": "CVT",
+      "v27_trades": 3,
+      "v27_pnl": 132.2,
+      "v27_wr": 66.7
+    },
+    {
+      "symbol": "IPA",
+      "v27_trades": 22,
+      "v27_pnl": 131.9,
+      "v27_wr": 45.5
+    },
+    {
+      "symbol": "DRH",
+      "v27_trades": 23,
+      "v27_pnl": 131.2,
+      "v27_wr": 39.1
+    },
+    {
+      "symbol": "LGL",
+      "v27_trades": 28,
+      "v27_pnl": 130.1,
+      "v27_wr": 46.4
+    },
+    {
+      "symbol": "DTD",
+      "v27_trades": 38,
+      "v27_pnl": 129.8,
+      "v27_wr": 39.5
+    },
+    {
+      "symbol": "CDO",
+      "v27_trades": 8,
+      "v27_pnl": 129.5,
+      "v27_wr": 50.0
+    },
+    {
+      "symbol": "EVE",
+      "v27_trades": 24,
+      "v27_pnl": 129.0,
+      "v27_wr": 58.3
+    },
+    {
+      "symbol": "ANV",
+      "v27_trades": 38,
+      "v27_pnl": 127.0,
+      "v27_wr": 55.3
+    },
+    {
+      "symbol": "HTG",
+      "v27_trades": 21,
+      "v27_pnl": 126.4,
+      "v27_wr": 47.6
+    },
+    {
+      "symbol": "DXP",
+      "v27_trades": 29,
+      "v27_pnl": 125.9,
+      "v27_wr": 55.2
+    },
+    {
+      "symbol": "LIG",
+      "v27_trades": 29,
+      "v27_pnl": 125.1,
+      "v27_wr": 44.8
+    },
+    {
+      "symbol": "KBC",
+      "v27_trades": 35,
+      "v27_pnl": 123.4,
+      "v27_wr": 42.9
+    },
+    {
+      "symbol": "HDG",
+      "v27_trades": 38,
+      "v27_pnl": 123.2,
+      "v27_wr": 44.7
+    },
+    {
+      "symbol": "TTH",
+      "v27_trades": 21,
+      "v27_pnl": 122.0,
+      "v27_wr": 38.1
+    },
+    {
+      "symbol": "BCM",
+      "v27_trades": 25,
+      "v27_pnl": 119.9,
+      "v27_wr": 56.0
+    },
+    {
+      "symbol": "CTG",
+      "v27_trades": 38,
+      "v27_pnl": 119.4,
+      "v27_wr": 52.6
+    },
+    {
+      "symbol": "BCE",
+      "v27_trades": 28,
+      "v27_pnl": 119.0,
+      "v27_wr": 42.9
+    },
+    {
+      "symbol": "VPB",
+      "v27_trades": 30,
+      "v27_pnl": 118.5,
+      "v27_wr": 26.7
+    },
+    {
+      "symbol": "NAF",
+      "v27_trades": 30,
+      "v27_pnl": 118.1,
+      "v27_wr": 43.3
+    },
+    {
+      "symbol": "HAX",
+      "v27_trades": 30,
+      "v27_pnl": 118.0,
+      "v27_wr": 46.7
+    },
+    {
+      "symbol": "HDC",
+      "v27_trades": 35,
+      "v27_pnl": 117.4,
+      "v27_wr": 40.0
+    },
+    {
+      "symbol": "NLG",
+      "v27_trades": 36,
+      "v27_pnl": 117.4,
+      "v27_wr": 50.0
+    },
+    {
+      "symbol": "BFC",
+      "v27_trades": 40,
+      "v27_pnl": 117.2,
+      "v27_wr": 47.5
+    },
+    {
+      "symbol": "CII",
+      "v27_trades": 31,
+      "v27_pnl": 117.1,
+      "v27_wr": 41.9
+    },
+    {
+      "symbol": "VNP",
+      "v27_trades": 15,
+      "v27_pnl": 116.7,
+      "v27_wr": 60.0
+    },
+    {
+      "symbol": "PGV",
+      "v27_trades": 18,
+      "v27_pnl": 114.5,
+      "v27_wr": 50.0
+    },
+    {
+      "symbol": "BSR",
+      "v27_trades": 36,
+      "v27_pnl": 114.3,
+      "v27_wr": 41.7
+    },
+    {
+      "symbol": "TDG",
+      "v27_trades": 28,
+      "v27_pnl": 113.8,
+      "v27_wr": 25.0
+    },
+    {
+      "symbol": "TVC",
+      "v27_trades": 25,
+      "v27_pnl": 113.5,
+      "v27_wr": 48.0
+    },
+    {
+      "symbol": "TMT",
+      "v27_trades": 11,
+      "v27_pnl": 113.4,
+      "v27_wr": 54.5
+    },
+    {
+      "symbol": "PFL",
+      "v27_trades": 20,
+      "v27_pnl": 111.1,
+      "v27_wr": 45.0
+    },
+    {
+      "symbol": "FID",
+      "v27_trades": 15,
+      "v27_pnl": 111.0,
+      "v27_wr": 33.3
+    },
+    {
+      "symbol": "FPT",
+      "v27_trades": 28,
+      "v27_pnl": 110.0,
+      "v27_wr": 53.6
+    },
+    {
+      "symbol": "DXG",
+      "v27_trades": 36,
+      "v27_pnl": 109.8,
+      "v27_wr": 44.4
+    },
+    {
+      "symbol": "FCN",
+      "v27_trades": 34,
+      "v27_pnl": 109.7,
+      "v27_wr": 50.0
+    },
+    {
+      "symbol": "VGC",
+      "v27_trades": 35,
+      "v27_pnl": 109.1,
+      "v27_wr": 57.1
+    },
+    {
+      "symbol": "MBB",
+      "v27_trades": 35,
+      "v27_pnl": 108.9,
+      "v27_wr": 57.1
+    },
+    {
+      "symbol": "NTC",
+      "v27_trades": 34,
+      "v27_pnl": 108.9,
+      "v27_wr": 41.2
+    },
+    {
+      "symbol": "DAH",
+      "v27_trades": 24,
+      "v27_pnl": 108.8,
+      "v27_wr": 41.7
+    },
+    {
+      "symbol": "BVS",
+      "v27_trades": 34,
+      "v27_pnl": 107.8,
+      "v27_wr": 38.2
+    },
+    {
+      "symbol": "HDB",
+      "v27_trades": 39,
+      "v27_pnl": 107.7,
+      "v27_wr": 51.3
+    },
+    {
+      "symbol": "GIL",
+      "v27_trades": 36,
+      "v27_pnl": 106.3,
+      "v27_wr": 41.7
+    },
+    {
+      "symbol": "HDA",
+      "v27_trades": 17,
+      "v27_pnl": 106.2,
+      "v27_wr": 41.2
+    },
+    {
+      "symbol": "IVS",
+      "v27_trades": 24,
+      "v27_pnl": 101.7,
+      "v27_wr": 33.3
+    },
+    {
+      "symbol": "TCD",
+      "v27_trades": 24,
+      "v27_pnl": 101.1,
+      "v27_wr": 41.7
+    },
+    {
+      "symbol": "PAN",
+      "v27_trades": 30,
+      "v27_pnl": 101.0,
+      "v27_wr": 50.0
+    },
+    {
+      "symbol": "DPM",
+      "v27_trades": 38,
+      "v27_pnl": 100.6,
+      "v27_wr": 39.5
+    },
+    {
+      "symbol": "SHN",
+      "v27_trades": 3,
+      "v27_pnl": 100.5,
+      "v27_wr": 66.7
+    },
+    {
+      "symbol": "ACM",
+      "v27_trades": 8,
+      "v27_pnl": 99.1,
+      "v27_wr": 50.0
+    },
+    {
+      "symbol": "NVL",
+      "v27_trades": 29,
+      "v27_pnl": 99.1,
+      "v27_wr": 37.9
+    },
+    {
+      "symbol": "PXT",
+      "v27_trades": 17,
+      "v27_pnl": 98.8,
+      "v27_wr": 23.5
+    },
+    {
+      "symbol": "KDC",
+      "v27_trades": 23,
+      "v27_pnl": 98.3,
+      "v27_wr": 26.1
+    },
+    {
+      "symbol": "VC3",
+      "v27_trades": 30,
+      "v27_pnl": 97.8,
+      "v27_wr": 26.7
+    },
+    {
+      "symbol": "ACL",
+      "v27_trades": 21,
+      "v27_pnl": 97.2,
+      "v27_wr": 52.4
+    },
+    {
+      "symbol": "VPG",
+      "v27_trades": 27,
+      "v27_pnl": 96.5,
+      "v27_wr": 44.4
+    },
+    {
+      "symbol": "CMG",
+      "v27_trades": 31,
+      "v27_pnl": 96.3,
+      "v27_wr": 45.2
+    },
+    {
+      "symbol": "LHG",
+      "v27_trades": 32,
+      "v27_pnl": 96.3,
+      "v27_wr": 56.2
+    },
+    {
+      "symbol": "IMP",
+      "v27_trades": 27,
+      "v27_pnl": 95.4,
+      "v27_wr": 51.9
+    },
+    {
+      "symbol": "TCL",
+      "v27_trades": 28,
+      "v27_pnl": 95.3,
+      "v27_wr": 42.9
+    },
+    {
+      "symbol": "DL1",
+      "v27_trades": 25,
+      "v27_pnl": 94.8,
+      "v27_wr": 44.0
+    },
+    {
+      "symbol": "NSH",
+      "v27_trades": 15,
+      "v27_pnl": 94.8,
+      "v27_wr": 33.3
+    },
+    {
+      "symbol": "NTP",
+      "v27_trades": 35,
+      "v27_pnl": 94.0,
+      "v27_wr": 51.4
+    },
+    {
+      "symbol": "SD9",
+      "v27_trades": 13,
+      "v27_pnl": 93.9,
+      "v27_wr": 30.8
+    },
+    {
+      "symbol": "HBC",
+      "v27_trades": 32,
+      "v27_pnl": 92.8,
+      "v27_wr": 40.6
+    },
+    {
+      "symbol": "CTD",
+      "v27_trades": 37,
+      "v27_pnl": 92.0,
+      "v27_wr": 37.8
+    },
+    {
+      "symbol": "D2D",
+      "v27_trades": 22,
+      "v27_pnl": 90.9,
+      "v27_wr": 59.1
+    },
+    {
+      "symbol": "QNS",
+      "v27_trades": 32,
+      "v27_pnl": 89.5,
+      "v27_wr": 46.9
+    },
+    {
+      "symbol": "LHC",
+      "v27_trades": 14,
+      "v27_pnl": 88.6,
+      "v27_wr": 42.9
+    },
+    {
+      "symbol": "PLP",
+      "v27_trades": 24,
+      "v27_pnl": 87.9,
+      "v27_wr": 50.0
+    },
+    {
+      "symbol": "BMI",
+      "v27_trades": 32,
+      "v27_pnl": 87.4,
+      "v27_wr": 46.9
+    },
+    {
+      "symbol": "CTI",
+      "v27_trades": 27,
+      "v27_pnl": 87.2,
+      "v27_wr": 55.6
+    },
+    {
+      "symbol": "OGC",
+      "v27_trades": 30,
+      "v27_pnl": 87.2,
+      "v27_wr": 30.0
+    },
+    {
+      "symbol": "NTL",
+      "v27_trades": 35,
+      "v27_pnl": 87.1,
+      "v27_wr": 48.6
+    },
+    {
+      "symbol": "S99",
+      "v27_trades": 27,
+      "v27_pnl": 86.0,
+      "v27_wr": 37.0
+    },
+    {
+      "symbol": "VIP",
+      "v27_trades": 32,
+      "v27_pnl": 85.3,
+      "v27_wr": 43.8
+    },
+    {
+      "symbol": "PHP",
+      "v27_trades": 23,
+      "v27_pnl": 85.1,
+      "v27_wr": 34.8
+    },
+    {
+      "symbol": "VEF",
+      "v27_trades": 25,
+      "v27_pnl": 85.0,
+      "v27_wr": 44.0
+    },
+    {
+      "symbol": "PXL",
+      "v27_trades": 28,
+      "v27_pnl": 84.7,
+      "v27_wr": 39.3
+    },
+    {
+      "symbol": "NVB",
+      "v27_trades": 28,
+      "v27_pnl": 84.1,
+      "v27_wr": 35.7
+    },
+    {
+      "symbol": "PHR",
+      "v27_trades": 41,
+      "v27_pnl": 84.1,
+      "v27_wr": 43.9
+    },
+    {
+      "symbol": "SAM",
+      "v27_trades": 27,
+      "v27_pnl": 84.0,
+      "v27_wr": 48.1
+    },
+    {
+      "symbol": "NAG",
+      "v27_trades": 23,
+      "v27_pnl": 83.1,
+      "v27_wr": 43.5
+    },
+    {
+      "symbol": "TVN",
+      "v27_trades": 28,
+      "v27_pnl": 79.5,
+      "v27_wr": 39.3
+    },
+    {
+      "symbol": "MWG",
+      "v27_trades": 38,
+      "v27_pnl": 79.4,
+      "v27_wr": 60.5
+    },
+    {
+      "symbol": "CSC",
+      "v27_trades": 24,
+      "v27_pnl": 79.1,
+      "v27_wr": 37.5
+    },
+    {
+      "symbol": "TVS",
+      "v27_trades": 23,
+      "v27_pnl": 78.7,
+      "v27_wr": 39.1
+    },
+    {
+      "symbol": "DVP",
+      "v27_trades": 29,
+      "v27_pnl": 78.0,
+      "v27_wr": 62.1
+    },
+    {
+      "symbol": "VTO",
+      "v27_trades": 27,
+      "v27_pnl": 77.5,
+      "v27_wr": 48.1
+    },
+    {
+      "symbol": "DHA",
+      "v27_trades": 35,
+      "v27_pnl": 77.2,
+      "v27_wr": 54.3
+    },
+    {
+      "symbol": "GMD",
+      "v27_trades": 32,
+      "v27_pnl": 77.0,
+      "v27_wr": 43.8
+    },
+    {
+      "symbol": "PTL",
+      "v27_trades": 21,
+      "v27_pnl": 76.9,
+      "v27_wr": 23.8
+    },
+    {
+      "symbol": "FOX",
+      "v27_trades": 28,
+      "v27_pnl": 76.4,
+      "v27_wr": 42.9
+    },
+    {
+      "symbol": "TDH",
+      "v27_trades": 24,
+      "v27_pnl": 76.1,
+      "v27_wr": 45.8
+    },
+    {
+      "symbol": "DS3",
+      "v27_trades": 10,
+      "v27_pnl": 73.8,
+      "v27_wr": 40.0
+    },
+    {
+      "symbol": "CCL",
+      "v27_trades": 35,
+      "v27_pnl": 73.2,
+      "v27_wr": 51.4
+    },
+    {
+      "symbol": "TCH",
+      "v27_trades": 34,
+      "v27_pnl": 72.7,
+      "v27_wr": 38.2
+    },
+    {
+      "symbol": "PVS",
+      "v27_trades": 40,
+      "v27_pnl": 72.4,
+      "v27_wr": 45.0
+    },
+    {
+      "symbol": "ITD",
+      "v27_trades": 27,
+      "v27_pnl": 71.9,
+      "v27_wr": 37.0
+    },
+    {
+      "symbol": "VNR",
+      "v27_trades": 22,
+      "v27_pnl": 71.5,
+      "v27_wr": 45.5
+    },
+    {
+      "symbol": "FMC",
+      "v27_trades": 27,
+      "v27_pnl": 71.4,
+      "v27_wr": 48.1
+    },
+    {
+      "symbol": "VLB",
+      "v27_trades": 26,
+      "v27_pnl": 71.2,
+      "v27_wr": 57.7
+    },
+    {
+      "symbol": "KDH",
+      "v27_trades": 41,
+      "v27_pnl": 71.0,
+      "v27_wr": 34.1
+    },
+    {
+      "symbol": "ACV",
+      "v27_trades": 26,
+      "v27_pnl": 70.6,
+      "v27_wr": 46.2
+    },
+    {
+      "symbol": "CDC",
+      "v27_trades": 22,
+      "v27_pnl": 70.0,
+      "v27_wr": 40.9
+    },
+    {
+      "symbol": "SKG",
+      "v27_trades": 31,
+      "v27_pnl": 69.4,
+      "v27_wr": 45.2
+    },
+    {
+      "symbol": "KSB",
+      "v27_trades": 32,
+      "v27_pnl": 67.1,
+      "v27_wr": 40.6
+    },
+    {
+      "symbol": "HT1",
+      "v27_trades": 33,
+      "v27_pnl": 66.7,
+      "v27_wr": 42.4
+    },
+    {
+      "symbol": "DST",
+      "v27_trades": 26,
+      "v27_pnl": 66.2,
+      "v27_wr": 26.9
+    },
+    {
+      "symbol": "HHG",
+      "v27_trades": 16,
+      "v27_pnl": 64.1,
+      "v27_wr": 12.5
+    },
+    {
+      "symbol": "BMC",
+      "v27_trades": 30,
+      "v27_pnl": 63.1,
+      "v27_wr": 36.7
+    },
+    {
+      "symbol": "OIL",
+      "v27_trades": 31,
+      "v27_pnl": 62.9,
+      "v27_wr": 35.5
+    },
+    {
+      "symbol": "REE",
+      "v27_trades": 32,
+      "v27_pnl": 62.7,
+      "v27_wr": 46.9
+    },
+    {
+      "symbol": "FCM",
+      "v27_trades": 19,
+      "v27_pnl": 61.7,
+      "v27_wr": 47.4
+    },
+    {
+      "symbol": "GSP",
+      "v27_trades": 25,
+      "v27_pnl": 61.3,
+      "v27_wr": 52.0
+    },
+    {
+      "symbol": "TLG",
+      "v27_trades": 34,
+      "v27_pnl": 61.0,
+      "v27_wr": 38.2
+    },
+    {
+      "symbol": "DCL",
+      "v27_trades": 28,
+      "v27_pnl": 60.2,
+      "v27_wr": 28.6
+    },
+    {
+      "symbol": "PVC",
+      "v27_trades": 37,
+      "v27_pnl": 60.2,
+      "v27_wr": 45.9
+    },
+    {
+      "symbol": "NCT",
+      "v27_trades": 25,
+      "v27_pnl": 60.0,
+      "v27_wr": 52.0
+    },
+    {
+      "symbol": "ASP",
+      "v27_trades": 24,
+      "v27_pnl": 59.4,
+      "v27_wr": 33.3
+    },
+    {
+      "symbol": "STB",
+      "v27_trades": 40,
+      "v27_pnl": 58.7,
+      "v27_wr": 45.0
+    },
+    {
+      "symbol": "PV2",
+      "v27_trades": 18,
+      "v27_pnl": 58.3,
+      "v27_wr": 33.3
+    },
+    {
+      "symbol": "VSH",
+      "v27_trades": 21,
+      "v27_pnl": 58.0,
+      "v27_wr": 52.4
+    },
+    {
+      "symbol": "TDM",
+      "v27_trades": 24,
+      "v27_pnl": 57.3,
+      "v27_wr": 54.2
+    },
+    {
+      "symbol": "VNS",
+      "v27_trades": 9,
+      "v27_pnl": 55.6,
+      "v27_wr": 44.4
+    },
+    {
+      "symbol": "BII",
+      "v27_trades": 10,
+      "v27_pnl": 55.0,
+      "v27_wr": 50.0
+    },
+    {
+      "symbol": "MSN",
+      "v27_trades": 37,
+      "v27_pnl": 54.6,
+      "v27_wr": 48.6
+    },
+    {
+      "symbol": "PTB",
+      "v27_trades": 33,
+      "v27_pnl": 53.8,
+      "v27_wr": 51.5
+    },
+    {
+      "symbol": "PHC",
+      "v27_trades": 28,
+      "v27_pnl": 53.4,
+      "v27_wr": 32.1
+    },
+    {
+      "symbol": "MBG",
+      "v27_trades": 29,
+      "v27_pnl": 52.6,
+      "v27_wr": 37.9
+    },
+    {
+      "symbol": "DMC",
+      "v27_trades": 14,
+      "v27_pnl": 51.9,
+      "v27_wr": 57.1
+    },
+    {
+      "symbol": "CVN",
+      "v27_trades": 16,
+      "v27_pnl": 51.4,
+      "v27_wr": 43.8
+    },
+    {
+      "symbol": "SBS",
+      "v27_trades": 25,
+      "v27_pnl": 51.4,
+      "v27_wr": 44.0
+    },
+    {
+      "symbol": "HAP",
+      "v27_trades": 28,
+      "v27_pnl": 49.6,
+      "v27_wr": 39.3
+    },
+    {
+      "symbol": "STK",
+      "v27_trades": 28,
+      "v27_pnl": 49.4,
+      "v27_wr": 42.9
+    },
+    {
+      "symbol": "POM",
+      "v27_trades": 22,
+      "v27_pnl": 48.7,
+      "v27_wr": 31.8
+    },
+    {
+      "symbol": "TTB",
+      "v27_trades": 20,
+      "v27_pnl": 48.5,
+      "v27_wr": 35.0
+    },
+    {
+      "symbol": "BCC",
+      "v27_trades": 33,
+      "v27_pnl": 48.2,
+      "v27_wr": 39.4
+    },
+    {
+      "symbol": "PXS",
+      "v27_trades": 25,
+      "v27_pnl": 47.8,
+      "v27_wr": 40.0
+    },
+    {
+      "symbol": "RAL",
+      "v27_trades": 27,
+      "v27_pnl": 47.7,
+      "v27_wr": 40.7
+    },
+    {
+      "symbol": "DVN",
+      "v27_trades": 27,
+      "v27_pnl": 47.2,
+      "v27_wr": 37.0
+    },
+    {
+      "symbol": "WSS",
+      "v27_trades": 15,
+      "v27_pnl": 45.5,
+      "v27_wr": 40.0
+    },
+    {
+      "symbol": "NNC",
+      "v27_trades": 22,
+      "v27_pnl": 45.1,
+      "v27_wr": 40.9
+    },
+    {
+      "symbol": "MIG",
+      "v27_trades": 30,
+      "v27_pnl": 44.7,
+      "v27_wr": 36.7
+    },
+    {
+      "symbol": "NRC",
+      "v27_trades": 28,
+      "v27_pnl": 44.6,
+      "v27_wr": 39.3
+    },
+    {
+      "symbol": "HNG",
+      "v27_trades": 26,
+      "v27_pnl": 44.1,
+      "v27_wr": 34.6
+    },
+    {
+      "symbol": "KPF",
+      "v27_trades": 15,
+      "v27_pnl": 43.9,
+      "v27_wr": 40.0
+    },
+    {
+      "symbol": "SWC",
+      "v27_trades": 10,
+      "v27_pnl": 43.9,
+      "v27_wr": 80.0
+    },
+    {
+      "symbol": "BVH",
+      "v27_trades": 35,
+      "v27_pnl": 43.6,
+      "v27_wr": 48.6
+    },
+    {
+      "symbol": "VOC",
+      "v27_trades": 26,
+      "v27_pnl": 43.0,
+      "v27_wr": 30.8
+    },
+    {
+      "symbol": "SBT",
+      "v27_trades": 36,
+      "v27_pnl": 41.7,
+      "v27_wr": 38.9
+    },
+    {
+      "symbol": "CHP",
+      "v27_trades": 18,
+      "v27_pnl": 41.6,
+      "v27_wr": 38.9
+    },
+    {
+      "symbol": "KVC",
+      "v27_trades": 14,
+      "v27_pnl": 41.2,
+      "v27_wr": 35.7
+    },
+    {
+      "symbol": "TV2",
+      "v27_trades": 38,
+      "v27_pnl": 40.2,
+      "v27_wr": 55.3
+    },
+    {
+      "symbol": "HTI",
+      "v27_trades": 16,
+      "v27_pnl": 39.8,
+      "v27_wr": 50.0
+    },
+    {
+      "symbol": "PVI",
+      "v27_trades": 31,
+      "v27_pnl": 39.7,
+      "v27_wr": 41.9
+    },
+    {
+      "symbol": "PGC",
+      "v27_trades": 20,
+      "v27_pnl": 39.4,
+      "v27_wr": 35.0
+    },
+    {
+      "symbol": "CMX",
+      "v27_trades": 29,
+      "v27_pnl": 39.3,
+      "v27_wr": 41.4
+    },
+    {
+      "symbol": "EIB",
+      "v27_trades": 34,
+      "v27_pnl": 38.4,
+      "v27_wr": 35.3
+    },
+    {
+      "symbol": "SHA",
+      "v27_trades": 20,
+      "v27_pnl": 38.4,
+      "v27_wr": 55.0
+    },
+    {
+      "symbol": "MSR",
+      "v27_trades": 35,
+      "v27_pnl": 38.2,
+      "v27_wr": 31.4
+    },
+    {
+      "symbol": "FIT",
+      "v27_trades": 29,
+      "v27_pnl": 38.1,
+      "v27_wr": 37.9
+    },
+    {
+      "symbol": "NED",
+      "v27_trades": 20,
+      "v27_pnl": 38.0,
+      "v27_wr": 35.0
+    },
+    {
+      "symbol": "ACB",
+      "v27_trades": 34,
+      "v27_pnl": 37.5,
+      "v27_wr": 47.1
+    },
+    {
+      "symbol": "THG",
+      "v27_trades": 35,
+      "v27_pnl": 37.2,
+      "v27_wr": 40.0
+    },
+    {
+      "symbol": "CLX",
+      "v27_trades": 19,
+      "v27_pnl": 37.1,
+      "v27_wr": 47.4
+    },
+    {
+      "symbol": "TTF",
+      "v27_trades": 30,
+      "v27_pnl": 35.9,
+      "v27_wr": 40.0
+    },
+    {
+      "symbol": "TRC",
+      "v27_trades": 10,
+      "v27_pnl": 35.8,
+      "v27_wr": 40.0
+    },
+    {
+      "symbol": "NDN",
+      "v27_trades": 38,
+      "v27_pnl": 35.4,
+      "v27_wr": 47.4
+    },
+    {
+      "symbol": "AGM",
+      "v27_trades": 22,
+      "v27_pnl": 35.1,
+      "v27_wr": 22.7
+    },
+    {
+      "symbol": "PVD",
+      "v27_trades": 36,
+      "v27_pnl": 34.7,
+      "v27_wr": 50.0
+    },
+    {
+      "symbol": "PVP",
+      "v27_trades": 27,
+      "v27_pnl": 34.1,
+      "v27_wr": 40.7
+    },
+    {
+      "symbol": "VCS",
+      "v27_trades": 29,
+      "v27_pnl": 33.1,
+      "v27_wr": 34.5
+    },
+    {
+      "symbol": "CTF",
+      "v27_trades": 29,
+      "v27_pnl": 32.4,
+      "v27_wr": 48.3
+    },
+    {
+      "symbol": "BWE",
+      "v27_trades": 38,
+      "v27_pnl": 32.2,
+      "v27_wr": 42.1
+    },
+    {
+      "symbol": "VKC",
+      "v27_trades": 8,
+      "v27_pnl": 31.5,
+      "v27_wr": 37.5
+    },
+    {
+      "symbol": "AST",
+      "v27_trades": 25,
+      "v27_pnl": 31.2,
+      "v27_wr": 64.0
+    },
+    {
+      "symbol": "TIS",
+      "v27_trades": 9,
+      "v27_pnl": 31.2,
+      "v27_wr": 44.4
+    },
+    {
+      "symbol": "DRC",
+      "v27_trades": 32,
+      "v27_pnl": 30.6,
+      "v27_wr": 46.9
+    },
+    {
+      "symbol": "BID",
+      "v27_trades": 34,
+      "v27_pnl": 30.1,
+      "v27_wr": 41.2
+    },
+    {
+      "symbol": "BIC",
+      "v27_trades": 31,
+      "v27_pnl": 29.4,
+      "v27_wr": 48.4
+    },
+    {
+      "symbol": "PVT",
+      "v27_trades": 41,
+      "v27_pnl": 29.2,
+      "v27_wr": 41.5
+    },
+    {
+      "symbol": "VHC",
+      "v27_trades": 36,
+      "v27_pnl": 28.1,
+      "v27_wr": 38.9
+    },
+    {
+      "symbol": "VPI",
+      "v27_trades": 35,
+      "v27_pnl": 27.7,
+      "v27_wr": 34.3
+    },
+    {
+      "symbol": "DBD",
+      "v27_trades": 25,
+      "v27_pnl": 27.6,
+      "v27_wr": 40.0
+    },
+    {
+      "symbol": "PGS",
+      "v27_trades": 8,
+      "v27_pnl": 26.2,
+      "v27_wr": 37.5
+    },
+    {
+      "symbol": "C32",
+      "v27_trades": 19,
+      "v27_pnl": 25.7,
+      "v27_wr": 36.8
+    },
+    {
+      "symbol": "BMP",
+      "v27_trades": 38,
+      "v27_pnl": 25.6,
+      "v27_wr": 39.5
+    },
+    {
+      "symbol": "TNG",
+      "v27_trades": 37,
+      "v27_pnl": 23.6,
+      "v27_wr": 40.5
+    },
+    {
+      "symbol": "BHN",
+      "v27_trades": 6,
+      "v27_pnl": 23.3,
+      "v27_wr": 33.3
+    },
+    {
+      "symbol": "NBB",
+      "v27_trades": 26,
+      "v27_pnl": 23.3,
+      "v27_wr": 34.6
+    },
+    {
+      "symbol": "CNG",
+      "v27_trades": 29,
+      "v27_pnl": 22.5,
+      "v27_wr": 37.9
+    },
+    {
+      "symbol": "GDT",
+      "v27_trades": 24,
+      "v27_pnl": 21.9,
+      "v27_wr": 41.7
+    },
+    {
+      "symbol": "HII",
+      "v27_trades": 37,
+      "v27_pnl": 21.7,
+      "v27_wr": 37.8
+    },
+    {
+      "symbol": "MPC",
+      "v27_trades": 32,
+      "v27_pnl": 21.3,
+      "v27_wr": 43.8
+    },
+    {
+      "symbol": "VCG",
+      "v27_trades": 37,
+      "v27_pnl": 20.7,
+      "v27_wr": 48.6
+    },
+    {
+      "symbol": "IJC",
+      "v27_trades": 36,
+      "v27_pnl": 20.2,
+      "v27_wr": 41.7
+    },
+    {
+      "symbol": "PVG",
+      "v27_trades": 21,
+      "v27_pnl": 19.8,
+      "v27_wr": 33.3
+    },
+    {
+      "symbol": "KOS",
+      "v27_trades": 30,
+      "v27_pnl": 18.9,
+      "v27_wr": 46.7
+    },
+    {
+      "symbol": "VLC",
+      "v27_trades": 20,
+      "v27_pnl": 18.8,
+      "v27_wr": 55.0
+    },
+    {
+      "symbol": "DSC",
+      "v27_trades": 17,
+      "v27_pnl": 15.2,
+      "v27_wr": 35.3
+    },
+    {
+      "symbol": "VCB",
+      "v27_trades": 34,
+      "v27_pnl": 15.0,
+      "v27_wr": 38.2
+    },
+    {
+      "symbol": "AMS",
+      "v27_trades": 19,
+      "v27_pnl": 14.6,
+      "v27_wr": 36.8
+    },
+    {
+      "symbol": "POW",
+      "v27_trades": 33,
+      "v27_pnl": 14.6,
+      "v27_wr": 36.4
+    },
+    {
+      "symbol": "AMV",
+      "v27_trades": 23,
+      "v27_pnl": 14.3,
+      "v27_wr": 43.5
+    },
+    {
+      "symbol": "NVT",
+      "v27_trades": 8,
+      "v27_pnl": 14.2,
+      "v27_wr": 50.0
+    },
+    {
+      "symbol": "DHG",
+      "v27_trades": 26,
+      "v27_pnl": 13.6,
+      "v27_wr": 38.5
+    },
+    {
+      "symbol": "DPR",
+      "v27_trades": 35,
+      "v27_pnl": 12.2,
+      "v27_wr": 40.0
+    },
+    {
+      "symbol": "QTP",
+      "v27_trades": 27,
+      "v27_pnl": 11.6,
+      "v27_wr": 44.4
+    },
+    {
+      "symbol": "MPT",
+      "v27_trades": 2,
+      "v27_pnl": 9.1,
+      "v27_wr": 50.0
+    },
+    {
+      "symbol": "LIX",
+      "v27_trades": 17,
+      "v27_pnl": 8.8,
+      "v27_wr": 35.3
+    },
+    {
+      "symbol": "TIP",
+      "v27_trades": 31,
+      "v27_pnl": 8.7,
+      "v27_wr": 41.9
+    },
+    {
+      "symbol": "VNM",
+      "v27_trades": 29,
+      "v27_pnl": 8.5,
+      "v27_wr": 41.4
+    },
+    {
+      "symbol": "VTV",
+      "v27_trades": 15,
+      "v27_pnl": 8.2,
+      "v27_wr": 40.0
+    },
+    {
+      "symbol": "SJD",
+      "v27_trades": 25,
+      "v27_pnl": 8.1,
+      "v27_wr": 44.0
+    },
+    {
+      "symbol": "KHP",
+      "v27_trades": 26,
+      "v27_pnl": 7.2,
+      "v27_wr": 38.5
+    },
+    {
+      "symbol": "SPI",
+      "v27_trades": 10,
+      "v27_pnl": 5.9,
+      "v27_wr": 20.0
+    },
+    {
+      "symbol": "TEG",
+      "v27_trades": 23,
+      "v27_pnl": 5.6,
+      "v27_wr": 34.8
+    },
+    {
+      "symbol": "VNG",
+      "v27_trades": 18,
+      "v27_pnl": 4.2,
+      "v27_wr": 50.0
+    },
+    {
+      "symbol": "AAA",
+      "v27_trades": 38,
+      "v27_pnl": 3.8,
+      "v27_wr": 50.0
+    },
+    {
+      "symbol": "NT2",
+      "v27_trades": 34,
+      "v27_pnl": 2.9,
+      "v27_wr": 44.1
+    },
+    {
+      "symbol": "VNB",
+      "v27_trades": 20,
+      "v27_pnl": 1.9,
+      "v27_wr": 25.0
+    },
+    {
+      "symbol": "VGG",
+      "v27_trades": 13,
+      "v27_pnl": 1.5,
+      "v27_wr": 30.8
+    },
+    {
+      "symbol": "SCS",
+      "v27_trades": 33,
+      "v27_pnl": -0.1,
+      "v27_wr": 39.4
+    },
+    {
+      "symbol": "APC",
+      "v27_trades": 15,
+      "v27_pnl": -1.5,
+      "v27_wr": 46.7
+    },
+    {
+      "symbol": "VJC",
+      "v27_trades": 30,
+      "v27_pnl": -2.1,
+      "v27_wr": 36.7
+    },
+    {
+      "symbol": "DHC",
+      "v27_trades": 33,
+      "v27_pnl": -4.7,
+      "v27_wr": 30.3
+    },
+    {
+      "symbol": "VHM",
+      "v27_trades": 38,
+      "v27_pnl": -6.9,
+      "v27_wr": 39.5
+    },
+    {
+      "symbol": "ITC",
+      "v27_trades": 28,
+      "v27_pnl": -7.3,
+      "v27_wr": 28.6
+    },
+    {
+      "symbol": "PLX",
+      "v27_trades": 32,
+      "v27_pnl": -7.6,
+      "v27_wr": 40.6
+    },
+    {
+      "symbol": "SGN",
+      "v27_trades": 15,
+      "v27_pnl": -11.8,
+      "v27_wr": 46.7
+    },
+    {
+      "symbol": "PPH",
+      "v27_trades": 24,
+      "v27_pnl": -14.9,
+      "v27_wr": 29.2
+    },
+    {
+      "symbol": "GAS",
+      "v27_trades": 32,
+      "v27_pnl": -15.0,
+      "v27_wr": 37.5
+    },
+    {
+      "symbol": "GEG",
+      "v27_trades": 38,
+      "v27_pnl": -15.0,
+      "v27_wr": 39.5
+    },
+    {
+      "symbol": "VGT",
+      "v27_trades": 28,
+      "v27_pnl": -15.0,
+      "v27_wr": 35.7
+    },
+    {
+      "symbol": "PAC",
+      "v27_trades": 21,
+      "v27_pnl": -17.6,
+      "v27_wr": 33.3
+    },
+    {
+      "symbol": "VRE",
+      "v27_trades": 29,
+      "v27_pnl": -19.0,
+      "v27_wr": 41.4
+    },
+    {
+      "symbol": "SAB",
+      "v27_trades": 31,
+      "v27_pnl": -21.6,
+      "v27_wr": 29.0
+    },
+    {
+      "symbol": "HND",
+      "v27_trades": 25,
+      "v27_pnl": -22.6,
+      "v27_wr": 16.0
+    },
+    {
+      "symbol": "CSM",
+      "v27_trades": 25,
+      "v27_pnl": -24.3,
+      "v27_wr": 32.0
+    },
+    {
+      "symbol": "PNJ",
+      "v27_trades": 37,
+      "v27_pnl": -25.6,
+      "v27_wr": 37.8
+    },
+    {
+      "symbol": "KMR",
+      "v27_trades": 23,
+      "v27_pnl": -29.8,
+      "v27_wr": 30.4
+    },
+    {
+      "symbol": "TNA",
+      "v27_trades": 23,
+      "v27_pnl": -30.6,
+      "v27_wr": 34.8
+    },
+    {
+      "symbol": "SRC",
+      "v27_trades": 12,
+      "v27_pnl": -31.0,
+      "v27_wr": 33.3
+    },
+    {
+      "symbol": "DHM",
+      "v27_trades": 23,
+      "v27_pnl": -36.1,
+      "v27_wr": 30.4
+    },
+    {
+      "symbol": "QBS",
+      "v27_trades": 17,
+      "v27_pnl": -41.0,
+      "v27_wr": 23.5
+    },
+    {
+      "symbol": "DQC",
+      "v27_trades": 27,
+      "v27_pnl": -41.6,
+      "v27_wr": 40.7
+    },
+    {
+      "symbol": "PPC",
+      "v27_trades": 32,
+      "v27_pnl": -42.8,
+      "v27_wr": 34.4
+    },
+    {
+      "symbol": "SSN",
+      "v27_trades": 10,
+      "v27_pnl": -50.8,
+      "v27_wr": 30.0
+    },
+    {
+      "symbol": "RDP",
+      "v27_trades": 15,
+      "v27_pnl": -65.2,
+      "v27_wr": 26.7
+    },
+    {
+      "symbol": "NHH",
+      "v27_trades": 32,
+      "v27_pnl": -74.6,
+      "v27_wr": 37.5
+    },
+    {
+      "symbol": "SRA",
+      "v27_trades": 31,
+      "v27_pnl": -82.3,
+      "v27_wr": 29.0
+    }
+  ],
+  "version": "v27",
+  "generated_at": "2026-04-22T10:00:16.493332"
+}

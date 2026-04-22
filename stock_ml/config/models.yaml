@@ -1,0 +1,312 @@
+models:
+  v27:
+    name: V27
+    description: V26 + hardcap_two_step + rule_priority + dynamic_score5_penalty + trend_persistence_hold
+    color: '#9C27B0'
+    active: true
+    strategy: v27
+    feature_set: leading_v2
+    mods:
+      a: true
+      b: true
+      c: false
+      d: false
+      e: true
+      f: true
+      g: true
+      h: true
+      i: true
+      j: true
+    params:
+      peak_protect_strong_threshold: 0.12
+      patch_smart_hardcap: true
+      patch_pp_restore: true
+      patch_long_horizon: true
+      patch_symbol_tuning: true
+      patch_rule_ensemble: true
+      patch_noise_filter: false
+      patch_adaptive_hardcap: false
+      patch_pp_2of3: false
+      v26_wider_hardcap: false
+      v26_relaxed_entry: true
+      v26_skip_choppy: true
+      v26_extended_hold: false
+      v26_strong_rule_ensemble: true
+      v26_min_position: false
+      v26_score5_penalty: false
+      v26_hardcap_confirm_strong: false
+      v27_selective_choppy: false
+      v27_hardcap_two_step: true
+      v27_rule_priority: true
+      v27_dynamic_score5_penalty: true
+      v27_trend_persistence_hold: true
+    marker_shape: arrowUp
+    order: 0
+  v26:
+    name: V26
+    description: V25 + skip choppy + relaxed strong-trend entry + stronger rule ensemble (B+C+E)
+    color: '#FF5722'
+    active: true
+    strategy: v26
+    feature_set: leading_v2
+    mods:
+      a: true
+      b: true
+      c: false
+      d: false
+      e: true
+      f: true
+      g: true
+      h: true
+      i: true
+      j: true
+    params:
+      peak_protect_strong_threshold: 0.12
+      patch_smart_hardcap: true
+      patch_pp_restore: true
+      patch_long_horizon: true
+      patch_symbol_tuning: true
+      patch_rule_ensemble: true
+      patch_noise_filter: false
+      patch_adaptive_hardcap: false
+      patch_pp_2of3: false
+      v26_wider_hardcap: false
+      v26_relaxed_entry: true
+      v26_skip_choppy: true
+      v26_extended_hold: false
+      v26_strong_rule_ensemble: true
+      v26_min_position: false
+      v26_score5_penalty: false
+      v26_hardcap_confirm_strong: false
+    marker_shape: arrowUp
+    order: 0
+  v25:
+    name: V25
+    description: V24 all patches + pp_threshold=0.12 (ablation-validated best combination)
+    color: '#E040FB'
+    active: true
+    strategy: v25
+    feature_set: leading_v2
+    mods:
+      a: true
+      b: true
+      c: false
+      d: false
+      e: true
+      f: true
+      g: true
+      h: true
+      i: true
+      j: true
+    params:
+      peak_protect_strong_threshold: 0.12
+      patch_smart_hardcap: true
+      patch_pp_restore: true
+      patch_long_horizon: true
+      patch_symbol_tuning: true
+      patch_rule_ensemble: true
+      patch_noise_filter: false
+      patch_adaptive_hardcap: false
+      patch_pp_2of3: false
+    marker_shape: arrowUp
+    order: 1
+  v24:
+    name: V24
+    description: V23-best + 5 patches (smart hard_cap, peak_protect sensitivity, long-horizon
+      carry, symbol-specific tuning, rule+ML ensemble)
+    color: '#FFD54F'
+    active: true
+    strategy: v24
+    feature_set: leading_v2
+    mods:
+      a: true
+      b: true
+      c: false
+      d: false
+      e: true
+      f: true
+      g: true
+      h: true
+      i: true
+      j: true
+    params:
+      fast_exit_strong: -0.08
+      fast_exit_moderate: -0.06
+      fast_exit_weak: -0.04
+      fast_exit_hb_buffer: 0.02
+      peak_protect_strong_threshold: 0.15
+      peak_protect_normal_threshold: 0.2
+      hard_cap_weak: -0.1
+      hard_cap_moderate_mult: 2.0
+      hard_cap_strong_mult: 3.0
+      hard_cap_strong_floor: 0.15
+      hard_cap_moderate_floor: 0.12
+      time_decay_bars: 20
+      time_decay_mult: 0.5
+    marker_shape: arrowUp
+    order: 2
+  v23:
+    name: V23
+    description: Graduated exits + restored peak_protect + trend-specific caps (pp_s=0.12)
+    color: '#8BC34A'
+    active: true
+    strategy: v23
+    feature_set: leading_v2
+    mods:
+      a: true
+      b: true
+      c: false
+      d: false
+      e: true
+      f: true
+      g: true
+      h: true
+      i: true
+      j: true
+    params:
+      peak_protect_strong_threshold: 0.12
+    marker_shape: arrowUp
+    order: 3
+  v22:
+    name: V22
+    description: V19.1 + SMA200 filter + hybrid entry + fast_exit_loss + signal_hard_cap
+      + time_decay
+    color: '#66BB6A'
+    active: true
+    strategy: v22
+    feature_set: leading_v2
+    mods:
+      a: true
+      b: true
+      c: false
+      d: false
+      e: true
+      f: true
+      g: true
+      h: true
+      i: true
+      j: true
+    params: {}
+    marker_shape: arrowUp
+    order: 4
+  v19_3:
+    name: V19.3
+    description: V19.1 + binary position sizing
+    color: '#EC407A'
+    active: false
+    retired_reason: Superseded by V22/V23
+    strategy: v19_3
+    mods:
+      a: true
+      b: true
+      c: false
+      d: false
+      e: true
+      f: true
+      g: true
+      h: true
+      i: true
+      j: true
+    params: {}
+    marker_shape: arrowUp
+    order: 4
+  v19_1:
+    name: V19.1
+    description: V19 risk-tuned for momentum/high-beta drawdown control
+    color: '#26C6DA'
+    active: false
+    strategy: v19_1
+    mods:
+      a: true
+      b: true
+      c: false
+      d: false
+      e: true
+      f: true
+      g: true
+      h: true
+      i: true
+      j: true
+    params: {}
+    marker_shape: arrowUp
+    order: 5
+    retired_reason: Superseded by V22/V23/V24/V25
+  v18:
+    name: V18
+    description: Adaptive entry + exit with regime awareness
+    color: '#29B6F6'
+    active: false
+    retired_reason: Superseded by V19.1
+    strategy: v18
+    mods:
+      a: true
+      b: true
+      c: false
+      d: false
+      e: true
+      f: true
+      g: true
+      h: true
+      i: true
+      j: true
+    params: {}
+    marker_shape: arrowUp
+    order: 6
+  rule:
+    name: Rule-Based
+    description: MACD + MA20 + bullish candle baseline
+    color: '#FF9800'
+    active: true
+    is_baseline: true
+    strategy: rule
+    mods: {}
+    params: {}
+    marker_shape: circle
+    order: 99
+pipeline:
+  data_dir: ../portable_data/vn_stock_ai_dataset_cleaned
+  feature_set: leading_v2
+  train_years: 4
+  test_years: 1
+  first_test_year: 2020
+  last_test_year: 2025
+  min_rows: 2000
+  model_type: lightgbm
+  symbols:
+    mode: auto
+    min_rows: 2000
+    explicit_list: ""
+  target:
+    type: trend_regime
+    trend_method: dual_ma
+    short_window: 5
+    long_window: 20
+    classes: 3
+  commission: 0.0015
+  tax: 0.001
+scoring:
+  weights:
+    total_pnl: 0.30
+    profit_factor: 0.25
+    win_rate: 0.20
+    avg_pnl: 0.15
+    max_loss_penalty: 0.10
+visualization:
+  output_dir: visualization
+  chart_library: lightweight-charts
+  exit_reason_abbreviations:
+    stop_loss: SL
+    trailing_stop: TS
+    hard_stop: HS
+    zombie_exit: ZE
+    hybrid_exit: HX
+    profit_lock: PL
+    profit_floor: PF
+    peak_protect_dist: PP
+    peak_protect_ema: PE
+    fast_loss_cut: FC
+    fast_exit_loss: FE
+    signal_hard_cap: HC
+    signal: ''
+    end: END
+    rule_sell: RS

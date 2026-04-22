@@ -1,0 +1,6 @@
+selected=J2+J3+J4+J5
+v27_selective_choppy=False
+v27_hardcap_two_step=True
+v27_rule_priority=True
+v27_dynamic_score5_penalty=True
+v27_trend_persistence_hold=True

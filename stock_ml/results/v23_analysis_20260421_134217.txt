@@ -1,0 +1,80 @@
+Collecting V19.1...
+Loading symbols:   0%|          | 0/14 [00:00<?, ?it/s]Loading symbols:  43%|####2     | 6/14 [00:00<00:00, 53.39it/s]Loading symbols:  93%|#########2| 13/14 [00:00<00:00, 60.71it/s]Loading symbols: 100%|##########| 14/14 [00:00<00:00, 52.76it/s]
+Collecting V19.3...
+Loading symbols:   0%|          | 0/14 [00:00<?, ?it/s]Loading symbols:  14%|#4        | 2/14 [00:00<00:00, 16.77it/s]Loading symbols:  36%|###5      | 5/14 [00:00<00:00, 23.29it/s]Loading symbols:  64%|######4   | 9/14 [00:00<00:00, 26.94it/s]Loading symbols:  93%|#########2| 13/14 [00:00<00:00, 29.86it/s]Loading symbols: 100%|##########| 14/14 [00:00<00:00, 27.52it/s]
+Collecting V22-Final...
+Loading symbols:   0%|          | 0/14 [00:00<?, ?it/s]Loading symbols:  21%|##1       | 3/14 [00:00<00:00, 28.84it/s]Loading symbols:  43%|####2     | 6/14 [00:00<00:00, 27.93it/s]Loading symbols:  71%|#######1  | 10/14 [00:00<00:00, 24.38it/s]Loading symbols: 100%|##########| 14/14 [00:00<00:00, 21.29it/s]Loading symbols: 100%|##########| 14/14 [00:00<00:00, 22.73it/s]
+Collecting V23 (best=pp_s=0.12)...
+Loading symbols:   0%|          | 0/14 [00:00<?, ?it/s]Loading symbols:  21%|##1       | 3/14 [00:00<00:00, 25.74it/s]Loading symbols:  43%|####2     | 6/14 [00:00<00:00, 26.95it/s]Loading symbols:  71%|#######1  | 10/14 [00:00<00:00, 30.39it/s]Loading symbols: 100%|##########| 14/14 [00:00<00:00, 23.81it/s]Loading symbols: 100%|##########| 14/14 [00:00<00:00, 25.12it/s]
+Collecting V16...
+Loading symbols:   0%|          | 0/14 [00:00<?, ?it/s]Loading symbols:  36%|###5      | 5/14 [00:00<00:00, 41.57it/s]Loading symbols:  79%|#######8  | 11/14 [00:00<00:00, 45.26it/s]Loading symbols: 100%|##########| 14/14 [00:00<00:00, 46.11it/s]
+Collecting Rule...
+Loading symbols:   0%|          | 0/14 [00:00<?, ?it/s]Loading symbols:  36%|###5      | 5/14 [00:00<00:00, 44.10it/s]Loading symbols:  86%|########5 | 12/14 [00:00<00:00, 54.45it/s]Loading symbols: 100%|##########| 14/14 [00:00<00:00, 51.58it/s]
+
+====================================================================================================
+TOP 10 BIGGEST LOSSES PER MODEL
+====================================================================================================
+
+-- v19_1 --
+entry_symbol entry_date  exit_date  pnl_pct exit_reason entry_trend  holding_days
+         VND 2021-01-18 2021-02-01   -28.59      signal    moderate            10
+         VND 2022-06-02 2022-06-16   -26.93      signal        weak            10
+         SSI 2022-01-06 2022-01-18   -18.48      signal        weak             8
+         VND 2022-01-06 2022-01-19   -17.87      signal        weak             9
+         AAV 2022-12-14 2022-12-27   -15.09      signal    moderate             9
+         DGC 2022-09-14 2022-09-26   -14.28      signal    moderate             8
+         REE 2022-06-17 2022-07-04   -14.13      signal      strong            11
+         AAV 2023-02-20 2023-03-03   -13.33      signal        weak             9
+         ACB 2020-02-13 2020-03-12   -13.32      signal      strong            20
+         AAV 2022-01-06 2022-01-19   -13.05      signal        weak             9
+
+-- v19_3 --
+entry_symbol entry_date  exit_date  pnl_pct     exit_reason entry_trend  holding_days
+         AAV 2024-05-30 2024-06-03   -17.11 signal_hard_cap      strong             2
+         AAV 2022-01-06 2022-01-13   -16.31 signal_hard_cap        weak             5
+         AAV 2024-05-08 2024-05-15   -16.13 signal_hard_cap      strong             5
+         AAS 2022-10-18 2022-10-24   -14.90 signal_hard_cap        weak             4
+         HPG 2021-01-25 2021-01-28   -14.17 signal_hard_cap    moderate             3
+         VND 2022-11-02 2022-11-07   -13.55 signal_hard_cap        weak             3
+         AAS 2021-01-06 2021-01-26   -13.08 signal_hard_cap        weak            14
+         TCB 2021-01-25 2021-01-28   -12.83 signal_hard_cap    moderate             3
+         AAV 2023-06-23 2023-06-29   -12.70 signal_hard_cap      strong             4
+         AAV 2021-11-16 2021-11-22   -12.69 signal_hard_cap      strong             4
+
+-- v22 --
+entry_symbol entry_date  exit_date  pnl_pct     exit_reason entry_trend  holding_days
+         VND 2022-06-02 2022-06-15   -21.70 signal_hard_cap        weak             9
+         VND 2021-01-18 2021-01-27   -20.68 signal_hard_cap    moderate             7
+         SSI 2022-01-06 2022-01-18   -18.48 signal_hard_cap        weak             8
+         VND 2022-01-06 2022-01-17   -17.49 signal_hard_cap        weak             7
+         DGC 2022-09-14 2022-09-26   -14.28 signal_hard_cap    moderate             8
+         HPG 2021-01-25 2021-01-28   -14.17 signal_hard_cap    moderate             3
+         BID 2022-09-30 2022-10-07   -13.87 signal_hard_cap        weak             5
+         AAS 2023-09-05 2023-09-26   -13.78          signal      strong            15
+         AAV 2023-02-20 2023-03-03   -13.33          signal        weak             9
+         ACB 2020-02-13 2020-03-12   -13.32          signal      strong            20
+
+-- v23 --
+entry_symbol entry_date  exit_date  pnl_pct     exit_reason entry_trend  holding_days
+         REE 2022-05-11 2022-05-16   -18.58 signal_hard_cap      strong             3
+         AAS 2021-04-08 2021-04-22   -18.18 signal_hard_cap    moderate             9
+         VND 2022-12-14 2022-12-26   -16.34 signal_hard_cap      strong             8
+         AAV 2022-01-06 2022-01-13   -16.31 signal_hard_cap        weak             5
+         REE 2022-05-30 2022-06-22   -15.73 signal_hard_cap      strong            17
+         AAS 2022-10-18 2022-10-24   -14.90 signal_hard_cap        weak             4
+         VND 2021-01-18 2021-01-26   -14.86 signal_hard_cap    moderate             6
+         DGC 2022-09-14 2022-09-26   -14.28 signal_hard_cap    moderate             8
+         HPG 2021-01-25 2021-01-28   -14.17 signal_hard_cap    moderate             3
+         BID 2022-09-30 2022-10-07   -13.87 signal_hard_cap        weak             5
+Traceback (most recent call last):
+  File "C:\Users\DUC CANH PC\Desktop\train_ai_ml\stock_ml\analyze_v23_vs_all.py", line 62, in <module>
+    top_loss = df.nsmallest(10, "pnl_pct")[["entry_symbol", "entry_date", "exit_date", "pnl_pct", "exit_reason", "entry_trend" if "entry_trend" in df.columns else "pnl_pct", "holding_days"]]
+               ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\DUC CANH PC\AppData\Local\Programs\Python\Python312\Lib\site-packages\pandas\core\frame.py", line 3899, in __getitem__
+    indexer = self.columns._get_indexer_strict(key, "columns")[1]
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\DUC CANH PC\AppData\Local\Programs\Python\Python312\Lib\site-packages\pandas\core\indexes\base.py", line 6115, in _get_indexer_strict
+    self._raise_if_missing(keyarr, indexer, axis_name)
+  File "C:\Users\DUC CANH PC\AppData\Local\Programs\Python\Python312\Lib\site-packages\pandas\core\indexes\base.py", line 6179, in _raise_if_missing
+    raise KeyError(f"{not_found} not in index")
+KeyError: "['entry_symbol'] not in index"

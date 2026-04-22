@@ -1,0 +1,10 @@
+====================================================================================================================================
+V19.1 COMPARISON (V11/V17/V18/V19/V19.1 + Rule) - Symbols: ACB,FPT,HPG,SSI,VND,MBB,TCB,VNM,DGC,AAS,AAV,REE,BID,VIC
+====================================================================================================================================
+H=Confirmed signal exit   I=Trend-carry override   J=Anti-chop entry filter
+
+Traceback (most recent call last):
+  File "C:\Users\DUC CANH PC\Desktop\train_ai_ml\stock_ml\run_v19_3_compare.py", line 984, in <module>
+    ("V19.1 risk-tuned           ", backtest_v19_1, True,  True,  False, False, True,  True,  True,  True,  True,  True),
+                                    ^^^^^^^^^^^^^^
+NameError: name 'backtest_v19_1' is not defined. Did you mean: 'backtest_v19_3'?

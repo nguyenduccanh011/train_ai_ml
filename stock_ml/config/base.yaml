@@ -1,0 +1,59 @@
+# Base configuration
+data:
+  data_dir: "../portable_data/vn_stock_ai_dataset_cleaned"
+  symbols_file: "clean_symbols.txt"
+  context_features_dir: "context_features"
+  all_symbols_dir: "all_symbols"
+  timeframe: "1D"
+
+split:
+  method: "walk_forward"  # walk_forward | expanding | rolling
+  train_years: 4
+  test_years: 1
+  gap_days: 0  # gap between train and test to avoid leakage
+  first_test_year: 2019
+  last_test_year: 2025
+
+target:
+  type: "trend_regime"  # trend_regime | return_classification | return_regression
+  trend_method: "dual_ma"  # dual_ma | hhll | regime_hmm
+  short_window: 10
+  long_window: 40
+  classes: 3  # 3: up/sideways/down, 2: up/down
+
+features:
+  feature_set: "minimal"  # minimal | technical | full
+  scaling: "robust"  # robust | standard | minmax | none
+  fill_method: "ffill_zero"
+
+training:
+  seed: 42
+  n_jobs: -1
+  # GPU Acceleration for LightGBM/XGBoost/CatBoost
+  # Options:
+  #   "cpu"  — CPU only (default, safest)
+  #   "gpu"  — Force GPU (LightGBM uses OpenCL, XGBoost uses CUDA)
+  #   "cuda" — Same as "gpu" (alias)
+  #   "auto" — Auto-detect: use GPU if NVIDIA GPU found, else CPU
+  # Override per-run: python run_pipeline.py --device gpu
+  device: "auto"
+  verbose: 1
+
+evaluation:
+  metrics:
+    - total_return
+    - max_drawdown
+    - calmar_ratio
+    - sharpe_ratio
+    - win_rate
+    - avg_win_loss_ratio
+    - wave_capture_rate
+    - mid_wave_sell_rate
+  initial_capital: 100000000  # 100M VND
+  commission: 0.0015  # 0.15% each way
+  slippage: 0.001
+
+output:
+  experiments_dir: "experiments"
+  save_predictions: true
+  save_model: true

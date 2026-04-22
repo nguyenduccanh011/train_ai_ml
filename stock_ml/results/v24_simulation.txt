@@ -1,0 +1,78 @@
+====================================================================================================
+V24 IMPACT SIMULATION (derived from existing trade CSVs — no model re-run)
+====================================================================================================
+
+[FIX 5.1] Smart hard_cap — confirm 1 bar in strong trend
+  V23 signal_hard_cap in strong trend: n=9, tot=-119.6%
+  If V24 behaves like V19.1 on these (avoiding hard_cap via confirm bar): delta = +55.1%
+  Cases improved: 6 of 9
+  Top cases:
+    REE 2022-05-11: V23 -18.6% → V24(≈V19.1) +11.9% (Δ+30.5%)
+    AAS 2023-09-05: V23 -13.8% → V24(≈V19.1) +0.0% (Δ+13.8%)
+    VND 2022-12-14: V23 -16.3% → V24(≈V19.1) -9.7% (Δ+6.7%)
+    SSI 2023-10-13: V23 -10.3% → V24(≈V19.1) -8.2% (Δ+2.1%)
+    ACB 2021-08-11: V23 -11.1% → V24(≈V19.1) -9.8% (Δ+1.2%)
+    BID 2021-06-29: V23 -10.4% → V24(≈V19.1) -9.6% (Δ+0.9%)
+  Moderate-trend hard_cap fix delta: +57.3%
+  Estimated total delta (strong 100% + moderate 50%): +83.8%
+
+[FIX 5.2] Peak_protect sensitivity restore (V19.1 style)
+  V19.1 peak_protect: n=41, tot=+1171.1%
+  V23  peak_protect: n=22, tot=+411.0%
+  If V24 peak_protect matches V19.1 (where V19.1 wins): delta = +152.6% over 14 trades
+  V23 peak_protect cases where V23 > V19.1: would lose +33.2%
+  Net estimated delta: +119.3%
+
+[FIX 5.3] Long-horizon carry (capture rule big wins)
+  Rule wins >+20%: n=62, tot=+2539.1%
+  Fully captured (V23 ≥70% of rule gain): 31
+  Partially captured (V23 cut short): 4, sum lost = +104.4%
+  Entirely missed (no V23 entry): 27, sum missed = +1019.4%
+
+  Top 10 partial-captures (V24 long-horizon carry target):
+    MBB 2025-06-16: rule +41.2% vs V23 +7.0% → recoverable +34.3%
+    AAS 2020-12-21: rule +49.4% vs V23 +21.5% → recoverable +27.9%
+    AAS 2024-12-09: rule +24.1% vs V23 +0.0% → recoverable +24.1%
+    ACB 2023-12-12: rule +21.7% vs V23 +3.6% → recoverable +18.1%
+  Conservative estimate (45% of partial-capture gap): +47.0%
+
+[FIX 5.4] Symbol-specific tuning (REE/MBB/AAS restore)
+  REE: V23 -11.4% vs V19.1 +19.3% → gap +30.6%
+  MBB: V23 +92.9% vs V19.1 +119.4% → gap +26.5%
+  AAS: V23 +149.2% vs V19.1 +171.2% → gap +22.0%
+  Gross gap restore: +79.1%, after 50% double-count correction: +39.5%
+
+[FIX 5.5] Rule + ML ensemble (partial rule capture)
+  Rule total = +1982.6%, V23 = +1860.3%, gap = +122.4%
+  Conservative estimate (10% of gap, non-overlapping with 5.3): +12.2%
+
+====================================================================================================
+V24 TOTAL PROJECTION (on top of V23-best +1860.3%)
+====================================================================================================
+  5.1 Smart hard_cap:               +83.8%
+  5.2 Peak_protect restore:         +119.3%
+  5.3 Long-horizon carry:           +47.0%
+  5.4 Symbol tuning (post-overlap): +39.5%
+  5.5 Rule ensemble:                +12.2%
+  ─────────────────────────────────────────────
+  Gross delta:                      +301.9%
+  Realistic (20% interaction discount): +241.5%
+
+  V24 projection: +1860.3% + 241.5% = +2101.8%
+  vs V19.1 baseline: +1866.8% → delta vs V19.1 = +235.0%
+  vs Rule baseline:  +1982.6% → delta vs Rule  = +119.2%
+
+MAX LOSS PROJECTION:
+  V23 top-5 worst losses:
+entry_symbol entry_date  pnl_pct     exit_reason
+         REE 2022-05-11   -18.58 signal_hard_cap
+         AAS 2021-04-08   -18.18 signal_hard_cap
+         VND 2022-12-14   -16.34 signal_hard_cap
+         AAV 2022-01-06   -16.31 signal_hard_cap
+         REE 2022-05-30   -15.73 signal_hard_cap
+
+  Projected V24 max loss: ~ -16% to -17% (weak-trend hard_cap still fires, strong-trend softer)
+
+====================================================================================================
+DONE
+====================================================================================================

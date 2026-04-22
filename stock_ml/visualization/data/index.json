@@ -1,0 +1,1950 @@
+{
+  "symbols": [
+    {
+      "symbol": "AAA",
+      "file": "data/AAA.json"
+    },
+    {
+      "symbol": "AAH",
+      "file": "data/AAH.json"
+    },
+    {
+      "symbol": "AAS",
+      "file": "data/AAS.json"
+    },
+    {
+      "symbol": "AAT",
+      "file": "data/AAT.json"
+    },
+    {
+      "symbol": "AAV",
+      "file": "data/AAV.json"
+    },
+    {
+      "symbol": "ABB",
+      "file": "data/ABB.json"
+    },
+    {
+      "symbol": "ABS",
+      "file": "data/ABS.json"
+    },
+    {
+      "symbol": "ABW",
+      "file": "data/ABW.json"
+    },
+    {
+      "symbol": "ACB",
+      "file": "data/ACB.json"
+    },
+    {
+      "symbol": "ACG",
+      "file": "data/ACG.json"
+    },
+    {
+      "symbol": "ACL",
+      "file": "data/ACL.json"
+    },
+    {
+      "symbol": "ACM",
+      "file": "data/ACM.json"
+    },
+    {
+      "symbol": "ACV",
+      "file": "data/ACV.json"
+    },
+    {
+      "symbol": "ADG",
+      "file": "data/ADG.json"
+    },
+    {
+      "symbol": "ADS",
+      "file": "data/ADS.json"
+    },
+    {
+      "symbol": "AFX",
+      "file": "data/AFX.json"
+    },
+    {
+      "symbol": "AGG",
+      "file": "data/AGG.json"
+    },
+    {
+      "symbol": "AGM",
+      "file": "data/AGM.json"
+    },
+    {
+      "symbol": "AGR",
+      "file": "data/AGR.json"
+    },
+    {
+      "symbol": "AIG",
+      "file": "data/AIG.json"
+    },
+    {
+      "symbol": "AMS",
+      "file": "data/AMS.json"
+    },
+    {
+      "symbol": "AMV",
+      "file": "data/AMV.json"
+    },
+    {
+      "symbol": "ANV",
+      "file": "data/ANV.json"
+    },
+    {
+      "symbol": "APC",
+      "file": "data/APC.json"
+    },
+    {
+      "symbol": "APG",
+      "file": "data/APG.json"
+    },
+    {
+      "symbol": "APH",
+      "file": "data/APH.json"
+    },
+    {
+      "symbol": "API",
+      "file": "data/API.json"
+    },
+    {
+      "symbol": "APS",
+      "file": "data/APS.json"
+    },
+    {
+      "symbol": "ART",
+      "file": "data/ART.json"
+    },
+    {
+      "symbol": "ASM",
+      "file": "data/ASM.json"
+    },
+    {
+      "symbol": "ASP",
+      "file": "data/ASP.json"
+    },
+    {
+      "symbol": "AST",
+      "file": "data/AST.json"
+    },
+    {
+      "symbol": "AVG",
+      "file": "data/AVG.json"
+    },
+    {
+      "symbol": "BAF",
+      "file": "data/BAF.json"
+    },
+    {
+      "symbol": "BCA",
+      "file": "data/BCA.json"
+    },
+    {
+      "symbol": "BCC",
+      "file": "data/BCC.json"
+    },
+    {
+      "symbol": "BCE",
+      "file": "data/BCE.json"
+    },
+    {
+      "symbol": "BCG",
+      "file": "data/BCG.json"
+    },
+    {
+      "symbol": "BCM",
+      "file": "data/BCM.json"
+    },
+    {
+      "symbol": "BFC",
+      "file": "data/BFC.json"
+    },
+    {
+      "symbol": "BHN",
+      "file": "data/BHN.json"
+    },
+    {
+      "symbol": "BIC",
+      "file": "data/BIC.json"
+    },
+    {
+      "symbol": "BID",
+      "file": "data/BID.json"
+    },
+    {
+      "symbol": "BIG",
+      "file": "data/BIG.json"
+    },
+    {
+      "symbol": "BII",
+      "file": "data/BII.json"
+    },
+    {
+      "symbol": "BKG",
+      "file": "data/BKG.json"
+    },
+    {
+      "symbol": "BMC",
+      "file": "data/BMC.json"
+    },
+    {
+      "symbol": "BMI",
+      "file": "data/BMI.json"
+    },
+    {
+      "symbol": "BMP",
+      "file": "data/BMP.json"
+    },
+    {
+      "symbol": "BMS",
+      "file": "data/BMS.json"
+    },
+    {
+      "symbol": "BNA",
+      "file": "data/BNA.json"
+    },
+    {
+      "symbol": "BOT",
+      "file": "data/BOT.json"
+    },
+    {
+      "symbol": "BSI",
+      "file": "data/BSI.json"
+    },
+    {
+      "symbol": "BSR",
+      "file": "data/BSR.json"
+    },
+    {
+      "symbol": "BVB",
+      "file": "data/BVB.json"
+    },
+    {
+      "symbol": "BVH",
+      "file": "data/BVH.json"
+    },
+    {
+      "symbol": "BVS",
+      "file": "data/BVS.json"
+    },
+    {
+      "symbol": "BWE",
+      "file": "data/BWE.json"
+    },
+    {
+      "symbol": "C32",
+      "file": "data/C32.json"
+    },
+    {
+      "symbol": "C47",
+      "file": "data/C47.json"
+    },
+    {
+      "symbol": "C4G",
+      "file": "data/C4G.json"
+    },
+    {
+      "symbol": "C69",
+      "file": "data/C69.json"
+    },
+    {
+      "symbol": "CCL",
+      "file": "data/CCL.json"
+    },
+    {
+      "symbol": "CDC",
+      "file": "data/CDC.json"
+    },
+    {
+      "symbol": "CDO",
+      "file": "data/CDO.json"
+    },
+    {
+      "symbol": "CEN",
+      "file": "data/CEN.json"
+    },
+    {
+      "symbol": "CEO",
+      "file": "data/CEO.json"
+    },
+    {
+      "symbol": "CHP",
+      "file": "data/CHP.json"
+    },
+    {
+      "symbol": "CII",
+      "file": "data/CII.json"
+    },
+    {
+      "symbol": "CKG",
+      "file": "data/CKG.json"
+    },
+    {
+      "symbol": "CLX",
+      "file": "data/CLX.json"
+    },
+    {
+      "symbol": "CMG",
+      "file": "data/CMG.json"
+    },
+    {
+      "symbol": "CMS",
+      "file": "data/CMS.json"
+    },
+    {
+      "symbol": "CMX",
+      "file": "data/CMX.json"
+    },
+    {
+      "symbol": "CNG",
+      "file": "data/CNG.json"
+    },
+    {
+      "symbol": "CRC",
+      "file": "data/CRC.json"
+    },
+    {
+      "symbol": "CRE",
+      "file": "data/CRE.json"
+    },
+    {
+      "symbol": "CSC",
+      "file": "data/CSC.json"
+    },
+    {
+      "symbol": "CSI",
+      "file": "data/CSI.json"
+    },
+    {
+      "symbol": "CSM",
+      "file": "data/CSM.json"
+    },
+    {
+      "symbol": "CST",
+      "file": "data/CST.json"
+    },
+    {
+      "symbol": "CSV",
+      "file": "data/CSV.json"
+    },
+    {
+      "symbol": "CTD",
+      "file": "data/CTD.json"
+    },
+    {
+      "symbol": "CTF",
+      "file": "data/CTF.json"
+    },
+    {
+      "symbol": "CTG",
+      "file": "data/CTG.json"
+    },
+    {
+      "symbol": "CTI",
+      "file": "data/CTI.json"
+    },
+    {
+      "symbol": "CTP",
+      "file": "data/CTP.json"
+    },
+    {
+      "symbol": "CTR",
+      "file": "data/CTR.json"
+    },
+    {
+      "symbol": "CTS",
+      "file": "data/CTS.json"
+    },
+    {
+      "symbol": "CVN",
+      "file": "data/CVN.json"
+    },
+    {
+      "symbol": "CVT",
+      "file": "data/CVT.json"
+    },
+    {
+      "symbol": "D2D",
+      "file": "data/D2D.json"
+    },
+    {
+      "symbol": "DAG",
+      "file": "data/DAG.json"
+    },
+    {
+      "symbol": "DAH",
+      "file": "data/DAH.json"
+    },
+    {
+      "symbol": "DBC",
+      "file": "data/DBC.json"
+    },
+    {
+      "symbol": "DBD",
+      "file": "data/DBD.json"
+    },
+    {
+      "symbol": "DCL",
+      "file": "data/DCL.json"
+    },
+    {
+      "symbol": "DCM",
+      "file": "data/DCM.json"
+    },
+    {
+      "symbol": "DDB",
+      "file": "data/DDB.json"
+    },
+    {
+      "symbol": "DDG",
+      "file": "data/DDG.json"
+    },
+    {
+      "symbol": "DDV",
+      "file": "data/DDV.json"
+    },
+    {
+      "symbol": "DFF",
+      "file": "data/DFF.json"
+    },
+    {
+      "symbol": "DGC",
+      "file": "data/DGC.json"
+    },
+    {
+      "symbol": "DGW",
+      "file": "data/DGW.json"
+    },
+    {
+      "symbol": "DHA",
+      "file": "data/DHA.json"
+    },
+    {
+      "symbol": "DHC",
+      "file": "data/DHC.json"
+    },
+    {
+      "symbol": "DHG",
+      "file": "data/DHG.json"
+    },
+    {
+      "symbol": "DHM",
+      "file": "data/DHM.json"
+    },
+    {
+      "symbol": "DHT",
+      "file": "data/DHT.json"
+    },
+    {
+      "symbol": "DIG",
+      "file": "data/DIG.json"
+    },
+    {
+      "symbol": "DL1",
+      "file": "data/DL1.json"
+    },
+    {
+      "symbol": "DLG",
+      "file": "data/DLG.json"
+    },
+    {
+      "symbol": "DMC",
+      "file": "data/DMC.json"
+    },
+    {
+      "symbol": "DPG",
+      "file": "data/DPG.json"
+    },
+    {
+      "symbol": "DPM",
+      "file": "data/DPM.json"
+    },
+    {
+      "symbol": "DPR",
+      "file": "data/DPR.json"
+    },
+    {
+      "symbol": "DQC",
+      "file": "data/DQC.json"
+    },
+    {
+      "symbol": "DRC",
+      "file": "data/DRC.json"
+    },
+    {
+      "symbol": "DRH",
+      "file": "data/DRH.json"
+    },
+    {
+      "symbol": "DRI",
+      "file": "data/DRI.json"
+    },
+    {
+      "symbol": "DS3",
+      "file": "data/DS3.json"
+    },
+    {
+      "symbol": "DSC",
+      "file": "data/DSC.json"
+    },
+    {
+      "symbol": "DSE",
+      "file": "data/DSE.json"
+    },
+    {
+      "symbol": "DST",
+      "file": "data/DST.json"
+    },
+    {
+      "symbol": "DTD",
+      "file": "data/DTD.json"
+    },
+    {
+      "symbol": "DVG",
+      "file": "data/DVG.json"
+    },
+    {
+      "symbol": "DVM",
+      "file": "data/DVM.json"
+    },
+    {
+      "symbol": "DVN",
+      "file": "data/DVN.json"
+    },
+    {
+      "symbol": "DVP",
+      "file": "data/DVP.json"
+    },
+    {
+      "symbol": "DXG",
+      "file": "data/DXG.json"
+    },
+    {
+      "symbol": "DXP",
+      "file": "data/DXP.json"
+    },
+    {
+      "symbol": "DXS",
+      "file": "data/DXS.json"
+    },
+    {
+      "symbol": "ECO",
+      "file": "data/ECO.json"
+    },
+    {
+      "symbol": "EIB",
+      "file": "data/EIB.json"
+    },
+    {
+      "symbol": "ELC",
+      "file": "data/ELC.json"
+    },
+    {
+      "symbol": "EVE",
+      "file": "data/EVE.json"
+    },
+    {
+      "symbol": "EVF",
+      "file": "data/EVF.json"
+    },
+    {
+      "symbol": "EVG",
+      "file": "data/EVG.json"
+    },
+    {
+      "symbol": "EVS",
+      "file": "data/EVS.json"
+    },
+    {
+      "symbol": "FCM",
+      "file": "data/FCM.json"
+    },
+    {
+      "symbol": "FCN",
+      "file": "data/FCN.json"
+    },
+    {
+      "symbol": "FID",
+      "file": "data/FID.json"
+    },
+    {
+      "symbol": "FIR",
+      "file": "data/FIR.json"
+    },
+    {
+      "symbol": "FIT",
+      "file": "data/FIT.json"
+    },
+    {
+      "symbol": "FMC",
+      "file": "data/FMC.json"
+    },
+    {
+      "symbol": "FOC",
+      "file": "data/FOC.json"
+    },
+    {
+      "symbol": "FOX",
+      "file": "data/FOX.json"
+    },
+    {
+      "symbol": "FPT",
+      "file": "data/FPT.json"
+    },
+    {
+      "symbol": "FRT",
+      "file": "data/FRT.json"
+    },
+    {
+      "symbol": "FTM",
+      "file": "data/FTM.json"
+    },
+    {
+      "symbol": "FTS",
+      "file": "data/FTS.json"
+    },
+    {
+      "symbol": "G36",
+      "file": "data/G36.json"
+    },
+    {
+      "symbol": "GAS",
+      "file": "data/GAS.json"
+    },
+    {
+      "symbol": "GDA",
+      "file": "data/GDA.json"
+    },
+    {
+      "symbol": "GDT",
+      "file": "data/GDT.json"
+    },
+    {
+      "symbol": "GEE",
+      "file": "data/GEE.json"
+    },
+    {
+      "symbol": "GEG",
+      "file": "data/GEG.json"
+    },
+    {
+      "symbol": "GEX",
+      "file": "data/GEX.json"
+    },
+    {
+      "symbol": "GIL",
+      "file": "data/GIL.json"
+    },
+    {
+      "symbol": "GKM",
+      "file": "data/GKM.json"
+    },
+    {
+      "symbol": "GMD",
+      "file": "data/GMD.json"
+    },
+    {
+      "symbol": "GSP",
+      "file": "data/GSP.json"
+    },
+    {
+      "symbol": "GVR",
+      "file": "data/GVR.json"
+    },
+    {
+      "symbol": "HAG",
+      "file": "data/HAG.json"
+    },
+    {
+      "symbol": "HAH",
+      "file": "data/HAH.json"
+    },
+    {
+      "symbol": "HAP",
+      "file": "data/HAP.json"
+    },
+    {
+      "symbol": "HAR",
+      "file": "data/HAR.json"
+    },
+    {
+      "symbol": "HAX",
+      "file": "data/HAX.json"
+    },
+    {
+      "symbol": "HBC",
+      "file": "data/HBC.json"
+    },
+    {
+      "symbol": "HCD",
+      "file": "data/HCD.json"
+    },
+    {
+      "symbol": "HCM",
+      "file": "data/HCM.json"
+    },
+    {
+      "symbol": "HD6",
+      "file": "data/HD6.json"
+    },
+    {
+      "symbol": "HDA",
+      "file": "data/HDA.json"
+    },
+    {
+      "symbol": "HDB",
+      "file": "data/HDB.json"
+    },
+    {
+      "symbol": "HDC",
+      "file": "data/HDC.json"
+    },
+    {
+      "symbol": "HDG",
+      "file": "data/HDG.json"
+    },
+    {
+      "symbol": "HHG",
+      "file": "data/HHG.json"
+    },
+    {
+      "symbol": "HHP",
+      "file": "data/HHP.json"
+    },
+    {
+      "symbol": "HHS",
+      "file": "data/HHS.json"
+    },
+    {
+      "symbol": "HID",
+      "file": "data/HID.json"
+    },
+    {
+      "symbol": "HII",
+      "file": "data/HII.json"
+    },
+    {
+      "symbol": "HIO",
+      "file": "data/HIO.json"
+    },
+    {
+      "symbol": "HLD",
+      "file": "data/HLD.json"
+    },
+    {
+      "symbol": "HMR",
+      "file": "data/HMR.json"
+    },
+    {
+      "symbol": "HND",
+      "file": "data/HND.json"
+    },
+    {
+      "symbol": "HNG",
+      "file": "data/HNG.json"
+    },
+    {
+      "symbol": "HPG",
+      "file": "data/HPG.json"
+    },
+    {
+      "symbol": "HPX",
+      "file": "data/HPX.json"
+    },
+    {
+      "symbol": "HQC",
+      "file": "data/HQC.json"
+    },
+    {
+      "symbol": "HSG",
+      "file": "data/HSG.json"
+    },
+    {
+      "symbol": "HSL",
+      "file": "data/HSL.json"
+    },
+    {
+      "symbol": "HSV",
+      "file": "data/HSV.json"
+    },
+    {
+      "symbol": "HT1",
+      "file": "data/HT1.json"
+    },
+    {
+      "symbol": "HTG",
+      "file": "data/HTG.json"
+    },
+    {
+      "symbol": "HTI",
+      "file": "data/HTI.json"
+    },
+    {
+      "symbol": "HTN",
+      "file": "data/HTN.json"
+    },
+    {
+      "symbol": "HUB",
+      "file": "data/HUB.json"
+    },
+    {
+      "symbol": "HUT",
+      "file": "data/HUT.json"
+    },
+    {
+      "symbol": "HVH",
+      "file": "data/HVH.json"
+    },
+    {
+      "symbol": "HVN",
+      "file": "data/HVN.json"
+    },
+    {
+      "symbol": "ICT",
+      "file": "data/ICT.json"
+    },
+    {
+      "symbol": "IDC",
+      "file": "data/IDC.json"
+    },
+    {
+      "symbol": "IDI",
+      "file": "data/IDI.json"
+    },
+    {
+      "symbol": "IDJ",
+      "file": "data/IDJ.json"
+    },
+    {
+      "symbol": "IJC",
+      "file": "data/IJC.json"
+    },
+    {
+      "symbol": "ILB",
+      "file": "data/ILB.json"
+    },
+    {
+      "symbol": "IMP",
+      "file": "data/IMP.json"
+    },
+    {
+      "symbol": "IPA",
+      "file": "data/IPA.json"
+    },
+    {
+      "symbol": "ITA",
+      "file": "data/ITA.json"
+    },
+    {
+      "symbol": "ITC",
+      "file": "data/ITC.json"
+    },
+    {
+      "symbol": "ITD",
+      "file": "data/ITD.json"
+    },
+    {
+      "symbol": "ITQ",
+      "file": "data/ITQ.json"
+    },
+    {
+      "symbol": "IVS",
+      "file": "data/IVS.json"
+    },
+    {
+      "symbol": "JVC",
+      "file": "data/JVC.json"
+    },
+    {
+      "symbol": "KBC",
+      "file": "data/KBC.json"
+    },
+    {
+      "symbol": "KDC",
+      "file": "data/KDC.json"
+    },
+    {
+      "symbol": "KDH",
+      "file": "data/KDH.json"
+    },
+    {
+      "symbol": "KDM",
+      "file": "data/KDM.json"
+    },
+    {
+      "symbol": "KHG",
+      "file": "data/KHG.json"
+    },
+    {
+      "symbol": "KHP",
+      "file": "data/KHP.json"
+    },
+    {
+      "symbol": "KLB",
+      "file": "data/KLB.json"
+    },
+    {
+      "symbol": "KMR",
+      "file": "data/KMR.json"
+    },
+    {
+      "symbol": "KOS",
+      "file": "data/KOS.json"
+    },
+    {
+      "symbol": "KPF",
+      "file": "data/KPF.json"
+    },
+    {
+      "symbol": "KSB",
+      "file": "data/KSB.json"
+    },
+    {
+      "symbol": "KSF",
+      "file": "data/KSF.json"
+    },
+    {
+      "symbol": "KSQ",
+      "file": "data/KSQ.json"
+    },
+    {
+      "symbol": "KVC",
+      "file": "data/KVC.json"
+    },
+    {
+      "symbol": "L14",
+      "file": "data/L14.json"
+    },
+    {
+      "symbol": "LAS",
+      "file": "data/LAS.json"
+    },
+    {
+      "symbol": "LCG",
+      "file": "data/LCG.json"
+    },
+    {
+      "symbol": "LDG",
+      "file": "data/LDG.json"
+    },
+    {
+      "symbol": "LGL",
+      "file": "data/LGL.json"
+    },
+    {
+      "symbol": "LHC",
+      "file": "data/LHC.json"
+    },
+    {
+      "symbol": "LHG",
+      "file": "data/LHG.json"
+    },
+    {
+      "symbol": "LIG",
+      "file": "data/LIG.json"
+    },
+    {
+      "symbol": "LIX",
+      "file": "data/LIX.json"
+    },
+    {
+      "symbol": "LMH",
+      "file": "data/LMH.json"
+    },
+    {
+      "symbol": "LPB",
+      "file": "data/LPB.json"
+    },
+    {
+      "symbol": "LSG",
+      "file": "data/LSG.json"
+    },
+    {
+      "symbol": "LSS",
+      "file": "data/LSS.json"
+    },
+    {
+      "symbol": "LTG",
+      "file": "data/LTG.json"
+    },
+    {
+      "symbol": "MBB",
+      "file": "data/MBB.json"
+    },
+    {
+      "symbol": "MBG",
+      "file": "data/MBG.json"
+    },
+    {
+      "symbol": "MBS",
+      "file": "data/MBS.json"
+    },
+    {
+      "symbol": "MCG",
+      "file": "data/MCG.json"
+    },
+    {
+      "symbol": "MCH",
+      "file": "data/MCH.json"
+    },
+    {
+      "symbol": "MCM",
+      "file": "data/MCM.json"
+    },
+    {
+      "symbol": "MFS",
+      "file": "data/MFS.json"
+    },
+    {
+      "symbol": "MHC",
+      "file": "data/MHC.json"
+    },
+    {
+      "symbol": "MIG",
+      "file": "data/MIG.json"
+    },
+    {
+      "symbol": "MML",
+      "file": "data/MML.json"
+    },
+    {
+      "symbol": "MPC",
+      "file": "data/MPC.json"
+    },
+    {
+      "symbol": "MPT",
+      "file": "data/MPT.json"
+    },
+    {
+      "symbol": "MSB",
+      "file": "data/MSB.json"
+    },
+    {
+      "symbol": "MSH",
+      "file": "data/MSH.json"
+    },
+    {
+      "symbol": "MSN",
+      "file": "data/MSN.json"
+    },
+    {
+      "symbol": "MSR",
+      "file": "data/MSR.json"
+    },
+    {
+      "symbol": "MST",
+      "file": "data/MST.json"
+    },
+    {
+      "symbol": "MWG",
+      "file": "data/MWG.json"
+    },
+    {
+      "symbol": "MZG",
+      "file": "data/MZG.json"
+    },
+    {
+      "symbol": "NAB",
+      "file": "data/NAB.json"
+    },
+    {
+      "symbol": "NAF",
+      "file": "data/NAF.json"
+    },
+    {
+      "symbol": "NAG",
+      "file": "data/NAG.json"
+    },
+    {
+      "symbol": "NBB",
+      "file": "data/NBB.json"
+    },
+    {
+      "symbol": "NBC",
+      "file": "data/NBC.json"
+    },
+    {
+      "symbol": "NCT",
+      "file": "data/NCT.json"
+    },
+    {
+      "symbol": "NDN",
+      "file": "data/NDN.json"
+    },
+    {
+      "symbol": "NED",
+      "file": "data/NED.json"
+    },
+    {
+      "symbol": "NHA",
+      "file": "data/NHA.json"
+    },
+    {
+      "symbol": "NHH",
+      "file": "data/NHH.json"
+    },
+    {
+      "symbol": "NKG",
+      "file": "data/NKG.json"
+    },
+    {
+      "symbol": "NLG",
+      "file": "data/NLG.json"
+    },
+    {
+      "symbol": "NNC",
+      "file": "data/NNC.json"
+    },
+    {
+      "symbol": "NO1",
+      "file": "data/NO1.json"
+    },
+    {
+      "symbol": "NRC",
+      "file": "data/NRC.json"
+    },
+    {
+      "symbol": "NSH",
+      "file": "data/NSH.json"
+    },
+    {
+      "symbol": "NT2",
+      "file": "data/NT2.json"
+    },
+    {
+      "symbol": "NTC",
+      "file": "data/NTC.json"
+    },
+    {
+      "symbol": "NTL",
+      "file": "data/NTL.json"
+    },
+    {
+      "symbol": "NTP",
+      "file": "data/NTP.json"
+    },
+    {
+      "symbol": "NVB",
+      "file": "data/NVB.json"
+    },
+    {
+      "symbol": "NVL",
+      "file": "data/NVL.json"
+    },
+    {
+      "symbol": "NVT",
+      "file": "data/NVT.json"
+    },
+    {
+      "symbol": "OCB",
+      "file": "data/OCB.json"
+    },
+    {
+      "symbol": "ODE",
+      "file": "data/ODE.json"
+    },
+    {
+      "symbol": "OGC",
+      "file": "data/OGC.json"
+    },
+    {
+      "symbol": "OIL",
+      "file": "data/OIL.json"
+    },
+    {
+      "symbol": "ORS",
+      "file": "data/ORS.json"
+    },
+    {
+      "symbol": "PAC",
+      "file": "data/PAC.json"
+    },
+    {
+      "symbol": "PAN",
+      "file": "data/PAN.json"
+    },
+    {
+      "symbol": "PAS",
+      "file": "data/PAS.json"
+    },
+    {
+      "symbol": "PAT",
+      "file": "data/PAT.json"
+    },
+    {
+      "symbol": "PBC",
+      "file": "data/PBC.json"
+    },
+    {
+      "symbol": "PC1",
+      "file": "data/PC1.json"
+    },
+    {
+      "symbol": "PCH",
+      "file": "data/PCH.json"
+    },
+    {
+      "symbol": "PDR",
+      "file": "data/PDR.json"
+    },
+    {
+      "symbol": "PET",
+      "file": "data/PET.json"
+    },
+    {
+      "symbol": "PFL",
+      "file": "data/PFL.json"
+    },
+    {
+      "symbol": "PGB",
+      "file": "data/PGB.json"
+    },
+    {
+      "symbol": "PGC",
+      "file": "data/PGC.json"
+    },
+    {
+      "symbol": "PGN",
+      "file": "data/PGN.json"
+    },
+    {
+      "symbol": "PGS",
+      "file": "data/PGS.json"
+    },
+    {
+      "symbol": "PGV",
+      "file": "data/PGV.json"
+    },
+    {
+      "symbol": "PHC",
+      "file": "data/PHC.json"
+    },
+    {
+      "symbol": "PHP",
+      "file": "data/PHP.json"
+    },
+    {
+      "symbol": "PHR",
+      "file": "data/PHR.json"
+    },
+    {
+      "symbol": "PLC",
+      "file": "data/PLC.json"
+    },
+    {
+      "symbol": "PLP",
+      "file": "data/PLP.json"
+    },
+    {
+      "symbol": "PLX",
+      "file": "data/PLX.json"
+    },
+    {
+      "symbol": "PNJ",
+      "file": "data/PNJ.json"
+    },
+    {
+      "symbol": "POM",
+      "file": "data/POM.json"
+    },
+    {
+      "symbol": "POW",
+      "file": "data/POW.json"
+    },
+    {
+      "symbol": "PPC",
+      "file": "data/PPC.json"
+    },
+    {
+      "symbol": "PPH",
+      "file": "data/PPH.json"
+    },
+    {
+      "symbol": "PPT",
+      "file": "data/PPT.json"
+    },
+    {
+      "symbol": "PSH",
+      "file": "data/PSH.json"
+    },
+    {
+      "symbol": "PTB",
+      "file": "data/PTB.json"
+    },
+    {
+      "symbol": "PTL",
+      "file": "data/PTL.json"
+    },
+    {
+      "symbol": "PV2",
+      "file": "data/PV2.json"
+    },
+    {
+      "symbol": "PVB",
+      "file": "data/PVB.json"
+    },
+    {
+      "symbol": "PVC",
+      "file": "data/PVC.json"
+    },
+    {
+      "symbol": "PVD",
+      "file": "data/PVD.json"
+    },
+    {
+      "symbol": "PVG",
+      "file": "data/PVG.json"
+    },
+    {
+      "symbol": "PVI",
+      "file": "data/PVI.json"
+    },
+    {
+      "symbol": "PVL",
+      "file": "data/PVL.json"
+    },
+    {
+      "symbol": "PVP",
+      "file": "data/PVP.json"
+    },
+    {
+      "symbol": "PVS",
+      "file": "data/PVS.json"
+    },
+    {
+      "symbol": "PVT",
+      "file": "data/PVT.json"
+    },
+    {
+      "symbol": "PWA",
+      "file": "data/PWA.json"
+    },
+    {
+      "symbol": "PXL",
+      "file": "data/PXL.json"
+    },
+    {
+      "symbol": "PXS",
+      "file": "data/PXS.json"
+    },
+    {
+      "symbol": "PXT",
+      "file": "data/PXT.json"
+    },
+    {
+      "symbol": "QBS",
+      "file": "data/QBS.json"
+    },
+    {
+      "symbol": "QCG",
+      "file": "data/QCG.json"
+    },
+    {
+      "symbol": "QNS",
+      "file": "data/QNS.json"
+    },
+    {
+      "symbol": "QTP",
+      "file": "data/QTP.json"
+    },
+    {
+      "symbol": "RAL",
+      "file": "data/RAL.json"
+    },
+    {
+      "symbol": "RDP",
+      "file": "data/RDP.json"
+    },
+    {
+      "symbol": "REE",
+      "file": "data/REE.json"
+    },
+    {
+      "symbol": "RYG",
+      "file": "data/RYG.json"
+    },
+    {
+      "symbol": "S99",
+      "file": "data/S99.json"
+    },
+    {
+      "symbol": "SAB",
+      "file": "data/SAB.json"
+    },
+    {
+      "symbol": "SAM",
+      "file": "data/SAM.json"
+    },
+    {
+      "symbol": "SBB",
+      "file": "data/SBB.json"
+    },
+    {
+      "symbol": "SBG",
+      "file": "data/SBG.json"
+    },
+    {
+      "symbol": "SBS",
+      "file": "data/SBS.json"
+    },
+    {
+      "symbol": "SBT",
+      "file": "data/SBT.json"
+    },
+    {
+      "symbol": "SCG",
+      "file": "data/SCG.json"
+    },
+    {
+      "symbol": "SCI",
+      "file": "data/SCI.json"
+    },
+    {
+      "symbol": "SCR",
+      "file": "data/SCR.json"
+    },
+    {
+      "symbol": "SCS",
+      "file": "data/SCS.json"
+    },
+    {
+      "symbol": "SD9",
+      "file": "data/SD9.json"
+    },
+    {
+      "symbol": "SDA",
+      "file": "data/SDA.json"
+    },
+    {
+      "symbol": "SGB",
+      "file": "data/SGB.json"
+    },
+    {
+      "symbol": "SGN",
+      "file": "data/SGN.json"
+    },
+    {
+      "symbol": "SGP",
+      "file": "data/SGP.json"
+    },
+    {
+      "symbol": "SHA",
+      "file": "data/SHA.json"
+    },
+    {
+      "symbol": "SHB",
+      "file": "data/SHB.json"
+    },
+    {
+      "symbol": "SHI",
+      "file": "data/SHI.json"
+    },
+    {
+      "symbol": "SHN",
+      "file": "data/SHN.json"
+    },
+    {
+      "symbol": "SHS",
+      "file": "data/SHS.json"
+    },
+    {
+      "symbol": "SIP",
+      "file": "data/SIP.json"
+    },
+    {
+      "symbol": "SJD",
+      "file": "data/SJD.json"
+    },
+    {
+      "symbol": "SJF",
+      "file": "data/SJF.json"
+    },
+    {
+      "symbol": "SJS",
+      "file": "data/SJS.json"
+    },
+    {
+      "symbol": "SKG",
+      "file": "data/SKG.json"
+    },
+    {
+      "symbol": "SLS",
+      "file": "data/SLS.json"
+    },
+    {
+      "symbol": "SMC",
+      "file": "data/SMC.json"
+    },
+    {
+      "symbol": "SPI",
+      "file": "data/SPI.json"
+    },
+    {
+      "symbol": "SRA",
+      "file": "data/SRA.json"
+    },
+    {
+      "symbol": "SRC",
+      "file": "data/SRC.json"
+    },
+    {
+      "symbol": "SSB",
+      "file": "data/SSB.json"
+    },
+    {
+      "symbol": "SSH",
+      "file": "data/SSH.json"
+    },
+    {
+      "symbol": "SSI",
+      "file": "data/SSI.json"
+    },
+    {
+      "symbol": "SSN",
+      "file": "data/SSN.json"
+    },
+    {
+      "symbol": "STB",
+      "file": "data/STB.json"
+    },
+    {
+      "symbol": "STH",
+      "file": "data/STH.json"
+    },
+    {
+      "symbol": "STK",
+      "file": "data/STK.json"
+    },
+    {
+      "symbol": "SVD",
+      "file": "data/SVD.json"
+    },
+    {
+      "symbol": "SWC",
+      "file": "data/SWC.json"
+    },
+    {
+      "symbol": "SZC",
+      "file": "data/SZC.json"
+    },
+    {
+      "symbol": "TAL",
+      "file": "data/TAL.json"
+    },
+    {
+      "symbol": "TAR",
+      "file": "data/TAR.json"
+    },
+    {
+      "symbol": "TCB",
+      "file": "data/TCB.json"
+    },
+    {
+      "symbol": "TCD",
+      "file": "data/TCD.json"
+    },
+    {
+      "symbol": "TCH",
+      "file": "data/TCH.json"
+    },
+    {
+      "symbol": "TCI",
+      "file": "data/TCI.json"
+    },
+    {
+      "symbol": "TCL",
+      "file": "data/TCL.json"
+    },
+    {
+      "symbol": "TCM",
+      "file": "data/TCM.json"
+    },
+    {
+      "symbol": "TDC",
+      "file": "data/TDC.json"
+    },
+    {
+      "symbol": "TDG",
+      "file": "data/TDG.json"
+    },
+    {
+      "symbol": "TDH",
+      "file": "data/TDH.json"
+    },
+    {
+      "symbol": "TDM",
+      "file": "data/TDM.json"
+    },
+    {
+      "symbol": "TDP",
+      "file": "data/TDP.json"
+    },
+    {
+      "symbol": "TDT",
+      "file": "data/TDT.json"
+    },
+    {
+      "symbol": "TEG",
+      "file": "data/TEG.json"
+    },
+    {
+      "symbol": "TGG",
+      "file": "data/TGG.json"
+    },
+    {
+      "symbol": "THD",
+      "file": "data/THD.json"
+    },
+    {
+      "symbol": "THG",
+      "file": "data/THG.json"
+    },
+    {
+      "symbol": "TID",
+      "file": "data/TID.json"
+    },
+    {
+      "symbol": "TIG",
+      "file": "data/TIG.json"
+    },
+    {
+      "symbol": "TIP",
+      "file": "data/TIP.json"
+    },
+    {
+      "symbol": "TIS",
+      "file": "data/TIS.json"
+    },
+    {
+      "symbol": "TLD",
+      "file": "data/TLD.json"
+    },
+    {
+      "symbol": "TLG",
+      "file": "data/TLG.json"
+    },
+    {
+      "symbol": "TLH",
+      "file": "data/TLH.json"
+    },
+    {
+      "symbol": "TMT",
+      "file": "data/TMT.json"
+    },
+    {
+      "symbol": "TNA",
+      "file": "data/TNA.json"
+    },
+    {
+      "symbol": "TNG",
+      "file": "data/TNG.json"
+    },
+    {
+      "symbol": "TNH",
+      "file": "data/TNH.json"
+    },
+    {
+      "symbol": "TNI",
+      "file": "data/TNI.json"
+    },
+    {
+      "symbol": "TNT",
+      "file": "data/TNT.json"
+    },
+    {
+      "symbol": "TOS",
+      "file": "data/TOS.json"
+    },
+    {
+      "symbol": "TPB",
+      "file": "data/TPB.json"
+    },
+    {
+      "symbol": "TRC",
+      "file": "data/TRC.json"
+    },
+    {
+      "symbol": "TSA",
+      "file": "data/TSA.json"
+    },
+    {
+      "symbol": "TSC",
+      "file": "data/TSC.json"
+    },
+    {
+      "symbol": "TTA",
+      "file": "data/TTA.json"
+    },
+    {
+      "symbol": "TTB",
+      "file": "data/TTB.json"
+    },
+    {
+      "symbol": "TTF",
+      "file": "data/TTF.json"
+    },
+    {
+      "symbol": "TTH",
+      "file": "data/TTH.json"
+    },
+    {
+      "symbol": "TTN",
+      "file": "data/TTN.json"
+    },
+    {
+      "symbol": "TV2",
+      "file": "data/TV2.json"
+    },
+    {
+      "symbol": "TVB",
+      "file": "data/TVB.json"
+    },
+    {
+      "symbol": "TVC",
+      "file": "data/TVC.json"
+    },
+    {
+      "symbol": "TVN",
+      "file": "data/TVN.json"
+    },
+    {
+      "symbol": "TVS",
+      "file": "data/TVS.json"
+    },
+    {
+      "symbol": "VAB",
+      "file": "data/VAB.json"
+    },
+    {
+      "symbol": "VC2",
+      "file": "data/VC2.json"
+    },
+    {
+      "symbol": "VC3",
+      "file": "data/VC3.json"
+    },
+    {
+      "symbol": "VC7",
+      "file": "data/VC7.json"
+    },
+    {
+      "symbol": "VCB",
+      "file": "data/VCB.json"
+    },
+    {
+      "symbol": "VCG",
+      "file": "data/VCG.json"
+    },
+    {
+      "symbol": "VCI",
+      "file": "data/VCI.json"
+    },
+    {
+      "symbol": "VCR",
+      "file": "data/VCR.json"
+    },
+    {
+      "symbol": "VCS",
+      "file": "data/VCS.json"
+    },
+    {
+      "symbol": "VDS",
+      "file": "data/VDS.json"
+    },
+    {
+      "symbol": "VEA",
+      "file": "data/VEA.json"
+    },
+    {
+      "symbol": "VEF",
+      "file": "data/VEF.json"
+    },
+    {
+      "symbol": "VFS",
+      "file": "data/VFS.json"
+    },
+    {
+      "symbol": "VGC",
+      "file": "data/VGC.json"
+    },
+    {
+      "symbol": "VGG",
+      "file": "data/VGG.json"
+    },
+    {
+      "symbol": "VGI",
+      "file": "data/VGI.json"
+    },
+    {
+      "symbol": "VGS",
+      "file": "data/VGS.json"
+    },
+    {
+      "symbol": "VGT",
+      "file": "data/VGT.json"
+    },
+    {
+      "symbol": "VHC",
+      "file": "data/VHC.json"
+    },
+    {
+      "symbol": "VHE",
+      "file": "data/VHE.json"
+    },
+    {
+      "symbol": "VHG",
+      "file": "data/VHG.json"
+    },
+    {
+      "symbol": "VHM",
+      "file": "data/VHM.json"
+    },
+    {
+      "symbol": "VIB",
+      "file": "data/VIB.json"
+    },
+    {
+      "symbol": "VIC",
+      "file": "data/VIC.json"
+    },
+    {
+      "symbol": "VIG",
+      "file": "data/VIG.json"
+    },
+    {
+      "symbol": "VIP",
+      "file": "data/VIP.json"
+    },
+    {
+      "symbol": "VJC",
+      "file": "data/VJC.json"
+    },
+    {
+      "symbol": "VKC",
+      "file": "data/VKC.json"
+    },
+    {
+      "symbol": "VLB",
+      "file": "data/VLB.json"
+    },
+    {
+      "symbol": "VLC",
+      "file": "data/VLC.json"
+    },
+    {
+      "symbol": "VNB",
+      "file": "data/VNB.json"
+    },
+    {
+      "symbol": "VND",
+      "file": "data/VND.json"
+    },
+    {
+      "symbol": "VNE",
+      "file": "data/VNE.json"
+    },
+    {
+      "symbol": "VNG",
+      "file": "data/VNG.json"
+    },
+    {
+      "symbol": "VNM",
+      "file": "data/VNM.json"
+    },
+    {
+      "symbol": "VNP",
+      "file": "data/VNP.json"
+    },
+    {
+      "symbol": "VNR",
+      "file": "data/VNR.json"
+    },
+    {
+      "symbol": "VNS",
+      "file": "data/VNS.json"
+    },
+    {
+      "symbol": "VNZ",
+      "file": "data/VNZ.json"
+    },
+    {
+      "symbol": "VOC",
+      "file": "data/VOC.json"
+    },
+    {
+      "symbol": "VOS",
+      "file": "data/VOS.json"
+    },
+    {
+      "symbol": "VPB",
+      "file": "data/VPB.json"
+    },
+    {
+      "symbol": "VPG",
+      "file": "data/VPG.json"
+    },
+    {
+      "symbol": "VPH",
+      "file": "data/VPH.json"
+    },
+    {
+      "symbol": "VPI",
+      "file": "data/VPI.json"
+    },
+    {
+      "symbol": "VRC",
+      "file": "data/VRC.json"
+    },
+    {
+      "symbol": "VRE",
+      "file": "data/VRE.json"
+    },
+    {
+      "symbol": "VSC",
+      "file": "data/VSC.json"
+    },
+    {
+      "symbol": "VSH",
+      "file": "data/VSH.json"
+    },
+    {
+      "symbol": "VTD",
+      "file": "data/VTD.json"
+    },
+    {
+      "symbol": "VTO",
+      "file": "data/VTO.json"
+    },
+    {
+      "symbol": "VTP",
+      "file": "data/VTP.json"
+    },
+    {
+      "symbol": "VTR",
+      "file": "data/VTR.json"
+    },
+    {
+      "symbol": "VTV",
+      "file": "data/VTV.json"
+    },
+    {
+      "symbol": "VTZ",
+      "file": "data/VTZ.json"
+    },
+    {
+      "symbol": "VUA",
+      "file": "data/VUA.json"
+    },
+    {
+      "symbol": "WSS",
+      "file": "data/WSS.json"
+    },
+    {
+      "symbol": "YEG",
+      "file": "data/YEG.json"
+    }
+  ],
+  "total_symbols": 486,
+  "generated_at": "2026-04-22T00:39:08.674692"
+}

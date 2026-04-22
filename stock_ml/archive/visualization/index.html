@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>V24 vs V23 vs V20 vs V19.3 vs V19.1 vs V18 vs Rule Comparison</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #131722; color: #d1d4dc; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+
+  .header {
+    padding: 10px 20px;
+    background: #1e222d;
+    border-bottom: 1px solid #2B2B43;
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  }
+  .header h1 { font-size: 15px; color: #fff; white-space: nowrap; }
+
+  .symbol-selector select {
+    background: #2a2e39; color: #d1d4dc; border: 1px solid #444;
+    padding: 6px 12px; border-radius: 4px; font-size: 13px; cursor: pointer;
+  }
+
+  .toggle-group { display: flex; gap: 3px; }
+  .toggle-btn {
+    padding: 4px 10px; border-radius: 4px; border: 1px solid #444;
+    background: #2a2e39; color: #666; cursor: pointer; font-size: 11px;
+    transition: all 0.15s;
+  }
+  .toggle-btn.active { color: #fff; border-color: #555; }
+  .toggle-btn.active.v24 { background: rgba(255,213,79,0.25); border-color: #FFD54F; }
+  .toggle-btn.active.v23 { background: rgba(139,195,74,0.25); border-color: #8BC34A; }
+  .toggle-btn.active.v20 { background: rgba(102,187,106,0.25); border-color: #66BB6A; }
+  .toggle-btn.active.v19_1 { background: rgba(38,198,218,0.25); border-color: #26C6DA; }
+  .toggle-btn.active.v19_3 { background: rgba(236,64,122,0.25); border-color: #EC407A; }
+  .toggle-btn.active.v18 { background: rgba(41,182,246,0.25); border-color: #29B6F6; }
+  .toggle-btn.active.rule { background: rgba(255,152,0,0.2); border-color: #FF9800; }
+  .toggle-btn.active.tbl { background: #363a45; border-color: #666; }
+
+  .stats-bar {
+    display: flex; gap: 3px; font-size: 11px; margin-left: auto; flex-wrap: wrap;
+  }
+  .stat-card {
+    padding: 5px 10px; border-radius: 4px; min-width: 160px;
+  }
+  .stat-v24 { background: rgba(255,213,79,0.1); border: 1px solid rgba(255,213,79,0.3); }
+  .stat-v23 { background: rgba(139,195,74,0.1); border: 1px solid rgba(139,195,74,0.3); }
+  .stat-v20 { background: rgba(102,187,106,0.1); border: 1px solid rgba(102,187,106,0.3); }
+  .stat-v19_1 { background: rgba(38,198,218,0.1); border: 1px solid rgba(38,198,218,0.3); }
+  .stat-v19_3 { background: rgba(236,64,122,0.1); border: 1px solid rgba(236,64,122,0.3); }
+  .stat-v18 { background: rgba(41,182,246,0.1); border: 1px solid rgba(41,182,246,0.3); }
+  .stat-rule { background: rgba(255,152,0,0.08); border: 1px solid rgba(255,152,0,0.25); }
+  .stat-title { font-weight: 700; margin-bottom: 2px; font-size: 11px; }
+  .stat-v24 .stat-title { color: #FFE082; }
+  .stat-v23 .stat-title { color: #C5E1A5; }
+  .stat-v20 .stat-title { color: #A5D6A7; }
+  .stat-v19_1 .stat-title { color: #80DEEA; }
+  .stat-v19_3 .stat-title { color: #F48FB1; }
+  .stat-v18 .stat-title { color: #81D4FA; }
+  .stat-rule .stat-title { color: #FFB74D; }
+  .stat-row { display: flex; justify-content: space-between; gap: 6px; line-height: 1.5; }
+  .stat-row .lbl { color: #888; }
+  .positive { color: #26a69a; }
+  .negative { color: #ef5350; }
+
+  #chart { width: 100%; height: calc(100vh - 300px); min-height: 380px; }
+
+  .legend {
+    padding: 5px 20px;
+    background: #1e222d;
+    border-top: 1px solid #2B2B43;
+    display: flex; gap: 14px; font-size: 10px; flex-wrap: wrap; align-items: center;
+  }
+  .legend-item { display: flex; align-items: center; gap: 3px; }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+  .legend-arrow { font-size: 13px; }
+  .legend-sep { width: 1px; height: 14px; background: #333; margin: 0 4px; }
+
+  .tables-container {
+    display: flex; gap: 4px; padding: 6px 20px; max-height: 200px;
+  }
+  .trade-panel {
+    flex: 1; overflow-y: auto; background: #1e222d; border-radius: 4px; border: 1px solid #2B2B43;
+  }
+  .trade-panel h3 { padding: 5px 8px; font-size: 11px; position: sticky; top: 0; background: #2a2e39; z-index: 1; }
+  .trade-panel.p-v24 h3 { color: #FFE082; }
+  .trade-panel.p-v20 h3 { color: #A5D6A7; }
+  .trade-panel.p-v23 h3 { color: #8BC34A; }
+  .trade-panel.p-v19_1 h3 { color: #80DEEA; }
+  .trade-panel.p-v19_3 h3 { color: #F48FB1; }
+  .trade-panel.p-v18 h3 { color: #81D4FA; }
+  .trade-panel.p-rule h3 { color: #FFB74D; }
+  .trade-panel table { width: 100%; border-collapse: collapse; font-size: 10px; }
+  .trade-panel th { background: #2a2e39; padding: 3px 5px; text-align: left; position: sticky; top: 26px; }
+  .trade-panel td { padding: 2px 5px; border-bottom: 1px solid #1c1f2b; }
+  .trade-panel tr:hover { background: #2a2e39; }
+
+  .best-label {
+    background: #4caf5033; color: #4caf50; padding: 0 4px; border-radius: 3px;
+    font-size: 9px; font-weight: 700;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>V24 vs V23 vs V20 vs V19.3 vs V19.1 vs V18 vs Rule</h1>
+  <div class="symbol-selector">
+    <select id="symbolSelect" onchange="loadSymbol(this.value)">
+      <option value="">Loading...</option>
+    </select>
+  </div>
+  <div class="toggle-group">
+    <button class="toggle-btn active v24" id="btnV24" onclick="toggleLayer('v24')">V24</button>
+    <button class="toggle-btn active v23" id="btnV23" onclick="toggleLayer('v23')">V23</button>
+    <button class="toggle-btn active v20" id="btnV20" onclick="toggleLayer('v20')">V20</button>
+    <button class="toggle-btn active v19_3" id="btnV193" onclick="toggleLayer('v19_3')">V19.3</button>
+    <button class="toggle-btn active v19_1" id="btnV191" onclick="toggleLayer('v19_1')">V19.1</button>
+    <button class="toggle-btn active v18" id="btnV18" onclick="toggleLayer('v18')">V18</button>
+    <button class="toggle-btn active rule" id="btnRule" onclick="toggleLayer('rule')">Rule</button>
+    <button class="toggle-btn tbl" id="btnTable" onclick="toggleTable()">Trades</button>
+  </div>
+  <div class="stats-bar" id="statsBar"></div>
+</div>
+
+<div id="chart"></div>
+
+<div class="legend">
+  <div class="legend-item"><span class="legend-arrow" style="color:#FFD54F">&#8593;</span> V24 Buy</div>
+  <div class="legend-item"><span class="legend-arrow" style="color:#4caf50">&#8595;</span> V24 Win</div>
+  <div class="legend-item"><span class="legend-arrow" style="color:#f44336">&#8595;</span> V24 Loss</div>
+  <div class="legend-sep"></div>
+  <div class="legend-item"><span class="legend-arrow" style="color:#8BC34A">&#8593;</span> V23 Buy</div>
+  <div class="legend-item"><span class="legend-arrow" style="color:#4caf50">&#8595;</span> V23 Win</div>
+  <div class="legend-item"><span class="legend-arrow" style="color:#f44336">&#8595;</span> V23 Loss</div>
+  <div class="legend-sep"></div>
+  <div class="legend-item"><span class="legend-arrow" style="color:#66BB6A">&#8593;</span> V20 Buy</div>
+  <div class="legend-item"><span class="legend-arrow" style="color:#4caf50">&#8595;</span> V20 Win</div>
+  <div class="legend-item"><span class="legend-arrow" style="color:#f44336">&#8595;</span> V20 Loss</div>
+  <div class="legend-sep"></div>
+  <div class="legend-item"><span class="legend-arrow" style="color:#EC407A">&#8593;</span> V19.3 Buy</div>
+  <div class="legend-item"><span class="legend-arrow" style="color:#4caf50">&#8595;</span> V19.3 Win</div>
+  <div class="legend-item"><span class="legend-arrow" style="color:#f44336">&#8595;</span> V19.3 Loss</div>
+  <div class="legend-sep"></div>
+  <div class="legend-item"><span class="legend-arrow" style="color:#26C6DA">&#8593;</span> V19.1 Buy</div>
+  <div class="legend-item"><span class="legend-arrow" style="color:#4caf50">&#8595;</span> V19.1 Win</div>
+  <div class="legend-item"><span class="legend-arrow" style="color:#f44336">&#8595;</span> V19.1 Loss</div>
+  <div class="legend-sep"></div>
+  <div class="legend-item"><span class="legend-arrow" style="color:#29B6F6">&#8593;</span> V18 Buy</div>
+  <div class="legend-item"><span class="legend-arrow" style="color:#4caf50">&#8595;</span> V18 Win</div>
+  <div class="legend-item"><span class="legend-arrow" style="color:#f44336">&#8595;</span> V18 Loss</div>
+  <div class="legend-sep"></div>
+  <div class="legend-item"><span class="legend-dot" style="background:#FF9800"></span> Rule Buy</div>
+  <div class="legend-item"><span class="legend-dot" style="background:#8BC34A"></span> Rule Win</div>
+  <div class="legend-item"><span class="legend-dot" style="background:#E91E63"></span> Rule Loss</div>
+  <div class="legend-sep"></div>
+  <div class="legend-item" style="color:#888">SL=StopLoss TS=TrailingStop HS=HardStop HX=HybridExit PL=ProfitLock PP=PeakProtect PE=PeakEMA8 ZE=Zombie</div>
+</div>
+
+<div class="tables-container" id="tablesContainer" style="display:none">
+  <div class="trade-panel p-v24">
+    <h3>V24 Trades</h3>
+    <table><thead><tr><th>#</th><th>Entry</th><th>Exit</th><th>Days</th><th>PnL%</th><th>Reason</th><th>Trend</th><th>Special</th></tr></thead>
+    <tbody id="v24Body"></tbody></table>
+  </div>
+  <div class="trade-panel p-v23">
+    <h3>V23 Optimal Trades</h3>
+    <table><thead><tr><th>#</th><th>Entry</th><th>Exit</th><th>Days</th><th>PnL%</th><th>Reason</th><th>Trend</th><th>Special</th></tr></thead>
+    <tbody id="v23Body"></tbody></table>
+  </div>
+  <div class="trade-panel p-v20">
+    <h3>V20 ML Trades</h3>
+    <table><thead><tr><th>#</th><th>Entry</th><th>Exit</th><th>Days</th><th>PnL%</th><th>Reason</th><th>Trend</th><th>Special</th></tr></thead>
+    <tbody id="v20Body"></tbody></table>
+  </div>
+  <div class="trade-panel p-v19_3">
+    <h3>V19.3 ML Trades</h3>
+    <table><thead><tr><th>#</th><th>Entry</th><th>Exit</th><th>Days</th><th>PnL%</th><th>Reason</th><th>Trend</th><th>Special</th></tr></thead>
+    <tbody id="v193Body"></tbody></table>
+  </div>
+  <div class="trade-panel p-v19_1">
+    <h3>V19.1 ML Trades</h3>
+    <table><thead><tr><th>#</th><th>Entry</th><th>Exit</th><th>Days</th><th>PnL%</th><th>Reason</th><th>Trend</th><th>Special</th></tr></thead>
+    <tbody id="v191Body"></tbody></table>
+  </div>
+  <div class="trade-panel p-v18">
+    <h3>V18 ML Trades</h3>
+    <table><thead><tr><th>#</th><th>Entry</th><th>Exit</th><th>Days</th><th>PnL%</th><th>Reason</th><th>Trend</th><th>Special</th></tr></thead>
+    <tbody id="v18Body"></tbody></table>
+  </div>
+  <div class="trade-panel p-rule">
+    <h3>Rule-Based Trades</h3>
+    <table><thead><tr><th>#</th><th>Entry</th><th>Exit</th><th>Days</th><th>PnL%</th></tr></thead>
+    <tbody id="ruleBody"></tbody></table>
+  </div>
+</div>
+
+<script src="https://unpkg.com/lightweight-charts@4.1.0/dist/lightweight-charts.standalone.production.js"></script>
+<script>
+let chart = null, candleSeries = null, volumeSeries = null, currentData = null;
+let showV24 = true, showV23 = true, showV20 = true, showV191 = true, showV193 = true, showV18 = true, showRule = true, showTable = false;
+
+function createChart() {
+  const c = document.getElementById('chart');
+  c.innerHTML = '';
+  chart = LightweightCharts.createChart(c, {
+    width: c.clientWidth, height: c.clientHeight,
+    layout: { background: { color: '#131722' }, textColor: '#d1d4dc' },
+    grid: { vertLines: { color: '#1e222d' }, horzLines: { color: '#1e222d' } },
+    crosshair: { mode: 0 },
+    timeScale: { timeVisible: false, borderColor: '#2B2B43' },
+    rightPriceScale: { borderColor: '#2B2B43' },
+  });
+  candleSeries = chart.addCandlestickSeries({
+    upColor: '#26a69a', downColor: '#ef5350',
+    borderUpColor: '#26a69a', borderDownColor: '#ef5350',
+    wickUpColor: '#26a69a', wickDownColor: '#ef5350',
+  });
+  volumeSeries = chart.addHistogramSeries({
+    priceFormat: { type: 'volume' }, priceScaleId: 'vol',
+    scaleMargins: { top: 0.85, bottom: 0 },
+  });
+  chart.priceScale('vol').applyOptions({ scaleMargins: { top: 0.85, bottom: 0 } });
+  window.addEventListener('resize', () => chart.resize(c.clientWidth, c.clientHeight));
+}
+
+function getMarkers() {
+  let m = [];
+  if (showV24 && currentData.v24_markers) m = m.concat(currentData.v24_markers);
+  if (showV23 && currentData.v23_markers) m = m.concat(currentData.v23_markers);
+  if (showV20 && currentData.v20_markers) m = m.concat(currentData.v20_markers);
+  if (showV193 && currentData.v19_3_markers) m = m.concat(currentData.v19_3_markers);
+  if (showV191 && currentData.v19_1_markers) m = m.concat(currentData.v19_1_markers);
+  if (showV18 && currentData.v18_markers) m = m.concat(currentData.v18_markers);
+  if (showRule && currentData.rule_markers) m = m.concat(currentData.rule_markers);
+  m.sort((a, b) => a.time < b.time ? -1 : a.time > b.time ? 1 : 0);
+  return m;
+}
+
+function pnlCls(v) { return v >= 0 ? 'positive' : 'negative'; }
+function fmt(v) { return v > 0 ? '+' + v : '' + v; }
+function maxDrawdownFromTrades(trades) {
+  if (!trades || trades.length === 0) return 0;
+  let cum = 0;
+  let peak = 0;
+  let maxDd = 0;
+  for (const t of trades) {
+    const pnl = Number(t && t.pnl_pct);
+    if (!Number.isFinite(pnl)) continue;
+    cum += pnl;
+    peak = Math.max(peak, cum);
+    maxDd = Math.max(maxDd, peak - cum);
+  }
+  return -Math.round(maxDd * 100) / 100;
+}
+
+function bestBadge(vals, idx) {
+  const max = Math.max(...vals);
+  return vals[idx] === max && max > 0 ? ' <span class="best-label">BEST</span>' : '';
+}
+
+function renderStats() {
+  const v24 = currentData.v24_stats || {};
+  const v23 = currentData.v23_stats || {};
+  const v20 = currentData.v20_stats || {};
+  const v193 = currentData.v19_3_stats || {};
+  const v191 = currentData.v19_1_stats || {};
+  const v18 = currentData.v18_stats || {};
+  const rule = currentData.rule_stats || {};
+  const bar = document.getElementById('statsBar');
+
+  const totals = [v24.total_pnl_pct||0, v23.total_pnl_pct||0, v20.total_pnl_pct||0, v193.total_pnl_pct||0, v191.total_pnl_pct||0, v18.total_pnl_pct||0, rule.total_pnl_pct||0];
+  const wrs = [v24.win_rate||0, v23.win_rate||0, v20.win_rate||0, v193.win_rate||0, v191.win_rate||0, v18.win_rate||0, rule.win_rate||0];
+  const avgs = [v24.avg_pnl_pct||0, v23.avg_pnl_pct||0, v20.avg_pnl_pct||0, v193.avg_pnl_pct||0, v191.avg_pnl_pct||0, v18.avg_pnl_pct||0, rule.avg_pnl_pct||0];
+
+  function card(s, cls, label, idx, trades) {
+    const maxDd = Number.isFinite(Number(s.max_drawdown_pct))
+      ? Number(s.max_drawdown_pct)
+      : maxDrawdownFromTrades(trades);
+    return `<div class="stat-card ${cls}">
+      <div class="stat-title">${label}</div>
+      <div class="stat-row"><span class="lbl">Trades:</span><span>${s.total_trades||0}</span></div>
+      <div class="stat-row"><span class="lbl">WR:</span><span>${s.win_rate||0}%${bestBadge(wrs,idx)}</span></div>
+      <div class="stat-row"><span class="lbl">Avg:</span><span class="${pnlCls(s.avg_pnl_pct)}">${fmt(s.avg_pnl_pct||0)}%${bestBadge(avgs,idx)}</span></div>
+      <div class="stat-row"><span class="lbl">Total:</span><span class="${pnlCls(s.total_pnl_pct)}">${fmt(s.total_pnl_pct||0)}%${bestBadge(totals,idx)}</span></div>
+      <div class="stat-row"><span class="lbl">Hold:</span><span>${s.avg_hold||0}d</span></div>
+      <div class="stat-row"><span class="lbl">PF:</span><span>${s.pf||0}</span></div>
+      <div class="stat-row"><span class="lbl">Median:</span><span class="${pnlCls(s.median_pnl_pct||0)}">${fmt(s.median_pnl_pct||0)}%</span></div>
+      <div class="stat-row"><span class="lbl">Std:</span><span>${s.std_pnl_pct||0}</span></div>
+      <div class="stat-row"><span class="lbl">Avg Win/Loss:</span><span>${fmt(s.avg_win_pct||0)}% / ${fmt(s.avg_loss_pct||0)}%</span></div>
+      <div class="stat-row"><span class="lbl">Payoff:</span><span>${s.payoff_ratio||0}</span></div>
+      <div class="stat-row"><span class="lbl">Max Win/Loss:</span><span>${fmt(s.max_win_pct||0)}% / ${fmt(s.max_loss_pct||0)}%</span></div>
+      <div class="stat-row"><span class="lbl">MaxDD:</span><span class="${pnlCls(maxDd)}">${fmt(maxDd)}%</span></div>
+    </div>`;
+  }
+
+  bar.innerHTML = card(v24, 'stat-v24', 'V24', 0, currentData.v24_trades || []) +
+                  card(v23, 'stat-v23', 'V23 Optimal', 1, currentData.v23_trades || []) +
+                  card(v20, 'stat-v20', 'V20 ML', 2, currentData.v20_trades || []) +
+                  card(v193, 'stat-v19_3', 'V19.3 ML', 3, currentData.v19_3_trades || []) +
+                  card(v191, 'stat-v19_1', 'V19.1 ML', 4, currentData.v19_1_trades || []) +
+                  card(v18, 'stat-v18', 'V18 ML', 5, currentData.v18_trades || []) +
+                  card(rule, 'stat-rule', 'Rule', 6, currentData.rule_trades || []);
+}
+
+function specialTag(t) {
+  let tags = [];
+  if (t.vshape_entry) tags.push('V');
+  if (t.breakout_entry) tags.push('BO');
+  if (t.secondary_breakout) tags.push('SB');
+  if (t.quick_reentry) tags.push('QR');
+  if (t.entry_profile) tags.push(t.entry_profile.toUpperCase());
+  if (t.entry_choppy_regime) tags.push('CHOP');
+  if (t.position_size !== undefined && t.position_size !== null) tags.push('SZ:' + Number(t.position_size).toFixed(2));
+  return tags.join(',');
+}
+
+function renderTrades() {
+  function fill(id, trades, cols) {
+    document.getElementById(id).innerHTML = (trades || []).map((t, i) => {
+      const cls = t.pnl_pct >= 0 ? 'positive' : 'negative';
+      let row = `<td>${i+1}</td><td>${t.entry_date||''}</td><td>${t.exit_date||''}</td><td>${t.holding_days||0}</td><td class="${cls}">${fmt(t.pnl_pct)}%</td>`;
+      if (cols.includes('reason')) row += `<td>${t.exit_reason||''}</td>`;
+      if (cols.includes('trend')) row += `<td>${t.entry_trend||''}</td>`;
+      if (cols.includes('special')) row += `<td>${specialTag(t)}</td>`;
+      return `<tr>${row}</tr>`;
+    }).join('');
+  }
+  fill('v24Body', currentData.v24_trades, ['reason','trend','special']);
+  fill('v23Body', currentData.v23_trades, ['reason','trend','special']);
+  fill('v20Body', currentData.v20_trades, ['reason','trend','special']);
+  fill('v193Body', currentData.v19_3_trades, ['reason','trend','special']);
+  fill('v191Body', currentData.v19_1_trades, ['reason','trend','special']);
+  fill('v18Body', currentData.v18_trades, ['reason','trend','special']);
+  fill('ruleBody', currentData.rule_trades, []);
+}
+
+async function loadModelPayload(folder, symbol) {
+  if (!symbol) return [];
+  const candidates = [
+    `./${folder}/${symbol}.json`,
+    `/${folder}/${symbol}.json`,
+  ];
+  try {
+    for (const path of candidates) {
+      const resp = await fetch(path);
+      if (!resp.ok) continue;
+      const data = await resp.json();
+      return data || {};
+    }
+    return {};
+  } catch (_) {
+    return {};
+  }
+}
+
+async function loadV23Payload(symbol) {
+  return loadModelPayload("data_v23", symbol);
+}
+
+async function loadV24Payload(symbol) {
+  return loadModelPayload("data_v24", symbol);
+}
+
+window.toggleLayer = function(layer) {
+  if (layer === 'v24') { showV24 = !showV24; document.getElementById('btnV24').classList.toggle('active'); }
+  if (layer === 'v23') { showV23 = !showV23; document.getElementById('btnV23').classList.toggle('active'); }
+  if (layer === 'v20') { showV20 = !showV20; document.getElementById('btnV20').classList.toggle('active'); }
+  if (layer === 'v19_3') { showV193 = !showV193; document.getElementById('btnV193').classList.toggle('active'); }
+  if (layer === 'v19_1') { showV191 = !showV191; document.getElementById('btnV191').classList.toggle('active'); }
+  if (layer === 'v18') { showV18 = !showV18; document.getElementById('btnV18').classList.toggle('active'); }
+  if (layer === 'rule') { showRule = !showRule; document.getElementById('btnRule').classList.toggle('active'); }
+  candleSeries.setMarkers(getMarkers());
+};
+
+window.toggleTable = function() {
+  showTable = !showTable;
+  document.getElementById('btnTable').classList.toggle('active');
+  document.getElementById('tablesContainer').style.display = showTable ? 'flex' : 'none';
+  const ch = document.getElementById('chart');
+  ch.style.height = showTable ? 'calc(100vh - 500px)' : 'calc(100vh - 300px)';
+  if (chart) chart.resize(ch.clientWidth, ch.clientHeight);
+};
+
+window.loadSymbol = async function(file) {
+  if (!file) return;
+  const resp = await fetch(file);
+  currentData = await resp.json();
+  const v24 = await loadV24Payload(currentData.symbol);
+  const v23 = await loadV23Payload(currentData.symbol);
+  currentData.v24_trades = v24.v24_trades || [];
+  currentData.v24_markers = v24.v24_markers || [];
+  currentData.v24_stats = v24.v24_stats || {};
+  currentData.v23_trades = v23.v23_trades || [];
+  currentData.v23_markers = v23.v23_markers || [];
+  currentData.v23_stats = v23.v23_stats || {};
+  if (!chart) createChart();
+  candleSeries.setData(currentData.ohlcv);
+  volumeSeries.setData(currentData.ohlcv.map(d => ({
+    time: d.time, value: d.volume,
+    color: d.close >= d.open ? 'rgba(38,166,154,0.3)' : 'rgba(239,83,80,0.3)'
+  })));
+  candleSeries.setMarkers(getMarkers());
+  chart.timeScale().fitContent();
+  renderStats();
+  renderTrades();
+};
+
+async function init() {
+  try {
+    const [idxResp, v24Resp] = await Promise.all([
+      fetch('./data/index.json'),
+      fetch('./data_v24/index.json'),
+    ]);
+    const index = await idxResp.json();
+    let v24Map = {};
+    if (v24Resp.ok) {
+      const v24Index = await v24Resp.json();
+      v24Map = Object.fromEntries((v24Index.symbols || []).map(s => [s.symbol, s]));
+    }
+    const sel = document.getElementById('symbolSelect');
+    sel.innerHTML = '';
+    for (const s of index.symbols) {
+      const opt = document.createElement('option');
+      opt.value = s.file;
+      const v24 = v24Map[s.symbol] || {};
+      const v24p = v24.v24_pnl || 0;
+      const v23p = s.v23_pnl || 0, v20p = s.v20_pnl || 0, v193p = s.v19_3_pnl || 0, v191p = s.v19_1_pnl || 0, v18p = s.v18_pnl || 0, rp = s.rule_pnl || 0;
+      opt.textContent = `${s.symbol} | V24:${fmt(v24p)}% V23:${fmt(v23p)}% V20:${fmt(v20p)}% V19.3:${fmt(v193p)}% V19.1:${fmt(v191p)}% V18:${fmt(v18p)}% Rule:${fmt(rp)}%`;
+      sel.appendChild(opt);
+    }
+    if (index.symbols.length > 0) loadSymbol(index.symbols[0].file);
+  } catch (e) {
+    document.getElementById('chart').innerHTML = '<div style="text-align:center;padding:40px;color:#888">No data. Run: python export_v17_comparison.py</div>';
+  }
+}
+
+init();
+</script>
+</body>
+</html>

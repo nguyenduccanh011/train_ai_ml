@@ -1,0 +1,351 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dynamic Model Comparison Dashboard</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #131722; color: #d1d4dc; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
+
+  .header {
+    padding: 10px 20px;
+    background: #1e222d;
+    border-bottom: 1px solid #2B2B43;
+    display: grid;
+    gap: 8px;
+  }
+  .header-controls {
+    display: grid;
+    grid-template-columns: auto minmax(220px, 420px) max-content 1fr;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+  .header h1 {
+    font-size: 15px;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .header-stats {
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+
+  .symbol-selector { position: relative; }
+  .symbol-selector select {
+    background: #2a2e39;
+    color: #d1d4dc;
+    border: 1px solid #444;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 13px;
+    cursor: pointer;
+    display: none;
+  }
+  .symbol-search-container {
+    position: relative;
+    display: block;
+  }
+  .symbol-search-input {
+    background: #2a2e39;
+    color: #d1d4dc;
+    border: 1px solid #444;
+    padding: 6px 12px;
+    border-radius: 4px;
+    font-size: 13px;
+    width: clamp(220px, 28vw, 420px);
+    max-width: 100%;
+    outline: none;
+  }
+  .symbol-search-input:focus { border-color: #666; }
+  .symbol-search-input::placeholder { color: #666; }
+  .symbol-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    min-width: 100%;
+    width: max-content;
+    background: #2a2e39;
+    border: 1px solid #444;
+    border-top: none;
+    border-radius: 0 0 4px 4px;
+    max-height: 400px;
+    overflow-y: auto;
+    z-index: 1000;
+    display: none;
+  }
+  .symbol-dropdown.open { display: block; }
+  .symbol-dropdown-item {
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 12px;
+    border-bottom: 1px solid #1e222d;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .symbol-dropdown-item:hover, .symbol-dropdown-item.highlighted { background: #363a45; }
+  .symbol-dropdown-item.selected {
+    background: #363a45;
+    border-left: 3px solid #4caf50;
+  }
+  .symbol-dropdown-item .sym-name {
+    font-weight: 700;
+    color: #fff;
+    min-width: 40px;
+  }
+  .symbol-dropdown-item .sym-pnl {
+    font-size: 10px;
+    color: #888;
+  }
+  .symbol-dropdown-item .sym-pnl .positive { color: #26a69a; }
+  .symbol-dropdown-item .sym-pnl .negative { color: #ef5350; }
+  .symbol-dropdown-count {
+    padding: 4px 12px;
+    font-size: 10px;
+    color: #666;
+    border-bottom: 1px solid #1e222d;
+    background: #252830;
+  }
+
+  .sort-controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .sort-controls label {
+    font-size: 10px;
+    color: #888;
+    white-space: nowrap;
+  }
+  .sort-controls select {
+    background: #2a2e39;
+    color: #d1d4dc;
+    border: 1px solid #444;
+    padding: 3px 6px;
+    border-radius: 3px;
+    font-size: 11px;
+    cursor: pointer;
+  }
+  .sort-controls button {
+    background: #2a2e39;
+    color: #d1d4dc;
+    border: 1px solid #444;
+    padding: 3px 8px;
+    border-radius: 3px;
+    font-size: 11px;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .sort-controls button:hover { border-color: #888; color: #fff; }
+  .sort-controls button.active { border-color: #4caf50; color: #4caf50; }
+
+  .toggle-group {
+    display: flex;
+    gap: 3px;
+    min-width: 0;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
+  }
+  .toggle-btn {
+    padding: 4px 10px;
+    border-radius: 4px;
+    border: 1px solid #444;
+    background: #2a2e39;
+    color: #666;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 600;
+    transition: all 0.15s;
+    white-space: nowrap;
+    flex: 0 0 auto;
+  }
+  .toggle-btn:hover { border-color: #888; color: #aaa; }
+  .toggle-btn.active { color: #fff; }
+  .toggle-btn.retire-btn { opacity: 0.5; font-style: italic; }
+
+  .stats-bar {
+    display: flex;
+    gap: 3px;
+    font-size: 11px;
+    flex-wrap: nowrap;
+    max-width: 100%;
+    min-width: max-content;
+  }
+  .stat-card {
+    padding: 5px 10px;
+    border-radius: 4px;
+    min-width: 175px;
+    flex: 0 0 auto;
+  }
+  .stat-title {
+    font-weight: 700;
+    margin-bottom: 2px;
+    font-size: 11px;
+    white-space: nowrap;
+  }
+  .stat-row { display: flex; justify-content: space-between; gap: 6px; line-height: 1.5; }
+  .stat-row .lbl { color: #888; }
+  .positive { color: #26a69a; }
+  .negative { color: #ef5350; }
+  .best-label {
+    background: #4caf5033;
+    color: #4caf50;
+    padding: 0 4px;
+    border-radius: 3px;
+    font-size: 9px;
+    font-weight: 700;
+  }
+
+  #chart { width: 100%; height: calc(100vh - 300px); min-height: 380px; }
+
+  .legend {
+    padding: 5px 20px;
+    background: #1e222d;
+    border-top: 1px solid #2B2B43;
+    display: flex;
+    gap: 14px;
+    font-size: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .legend-item { display: flex; align-items: center; gap: 3px; }
+  .legend-arrow { font-size: 13px; }
+  .legend-sep { width: 1px; height: 14px; background: #333; margin: 0 4px; }
+
+  .tables-container {
+    display: flex;
+    gap: 4px;
+    padding: 6px 20px;
+    max-height: 200px;
+    overflow-x: auto;
+  }
+  .trade-panel {
+    flex: 1;
+    min-width: 200px;
+    overflow-y: auto;
+    background: #1e222d;
+    border-radius: 4px;
+    border: 1px solid #2B2B43;
+  }
+  .trade-panel h3 {
+    padding: 5px 8px;
+    font-size: 11px;
+    position: sticky;
+    top: 0;
+    background: #2a2e39;
+    z-index: 1;
+  }
+  .trade-panel table { width: 100%; border-collapse: collapse; font-size: 10px; }
+  .trade-panel th {
+    background: #2a2e39;
+    padding: 3px 5px;
+    text-align: left;
+    position: sticky;
+    top: 26px;
+  }
+  .trade-panel td { padding: 2px 5px; border-bottom: 1px solid #1c1f2b; }
+  .trade-panel tr:hover { background: #2a2e39; }
+
+  .model-mgr {
+    margin-left: 8px;
+    display: flex;
+    gap: 4px;
+    align-items: center;
+  }
+  .mgr-btn {
+    padding: 3px 8px;
+    border-radius: 3px;
+    border: 1px solid #555;
+    background: #2a2e39;
+    color: #aaa;
+    cursor: pointer;
+    font-size: 10px;
+  }
+  .mgr-btn:hover { border-color: #888; color: #fff; }
+  .mgr-btn.danger { border-color: #ef5350; color: #ef5350; }
+  .mgr-btn.danger:hover { background: #ef535033; }
+
+  .symbol-dropdown::-webkit-scrollbar { width: 6px; }
+  .symbol-dropdown::-webkit-scrollbar-track { background: #1e222d; }
+  .symbol-dropdown::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+  .symbol-dropdown::-webkit-scrollbar-thumb:hover { background: #666; }
+
+  .toggle-group::-webkit-scrollbar, .header-stats::-webkit-scrollbar { height: 6px; }
+  .toggle-group::-webkit-scrollbar-track, .header-stats::-webkit-scrollbar-track { background: #1e222d; }
+  .toggle-group::-webkit-scrollbar-thumb, .header-stats::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+  .toggle-group::-webkit-scrollbar-thumb:hover, .header-stats::-webkit-scrollbar-thumb:hover { background: #666; }
+
+  @media (max-width: 1320px) {
+    .header-controls {
+      grid-template-columns: auto minmax(220px, 1fr) max-content;
+      grid-template-areas:
+        "title search sort"
+        "toggle toggle toggle";
+    }
+    .header-controls h1 { grid-area: title; }
+    .header-controls .symbol-selector { grid-area: search; }
+    .header-controls .sort-controls { grid-area: sort; justify-self: end; }
+    .header-controls .toggle-group { grid-area: toggle; }
+  }
+
+  @media (max-width: 880px) {
+    .header { padding: 10px 12px; }
+    .header-controls {
+      grid-template-columns: 1fr;
+      grid-template-areas:
+        "title"
+        "search"
+        "sort"
+        "toggle";
+    }
+    .symbol-search-input { width: 100%; }
+    .header-controls .sort-controls { justify-self: start; }
+  }
+</style>
+</head>
+<body>
+<div class="header" id="header">
+  <div class="header-controls">
+    <h1>📊 Model Comparison Dashboard</h1>
+    <div class="symbol-selector">
+      <select id="symbolSelect" onchange="loadSymbol(this.value)" style="display:none">
+        <option value="">Loading...</option>
+      </select>
+      <div class="symbol-search-container">
+        <input type="text" class="symbol-search-input" id="symbolSearchInput"
+               placeholder="🔍 Tìm mã cổ phiếu... (VD: TCB, FPT, VNM)"
+               autocomplete="off" />
+        <div class="symbol-dropdown" id="symbolDropdown"></div>
+      </div>
+    </div>
+    <div class="sort-controls" id="sortControls">
+      <label>Sắp xếp:</label>
+      <select id="sortModel" title="Chọn model để sắp xếp theo PnL">
+        <option value="">A-Z</option>
+      </select>
+      <button id="sortDirBtn" onclick="toggleSortDir()" title="Đổi chiều sắp xếp">↓ Cao→Thấp</button>
+    </div>
+    <div class="toggle-group" id="toggleGroup"></div>
+  </div>
+  <div class="header-stats">
+    <div class="stats-bar" id="statsBar"></div>
+  </div>
+</div>
+<div id="chart"></div>
+<div class="legend" id="legendBar"></div>
+<div class="tables-container" id="tablesContainer" style="display:none"></div>
+<script src="https://unpkg.com/lightweight-charts@4.1.0/dist/lightweight-charts.standalone.production.js"></script>
+<script src="./js/state.js"></script>
+<script src="./js/chart.js"></script>
+<script src="./js/ui.js"></script>
+<script src="./js/app.js"></script>
+</body>
+</html>

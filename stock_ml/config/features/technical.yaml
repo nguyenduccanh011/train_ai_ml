@@ -1,0 +1,56 @@
+# Technical feature set - Phase 2
+_inherit: minimal.yaml
+
+feature_groups:
+  price_action:
+    enabled: true
+  volume:
+    enabled: true
+  moving_averages:
+    enabled: true
+
+  momentum:
+    enabled: true
+    features:
+      - rsi_14
+      - rsi_7
+      - stoch_k
+      - stoch_d
+      - williams_r
+      - roc_10
+      - roc_20
+      - momentum_10
+
+  trend:
+    enabled: true
+    features:
+      - macd
+      - macd_signal
+      - macd_histogram
+      - adx_14
+      - plus_di
+      - minus_di
+      - cci_20
+      - aroon_up
+      - aroon_down
+
+  volatility:
+    enabled: true
+    features:
+      - bb_upper
+      - bb_lower
+      - bb_width
+      - bb_pctb
+      - atr_14
+      - atr_ratio
+      - keltner_upper
+      - keltner_lower
+
+  volume_advanced:
+    enabled: true
+    features:
+      - obv
+      - obv_slope_10
+      - vwap_ratio
+      - mfi_14
+      - cmf_20

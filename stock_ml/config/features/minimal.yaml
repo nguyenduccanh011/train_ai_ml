@@ -1,0 +1,35 @@
+# Minimal feature set - Phase 1 baseline
+feature_groups:
+  price_action:
+    enabled: true
+    features:
+      - return_1d
+      - return_5d
+      - return_10d
+      - return_20d
+      - log_return_1d
+      - volatility_10d
+      - volatility_20d
+      - high_low_range
+      - close_to_high
+      - close_to_low
+
+  volume:
+    enabled: true
+    features:
+      - volume_ratio_5d
+      - volume_ratio_20d
+      - traded_value_ratio_5d
+
+  moving_averages:
+    enabled: true
+    features:
+      - sma_5
+      - sma_10
+      - sma_20
+      - sma_50
+      - ema_10
+      - ema_20
+      - price_to_sma20
+      - price_to_sma50
+      - sma10_cross_sma20

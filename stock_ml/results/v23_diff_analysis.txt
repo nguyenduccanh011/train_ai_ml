@@ -1,0 +1,483 @@
+v16: cols=['entry_day', 'exit_day', 'holding_days', 'pnl_pct', 'max_profit_pct', 'exit_reason', 'exit_date', 'entry_wp']... rows=431
+v19_1: cols=['entry_day', 'exit_day', 'holding_days', 'pnl_pct', 'max_profit_pct', 'exit_reason', 'exit_date', 'entry_wp']... rows=419
+v19_3: cols=['entry_day', 'exit_day', 'holding_days', 'pnl_pct', 'max_profit_pct', 'exit_reason', 'exit_date', 'entry_wp']... rows=441
+v22: cols=['entry_day', 'exit_day', 'holding_days', 'pnl_pct', 'max_profit_pct', 'exit_reason', 'exit_date', 'entry_wp']... rows=414
+v23: cols=['entry_day', 'exit_day', 'holding_days', 'pnl_pct', 'max_profit_pct', 'exit_reason', 'exit_date', 'entry_wp']... rows=409
+rule: cols=['entry_date', 'exit_date', 'holding_days', 'pnl_pct', 'entry_price', 'exit_price', 'exit_reason', 'entry_symbol']... rows=585
+
+========== TOP 5 LOSSES PER MODEL ==========
+
+--- v16 ---
+entry_symbol entry_date  exit_date  pnl_pct exit_reason entry_trend  holding_days
+         AAS 2023-09-13 2023-09-26   -23.62      signal      strong             9
+         VND 2022-06-02 2022-06-15   -21.70      signal        weak             9
+         VIC 2022-12-09 2022-12-22   -18.88      signal      strong             9
+         VND 2022-11-02 2022-11-15   -18.17      signal        weak             9
+         VND 2022-01-06 2022-01-19   -17.87      signal        weak             9
+
+--- v19_1 ---
+entry_symbol entry_date  exit_date  pnl_pct exit_reason entry_trend  holding_days
+         VND 2021-01-18 2021-02-01   -28.59      signal    moderate            10
+         VND 2022-06-02 2022-06-16   -26.93      signal        weak            10
+         SSI 2022-01-06 2022-01-18   -18.48      signal        weak             8
+         VND 2022-01-06 2022-01-19   -17.87      signal        weak             9
+         AAV 2022-12-14 2022-12-27   -15.09      signal    moderate             9
+
+--- v19_3 ---
+entry_symbol entry_date  exit_date  pnl_pct     exit_reason entry_trend  holding_days
+         AAV 2024-05-30 2024-06-03   -17.11 signal_hard_cap      strong             2
+         AAV 2022-01-06 2022-01-13   -16.31 signal_hard_cap        weak             5
+         AAV 2024-05-08 2024-05-15   -16.13 signal_hard_cap      strong             5
+         AAS 2022-10-18 2022-10-24   -14.90 signal_hard_cap        weak             4
+         HPG 2021-01-25 2021-01-28   -14.17 signal_hard_cap    moderate             3
+
+--- v22 ---
+entry_symbol entry_date  exit_date  pnl_pct     exit_reason entry_trend  holding_days
+         VND 2022-06-02 2022-06-15   -21.70 signal_hard_cap        weak             9
+         VND 2021-01-18 2021-01-27   -20.68 signal_hard_cap    moderate             7
+         SSI 2022-01-06 2022-01-18   -18.48 signal_hard_cap        weak             8
+         VND 2022-01-06 2022-01-17   -17.49 signal_hard_cap        weak             7
+         DGC 2022-09-14 2022-09-26   -14.28 signal_hard_cap    moderate             8
+
+--- v23 ---
+entry_symbol entry_date  exit_date  pnl_pct     exit_reason entry_trend  holding_days
+         REE 2022-05-11 2022-05-16   -18.58 signal_hard_cap      strong             3
+         AAS 2021-04-08 2021-04-22   -18.18 signal_hard_cap    moderate             9
+         VND 2022-12-14 2022-12-26   -16.34 signal_hard_cap      strong             8
+         AAV 2022-01-06 2022-01-13   -16.31 signal_hard_cap        weak             5
+         REE 2022-05-30 2022-06-22   -15.73 signal_hard_cap      strong            17
+
+--- rule ---
+entry_symbol entry_date  exit_date  pnl_pct exit_reason  holding_days
+         AAV 2022-05-27 2022-06-13   -27.23   rule_sell            11
+         SSI 2022-11-01 2022-11-10   -18.54   rule_sell             7
+         VND 2020-03-11 2020-03-23   -18.36   rule_sell             8
+         SSI 2022-05-26 2022-06-14   -17.80   rule_sell            13
+         AAS 2025-10-13 2025-10-21   -16.88   rule_sell             6
+
+========== PER-SYMBOL TOTALS (entry_date 2022 only - bear year) ==========
+
+--- v16 2022 ---  total=-92.0% n=76
+              n  total   avg    wr
+entry_symbol                      
+AAS           6   10.0   1.7  50.0
+AAV           5   18.5   3.7  20.0
+ACB           5   -1.5  -0.3  40.0
+BID           6   17.3   2.9  33.3
+DGC           3   31.0  10.3  33.3
+FPT           5    8.1   1.6  40.0
+HPG           4    1.3   0.3  25.0
+MBB           7   12.2   1.7  57.1
+REE           7  -20.8  -3.0  14.3
+SSI           5  -23.6  -4.7  20.0
+TCB           8  -38.4  -4.8  12.5
+VIC           3  -28.0  -9.3   0.0
+VND           7  -66.1  -9.4  14.3
+VNM           5  -11.8  -2.4  20.0
+
+--- v19_1 2022 ---  total=-22.4% n=73
+              n  total   avg    wr
+entry_symbol                      
+AAS           6   -6.5  -1.1  33.3
+AAV           5   15.3   3.1  40.0
+ACB           5   -5.0  -1.0  40.0
+BID           5   40.7   8.1  60.0
+DGC           4   43.0  10.8  25.0
+FPT           5    8.1   1.6  40.0
+HPG           4    7.6   1.9  25.0
+MBB           5   20.4   4.1  60.0
+REE           7  -15.0  -2.1  42.9
+SSI           6  -39.9  -6.7   0.0
+TCB           6  -21.0  -3.5  16.7
+VIC           4  -11.4  -2.8   0.0
+VND           6  -43.1  -7.2  33.3
+VNM           5  -15.7  -3.1  20.0
+
+--- v19_3 2022 ---  total=+8.5% n=72
+              n  total   avg    wr
+entry_symbol                      
+AAS           6  -10.5  -1.8  33.3
+AAV           5    4.2   0.8  20.0
+ACB           4   -1.0  -0.2  25.0
+BID           5   47.5   9.5  60.0
+DGC           4   45.8  11.4  25.0
+FPT           5   17.4   3.5  60.0
+HPG           4    7.4   1.8  25.0
+MBB           6    4.5   0.8  50.0
+REE           7  -32.2  -4.6  28.6
+SSI           6  -27.5  -4.6   0.0
+TCB           5  -13.7  -2.7  20.0
+VIC           4  -13.4  -3.4   0.0
+VND           6   -5.3  -0.9  33.3
+VNM           5  -14.7  -2.9  20.0
+
+--- v22 2022 ---  total=-10.9% n=70
+              n  total  avg    wr
+entry_symbol                     
+AAS           6   -6.5 -1.1  33.3
+AAV           4   30.4  7.6  50.0
+ACB           5   -5.0 -1.0  40.0
+BID           5   43.8  8.8  60.0
+DGC           4   32.5  8.1  25.0
+FPT           5   -0.3 -0.1  40.0
+HPG           4    7.6  1.9  25.0
+MBB           5   20.4  4.1  60.0
+REE           6   -6.2 -1.0  50.0
+SSI           6  -43.9 -7.3   0.0
+TCB           5  -19.2 -3.8  20.0
+VIC           4  -11.4 -2.8   0.0
+VND           6  -37.5 -6.2  33.3
+VNM           5  -15.7 -3.1  20.0
+
+--- v23 2022 ---  total=-47.0% n=71
+              n  total  avg    wr
+entry_symbol                     
+AAS           6  -13.6 -2.3  33.3
+AAV           4   27.2  6.8  50.0
+ACB           5   -5.0 -1.0  40.0
+BID           5   43.8  8.8  60.0
+DGC           4   32.5  8.1  25.0
+FPT           5   -0.3 -0.1  40.0
+HPG           4    4.9  1.2  25.0
+MBB           6    1.7  0.3  50.0
+REE           7  -45.6 -6.5  14.3
+SSI           5  -29.0 -5.8   0.0
+TCB           5  -19.2 -3.8  20.0
+VIC           4  -11.4 -2.8   0.0
+VND           6  -17.3 -2.9  33.3
+VNM           5  -15.7 -3.1  20.0
+
+--- rule 2022 ---  total=-21.2% n=86
+              n  total  avg    wr
+entry_symbol                     
+AAS           6   -7.2 -1.2  33.3
+AAV           4   -8.5 -2.1  75.0
+ACB           6  -16.3 -2.7  33.3
+BID           6   -1.2 -0.2  50.0
+DGC           5   38.8  7.8  40.0
+FPT           6    5.2  0.9  66.7
+HPG           6   10.4  1.7  50.0
+MBB           6   -5.8 -1.0  50.0
+REE           9   -5.4 -0.6  55.6
+SSI           6   -9.1 -1.5  33.3
+TCB           5    0.8  0.2  60.0
+VIC           7  -22.4 -3.2  14.3
+VND           6   18.9  3.1  50.0
+VNM           8  -19.4 -2.4  25.0
+
+========== ALIGNED TRADES: same symbol+similar entry_date across V19.1 vs V23 ==========
+
+Top 15 trades V23 BETTER than V19.1:
+sym       date  pnl_v191  pnl_v23  delta                r1                r2
+VND 2022-06-02    -26.93   -10.02  16.91            signal   signal_hard_cap
+AAS 2023-03-15     -6.93     9.71  16.64            signal            signal
+SSI 2023-08-23     -0.14    14.33  14.47            signal peak_protect_dist
+VND 2021-01-18    -28.59   -14.86  13.73            signal   signal_hard_cap
+TCB 2024-01-30     16.48    29.22  12.74 peak_protect_dist            signal
+VIC 2025-08-18     61.59    70.05   8.46 peak_protect_dist            signal
+VND 2022-01-06    -17.87   -10.08   7.79            signal   signal_hard_cap
+SSI 2023-03-10      0.23     7.87   7.64     trailing_stop            signal
+DGC 2020-04-24     36.33    43.73   7.40 peak_protect_dist            signal
+VND 2020-05-15      2.16     9.05   6.89            signal peak_protect_dist
+SSI 2021-05-10     45.38    52.13   6.75 peak_protect_dist            signal
+SSI 2022-01-06    -18.48   -12.69   5.79            signal   signal_hard_cap
+TCB 2022-07-06     -2.14     3.10   5.24     trailing_stop            signal
+AAS 2021-10-18     32.49    37.46   4.97 peak_protect_dist            signal
+VNM 2020-05-07      8.32    13.15   4.83 peak_protect_dist            signal
+
+Top 15 trades V23 WORSE than V19.1:
+sym       date  pnl_v191  pnl_v23  delta                r1              r2
+AAS 2025-07-09     97.83    61.96 -35.87 peak_protect_dist          signal
+REE 2022-05-11     11.88   -18.58 -30.46 peak_protect_dist signal_hard_cap
+AAS 2021-01-06      9.81   -13.08 -22.89     trailing_stop signal_hard_cap
+TCB 2021-01-25     10.05   -12.83 -22.88            signal signal_hard_cap
+AAV 2024-08-01     10.00   -10.94 -20.94  peak_protect_ema signal_hard_cap
+AAS 2023-09-05      0.00   -13.78 -13.78     trailing_stop signal_hard_cap
+DGC 2022-02-10     66.42    55.93 -10.49 peak_protect_dist          signal
+BID 2022-09-30     -4.27   -13.87  -9.60            signal signal_hard_cap
+MBB 2022-10-14     -3.32   -12.34  -9.02            signal signal_hard_cap
+FPT 2022-03-23     15.13     6.74  -8.39 peak_protect_dist          signal
+AAV 2025-04-15     31.67    23.33  -8.34 peak_protect_dist          signal
+MBB 2025-07-30     31.75    23.72  -8.03 peak_protect_dist          signal
+HPG 2021-01-25     -6.41   -14.17  -7.76            signal signal_hard_cap
+AAS 2022-10-18     -7.80   -14.90  -7.10            signal signal_hard_cap
+VND 2022-12-14     -9.65   -16.34  -6.69            signal signal_hard_cap
+
+Missing in V23 (V19.1 has but V23 skipped): 28
+  Of which V19.1 winners (>+5%) skipped: 6, sum lost = +60.6%
+sym       date  pnl_v191                r1
+VND 2023-07-27     16.21 peak_protect_dist
+VNM 2020-08-10     13.29            signal
+BID 2022-11-10     12.95  peak_protect_ema
+HPG 2021-02-22      6.45            signal
+VND 2022-02-22      6.15            signal
+AAS 2023-04-04      5.56            signal
+
+========== RULE has but V23 missed (>+10% rule wins) ==========
+Total rule wins missed by V23: 58, sum=+1582.4%
+sym       date  rule_pnl  rule_rsn
+AAV 2021-08-04    127.36 rule_sell
+AAV 2020-11-24     79.11 rule_sell
+DGC 2020-04-09     70.18 rule_sell
+SSI 2025-06-19     68.32 rule_sell
+HPG 2020-09-18     61.37 rule_sell
+AAV 2024-04-23     58.47 rule_sell
+AAS 2021-05-21     57.95 rule_sell
+VIC 2025-02-19     45.54 rule_sell
+REE 2020-07-03     45.30 rule_sell
+FPT 2023-05-12     37.38 rule_sell
+BID 2025-12-17     35.03 rule_sell
+HPG 2020-04-06     34.73 rule_sell
+VND 2020-08-19     31.98 rule_sell
+MBB 2023-12-06     29.86 rule_sell
+AAV 2024-10-29     28.81 rule_sell
+ACB 2020-08-05     28.36 rule_sell
+DGC 2021-02-08     26.81 rule_sell
+BID 2023-10-27     26.29 rule_sell
+MBB 2020-11-13     26.01 rule_sell
+AAS 2021-08-03     25.83 rule_sell
+
+========== SIGNAL_HARD_CAP DEEP DIVE (V23) ==========
+V23 signal_hard_cap: n=29, total=-378.6%, avg=-13.06%
+              n     tot    avg
+entry_trend                   
+moderate      7  -95.90 -13.70
+strong        9 -119.58 -13.29
+weak         13 -163.14 -12.55
+
+For each V23 signal_hard_cap, what did V19.1 do?
+
+Matched: 28. V19.1 sum on these = -242.7%, V23 sum = -362.9%, diff = +120.2%
+Top cases V19.1 saved better:
+sym       date  v23_pnl  v191_pnl          v191_rsn  delta
+REE 2022-05-11   -18.58     11.88 peak_protect_dist  30.46
+AAS 2021-01-06   -13.08      9.81     trailing_stop  22.89
+TCB 2021-01-25   -12.83     10.05            signal  22.88
+AAV 2024-07-29   -10.94     10.00  peak_protect_ema  20.94
+AAS 2023-09-05   -13.78      0.00     trailing_stop  13.78
+BID 2022-09-30   -13.87     -4.27            signal   9.60
+MBB 2022-10-14   -12.34     -3.32            signal   9.02
+HPG 2021-01-25   -14.17     -6.41            signal   7.76
+AAS 2022-10-18   -14.90     -7.80            signal   7.10
+VND 2022-12-14   -16.34     -9.65            signal   6.69
+AAS 2021-04-08   -18.18    -12.46            signal   5.72
+AAV 2022-01-06   -16.31    -13.05            signal   3.26
+HPG 2022-10-12   -12.35     -9.67            signal   2.68
+SSI 2023-10-13   -10.31     -8.21            signal   2.10
+ACB 2021-08-11   -11.08     -9.83            signal   1.25
+
+========== REE DEEP DIVE (V23 -11.4% vs V22 +28%) ==========
+
+--- v16 REE  total=+21.9% n=29 ---
+entry_date  exit_date  pnl_pct       exit_reason entry_trend  holding_days
+2020-01-06 2020-01-17     0.11            signal        weak             9
+2020-03-17 2020-03-30    -8.36            signal        weak             9
+2020-05-15 2020-06-12    -1.92            signal    moderate            20
+2020-07-13 2020-07-27    -3.66            signal      strong            10
+2020-08-04 2020-10-02    19.12 peak_protect_dist      strong            41
+2020-10-09 2020-12-21    12.17            signal      strong            51
+2021-01-19 2021-02-01    -5.12            signal    moderate             9
+2021-02-25 2021-03-10    -2.66            signal      strong             9
+2021-05-27 2021-06-09    -6.25            signal      strong             9
+2021-06-21 2021-07-05    -5.81         stop_loss      strong            10
+2021-08-17 2021-09-24    15.21            signal      strong            26
+2021-10-12 2021-11-08    -0.55            signal      strong            14
+2022-01-06 2022-01-19    -7.58            signal        weak             9
+2022-02-16 2022-03-11    -0.13            signal      strong            17
+2022-03-31 2022-04-20    -0.97            signal      strong            13
+2022-06-03 2022-06-23    -8.29            signal      strong            14
+2022-08-09 2022-08-22     3.48            signal        weak             9
+2022-08-31 2022-09-21    -2.68            signal      strong            13
+2022-10-21 2022-11-03    -4.68            signal        weak             9
+2023-04-06 2023-04-19    -2.44            signal    moderate             9
+2023-05-30 2023-07-24     5.88            signal      strong            39
+2023-07-27 2023-08-09    -4.31            signal      strong             9
+2023-11-17 2023-12-15    -2.24            signal        weak            20
+2024-02-20 2024-04-04     6.97            signal      strong            32
+2024-05-09 2024-08-02    22.48            signal      strong            61
+2024-12-06 2024-12-31     0.16               end      strong            17
+2025-02-10 2025-03-17     7.45            signal      strong            25
+2025-06-10 2025-07-03     0.57            signal      strong            17
+2025-07-25 2025-08-07    -4.01            signal      strong             9
+
+--- v19_1 REE  total=+19.3% n=30 ---
+entry_date  exit_date  pnl_pct       exit_reason entry_trend  holding_days
+2020-01-06 2020-02-03    -8.11            signal        weak            15
+2020-03-17 2020-03-30    -8.36            signal        weak             9
+2020-05-15 2020-06-17    -2.39            signal    moderate            23
+2020-07-13 2020-07-29    -2.74            signal      strong            12
+2020-08-03 2020-10-02    19.12 peak_protect_dist      strong            42
+2020-10-09 2020-12-18    10.96            signal      strong            50
+2020-12-23 2020-12-31     0.93               end      strong             6
+2021-01-19 2021-02-01    -5.12            signal    moderate             9
+2021-02-09 2021-03-09    -3.53            signal      strong            15
+2021-05-20 2021-06-07    -4.44            signal      strong            12
+2021-06-21 2021-07-06    -9.78            signal      strong            11
+2021-08-12 2021-09-28    15.82            signal      strong            31
+2021-10-05 2021-11-08     3.15            signal      strong            18
+2022-01-06 2022-01-19    -7.58            signal        weak             9
+2022-02-21 2022-03-10    -0.96            signal      strong            13
+2022-03-24 2022-04-21     2.52            signal      strong            19
+2022-05-11 2022-06-10    11.88 peak_protect_dist      strong            22
+2022-06-17 2022-07-04   -14.13            signal      strong            11
+2022-08-09 2022-09-08     1.13            signal        weak            20
+2022-09-14 2022-09-27    -7.83            signal    moderate             9
+2023-04-06 2023-04-20    -2.44            signal    moderate            10
+2023-05-30 2023-07-24     5.88            signal      strong            39
+2023-07-27 2023-08-09    -4.31            signal      strong             9
+2023-11-17 2023-12-15    -2.24            signal        weak            20
+2024-02-20 2024-04-08     6.29            signal      strong            34
+2024-05-03 2024-07-31    21.46            signal      strong            63
+2024-12-24 2024-12-31     0.60               end      strong             5
+2025-02-10 2025-03-17     7.45            signal      strong            25
+2025-06-05 2025-07-02    -1.36            signal      strong            19
+2025-07-15 2025-07-31    -2.62            signal      strong            12
+
+--- v19_3 REE  total=+8.5% n=30 ---
+entry_date  exit_date  pnl_pct       exit_reason entry_trend  holding_days
+2020-01-06 2020-01-31    -6.98    fast_exit_loss        weak            14
+2020-03-17 2020-03-23    -7.17    fast_exit_loss        weak             4
+2020-05-15 2020-06-15    -3.65    fast_exit_loss    moderate            21
+2020-07-13 2020-07-27    -3.66    fast_exit_loss      strong            10
+2020-08-03 2020-10-02    19.12 peak_protect_dist      strong            42
+2020-10-09 2020-12-18    10.96            signal      strong            50
+2020-12-23 2020-12-31     0.93               end      strong             6
+2021-01-19 2021-01-28    -8.51    fast_exit_loss    moderate             7
+2021-02-05 2021-03-09     2.81            signal      strong            17
+2021-05-20 2021-06-02    -4.12    fast_exit_loss      strong             9
+2021-06-21 2021-07-05    -5.81    fast_exit_loss      strong            10
+2021-08-17 2021-09-28    13.98            signal      strong            28
+2021-10-05 2021-11-08     3.15            signal      strong            18
+2022-01-06 2022-01-13    -5.43    fast_exit_loss        weak             5
+2022-02-21 2022-03-10    -0.96            signal      strong            13
+2022-03-24 2022-04-21     2.52            signal      strong            19
+2022-05-11 2022-05-13   -12.54   signal_hard_cap      strong             2
+2022-05-30 2022-06-13    -8.67    fast_exit_loss      strong            10
+2022-08-09 2022-09-08     1.13            signal        weak            20
+2022-09-14 2022-09-26    -8.30    fast_exit_loss    moderate             8
+2023-04-06 2023-04-20    -2.44            signal    moderate            10
+2023-05-30 2023-07-24     5.88            signal      strong            39
+2023-07-27 2023-08-02    -3.28    fast_exit_loss      strong             4
+2023-11-17 2023-12-15    -2.24            signal        weak            20
+2024-02-20 2024-04-08     6.29            signal      strong            34
+2024-05-03 2024-07-31    21.46            signal      strong            63
+2024-12-24 2024-12-31     0.60               end      strong             5
+2025-02-10 2025-03-17     7.45            signal      strong            25
+2025-06-05 2025-07-02    -1.36            signal      strong            19
+2025-07-15 2025-07-31    -2.62            signal      strong            12
+
+--- v22 REE  total=+28.0% n=29 ---
+entry_date  exit_date  pnl_pct       exit_reason entry_trend  holding_days
+2020-01-06 2020-02-03    -8.11            signal        weak            15
+2020-03-17 2020-03-30    -8.36            signal        weak             9
+2020-05-15 2020-06-17    -2.39            signal    moderate            23
+2020-07-13 2020-07-29    -2.74            signal      strong            12
+2020-08-03 2020-10-02    19.12 peak_protect_dist      strong            42
+2020-10-09 2020-12-18    10.96            signal      strong            50
+2020-12-23 2020-12-31     0.93               end      strong             6
+2021-01-19 2021-02-01    -5.12            signal    moderate             9
+2021-02-09 2021-03-09    -3.53            signal      strong            15
+2021-05-20 2021-06-07    -4.44            signal      strong            12
+2021-06-21 2021-07-06    -9.78            signal      strong            11
+2021-08-12 2021-09-28    15.82            signal      strong            31
+2021-10-05 2021-11-08     3.15            signal      strong            18
+2022-01-06 2022-01-19    -7.58            signal        weak             9
+2022-02-21 2022-03-10    -0.96            signal      strong            13
+2022-03-24 2022-04-21     2.52            signal      strong            19
+2022-05-11 2022-06-24     6.54            signal      strong            32
+2022-08-09 2022-09-08     1.13            signal        weak            20
+2022-09-14 2022-09-27    -7.83            signal    moderate             9
+2023-04-06 2023-04-20    -2.44            signal    moderate            10
+2023-05-30 2023-07-24     5.88            signal      strong            39
+2023-07-27 2023-08-09    -4.31            signal      strong             9
+2023-11-17 2023-12-15    -2.24            signal        weak            20
+2024-02-20 2024-04-08     6.29            signal      strong            34
+2024-05-03 2024-07-31    21.46            signal      strong            63
+2024-12-24 2024-12-31     0.60               end      strong             5
+2025-02-10 2025-03-17     7.45            signal      strong            25
+2025-06-05 2025-07-02    -1.36            signal      strong            19
+2025-07-15 2025-07-31    -2.62            signal      strong            12
+
+--- v23 REE  total=-11.4% n=30 ---
+entry_date  exit_date  pnl_pct       exit_reason entry_trend  holding_days
+2020-01-06 2020-02-03    -8.11            signal        weak            15
+2020-03-17 2020-03-30    -8.36            signal        weak             9
+2020-05-15 2020-06-17    -2.39            signal    moderate            23
+2020-07-13 2020-07-29    -2.74            signal      strong            12
+2020-08-03 2020-10-02    19.12 peak_protect_dist      strong            42
+2020-10-09 2020-12-18    10.96            signal      strong            50
+2020-12-23 2020-12-31     0.93               end      strong             6
+2021-01-19 2021-02-01    -5.12            signal    moderate             9
+2021-02-09 2021-03-09    -3.53            signal      strong            15
+2021-05-20 2021-06-07    -4.44            signal      strong            12
+2021-06-21 2021-07-06    -9.78            signal      strong            11
+2021-08-12 2021-09-28    15.82            signal      strong            31
+2021-10-05 2021-11-08     3.15            signal      strong            18
+2022-01-06 2022-01-19    -7.58            signal        weak             9
+2022-02-21 2022-03-10    -0.96            signal      strong            13
+2022-03-24 2022-04-21     2.52            signal      strong            19
+2022-05-11 2022-05-16   -18.58   signal_hard_cap      strong             3
+2022-05-30 2022-06-22   -15.73   signal_hard_cap      strong            17
+2022-08-17 2022-09-19    -0.59            signal    moderate            21
+2022-10-21 2022-11-03    -4.68            signal        weak             9
+2023-04-06 2023-04-20    -2.44            signal    moderate            10
+2023-05-30 2023-07-24     5.88            signal      strong            39
+2023-07-27 2023-08-09    -4.31            signal      strong             9
+2023-11-17 2023-12-15    -2.24            signal        weak            20
+2024-02-20 2024-04-08     6.29            signal      strong            34
+2024-05-03 2024-07-31    21.46            signal      strong            63
+2024-12-24 2024-12-31     0.60               end      strong             5
+2025-02-10 2025-03-17     7.45            signal      strong            25
+2025-06-05 2025-07-02    -1.36            signal      strong            19
+2025-07-15 2025-07-31    -2.62            signal      strong            12
+
+--- rule REE  total=+36.6% n=46 ---
+entry_date  exit_date  pnl_pct exit_reason  holding_days
+2020-02-14 2020-03-02    -3.64   rule_sell            11
+2020-04-06 2020-06-11     0.50   rule_sell            46
+2020-07-03 2020-12-17    45.30   rule_sell           118
+2021-01-04 2021-01-27     2.68   rule_sell            17
+2021-02-09 2021-03-04    -3.14   rule_sell            12
+2021-04-29 2021-06-07     3.60   rule_sell            25
+2021-06-17 2021-06-24    -6.48   rule_sell             5
+2021-07-30 2021-09-24    18.05   rule_sell            38
+2021-10-06 2021-11-01    -0.21   rule_sell            18
+2021-12-13 2022-01-10    -2.39   rule_sell            19
+2022-01-27 2022-03-09     4.99   rule_sell            24
+2022-03-24 2022-04-20     1.01   rule_sell            18
+2022-05-06 2022-05-16   -12.81   rule_sell             6
+2022-05-19 2022-06-21    11.54   rule_sell            23
+2022-07-19 2022-07-29    -7.88   rule_sell             8
+2022-08-02 2022-09-08     2.95   rule_sell            25
+2022-09-14 2022-09-16    -2.26   rule_sell             2
+2022-10-17 2022-11-02    -6.39   rule_sell            12
+2022-11-28 2022-12-20     3.49   rule_sell            16
+2023-01-30 2023-02-14    -4.85   rule_sell            11
+2023-02-20 2023-02-23    -4.49   rule_sell             3
+2023-03-15 2023-03-22    -3.11   rule_sell             5
+2023-03-27 2023-04-17    -0.80   rule_sell            15
+2023-05-15 2023-07-20    10.22   rule_sell            48
+2023-07-28 2023-08-01    -4.16   rule_sell             2
+2023-08-30 2023-09-29    -0.19   rule_sell            20
+2023-11-14 2023-12-15    -2.58   rule_sell            23
+2024-01-03 2024-01-10    -3.62   rule_sell             5
+2024-01-23 2024-02-02    -3.83   rule_sell             8
+2024-02-15 2024-04-04     7.38   rule_sell            35
+2024-05-02 2024-06-14     9.64   rule_sell            31
+2024-07-08 2024-08-01     1.62   rule_sell            18
+2024-08-19 2024-09-04    -5.18   rule_sell            10
+2024-09-25 2024-10-08    -3.31   rule_sell             9
+2024-10-30 2024-11-01    -5.11   rule_sell             2
+2024-11-07 2024-12-12     1.81   rule_sell            25
+2024-12-25 2024-12-30    -2.97   rule_sell             3
+2025-01-17 2025-03-14     7.26   rule_sell            35
+2025-04-21 2025-07-02    11.31   rule_sell            49
+2025-07-22 2025-07-29    -3.41   rule_sell             5
+2025-09-05 2025-09-29    -3.77   rule_sell            16
+2025-10-29 2025-11-26     0.29   rule_sell            20
+2026-01-07 2026-02-02    -1.78   rule_sell            18
+2026-02-03 2026-02-06    -2.72   rule_sell             3
+2026-02-24 2026-03-09    -6.39   rule_sell             9
+2026-03-13 2026-04-03     0.44   rule_sell            15
+
+DONE

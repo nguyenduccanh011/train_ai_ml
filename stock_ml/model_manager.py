@@ -23,6 +23,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import src.safe_io  # noqa: F401 — fix UnicodeEncodeError on Windows console
 
 from src.config_loader import get_config_path, load_config
+from src.env import get_results_dir
 from src.evaluation.scoring import composite_score
 
 
@@ -52,7 +53,7 @@ def cmd_list(args):
         print(f"  {key:<10} {m.get('name','?'):<20} {status:<10} {color:<10} {strategy:<10} {desc}")
 
     # Check for trades CSV files
-    results_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "results")
+    results_dir = get_results_dir()
     print(f"\n  TRADES CSV FILES ({results_dir}):")
     for key, m in sorted_models:
         csv_path = os.path.join(results_dir, f"trades_{key}.csv")
@@ -118,7 +119,7 @@ def cmd_compare(args):
     """
     cfg = load_config(force_reload=True)
     models = cfg.get("models", {})
-    results_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "results")
+    results_dir = get_results_dir()
 
     # Determine which versions to compare
     specific_versions = getattr(args, "versions", None) or ""

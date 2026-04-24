@@ -136,6 +136,21 @@ if HAS_CAT:
         "needs_scaling": False,
     }
 
+# GRU sequence classifier (V37d)
+try:
+    from src.models.sequence import GRUClassifier, HAS_TORCH as _HAS_TORCH_GRU
+    if _HAS_TORCH_GRU:
+        MODEL_CATALOG["gru"] = {
+            "class": GRUClassifier,
+            "params": {"window": 20, "hidden": 64, "n_layers": 2,
+                       "dropout": 0.2, "epochs": 8, "batch_size": 512,
+                       "lr": 1e-3, "n_classes": 3, "device": "auto",
+                       "random_state": 42, "verbose": False},
+            "needs_scaling": True,
+        }
+except ImportError:
+    pass
+
 
 def get_available_models() -> List[str]:
     return list(MODEL_CATALOG.keys())

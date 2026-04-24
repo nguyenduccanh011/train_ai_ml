@@ -1,0 +1,372 @@
+{
+  "symbols": [
+    {
+      "symbol": "LPB",
+      "v37a_exit_trades": 60,
+      "v37a_exit_pnl": 405.6,
+      "v37a_exit_wr": 63.3
+    },
+    {
+      "symbol": "VND",
+      "v37a_exit_trades": 71,
+      "v37a_exit_pnl": 364.8,
+      "v37a_exit_wr": 64.8
+    },
+    {
+      "symbol": "VIC",
+      "v37a_exit_trades": 41,
+      "v37a_exit_pnl": 355.7,
+      "v37a_exit_wr": 56.1
+    },
+    {
+      "symbol": "DGC",
+      "v37a_exit_trades": 67,
+      "v37a_exit_pnl": 350.5,
+      "v37a_exit_wr": 61.2
+    },
+    {
+      "symbol": "VDS",
+      "v37a_exit_trades": 65,
+      "v37a_exit_pnl": 345.7,
+      "v37a_exit_wr": 70.8
+    },
+    {
+      "symbol": "PDR",
+      "v37a_exit_trades": 70,
+      "v37a_exit_pnl": 344.4,
+      "v37a_exit_wr": 61.4
+    },
+    {
+      "symbol": "DIG",
+      "v37a_exit_trades": 76,
+      "v37a_exit_pnl": 343.9,
+      "v37a_exit_wr": 56.6
+    },
+    {
+      "symbol": "NKG",
+      "v37a_exit_trades": 70,
+      "v37a_exit_pnl": 343.2,
+      "v37a_exit_wr": 62.9
+    },
+    {
+      "symbol": "AAV",
+      "v37a_exit_trades": 53,
+      "v37a_exit_pnl": 342.9,
+      "v37a_exit_wr": 56.6
+    },
+    {
+      "symbol": "SHB",
+      "v37a_exit_trades": 51,
+      "v37a_exit_pnl": 332.3,
+      "v37a_exit_wr": 60.8
+    },
+    {
+      "symbol": "VCI",
+      "v37a_exit_trades": 73,
+      "v37a_exit_pnl": 318.0,
+      "v37a_exit_wr": 58.9
+    },
+    {
+      "symbol": "FRT",
+      "v37a_exit_trades": 69,
+      "v37a_exit_pnl": 317.7,
+      "v37a_exit_wr": 66.7
+    },
+    {
+      "symbol": "DCM",
+      "v37a_exit_trades": 67,
+      "v37a_exit_pnl": 286.9,
+      "v37a_exit_wr": 65.7
+    },
+    {
+      "symbol": "HSG",
+      "v37a_exit_trades": 72,
+      "v37a_exit_pnl": 283.9,
+      "v37a_exit_wr": 62.5
+    },
+    {
+      "symbol": "SSI",
+      "v37a_exit_trades": 66,
+      "v37a_exit_pnl": 275.4,
+      "v37a_exit_wr": 63.6
+    },
+    {
+      "symbol": "GEX",
+      "v37a_exit_trades": 70,
+      "v37a_exit_pnl": 273.0,
+      "v37a_exit_wr": 52.9
+    },
+    {
+      "symbol": "BCG",
+      "v37a_exit_trades": 58,
+      "v37a_exit_pnl": 262.4,
+      "v37a_exit_wr": 55.2
+    },
+    {
+      "symbol": "HPG",
+      "v37a_exit_trades": 58,
+      "v37a_exit_pnl": 253.2,
+      "v37a_exit_wr": 60.3
+    },
+    {
+      "symbol": "VTP",
+      "v37a_exit_trades": 56,
+      "v37a_exit_pnl": 242.6,
+      "v37a_exit_wr": 51.8
+    },
+    {
+      "symbol": "AAS",
+      "v37a_exit_trades": 41,
+      "v37a_exit_pnl": 242.2,
+      "v37a_exit_wr": 68.3
+    },
+    {
+      "symbol": "PC1",
+      "v37a_exit_trades": 80,
+      "v37a_exit_pnl": 241.1,
+      "v37a_exit_wr": 58.8
+    },
+    {
+      "symbol": "KDH",
+      "v37a_exit_trades": 65,
+      "v37a_exit_pnl": 218.1,
+      "v37a_exit_wr": 58.5
+    },
+    {
+      "symbol": "VPB",
+      "v37a_exit_trades": 62,
+      "v37a_exit_pnl": 208.3,
+      "v37a_exit_wr": 50.0
+    },
+    {
+      "symbol": "HDG",
+      "v37a_exit_trades": 73,
+      "v37a_exit_pnl": 207.8,
+      "v37a_exit_wr": 57.5
+    },
+    {
+      "symbol": "MBB",
+      "v37a_exit_trades": 56,
+      "v37a_exit_pnl": 206.8,
+      "v37a_exit_wr": 57.1
+    },
+    {
+      "symbol": "MWG",
+      "v37a_exit_trades": 69,
+      "v37a_exit_pnl": 203.9,
+      "v37a_exit_wr": 65.2
+    },
+    {
+      "symbol": "FPT",
+      "v37a_exit_trades": 52,
+      "v37a_exit_pnl": 201.8,
+      "v37a_exit_wr": 63.5
+    },
+    {
+      "symbol": "TCB",
+      "v37a_exit_trades": 63,
+      "v37a_exit_pnl": 197.8,
+      "v37a_exit_wr": 63.5
+    },
+    {
+      "symbol": "GMD",
+      "v37a_exit_trades": 63,
+      "v37a_exit_pnl": 197.2,
+      "v37a_exit_wr": 66.7
+    },
+    {
+      "symbol": "DPM",
+      "v37a_exit_trades": 67,
+      "v37a_exit_pnl": 190.3,
+      "v37a_exit_wr": 53.7
+    },
+    {
+      "symbol": "EIB",
+      "v37a_exit_trades": 58,
+      "v37a_exit_pnl": 181.5,
+      "v37a_exit_wr": 51.7
+    },
+    {
+      "symbol": "MSN",
+      "v37a_exit_trades": 67,
+      "v37a_exit_pnl": 179.1,
+      "v37a_exit_wr": 61.2
+    },
+    {
+      "symbol": "ACV",
+      "v37a_exit_trades": 39,
+      "v37a_exit_pnl": 178.9,
+      "v37a_exit_wr": 61.5
+    },
+    {
+      "symbol": "CTG",
+      "v37a_exit_trades": 63,
+      "v37a_exit_pnl": 174.3,
+      "v37a_exit_wr": 55.6
+    },
+    {
+      "symbol": "POW",
+      "v37a_exit_trades": 55,
+      "v37a_exit_pnl": 165.2,
+      "v37a_exit_wr": 60.0
+    },
+    {
+      "symbol": "VHM",
+      "v37a_exit_trades": 60,
+      "v37a_exit_pnl": 165.2,
+      "v37a_exit_wr": 55.0
+    },
+    {
+      "symbol": "TPB",
+      "v37a_exit_trades": 59,
+      "v37a_exit_pnl": 161.5,
+      "v37a_exit_wr": 55.9
+    },
+    {
+      "symbol": "BCM",
+      "v37a_exit_trades": 55,
+      "v37a_exit_pnl": 160.5,
+      "v37a_exit_wr": 56.4
+    },
+    {
+      "symbol": "HCM",
+      "v37a_exit_trades": 76,
+      "v37a_exit_pnl": 159.6,
+      "v37a_exit_wr": 52.6
+    },
+    {
+      "symbol": "HDB",
+      "v37a_exit_trades": 72,
+      "v37a_exit_pnl": 159.5,
+      "v37a_exit_wr": 45.8
+    },
+    {
+      "symbol": "PVD",
+      "v37a_exit_trades": 66,
+      "v37a_exit_pnl": 156.1,
+      "v37a_exit_wr": 59.1
+    },
+    {
+      "symbol": "NVL",
+      "v37a_exit_trades": 57,
+      "v37a_exit_pnl": 154.5,
+      "v37a_exit_wr": 54.4
+    },
+    {
+      "symbol": "STB",
+      "v37a_exit_trades": 70,
+      "v37a_exit_pnl": 150.1,
+      "v37a_exit_wr": 54.3
+    },
+    {
+      "symbol": "ACB",
+      "v37a_exit_trades": 53,
+      "v37a_exit_pnl": 149.9,
+      "v37a_exit_wr": 60.4
+    },
+    {
+      "symbol": "KBC",
+      "v37a_exit_trades": 61,
+      "v37a_exit_pnl": 142.9,
+      "v37a_exit_wr": 60.7
+    },
+    {
+      "symbol": "BSR",
+      "v37a_exit_trades": 63,
+      "v37a_exit_pnl": 131.9,
+      "v37a_exit_wr": 50.8
+    },
+    {
+      "symbol": "SBT",
+      "v37a_exit_trades": 63,
+      "v37a_exit_pnl": 128.4,
+      "v37a_exit_wr": 47.6
+    },
+    {
+      "symbol": "VCB",
+      "v37a_exit_trades": 48,
+      "v37a_exit_pnl": 125.4,
+      "v37a_exit_wr": 62.5
+    },
+    {
+      "symbol": "REE",
+      "v37a_exit_trades": 60,
+      "v37a_exit_pnl": 119.0,
+      "v37a_exit_wr": 46.7
+    },
+    {
+      "symbol": "NLG",
+      "v37a_exit_trades": 65,
+      "v37a_exit_pnl": 117.2,
+      "v37a_exit_wr": 47.7
+    },
+    {
+      "symbol": "BVH",
+      "v37a_exit_trades": 63,
+      "v37a_exit_pnl": 116.4,
+      "v37a_exit_wr": 52.4
+    },
+    {
+      "symbol": "PLX",
+      "v37a_exit_trades": 51,
+      "v37a_exit_pnl": 104.4,
+      "v37a_exit_wr": 58.8
+    },
+    {
+      "symbol": "GAS",
+      "v37a_exit_trades": 49,
+      "v37a_exit_pnl": 104.2,
+      "v37a_exit_wr": 63.3
+    },
+    {
+      "symbol": "PVS",
+      "v37a_exit_trades": 73,
+      "v37a_exit_pnl": 104.0,
+      "v37a_exit_wr": 46.6
+    },
+    {
+      "symbol": "VJC",
+      "v37a_exit_trades": 50,
+      "v37a_exit_pnl": 99.4,
+      "v37a_exit_wr": 48.0
+    },
+    {
+      "symbol": "SAB",
+      "v37a_exit_trades": 47,
+      "v37a_exit_pnl": 99.3,
+      "v37a_exit_wr": 51.1
+    },
+    {
+      "symbol": "PNJ",
+      "v37a_exit_trades": 58,
+      "v37a_exit_pnl": 91.6,
+      "v37a_exit_wr": 58.6
+    },
+    {
+      "symbol": "VNM",
+      "v37a_exit_trades": 42,
+      "v37a_exit_pnl": 77.6,
+      "v37a_exit_wr": 54.8
+    },
+    {
+      "symbol": "OCB",
+      "v37a_exit_trades": 33,
+      "v37a_exit_pnl": 64.5,
+      "v37a_exit_wr": 60.6
+    },
+    {
+      "symbol": "BID",
+      "v37a_exit_trades": 53,
+      "v37a_exit_pnl": 61.1,
+      "v37a_exit_wr": 52.8
+    },
+    {
+      "symbol": "NT2",
+      "v37a_exit_trades": 61,
+      "v37a_exit_pnl": 45.0,
+      "v37a_exit_wr": 45.9
+    }
+  ],
+  "version": "v37a_exit",
+  "generated_at": "2026-04-24T20:54:34.980523"
+}

@@ -186,10 +186,18 @@ function updateStatsVisibility() {
 // ============================================================
 
 function renderSymbolSelector(baseIndex, modelIndices) {
-  // Build allSymbolItems from base index
+  // Build set of symbols that appear in at least one model's data
+  const modelSymbolSet = new Set();
+  for (const syms of Object.values(modelIndices)) {
+    for (const s of syms) modelSymbolSet.add(s.symbol);
+  }
+
+  // Filter base index to only symbols with model data
   const symbolSet = new Set();
   if (baseIndex && baseIndex.symbols) {
-    for (const s of baseIndex.symbols) symbolSet.add(s.symbol);
+    for (const s of baseIndex.symbols) {
+      if (modelSymbolSet.has(s.symbol)) symbolSet.add(s.symbol);
+    }
   }
   const symbolList = [...symbolSet].sort();
 

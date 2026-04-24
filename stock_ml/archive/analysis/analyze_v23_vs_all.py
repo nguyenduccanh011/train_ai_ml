@@ -7,7 +7,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from run_v19_1_compare import run_test as run_test_base, run_rule_test, backtest_v19_1
 from run_v19_3_compare import backtest_v19_3
-from run_v22_final import backtest_v22_final
+from run_v22_final import backtest_v22
 from run_v23_optimal import backtest_v23
 from run_v16_compare import backtest_v16
 
@@ -25,7 +25,7 @@ def collect(label, fn, **extra):
 
 print("Collecting V19.1..."); d191 = collect("v19_1", backtest_v19_1)
 print("Collecting V19.3..."); d193 = collect("v19_3", backtest_v19_3)
-print("Collecting V22-Final..."); d22 = collect("v22", backtest_v22_final)
+print("Collecting V22-Final..."); d22 = collect("v22", backtest_v22)
 print("Collecting V23 (best=pp_s=0.12)..."); d23 = collect("v23", backtest_v23, peak_protect_strong_threshold=0.12)
 
 # V16 has different signature (no mod_h/i/j)

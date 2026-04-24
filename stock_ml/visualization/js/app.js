@@ -75,9 +75,7 @@ async function init() {
     if (!manifestResp.ok) throw new Error('manifest.json not found');
     manifest = await manifestResp.json();
 
-    // Update title
     const modelNames = manifest.models.map(m => m.name);
-    document.querySelector('h1').textContent = modelNames.join(' vs ');
 
     // Render dynamic UI
     renderToggleButtons();
@@ -103,9 +101,9 @@ async function init() {
     // Render symbol selector
     renderSymbolSelector(baseIndex, modelIndices);
 
-    // Load first symbol
-    if (baseIndex.symbols && baseIndex.symbols.length > 0) {
-      loadSymbol(baseIndex.symbols[0].file);
+    // Load first symbol from filtered list (symbols that have model data)
+    if (allSymbolItems.length > 0) {
+      loadSymbol(allSymbolItems[0].file);
     }
   } catch (e) {
     console.error('Init error:', e);

@@ -57,6 +57,25 @@ class FeatureEngine:
             df = self._volatility_regime(df)
             df = self._multi_timeframe(df)
 
+        if self.feature_set == "leading_v3":
+            # leading_v2 + accumulation features for V29 retrain
+            df = self._market_structure(df)
+            df = self._exhaustion_signals(df)
+            df = self._volatility_regime(df)
+            df = self._multi_timeframe(df)
+            df = self._accumulation_features(df)
+
+        if self.feature_set == "leading_v4":
+            # leading_v3 + Heikin-Ashi wave-position features for V34 retrain
+            # Motivation: HA features giúp model phân biệt "đầu sóng" vs "cuối sóng/fomo"
+            # và nhận diện đảo chiều phân phối sớm hơn (upper shadow growing, color switch)
+            df = self._market_structure(df)
+            df = self._exhaustion_signals(df)
+            df = self._volatility_regime(df)
+            df = self._multi_timeframe(df)
+            df = self._accumulation_features(df)
+            df = self._heikin_ashi_features(df)
+
         if "A" in self.extra_groups:
             df = self._market_structure(df)
         if "B" in self.extra_groups:
@@ -81,6 +100,10 @@ class FeatureEngine:
         result = pd.concat(parts, ignore_index=True)
 
         if "E" in self.extra_groups:
+            result = self._relative_strength(result)
+
+        # leading_v3 always includes relative strength (cross-sectional)
+        if self.feature_set == "leading_v3" and "E" not in self.extra_groups:
             result = self._relative_strength(result)
 
         return result
@@ -617,6 +640,64 @@ class FeatureEngine:
 
         return df
 
+    # ── Group G: Accumulation features (V29) ─────────────────────────
+
+    def _accumulation_features(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Features designed to detect 'before-breakout' accumulation phase."""
+        c = df["close"]
+        h = df["high"]
+        l = df["low"]
+        v = df["volume"].replace(0, np.nan)
+
+        # Volatility contraction: short-term std / long-term std (NR4/NR7 idea)
+        ret1 = c.pct_change(1)
+        std5 = ret1.rolling(5).std()
+        std20 = ret1.rolling(20).std()
+        df["acc_vol_contraction"] = std5 / std20.replace(0, np.nan)
+
+        # Range compression — daily range relative to longer baseline
+        rng = (h - l) / c.replace(0, np.nan)
+        rng5 = rng.rolling(5).mean()
+        rng20 = rng.rolling(20).mean()
+        df["acc_range_compression"] = rng5 / rng20.replace(0, np.nan)
+
+        # Distance to recent highs (smaller = closer to breakout zone)
+        for w in [10, 20, 50]:
+            roll_high = h.rolling(w, min_periods=max(3, w // 3)).max()
+            df[f"acc_dist_to_high_{w}"] = (roll_high - c) / c.replace(0, np.nan)
+
+        # Volume drying (mean recent vs longer base) then spike
+        vol5 = v.rolling(5).mean()
+        vol20 = v.rolling(20).mean()
+        df["acc_vol_dry_ratio"] = vol5 / vol20.replace(0, np.nan)
+        df["acc_vol_spike_ratio"] = v / vol20.replace(0, np.nan)
+        df["acc_vol_dry_then_spike"] = (
+            (df["acc_vol_dry_ratio"] < 0.85).astype(float)
+            * (df["acc_vol_spike_ratio"] > 1.5).astype(float)
+        )
+
+        # Sideway score: % days where |daily ret| < 0.005 in last 10
+        small_day = (ret1.abs() < 0.005).astype(float)
+        df["acc_sideway_score_10"] = small_day.rolling(10).mean()
+
+        # Bollinger squeeze proximity (lower = more compressed)
+        sma20 = c.rolling(20).mean()
+        std20p = c.rolling(20).std()
+        bbw = (4 * std20p) / sma20.replace(0, np.nan)
+        df["acc_bbw_pct_60d"] = bbw.rolling(60, min_periods=20).rank(pct=True)
+
+        # Days since meaningful move (|return| > 3%)
+        big_move = (ret1.abs() > 0.03).astype(int)
+        days_since = np.zeros(len(df))
+        cnt = 0
+        bm = big_move.fillna(0).values
+        for i in range(len(df)):
+            cnt = 0 if bm[i] == 1 else cnt + 1
+            days_since[i] = cnt
+        df["acc_days_since_big_move"] = days_since
+
+        return df
+
     # ── Group E: Relative Strength (cross-sectional) ─────────────────
 
     def _relative_strength(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -712,6 +793,135 @@ class FeatureEngine:
 
             # Merge on timestamp (date)
             df = df.merge(ctx_merge, on="timestamp", how="left")
+
+        return df
+
+    # ── Heikin-Ashi Wave-Position Features (V34) ─────────────────────
+    def _heikin_ashi_features(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Heikin-Ashi based features for wave position and reversal detection.
+
+        Design rationale (từ phân tích V32 trades):
+        - Losers avg entry_ret_5d=+3.55%: model mua khi đã tăng → cần "wave position"
+        - signal exits: avg max_profit=+150% rồi mới thua → cần tín hiệu phân phối sớm
+        - HA không dùng màu đơn lẻ (lag) mà dùng: streak + shadow ratio + body dynamic
+        """
+        o = df["open"].values.astype(float)
+        h = df["high"].values.astype(float)
+        l = df["low"].values.astype(float)
+        c = df["close"].values.astype(float)
+        n = len(df)
+
+        # ── 1. Compute Heikin-Ashi OHLC ──────────────────────────────
+        ha_close = (o + h + l + c) / 4.0
+
+        ha_open = np.zeros(n)
+        ha_open[0] = (o[0] + c[0]) / 2.0
+        for i in range(1, n):
+            ha_open[i] = (ha_open[i - 1] + ha_close[i - 1]) / 2.0
+
+        ha_high = np.maximum(h, np.maximum(ha_open, ha_close))
+        ha_low  = np.minimum(l, np.minimum(ha_open, ha_close))
+
+        ha_body   = ha_close - ha_open   # >0 = bullish candle
+        ha_range  = ha_high - ha_low
+        ha_range  = np.where(ha_range == 0, 1e-8, ha_range)
+
+        # ── 2. Color and streak ───────────────────────────────────────
+        ha_green = (ha_body > 0).astype(float)   # 1=green, 0=red
+
+        green_streak = np.zeros(n)
+        red_streak   = np.zeros(n)
+        for i in range(n):
+            if ha_green[i] == 1:
+                green_streak[i] = (green_streak[i - 1] + 1) if i > 0 else 1
+                red_streak[i] = 0
+            else:
+                red_streak[i] = (red_streak[i - 1] + 1) if i > 0 else 1
+                green_streak[i] = 0
+
+        df["ha_green"]        = ha_green
+        df["ha_green_streak"] = green_streak   # liên tiếp xanh: 1-2=đầu, 5+=cuối sóng
+        df["ha_red_streak"]   = red_streak
+        # Đổi màu ngày hôm nay (0→1 hoặc 1→0): tín hiệu đảo chiều sớm
+        df["ha_color_switch"] = (np.diff(ha_green, prepend=ha_green[0]) != 0).astype(float)
+
+        # ── 3. Shadow ratios (tín hiệu quan trọng hơn màu) ───────────
+        # Không có râu dưới → uptrend mạnh; không có râu trên → downtrend mạnh
+        upper_shadow = ha_high - np.maximum(ha_open, ha_close)
+        lower_shadow = np.minimum(ha_open, ha_close) - ha_low
+
+        df["ha_upper_shadow_ratio"] = upper_shadow / ha_range
+        df["ha_lower_shadow_ratio"] = lower_shadow / ha_range
+        df["ha_no_lower_shadow"]    = (lower_shadow < ha_range * 0.05).astype(float)
+        df["ha_no_upper_shadow"]    = (upper_shadow < ha_range * 0.05).astype(float)
+
+        # Râu trên đang tăng dần (cuối sóng tăng / phân phối)
+        # Fix: dùng pd.Series với index=df.index tránh NaN khi assign về grouped sub-DataFrame
+        idx = df.index
+        upper_s = pd.Series(upper_shadow / ha_range, index=idx)
+        df["ha_upper_shadow_growing"] = (
+            upper_s.rolling(3, min_periods=3).mean() > upper_s.rolling(10, min_periods=5).mean()
+        ).astype(float)
+        # Râu dưới đang tăng dần (cuối sóng giảm / hỗ trợ)
+        lower_s = pd.Series(lower_shadow / ha_range, index=idx)
+        df["ha_lower_shadow_growing"] = (
+            lower_s.rolling(3, min_periods=3).mean() > lower_s.rolling(10, min_periods=5).mean()
+        ).astype(float)
+
+        # ── 4. Body strength (momentum quality) ──────────────────────
+        df["ha_body_ratio"]  = np.abs(ha_body) / ha_range
+        body_s = pd.Series(np.abs(ha_body) / ha_range, index=idx)
+        df["ha_body_shrinking"] = (
+            body_s.rolling(3, min_periods=3).mean() < body_s.rolling(10, min_periods=5).mean()
+        ).astype(float)
+
+        # ── 5. Wave position — phân biệt "đầu sóng" vs "cuối sóng" ──
+        win = 20
+        green_streak_s = pd.Series(green_streak, index=idx)
+        streak_max = green_streak_s.rolling(win, min_periods=5).max().replace(0, 1)
+        df["ha_streak_position"] = (green_streak_s / streak_max).fillna(0.0)
+        # 0 = đầu sóng, 1 = cuối/đỉnh
+
+        # ── 6. Doji detection (body rất nhỏ, cả 2 râu) ───────────────
+        df["ha_doji"] = (
+            (np.abs(ha_body) / ha_range < 0.15) &
+            (upper_shadow / ha_range > 0.2) &
+            (lower_shadow / ha_range > 0.2)
+        ).astype(float)
+
+        # ── 7. Reversal candle patterns (kết hợp HA + price real) ────
+        # Bearish reversal signal: green streak >= 5 + upper shadow growing + body shrinking
+        df["ha_bearish_reversal_signal"] = (
+            (green_streak >= 4) &
+            (df["ha_upper_shadow_growing"] == 1) &
+            (df["ha_body_shrinking"] == 1)
+        ).astype(float)
+
+        # Bullish reversal signal: đã đỏ >= 3 ngày TRƯỚC + ngày nay đổi xanh + lower shadow growing
+        # Fix: dùng red_streak shifted (ngày hôm qua đỏ >= 3) chứ không phải hôm nay (=0 khi switch)
+        prev_red_streak = pd.Series(red_streak, index=idx).shift(1).fillna(0).values
+        df["ha_bullish_reversal_signal"] = (
+            (prev_red_streak >= 3) &
+            (df["ha_lower_shadow_growing"] == 1) &
+            (df["ha_color_switch"] == 1)
+        ).astype(float)
+
+        # ── 8. Early wave detection (mua đầu sóng, không fomo) ───────
+        # Điều kiện lý tưởng: streak ngắn (1-2) + lower shadow absent + body ratio lớn
+        df["ha_early_wave"] = (
+            (green_streak <= 2) &
+            (green_streak >= 1) &
+            (df["ha_no_lower_shadow"] == 1) &
+            (df["ha_body_ratio"] > 0.5)
+        ).astype(float)
+
+        # ── 9. Late wave / fomo signal (tránh vào) ───────────────────
+        # green streak dài + upper shadow lớn + body thu nhỏ
+        df["ha_late_wave"] = (
+            (green_streak >= 5) &
+            (df["ha_upper_shadow_ratio"] > 0.3) &
+            (df["ha_body_shrinking"] == 1)
+        ).astype(float)
 
         return df
 

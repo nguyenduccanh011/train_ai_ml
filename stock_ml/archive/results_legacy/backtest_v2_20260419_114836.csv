@@ -1,0 +1,5 @@
+model,feature_set,n_symbols,v1_return_pct,v2_return_pct,v1_sharpe,v2_sharpe,v1_avg_dd_pct,v2_avg_dd_pct,v1_worst_dd_pct,v2_worst_dd_pct,v1_win_rate,v2_win_rate,v1_trades,v2_trades,buy_hold_pct,f1_macro,accuracy,v1_profit_M,v2_profit_M
+random_forest,technical,10,15.63,12.75,0.07,0.015,-37.24,-37.52,-55.19,-50.5,22.2,37.0,405,389,-15.17,0.704,0.701,15.6,12.7
+xgboost,technical,10,-5.26,-9.95,-0.163,-0.122,-34.07,-35.45,-50.98,-53.2,19.6,35.8,500,453,-15.17,0.668,0.678,-5.3,-10.0
+lightgbm,technical,10,4.27,3.65,-0.014,-0.031,-31.81,-32.82,-48.05,-50.09,20.9,37.8,574,505,-15.17,0.649,0.663,4.3,3.6
+logistic_regression,technical,10,-8.79,-10.45,-0.216,-0.211,-37.89,-39.33,-51.75,-55.66,18.4,32.8,516,488,-15.17,0.575,0.58,-8.8,-10.4

@@ -1,0 +1,4 @@
+model,mode,total_return_pct,ann_return_pct,sharpe,max_dd_pct,profit_factor,win_rate_pct,trades,avg_win_pct,avg_loss_pct,max_win_pct,max_loss_pct,avg_hold,expectancy,final_equity,f1,n_filtered,n_regime,n_sl,n_trail,n_partial
+lightgbm,v4,126.51,3.75,0.275,-70.46,7.44,47.8,228,25.53,-1.85,110.75,-7.78,5.7,11.24,226505638,0.7651141860235847,149,19,5,19,50
+random_forest,v4,327.37,6.75,0.39,-59.3,7.18,44.9,207,27.03,-1.93,110.75,-7.01,7.0,11.08,427371694,0.7702993895078377,78,14,7,33,41
+xgboost,v4,166.27,4.51,0.308,-58.67,8.01,46.3,229,27.12,-1.83,110.75,-7.53,5.7,11.57,266266279,0.7657603902646862,136,19,5,18,52

@@ -23,7 +23,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import src.safe_io  # noqa: F401 — fix UnicodeEncodeError on Windows console
 
 from src.config_loader import get_config_path, load_config
-from src.env import get_results_dir
+from src.env import get_results_dir, get_experiment_dir
 from src.evaluation.scoring import composite_score
 
 
@@ -53,8 +53,10 @@ def cmd_list(args):
         print(f"  {key:<10} {m.get('name','?'):<20} {status:<10} {color:<10} {strategy:<10} {desc}")
 
     # Check for trades CSV files
-    results_dir = get_results_dir()
-    print(f"\n  TRADES CSV FILES ({results_dir}):")
+    experiment = getattr(args, "experiment", None) or ""
+    results_dir = get_experiment_dir(experiment) if experiment else get_results_dir()
+    label = f"{results_dir}" + (f" [experiment: {experiment}]" if experiment else "")
+    print(f"\n  TRADES CSV FILES ({label}):")
     for key, m in sorted_models:
         csv_path = os.path.join(results_dir, f"trades_{key}.csv")
         if os.path.exists(csv_path):
@@ -115,11 +117,15 @@ def cmd_compare(args):
     """Compare models using their trades CSV files.
 
     Supports --versions flag to compare specific versions (not just active ones).
+    Supports --experiment flag to compare within a specific experiment subfolder.
     When called from run_pipeline.py, args.versions may contain a comma-separated list.
     """
     cfg = load_config(force_reload=True)
     models = cfg.get("models", {})
-    results_dir = get_results_dir()
+
+    # Resolve results dir: experiment subfolder or flat
+    experiment = getattr(args, "experiment", None) or ""
+    results_dir = get_experiment_dir(experiment) if experiment else get_results_dir()
 
     # Determine which versions to compare
     specific_versions = getattr(args, "versions", None) or ""
@@ -146,6 +152,7 @@ def cmd_compare(args):
         print("=" * 130)
 
     metrics = {}
+    trades_cache = {}
     for key, m in sorted_models:
         csv_path = os.path.join(results_dir, f"trades_{key}.csv")
         if not os.path.exists(csv_path):
@@ -169,14 +176,22 @@ def cmd_compare(args):
             "max_loss": np.min(pnls) if len(pnls) > 0 else 0,
             "avg_hold": df["holding_days"].mean() if "holding_days" in df.columns else 0,
         }
+        trades_cache[key] = df.to_dict("records")
 
     if not metrics:
         print("  No trades data found. Run backtest first.")
         return
 
-    # Compute composite scores
+    # Compute all extra metrics and composite scores
+    from src.evaluation.scoring import (
+        calc_sharpe, calc_mdd_per_symbol, calc_yearly_consistency,
+    )
     for key, m in metrics.items():
-        m["score"] = composite_score(m)
+        tl = trades_cache.get(key, [])
+        m["sharpe"]  = calc_sharpe(tl)
+        m["mdd_sym"] = calc_mdd_per_symbol(tl)
+        m["cv"]      = calc_yearly_consistency(tl)
+        m["score"]   = composite_score(m, trades=tl)
 
     # Check metadata consistency
     meta_warnings = []
@@ -203,24 +218,83 @@ def cmd_compare(args):
                 print(f"    {key}: {len(syms)} symbols")
 
     # Summary table
-    print(f"\n  {'Model':<20} | {'#':>4} {'WR':>6} {'AvgPnL':>8} {'TotPnL':>10} {'PF':>6} {'MaxLoss':>8} {'AvgHold':>8} {'Score':>7}")
-    print("  " + "-" * 95)
+    hdr = f"  {'Model':<20} | {'#':>4} {'AvgPnL':>8} {'TotPnL':>10} {'PF':>6} {'Sharpe':>7} {'MDD/sym':>8} {'CV':>6} {'Score':>7}"
+    print(f"\n{hdr}")
+    print("  " + "-" * 105)
     best_score = max(m["score"] for m in metrics.values())
     for key, m in metrics.items():
         star = " ◀ BEST" if m["score"] == best_score else ""
-        print(f"  {m['name']:<20} | {m['trades']:>4} {m['wr']:>5.1f}% {m['avg_pnl']:>+7.2f}% "
-              f"{m['total_pnl']:>+9.1f}% {m['pf']:>5.2f} {m['max_loss']:>+7.1f}% {m['avg_hold']:>6.1f}d {m['score']:>6.1f}{star}")
+        print(f"  {m['name']:<20} | {m['trades']:>4} {m['avg_pnl']:>+7.2f}% "
+              f"{m['total_pnl']:>+9.1f}% {m['pf']:>5.2f} "
+              f"{m['sharpe']:>7.3f} {m['mdd_sym']:>7.1f}% {m['cv']:>5.2f} "
+              f"{m['score']:>6.1f}{star}")
+
+    # Scoring legend
+    print(f"\n  Sharpe = avg_pnl/std(pnl)  |  MDD/sym = avg per-symbol drawdown  |  CV = std/mean of yearly PnL")
 
     # Recommendation
     print(f"\n  RECOMMENDATION (by composite score):")
     best_key = max(metrics, key=lambda k: metrics[k]["score"])
     worst_key = min(metrics, key=lambda k: metrics[k]["score"])
     worst = metrics[worst_key]
-    print(f"    Best:  {best_key} ({metrics[best_key]['name']}) — Score={metrics[best_key]['score']:.1f}")
+    print(f"    Best:  {best_key} ({metrics[best_key]['name']}) — Score={metrics[best_key]['score']:.1f}, "
+          f"Sharpe={metrics[best_key]['sharpe']:.3f}, MDD/sym={metrics[best_key]['mdd_sym']:.1f}%")
     if worst["total_pnl"] < 0 or worst["score"] < 0:
-        print(f"    Consider retiring '{worst_key}' ({worst['name']}): Score={worst['score']:.1f}, TotalPnL={worst['total_pnl']:+.1f}%")
+        print(f"    Consider retiring '{worst_key}' ({worst['name']}): "
+              f"Score={worst['score']:.1f}, TotalPnL={worst['total_pnl']:+.1f}%")
 
     print("=" * 130)
+
+
+def cmd_experiments(args):
+    """List all experiment subfolders in results/."""
+    results_dir = get_results_dir()
+    if not os.path.isdir(results_dir):
+        print(f"  No results directory found: {results_dir}")
+        return
+
+    experiments = []
+    for name in sorted(os.listdir(results_dir)):
+        exp_path = os.path.join(results_dir, name)
+        if not os.path.isdir(exp_path):
+            continue
+        exp_json = os.path.join(exp_path, "experiment.json")
+        if os.path.exists(exp_json):
+            import json
+            with open(exp_json, "r", encoding="utf-8") as f:
+                meta = json.load(f)
+            experiments.append((name, meta))
+        else:
+            # Subfolder without experiment.json — still show it
+            experiments.append((name, {}))
+
+    if not experiments:
+        print("  No experiment subfolders found.")
+        print(f"  Run with --feature-sets to create experiments: results/{results_dir}")
+        return
+
+    print("=" * 110)
+    print("EXPERIMENTS")
+    print("=" * 110)
+    print(f"  {'Key':<35} {'feature_set':<15} {'ml_model':<12} {'versions':<25} {'#symbols':<10} {'generated_at'}")
+    print("  " + "-" * 105)
+    for name, meta in experiments:
+        feat = meta.get("feature_set", "?")
+        ml = meta.get("ml_model", "?")
+        versions = ", ".join(meta.get("versions", []))
+        n_sym = meta.get("n_symbols", "?")
+        gen = meta.get("generated_at", "?")[:19]
+        # Count CSVs if no experiment.json
+        if not meta:
+            exp_path = os.path.join(results_dir, name)
+            csvs = [f for f in os.listdir(exp_path) if f.endswith(".csv")]
+            feat = ml = "?"
+            versions = ", ".join(c.replace("trades_", "").replace(".csv", "") for c in csvs)
+            n_sym = gen = "?"
+        print(f"  {name:<35} {feat:<15} {ml:<12} {versions:<25} {str(n_sym):<10} {gen}")
+
+    print("=" * 110)
+    print(f"\n  Usage: python model_manager.py compare --experiment <key> --versions v26,v27")
 
 
 def cmd_add(args):
@@ -256,8 +330,8 @@ def cmd_add(args):
     print(f"  Color: {new_model['color']}")
     print(f"  Strategy: {new_model['strategy']}")
     print(f"\n  Next steps:")
-    print(f"    1. Create backtest function in run_{args.version}.py")
-    print(f"    2. Run: python run_{args.version}.py")
+    print(f"    1. Create backtest function in experiments/run_{args.version}.py")
+    print(f"    2. Run: python experiments/run_{args.version}.py")
     print(f"    3. Export: python -m src.export.unified_export --versions {args.version}")
     print(f"    4. Open dashboard.html — model appears automatically!")
 
@@ -269,6 +343,8 @@ def main():
     # list
     p_list = sub.add_parser("list", help="List all models")
     p_list.add_argument("--active", action="store_true", help="Show only active models")
+    p_list.add_argument("--experiment", type=str, default="",
+                        help="Show CSV files from experiment subfolder (e.g., leading_v2__lightgbm)")
 
     # retire
     p_retire = sub.add_parser("retire", help="Retire a model")
@@ -283,6 +359,11 @@ def main():
     p_compare = sub.add_parser("compare", help="Compare all active models")
     p_compare.add_argument("--versions", type=str, default="",
                            help="Comma-separated versions to compare (e.g., v25,v24,v23,rule). Default: all active")
+    p_compare.add_argument("--experiment", type=str, default="",
+                           help="Read CSV files from experiment subfolder (e.g., leading_v2__lightgbm)")
+
+    # experiments
+    sub.add_parser("experiments", help="List all experiment subfolders in results/")
 
     # add
     p_add = sub.add_parser("add", help="Add a new model version")
@@ -302,6 +383,8 @@ def main():
         cmd_activate(args)
     elif args.command == "compare":
         cmd_compare(args)
+    elif args.command == "experiments":
+        cmd_experiments(args)
     elif args.command == "add":
         cmd_add(args)
     else:

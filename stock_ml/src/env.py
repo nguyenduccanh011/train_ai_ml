@@ -54,6 +54,18 @@ def get_results_dir():
     return os.path.join(stock_ml_dir, "results")
 
 
+def get_experiment_dir(experiment_key: str) -> str:
+    """Return path to a specific experiment subfolder inside results/.
+
+    Args:
+        experiment_key: e.g. "leading_v2__lightgbm"
+
+    Returns:
+        Absolute path: results/{experiment_key}/
+    """
+    return os.path.join(get_results_dir(), experiment_key)
+
+
 def get_env_info():
     """Print environment summary."""
     import shutil

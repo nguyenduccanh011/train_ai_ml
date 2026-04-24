@@ -109,6 +109,16 @@ def get_model_colors():
     return {k: v.get("color", "#888888") for k, v in get_active_models().items()}
 
 
+def get_symbol_profiles():
+    """Return {symbol -> profile_name} mapping from models.yaml symbol_profiles section."""
+    cfg = load_config()
+    profiles = {}
+    for profile_name, syms in cfg.get("symbol_profiles", {}).items():
+        for sym in (syms or []):
+            profiles[str(sym)] = profile_name
+    return profiles
+
+
 def get_pipeline_symbols(symbols_arg="", min_rows_override=None):
     """Resolve the canonical symbol list for a pipeline run.
 

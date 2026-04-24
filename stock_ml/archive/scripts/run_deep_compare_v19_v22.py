@@ -6,7 +6,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from run_v19_3_compare import backtest_v19_3, run_test, run_rule_test, calc_metrics
 from run_v19_1_compare import backtest_v19_1
-from run_v22_final import backtest_v22_final
+from run_v22_final import backtest_v22
 
 SYMBOLS = 'ACB,FPT,HPG,SSI,VND,MBB,TCB,VNM,DGC,AAS,AAV,REE,BID,VIC'
 
@@ -20,7 +20,7 @@ m_v193 = calc_metrics(t_v193)
 
 print('Running V22 Final...')
 def v22_fn(y_pred, returns, df_test, feature_cols, **kwargs):
-    return backtest_v22_final(y_pred, returns, df_test, feature_cols, **kwargs)
+    return backtest_v22(y_pred, returns, df_test, feature_cols, **kwargs)
 t_v22 = run_test(SYMBOLS, True, True, False, False, True, True, True, True, True, True, backtest_fn=v22_fn)
 m_v22 = calc_metrics(t_v22)
 

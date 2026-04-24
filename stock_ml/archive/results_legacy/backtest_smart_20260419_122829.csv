@@ -1,0 +1,2 @@
+model,feature_set,mode,total_return_pct,ann_return_pct,buy_hold_pct,excess_pct,sharpe,max_dd_pct,profit_factor,win_rate_pct,f1_macro,accuracy,trades,final_equity,profit_vnd,n_stop_loss,n_trailing_stop
+lightgbm,technical,smart_exit,25.43,1.01,-98.52,123.95,0.167,-82.85,2.01,31.4,0.7664562533126343,0.7605708245243129,328,125429295,25429295,22,71

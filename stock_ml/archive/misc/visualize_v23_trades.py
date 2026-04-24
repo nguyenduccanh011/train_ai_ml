@@ -20,7 +20,7 @@ from src.data.loader import DataLoader
 from run_v19_1_compare import run_test as run_test_base, run_rule_test, calc_metrics
 from run_v19_1_compare import backtest_v19_1
 from run_v19_3_compare import backtest_v19_3
-from run_v22_final import backtest_v22_final
+from run_v22_final import backtest_v22
 from run_v23_optimal import backtest_v23
 
 SYMBOLS = "ACB,FPT,HPG,SSI,VND,MBB,TCB,VNM,DGC,AAS,AAV,REE,BID,VIC"
@@ -413,7 +413,7 @@ if __name__ == "__main__":
     print("=" * 100)
 
     def v22_fn(y_pred, returns, df_test, feature_cols, **kwargs):
-        return backtest_v22_final(y_pred, returns, df_test, feature_cols, **kwargs)
+        return backtest_v22(y_pred, returns, df_test, feature_cols, **kwargs)
 
     def v23_fn(y_pred, returns, df_test, feature_cols, **kwargs):
         return backtest_v23(y_pred, returns, df_test, feature_cols,

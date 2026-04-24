@@ -5,6 +5,7 @@ Rule: BUY when MACD_hist > 0 AND Close > MA20 AND Close > Open
 """
 import sys, os, numpy as np, pandas as pd
 from collections import defaultdict
+import importlib
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -15,7 +16,23 @@ from src.data.splitter import WalkForwardSplitter
 from src.data.target import TargetGenerator
 from src.features.engine import FeatureEngine
 from src.models.registry import build_model
-from run_v9_compare import backtest_v9
+
+
+def _load_backtest_v9():
+    """Optional loader for legacy V9 backtest in active code paths only."""
+    candidates = [
+        "experiments.run_v9_compare",
+        "run_v9_compare",
+    ]
+    for module_name in candidates:
+        try:
+            module = importlib.import_module(module_name)
+            fn = getattr(module, "backtest_v9", None)
+            if callable(fn):
+                return fn
+        except Exception:
+            continue
+    return None
 
 
 def compute_macd(close, fast=12, slow=26, signal=9):
@@ -131,6 +148,12 @@ def main():
     df = target_gen.generate_for_all_symbols(df)
     feature_cols = engine.get_feature_columns(df)
     df = df.dropna(subset=feature_cols + ["target"])
+
+    backtest_v9 = _load_backtest_v9()
+    if backtest_v9 is None:
+        print("V9 backtest function not found in active modules (experiments.run_v9_compare).")
+        print("Rule backtest API remains available via backtest_rule().")
+        return
 
     # Collect V9 trades
     v9_by_sym = defaultdict(list)

@@ -30,7 +30,7 @@ from src.models.registry import build_model
 from run_v19_1_compare import run_test as run_test_base, run_rule_test, calc_metrics
 from run_v19_1_compare import backtest_v19_1
 from run_v19_3_compare import backtest_v19_3
-from run_v22_final import backtest_v22_final
+from run_v22_final import backtest_v22
 
 SYMBOLS = "ACB,FPT,HPG,SSI,VND,MBB,TCB,VNM,DGC,AAS,AAV,REE,BID,VIC"
 
@@ -111,7 +111,7 @@ def run_with_equity(backtest_fn, symbols_str=SYMBOLS):
 
 def make_v22_fn():
     def bt_fn(y_pred, returns, df_test, feature_cols, **kwargs):
-        return backtest_v22_final(y_pred, returns, df_test, feature_cols,
+        return backtest_v22(y_pred, returns, df_test, feature_cols,
                                   fast_exit_threshold_std=-0.06, **kwargs)
     return bt_fn
 

@@ -1,0 +1,372 @@
+{
+  "symbols": [
+    {
+      "symbol": "VND",
+      "v35b_trades": 19,
+      "v35b_pnl": 436.2,
+      "v35b_wr": 57.9
+    },
+    {
+      "symbol": "VIC",
+      "v35b_trades": 18,
+      "v35b_pnl": 394.5,
+      "v35b_wr": 50.0
+    },
+    {
+      "symbol": "DIG",
+      "v35b_trades": 20,
+      "v35b_pnl": 368.0,
+      "v35b_wr": 60.0
+    },
+    {
+      "symbol": "LPB",
+      "v35b_trades": 18,
+      "v35b_pnl": 277.1,
+      "v35b_wr": 55.6
+    },
+    {
+      "symbol": "FRT",
+      "v35b_trades": 22,
+      "v35b_pnl": 265.2,
+      "v35b_wr": 54.5
+    },
+    {
+      "symbol": "HSG",
+      "v35b_trades": 21,
+      "v35b_pnl": 262.4,
+      "v35b_wr": 52.4
+    },
+    {
+      "symbol": "NKG",
+      "v35b_trades": 22,
+      "v35b_pnl": 258.8,
+      "v35b_wr": 59.1
+    },
+    {
+      "symbol": "DGC",
+      "v35b_trades": 26,
+      "v35b_pnl": 258.4,
+      "v35b_wr": 53.8
+    },
+    {
+      "symbol": "SSI",
+      "v35b_trades": 21,
+      "v35b_pnl": 252.4,
+      "v35b_wr": 57.1
+    },
+    {
+      "symbol": "AAV",
+      "v35b_trades": 25,
+      "v35b_pnl": 244.1,
+      "v35b_wr": 56.0
+    },
+    {
+      "symbol": "VCI",
+      "v35b_trades": 24,
+      "v35b_pnl": 239.5,
+      "v35b_wr": 54.2
+    },
+    {
+      "symbol": "PDR",
+      "v35b_trades": 21,
+      "v35b_pnl": 238.8,
+      "v35b_wr": 38.1
+    },
+    {
+      "symbol": "VDS",
+      "v35b_trades": 18,
+      "v35b_pnl": 234.1,
+      "v35b_wr": 55.6
+    },
+    {
+      "symbol": "SHB",
+      "v35b_trades": 23,
+      "v35b_pnl": 220.9,
+      "v35b_wr": 34.8
+    },
+    {
+      "symbol": "BCG",
+      "v35b_trades": 22,
+      "v35b_pnl": 213.9,
+      "v35b_wr": 45.5
+    },
+    {
+      "symbol": "GEX",
+      "v35b_trades": 25,
+      "v35b_pnl": 199.3,
+      "v35b_wr": 44.0
+    },
+    {
+      "symbol": "HCM",
+      "v35b_trades": 23,
+      "v35b_pnl": 196.4,
+      "v35b_wr": 52.2
+    },
+    {
+      "symbol": "DPM",
+      "v35b_trades": 20,
+      "v35b_pnl": 195.6,
+      "v35b_wr": 50.0
+    },
+    {
+      "symbol": "DCM",
+      "v35b_trades": 19,
+      "v35b_pnl": 194.1,
+      "v35b_wr": 57.9
+    },
+    {
+      "symbol": "VTP",
+      "v35b_trades": 20,
+      "v35b_pnl": 192.4,
+      "v35b_wr": 50.0
+    },
+    {
+      "symbol": "HPG",
+      "v35b_trades": 22,
+      "v35b_pnl": 192.1,
+      "v35b_wr": 50.0
+    },
+    {
+      "symbol": "FPT",
+      "v35b_trades": 20,
+      "v35b_pnl": 150.2,
+      "v35b_wr": 60.0
+    },
+    {
+      "symbol": "BSR",
+      "v35b_trades": 22,
+      "v35b_pnl": 141.9,
+      "v35b_wr": 63.6
+    },
+    {
+      "symbol": "MWG",
+      "v35b_trades": 23,
+      "v35b_pnl": 139.0,
+      "v35b_wr": 65.2
+    },
+    {
+      "symbol": "AAS",
+      "v35b_trades": 17,
+      "v35b_pnl": 133.2,
+      "v35b_wr": 41.2
+    },
+    {
+      "symbol": "GMD",
+      "v35b_trades": 20,
+      "v35b_pnl": 126.3,
+      "v35b_wr": 65.0
+    },
+    {
+      "symbol": "HDG",
+      "v35b_trades": 22,
+      "v35b_pnl": 123.1,
+      "v35b_wr": 54.5
+    },
+    {
+      "symbol": "MSN",
+      "v35b_trades": 22,
+      "v35b_pnl": 121.9,
+      "v35b_wr": 50.0
+    },
+    {
+      "symbol": "STB",
+      "v35b_trades": 26,
+      "v35b_pnl": 121.1,
+      "v35b_wr": 61.5
+    },
+    {
+      "symbol": "NVL",
+      "v35b_trades": 20,
+      "v35b_pnl": 120.8,
+      "v35b_wr": 45.0
+    },
+    {
+      "symbol": "PC1",
+      "v35b_trades": 26,
+      "v35b_pnl": 116.2,
+      "v35b_wr": 50.0
+    },
+    {
+      "symbol": "KDH",
+      "v35b_trades": 24,
+      "v35b_pnl": 113.0,
+      "v35b_wr": 50.0
+    },
+    {
+      "symbol": "CTG",
+      "v35b_trades": 25,
+      "v35b_pnl": 107.3,
+      "v35b_wr": 44.0
+    },
+    {
+      "symbol": "HDB",
+      "v35b_trades": 24,
+      "v35b_pnl": 105.5,
+      "v35b_wr": 54.2
+    },
+    {
+      "symbol": "KBC",
+      "v35b_trades": 22,
+      "v35b_pnl": 104.1,
+      "v35b_wr": 40.9
+    },
+    {
+      "symbol": "VPB",
+      "v35b_trades": 26,
+      "v35b_pnl": 104.0,
+      "v35b_wr": 38.5
+    },
+    {
+      "symbol": "POW",
+      "v35b_trades": 19,
+      "v35b_pnl": 102.7,
+      "v35b_wr": 52.6
+    },
+    {
+      "symbol": "VHM",
+      "v35b_trades": 23,
+      "v35b_pnl": 101.5,
+      "v35b_wr": 47.8
+    },
+    {
+      "symbol": "TCB",
+      "v35b_trades": 23,
+      "v35b_pnl": 96.0,
+      "v35b_wr": 52.2
+    },
+    {
+      "symbol": "REE",
+      "v35b_trades": 22,
+      "v35b_pnl": 94.7,
+      "v35b_wr": 40.9
+    },
+    {
+      "symbol": "MBB",
+      "v35b_trades": 23,
+      "v35b_pnl": 94.4,
+      "v35b_wr": 47.8
+    },
+    {
+      "symbol": "ACV",
+      "v35b_trades": 19,
+      "v35b_pnl": 94.0,
+      "v35b_wr": 52.6
+    },
+    {
+      "symbol": "BCM",
+      "v35b_trades": 21,
+      "v35b_pnl": 86.5,
+      "v35b_wr": 52.4
+    },
+    {
+      "symbol": "NLG",
+      "v35b_trades": 21,
+      "v35b_pnl": 84.3,
+      "v35b_wr": 47.6
+    },
+    {
+      "symbol": "PVD",
+      "v35b_trades": 24,
+      "v35b_pnl": 79.1,
+      "v35b_wr": 41.7
+    },
+    {
+      "symbol": "ACB",
+      "v35b_trades": 22,
+      "v35b_pnl": 72.0,
+      "v35b_wr": 54.5
+    },
+    {
+      "symbol": "VJC",
+      "v35b_trades": 22,
+      "v35b_pnl": 65.8,
+      "v35b_wr": 45.5
+    },
+    {
+      "symbol": "BVH",
+      "v35b_trades": 24,
+      "v35b_pnl": 55.9,
+      "v35b_wr": 62.5
+    },
+    {
+      "symbol": "EIB",
+      "v35b_trades": 26,
+      "v35b_pnl": 55.0,
+      "v35b_wr": 46.2
+    },
+    {
+      "symbol": "TPB",
+      "v35b_trades": 28,
+      "v35b_pnl": 50.5,
+      "v35b_wr": 39.3
+    },
+    {
+      "symbol": "VCB",
+      "v35b_trades": 22,
+      "v35b_pnl": 42.6,
+      "v35b_wr": 50.0
+    },
+    {
+      "symbol": "SBT",
+      "v35b_trades": 30,
+      "v35b_pnl": 36.7,
+      "v35b_wr": 33.3
+    },
+    {
+      "symbol": "PNJ",
+      "v35b_trades": 22,
+      "v35b_pnl": 36.4,
+      "v35b_wr": 59.1
+    },
+    {
+      "symbol": "VNM",
+      "v35b_trades": 21,
+      "v35b_pnl": 23.4,
+      "v35b_wr": 42.9
+    },
+    {
+      "symbol": "PLX",
+      "v35b_trades": 22,
+      "v35b_pnl": 20.8,
+      "v35b_wr": 45.5
+    },
+    {
+      "symbol": "GAS",
+      "v35b_trades": 20,
+      "v35b_pnl": 13.4,
+      "v35b_wr": 40.0
+    },
+    {
+      "symbol": "OCB",
+      "v35b_trades": 18,
+      "v35b_pnl": 7.6,
+      "v35b_wr": 27.8
+    },
+    {
+      "symbol": "PVS",
+      "v35b_trades": 26,
+      "v35b_pnl": 0.6,
+      "v35b_wr": 38.5
+    },
+    {
+      "symbol": "NT2",
+      "v35b_trades": 25,
+      "v35b_pnl": -1.1,
+      "v35b_wr": 40.0
+    },
+    {
+      "symbol": "BID",
+      "v35b_trades": 23,
+      "v35b_pnl": -4.6,
+      "v35b_wr": 43.5
+    },
+    {
+      "symbol": "SAB",
+      "v35b_trades": 23,
+      "v35b_pnl": -13.4,
+      "v35b_wr": 30.4
+    }
+  ],
+  "version": "v35b",
+  "generated_at": "2026-04-24T16:21:34.147135"
+}

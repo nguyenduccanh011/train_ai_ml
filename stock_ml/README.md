@@ -1,8 +1,8 @@
-# Stock ML Trading System
+﻿# Stock ML Trading System
 
 ## Tong quan
 
-He thong ML du doan xu huong gia co phieu Viet Nam (370+ ma, 2015-2025) su dung LightGBM voi walk-forward validation. He thong ho tro quan ly nhieu phien ban model, backtest tu dong, va dashboard so sanh truc quan.
+He thong ML du doan xu huong gia co phieu Viet Nam (du lieu 2015-2025) su dung LightGBM voi walk-forward validation. He thong ho tro quan ly nhieu phien ban model, backtest tu dong, va dashboard so sanh truc quan.
 
 ## Cai dat
 
@@ -74,10 +74,14 @@ stock_ml/
 |   +-- models.yaml              # Registry trung tam -- dinh nghia TAT CA model versions
 |   +-- base.yaml                # Cau hinh training device (gpu/cpu/auto)
 |
-+-- src/                          # Core ML pipeline (shared code)
++-- src/                          # Core ML pipeline (shared code â€” khong co runner scripts o day)
 |   +-- env.py                    # Auto-detect local/Colab, resolve paths
 |   +-- config_loader.py          # Doc models.yaml, cung cap helper functions
 |   +-- safe_io.py                # Fix UnicodeEncodeError tren Windows console
+|   +-- signal_adapter.py         # Canonicalize model predictions -> {-1,0,1}
+|   +-- experiment_runner.py      # run_test() + run_rule_test() -- dung chung cho moi run_vXX
+|   +-- cache/
+|   |   +-- feature_cache.py      # FeatureCacheManager -- cache feature DataFrame theo feature_set/signature
 |   +-- data/
 |   |   +-- loader.py             # DataLoader -- load OHLCV tu CSV (Hive-partitioned)
 |   |   +-- splitter.py           # WalkForwardSplitter -- rolling 4yr train / 1yr test
@@ -86,11 +90,15 @@ stock_ml/
 |   |   +-- engine.py             # FeatureEngine -- leading/leading_v2 feature sets
 |   +-- models/
 |   |   +-- registry.py           # ModelRegistry -- LightGBM, XGBoost, RandomForest
+|   +-- backtest/
+|   |   +-- engine.py             # backtest_unified() -- engine chinh dung chung cho v22-v27
+|   |   +-- defaults.py           # DEFAULT_PARAMS, FEATURE_DEFAULTS, symbol configs (doc tu models.yaml)
+|   |   +-- indicators.py         # compute_indicators(), detect_trend_strength(), get_regime_adapter()
 |   +-- evaluation/
-|   |   +-- scoring.py            # Unified scoring -- composite_score() + calc_metrics()
+|   |   +-- scoring.py            # composite_score() + calc_metrics() -- single source of truth
 |   |   +-- metrics.py            # Classification metrics (F1, accuracy)
-|   |   +-- backtest.py           # Backtest engine v1 (legacy)
-|   |   +-- backtest_v2.py        # Backtest engine v2 (legacy)
+|   +-- strategies/
+|   |   +-- legacy.py             # backtest_v19_1/v19_3 -- dung boi src/ luc train, khong dung truc tiep
 |   +-- export/
 |       +-- unified_export.py     # Export thong nhat -- CSV -> JSON cho dashboard
 |
@@ -124,18 +132,26 @@ stock_ml/
 |   +-- trades_rule.meta.json     # Metadata cho rule baseline
 |
 +-- model_manager.py              # CLI quan ly model (list/compare/retire/add)
-+-- run_pipeline.py               # Pipeline runner thong nhat (shared ML cache)
++-- run_pipeline.py               # Pipeline runner thong nhat (shared ML cache + matrix mode)
 +-- colab_setup.py                # 1-click setup cho Google Colab
++-- compare_rule_vs_model.py      # Rule-based backtest (backtest_rule)
 |
-+-- run_v27.py                    # V27 backtest function + standalone runner
-+-- run_v26.py                    # V26 backtest function + runner
-+-- run_v25.py                    # V25 ablation study + backtest function
-+-- run_v24.py                    # V24 backtest function + runner
-+-- run_v23_optimal.py            # V23 backtest function
-+-- run_v22_final.py              # V22 backtest function
-+-- run_v19_1_compare.py          # V19.1 backtest + run_test() + calc_metrics()
-+-- compare_rule_vs_model.py      # Rule-based backtest
-+-- run_feature_ablation.py       # Feature group ablation experiment
++-- experiments/
+|   +-- run_v27.py                # V27: backtest_v27() + standalone runner
+|   +-- run_v26.py                # V26: backtest_v26() + runner
+|   +-- run_v26_experiments.py    # V26: ablation cac patch A-H (dung src/experiment_runner)
+|   +-- run_v25.py                # V25: backtest_v25() + ablation study
+|   +-- run_v24.py                # V24: backtest_v24() + runner
+|   +-- run_v23_optimal.py        # V23: backtest_v23()
+|   +-- run_v22_final.py          # V22: backtest_v22()
+|   +-- run_feature_ablation.py   # Feature group ablation experiment (Groups A/B/C/D/E/F)
+|
++-- archive/                      # Code khong con active -- giu de tham khao lich su
+|   +-- scripts/                  # run_v2 -> run_v22_compare, run_v26_feature_compare, run_v27_experiments
+|   +-- src/                      # pipeline.py + evaluation/ (da duoc thay boi src/ chinh)
+|   +-- analysis/                 # Deep analysis scripts (v10-v23)
+|   +-- exports/                  # Export scripts (v10-v23)
+|   +-- misc/                     # Visualization + cleanup scripts
 |
 +-- docs/                         # Tai lieu bo sung
 +-- requirements.txt              # Python dependencies
@@ -146,16 +162,22 @@ stock_ml/
 ### Luong xu ly chinh
 
 ```
-+-------------+    +--------------+    +--------------+    +--------------+
-|  Data Load   |--->|  Feature Eng |--->|  Train Model |--->|   Backtest   |
-|  (loader.py) |    |  (engine.py) |    |  (LightGBM)  |    |  (run_v*.py) |
-+-------------+    +--------------+    +--------------+    +------+-------+
-                                                                  |
-                                                                  v
-+-------------+    +--------------+    +--------------+    +--------------+
-|  Dashboard   |<---|  manifest.json|<---|  Unified Export|<---| trades_v*.csv|
-|  (HTML+JS)   |    |  (auto-gen)  |    |  (export.py)  |    |  (results/)  |
-+-------------+    +--------------+    +--------------+    +--------------+
++-------------+    +--------------+    +------------------+    +--------------+
+|  Data Load   |--->|  Feature Eng |--->|  Target Generate |--->|  Train Model |
+|  (loader.py) |    |  (engine.py) |    |  entry_wave      |    |  Model A     |
++-------------+    +--------------+    |  exit_signal (*) |    |  (entry)     |
+                                        +------------------+    |  Model B (*) |
+                                                                |  (exit)      |
+                                                                +------+-------+
+                                                                       |
+                                                                       v
++-------------+    +--------------+    +--------------+    +------------------+
+|  Dashboard   |<---|  manifest.json|<---|  Unified Export|<---| Backtest Engine  |
+|  (HTML+JS)   |    |  (auto-gen)  |    |  (export.py)  |    | y_pred_entry     |
++-------------+    +--------------+    +--------------+    | y_pred_exit (*)  |
+                                                            +------------------+
+
+(*) Exit model — chi active neu model co exit_model.enabled=true trong models.yaml
 ```
 
 ### Walk-Forward Validation
@@ -170,10 +192,35 @@ stock_ml/
      <-- 4yr train -->   <-- 1yr test -->
 ```
 
-- **Model:** LightGBM classifier (3 classes: UPTREND / SIDEWAYS / DOWNTREND)
-- **Target:** Dual MA crossover (SMA5/SMA20), shifted -1 de du doan ngay mai
-- **Features:** leading_v2 feature set (Groups A+B+C+D: Market Structure, Exhaustion, Volatility Regime, Multi-timeframe)
-- **Symbols:** 370+ ma co phieu VN (HOSE + HNX), auto-detect voi min 2000 rows
+- **Model A (entry):** LightGBM, 3 classes — early_wave BUY / NEUTRAL / AVOID
+- **Model B (exit):** LightGBM, binary — EXIT_NOW / HOLD (chi active khi exit_model.enabled=true)
+- **Target entry:** early_wave (sideways N ngay + forward gain >= threshold)
+- **Target exit:** forward drawdown >= loss_threshold trong N ngay (doc lap voi entry target)
+- **Target config:** moi version tu khai bao trong `config/models.yaml` -> `models.<version>.target`
+- **Exit config:** `config/models.yaml` -> `models.<version>.exit_model` (forward_window, loss_threshold)
+- **Features:** leading_v4 (V34+) — leading_v3 (V29-V33) — leading_v2 (V22-V28)
+- **Symbols:** Lay tu `config/models.yaml` (`pipeline.symbols`)
+
+### Dual Model Architecture (Entry + Exit)
+
+```
+Train time (per fold):
+  X_train = features(train_period)
+  Model A.fit(X_train, y_entry)   <- early_wave label: BUY/NEUTRAL/AVOID
+  Model B.fit(X_train, y_exit)    <- exit label: EXIT(1)/HOLD(0)  [neu enabled]
+
+Backtest time (per bar):
+  y_pred_entry[i] = Model A.predict(features[i])
+  y_pred_exit[i]  = Model B.predict(features[i])   [neu enabled, else None]
+
+  Engine logic:
+    if not in_position and y_pred_entry[i] == 1: -> entry
+    if in_position:
+      if hard_stop:           -> exit (highest priority)
+      elif y_pred_exit[i]==1  -> exit "model_b_exit"  [override engine rules]
+      elif trailing_stop:     -> exit
+      elif ...other rules...  -> exit
+```
 
 ### Backtest Engine
 
@@ -181,8 +228,9 @@ Moi version co mot ham `backtest_vXX()` rieng voi logic entry/exit khac nhau:
 
 | Component | Mo ta |
 |-----------|-------|
-| **Entry Logic** | ML signal + breakout + V-shape + rule ensemble |
-| **Exit Logic** | Hard stop, ATR stop, trailing, profit lock, peak protect, zombie, signal confirm |
+| **Entry Logic** | ML signal (Model A) + breakout + V-shape + rule ensemble |
+| **Exit Logic** | Model B exit (override) > Hard stop > ATR stop > trailing > peak protect > zombie > signal |
+| **Model B Exit** | `model_b_exit` — active sau min 3 ngay giu, chi bi block boi hard_stop |
 | **Position Sizing** | Trend-based (strong/moderate/weak) + ATR-adjusted |
 | **Mod Flags** | 10 toggles (a-j) bat/tat tung module |
 | **Regime Adapter** | Symbol profiles (bank, high_beta, momentum, defensive) |
@@ -213,6 +261,12 @@ python run_pipeline.py --version v24 --export-only
 
 # Custom symbols
 python run_pipeline.py --version v24 --symbols ACB,FPT,HPG
+
+# Matrix mode: test nhieu feature set x nhieu ML model
+python run_pipeline.py --versions v26,v27 --feature-sets leading,leading_v2 --ml-models lightgbm,xgboost
+
+# Matrix mode + compare list (auto append vao versions)
+python run_pipeline.py --version v27 --compare v26 --feature-sets leading_v2 --ml-models lightgbm
 ```
 
 ### Pipeline Architecture (Unified)
@@ -268,15 +322,24 @@ Output:
 | `--skip-existing` | Skip TAT CA versions da co CSV (ke ca `--version`) |
 | `--force` | Chay lai TAT CA, bo qua cache |
 
-**Metadata validation:** Khi smart cache tai su dung CSV cu, he thong kiem tra `.meta.json` de dam bao CSV duoc tao voi cung dieu kien (symbols, min_rows). Neu khac biet, hien canh bao:
+**Metadata validation:** Khi smart cache tai su dung CSV cu, he thong kiem tra `.meta.json` de dam bao CSV duoc tao voi cung dieu kien (symbols, min_rows, feature_set, target_fingerprint). Neu khac biet, hien canh bao:
 
 ```
   WARNING: 2 cached CSV(s) have mismatched conditions:
     v24: symbol list differs (14 changes: cached=14, current=367)
-    Use --force to re-generate these for a fair comparison.
+    Mismatched versions se tu dong bi cache invalidation va duoc re-run de dam bao fairness.
 ```
 
 > **Luu y:** Export va Compare luon bao gom TAT CA versions (ca cached lan moi chay).
+
+### Feature Cache (run_vXX / run_test)
+
+`src/experiment_runner.py` co cache rieng cho buoc tao feature (qua `FeatureCacheManager`) de tang toc cac script `experiments/run_v24.py`, `run_v25.py`, `run_v26.py`, `run_v26_experiments.py`, `run_v27.py`.
+
+- Thu muc cache: `results/cache/features/<feature_set>/`
+- Cache key duoc tao tu: `symbols + target_config + source_fingerprint(data) + code_fingerprint + schema_version`
+- Ho tro nhieu feature set (`leading`, `leading_v2`, va cac set moi sau nay) ma khong xung dot cache
+- Khi data hoac code thay doi, key thay doi -> cache miss tu nhien (khong can xoa tay)
 
 ## Quan ly Model
 
@@ -321,12 +384,29 @@ Symbols duoc cau hinh trong `config/models.yaml`:
 ```yaml
 pipeline:
   symbols:
-    mode: auto          # auto | explicit
+    mode: explicit      # auto | explicit
     min_rows: 2000      # Chi lay symbols co >= 2000 dong du lieu
-    explicit_list: ""   # Danh sach cu the (chi dung khi mode=explicit)
+    explicit_list: "ACB,FPT,..."  # Danh sach cu the (chi dung khi mode=explicit)
 ```
 
-Khi `mode: auto`, he thong tu dong scan thu muc du lieu va chon tat ca symbols du dieu kien. Tat ca models trong cung 1 pipeline run se dung CUNG 1 symbol list.
+Khi `mode: explicit`, he thong dung danh sach co san trong config. Neu chuyen sang `mode: auto`, he thong se scan thu muc du lieu va chon tat ca symbols du dieu kien `min_rows`. Tat ca models trong cung 1 pipeline run se dung CUNG 1 symbol list.
+
+### Symbol Profiles
+
+Phan loai symbol (bank/high_beta/momentum/defensive) duoc cau hinh trong `config/models.yaml`:
+
+```yaml
+symbol_profiles:
+  bank: [ACB, BID, MBB, TCB]
+  high_beta: [AAV, AAS, SSI, VND]
+  momentum: [DGC, HPG, VIC]
+  defensive: [FPT, REE, VNM]
+
+rule_priority_symbols: [AAA, SSN, TEG, GAS, PLX, IJC, DQC]
+score5_risky_symbols: [AAA, IJC, ITC, VHM, TEG, QBS, KMR, SSN, PLX]
+```
+
+Backtest engine (`src/backtest/engine.py`) tu dong doc cac config nay qua `src/backtest/defaults.py`. Them/sua symbol chi can chinh `config/models.yaml`, khong can sua code.
 
 ### CLI Commands
 
@@ -364,32 +444,60 @@ Khi retire model, chi can chay `python model_manager.py retire vXX` -> dashboard
 
 ## Workflow: Them Model Moi
 
-### Buoc 1: Dang ky model
+### Buoc 1: Dang ky model trong models.yaml
 
+```yaml
+# config/models.yaml
+models:
+  v43:
+    name: V43
+    description: 'Mo ta ngan gon'
+    color: '#FF5722'
+    active: true
+    strategy: v43
+    feature_set: leading_v4
+    target:
+      type: early_wave
+      forward_window: 8
+      gain_threshold: 0.06
+      loss_threshold: 0.03
+      classes: 3
+    exit_model:           # Bo qua neu khong muon exit model
+      enabled: true
+      forward_window: 15
+      loss_threshold: 0.05
+    mods:
+      a: true
+      b: true
+      # ... c-j
+    marker_shape: arrowUp
+    order: -52
+```
+
+Hoac dung CLI:
 ```bash
-python model_manager.py add v28 --name "V28 Improved" --color "#FF5722" --strategy v28
+python model_manager.py add v43 --name "V43" --color "#FF5722" --strategy v43
 ```
 
 ### Buoc 2: Viet backtest function
 
-Tao file `run_v28.py` voi ham `backtest_v28()`. Co the copy tu version gan nhat va chi sua phan logic khac:
+Tao `experiments/run_v43.py`. Backtest function chi can nhan `**kwargs` de tu dong nhan `y_pred_exit`:
 
 ```python
-def backtest_v28(y_pred, returns, df_test, feature_cols,
-                 initial_capital=100_000_000, commission=0.0015, tax=0.001,
-                 record_trades=True,
-                 mod_a=True, mod_b=True, ...):
-    # Logic entry/exit moi o day
-    ...
+# experiments/run_v43.py
+from experiments.run_v37a import backtest_v37a
+
+def backtest_v43(y_pred, returns, df_test, feature_cols, **kwargs):
+    # Them logic rieng neu can, roi delegate xuong engine
+    # y_pred_exit duoc tu dong truyen qua **kwargs -> backtest_unified
+    return backtest_v37a(y_pred, returns, df_test, feature_cols, **kwargs)
 ```
 
-### Buoc 3: Dang ky backtest function
-
-Them vao `get_backtest_function()` trong `run_pipeline.py`:
+### Buoc 3: Dang ky trong run_pipeline.py
 
 ```python
 strategy_map = {
-    "v28": ("run_v28", "backtest_v28"),
+    "v43": ("experiments.run_v43", "backtest_v43"),
     ...
 }
 ```
@@ -397,15 +505,15 @@ strategy_map = {
 ### Buoc 4: Chay backtest
 
 ```bash
-# Chay V28 + so sanh voi V27 va Rule
-python run_pipeline.py --version v28 --compare v27,rule
+# Chay V43 (tu dong dung exit model neu exit_model.enabled=true trong yaml)
+python run_pipeline.py --version v43 --compare v37a,rule
 ```
 
-Output: `results/trades_v28.csv` + `results/trades_v28.meta.json` + `visualization/data_v28/` + `manifest.json` updated
+Output: `results/trades_v43.csv` + `.meta.json` + `visualization/data_v43/` + `manifest.json`
 
 ### Buoc 5: Xem ket qua
 
-Mo `visualization/dashboard.html` trong browser -> V28 tu xuat hien tren dashboard!
+Mo `visualization/dashboard.html` trong browser -> V43 tu xuat hien tren dashboard!
 
 ### Buoc 6: Quyet dinh
 
@@ -474,7 +582,7 @@ visualization/
     +-- ...
 ```
 
-## Google Colab — Hybrid Workflow
+## Google Colab â€” Hybrid Workflow
 
 He thong ho tro chay tren ca **local** (RTX 3060) va **Google Colab** (T4/A100). Code tu dong detect moi truong va chuyen path phu hop.
 
@@ -484,7 +592,7 @@ He thong ho tro chay tren ca **local** (RTX 3060) va **Google Colab** (T4/A100).
 +----------------------------------------------------------+
 |               GitHub (source of truth)                    |
 |   stock_ml/src/*, config/*, run_*.py, requirements.txt   |
-|   CHI CODE — khong data, khong model, khong results      |
+|   CHI CODE â€” khong data, khong model, khong results      |
 +---------------------------+------------------------------+
                             |
                 +-----------+-----------+
@@ -511,7 +619,7 @@ He thong ho tro chay tren ca **local** (RTX 3060) va **Google Colab** (T4/A100).
 |------|-------------|-------|
 | Dev/debug strategy moi | Chay 1-2 symbol nhanh | |
 | Train 1 model (v27) | OK neu LightGBM/XGBoost | Neu can deep learning |
-| **Chay ALL models so sanh** | | **Colab** — `--all` |
+| **Chay ALL models so sanh** | | **Colab** â€” `--all` |
 | **Feature ablation toan bo** | | **Colab** |
 | **Batch backtest 200+ symbols x 7 models** | | **Colab** |
 | Export JSON cho dashboard | Local (nhe) | |
@@ -528,22 +636,22 @@ Upload file `.tar.gz` len Google Drive:
 - Tao thu muc: `MyDrive/stock_ml_hub/portable_data/`
 - Upload `vn_stock_ai_dataset_cleaned.tar.gz` vao do
 
-### Buoc 2: Lan dau tren Colab — Setup
+### Buoc 2: Lan dau tren Colab â€” Setup
 
 Mo Colab, tao notebook moi, paste 3 cell:
 
-**Cell 1 — Clone repo:**
+**Cell 1 â€” Clone repo:**
 ```python
 !git clone https://github.com/nguyenduccanh011/train_ai_ml.git /content/repo
 %cd /content/repo/stock_ml
 ```
 
-**Cell 2 — Setup (mount Drive, install deps, check data):**
+**Cell 2 â€” Setup (mount Drive, install deps, check data):**
 ```python
 %run colab_setup.py
 ```
 
-**Cell 3 — Giai nen data (chi lan dau):**
+**Cell 3 â€” Giai nen data (chi lan dau):**
 ```python
 !cd /content/drive/MyDrive/stock_ml_hub/portable_data && tar -xzf vn_stock_ai_dataset_cleaned.tar.gz
 ```
@@ -561,7 +669,7 @@ Mo Colab, tao notebook moi, paste 3 cell:
 !python run_pipeline.py --version v27 --compare v26,v25,v24,rule
 
 # Feature ablation
-!python run_feature_ablation.py
+!python experiments/run_feature_ablation.py
 ```
 
 Results tu dong luu vao `MyDrive/stock_ml_hub/results/` tren Drive.
@@ -576,12 +684,12 @@ Hoac cai Google Drive for Desktop de tu sync.
 Chi can 2 cell:
 
 ```python
-# Cell 1 — Pull latest code + setup
+# Cell 1 â€” Pull latest code + setup
 !git clone https://github.com/nguyenduccanh011/train_ai_ml.git /content/repo 2>/dev/null || git -C /content/repo pull --ff-only
 %cd /content/repo/stock_ml
 %run colab_setup.py
 
-# Cell 2 — Run
+# Cell 2 â€” Run
 !python run_pipeline.py --all
 ```
 
@@ -691,6 +799,8 @@ Moi file `results/trades_{version}.meta.json`:
   "n_symbols": 367,
   "min_rows": 2000,
   "feature_set": "leading_v2",
+  "target_config": {"type": "trend_regime", "trend_method": "dual_ma", "short_window": 5, "long_window": 20, "classes": 3},
+  "target_fingerprint": "{\"classes\":3,\"long_window\":20,\"short_window\":5,\"trend_method\":\"dual_ma\",\"type\":\"trend_regime\"}",
   "n_trades": 9915
 }
 ```
@@ -704,19 +814,65 @@ V11 (baseline) -> V17 (modules A-J) -> V18 (adaptive) -> V19 (regime)
     -> V19.1 (risk-tuned) -> V19.3 (binary sizing) -> V22 (SMA200 + hybrid)
     -> V23 (graduated exits) -> V24 (5 patches) -> V25 (ablation-validated)
     -> V26 (skip choppy + rule ensemble) -> V27 (hardcap two-step + trend persistence)
+    -> V28 (early wave target) -> V29 (leading_v3 retrain, +26)
+    -> V30 (signal_exit_defer) -> V31 (SHEF + HAP)
+    -> V32 (HAP preempt fix, +11) -> V33 (recovery_peak_filter, +4)
+    -> V34 (leading_v4 HA features, +32) -> V35/V36 (V35 flags)
+    -> V37a (per-profile dispatch) -> V38/V39 (HA exit, HAP reform, rule_confirm)
+    -> V37a+ExitModel ★ CURRENT BEST (separate exit model B, score +187 vs V37a)
+    -> V42 (fw=15 entry + exit model)
 ```
+
+### Ket qua so sanh hien tai (61 symbols, 2020-2025)
+
+| Version | Trades | WR | AvgPnL | TotPnL | PF | MaxLoss | AvgHold | Score |
+|---------|--------|----|--------|--------|-----|---------|---------|-------|
+| **V37a+ExitModel** ★ | 3694 | 57.4% | +3.35% | +12386% | 3.18 | -23.9% | 8.5d | **597** |
+| V42a+ExitModel | 4087 | 56.0% | +2.73% | +11142% | 2.76 | -23.9% | 7.2d | 550 |
+| V37a | 1355 | 49.0% | +6.19% | +8392% | 2.84 | -57.4% | 35.5d | ~410 |
+| V42_base | 1383 | 48.6% | +5.95% | +8230% | 2.75 | -57.4% | 34.4d | 401 |
+| V34 | 1299 | 50.2% | +6.35% | +8243% | 2.89 | — | — | 465 |
+| Rule | 2185 | 39.8% | +2.37% | +5178% | 1.84 | -27.2% | 18.1d | — |
+
+**Key insight:** Exit model B (+ExitModel) tang WR +8pp, giam MaxLoss 58%, tang TotalPnL 47%
+bang cach thoat som o dinh song thay vi giu den trailing stop.
 
 ### Active Models (hien tai)
 
-| Version | Mo ta | Feature Set |
-|---------|-------|-------------|
-| **V27** | V26 + hardcap two-step + rule priority + dynamic score5 penalty + trend persistence | leading_v2 |
-| **V26** | V25 + skip choppy + relaxed strong-trend entry + stronger rule ensemble | leading_v2 |
-| **V25** | V24 all patches + pp_threshold=0.12 (ablation-validated) | leading_v2 |
-| **V24** | V23 + smart hard_cap + peak_protect + long-horizon carry + symbol tuning + rule ensemble | leading_v2 |
-| **V23** | Graduated exits + restored peak_protect + trend-specific caps | leading_v2 |
-| **V22** | V19.1 + SMA200 filter + hybrid entry + fast_exit_loss + signal_hard_cap + time_decay | leading_v2 |
-| **Rule** | MACD_hist > 0 AND Close > MA20 AND Close > Open (baseline) | N/A |
+| Version | Mo ta | Feature Set | Exit Model |
+|---------|-------|-------------|------------|
+| **V37a+ExitModel** ★ | V37a engine + Model B exit (fw=15, loss=5%) | leading_v4 | enabled |
+| **V42a** | V37a engine, fw=15 entry + Model B exit | leading_v4 | enabled |
+| **V42_base** | V37a engine, fw=15 (khong exit model, baseline) | leading_v4 | — |
+| **V39g** | V37a + HAP reform (8%/15d) + selective rule_confirm | leading_v4 | enabled |
+| **V39f** | V37a + HAP (8%/15d) + rule_confirm | leading_v4 | enabled |
+| **V39d** | V39e + per-symbol rule-exit hybrid | leading_v4 | enabled |
+| **V39e** | V37a + signal_exit_min_hold=35 + HAP reform | leading_v4 | enabled |
+| **V39b** | V37a + HAP reform (trigger 8%, min_hold=15) | leading_v4 | enabled |
+| **V39a2** | V37a + rule_confirm_exit (selective) | leading_v4 | enabled |
+| **V39a** | V37a + signal_exit_min_hold=35 | leading_v4 | enabled |
+| **V37a** | V34 engine + per-profile V35 flag dispatch | leading_v4 | enabled |
+| **V36a/b/c** | V35 flag variants | leading_v4 | enabled |
+| **V35b** | V34 + V35 flags (rule_override + skip_proximity) | leading_v4 | enabled |
+| **V34** | V32 engine + leading_v4 (18 HA features) + HAP(t4,f7) | leading_v4 | enabled |
+| **V32/V31/V30/V29** | HAP preempt / SHEF / signal_defer / early_wave | leading_v3 | — |
+| **Rule** | MACD_hist > 0 AND Close > MA20 AND Close > Open (baseline) | N/A | — |
+
+### Exit Model Config (models.yaml)
+
+```yaml
+v39g:
+  target:
+    type: early_wave        # entry label (buy/neutral/avoid)
+    forward_window: 8
+    gain_threshold: 0.06
+  exit_model:               # exit label (exit/hold) — doc lap
+    enabled: true
+    forward_window: 15      # nhin truoc 15 ngay (dai hon entry fw=8)
+    loss_threshold: 0.05    # exit neu co luc giam >= 5%
+```
+
+`exit_model` duoc doc tu `config/models.yaml`. Model khong co block nay chay nhu cu (backward compatible).
 
 ### Retired Models
 
@@ -725,6 +881,7 @@ V11 (baseline) -> V17 (modules A-J) -> V18 (adaptive) -> V19 (regime)
 | V19.3 | Superseded by V22/V23 |
 | V19.1 | Superseded by V22/V23/V24/V25 |
 | V18 | Superseded by V19.1 |
+| V25/V23 | Superseded by V26+ |
 
 ### Mod Flags (a-j)
 
@@ -752,25 +909,76 @@ Feature set mac dinh cho tat ca active models. Bao gom:
 - **Group B:** Exhaustion & Failure Signals (upthrust, spring, climax volume, gaps)
 - **Group C:** Volatility Regime (ATR percentile, compression, overnight gaps)
 - **Group D:** Multi-timeframe (weekly indicators, price vs weekly MA)
+- **Group G (accumulation):** Volatility contraction, range compression, dist-to-highs, volume dry-then-spike, sideway score, BB squeeze
+
+### leading_v4 (V34 — current best)
+
+leading_v3 + **18 Heikin-Ashi wave-position features** (`src/features/engine.py::_heikin_ashi_features`):
+
+| Feature | Y nghia |
+|---------|---------|
+| `ha_green`, `ha_green_streak`, `ha_red_streak` | Mau va chuoi lien tiep |
+| `ha_color_switch` | Doi mau ngay hom nay (tin hieu dao chieu som) |
+| `ha_upper_shadow_ratio`, `ha_lower_shadow_ratio` | Ti le rau tren/duoi |
+| `ha_no_lower_shadow`, `ha_no_upper_shadow` | Uptrend/downtrend manh (khong rau) |
+| `ha_upper_shadow_growing`, `ha_lower_shadow_growing` | Rau tang dan (phan phoi/tich luy) |
+| `ha_body_ratio`, `ha_body_shrinking` | Suc manh than nen, da giam dan |
+| `ha_streak_position` | Vi tri trong song (0=dau, 1=dinh) |
+| `ha_doji` | Doji HA (canh bao dao chieu) |
+| `ha_bearish_reversal_signal` | green_streak>=4 + upper_shadow growing + body shrinking |
+| `ha_bullish_reversal_signal` | Truoc do do >=3 ngay + doi sang xanh + lower shadow growing |
+| `ha_early_wave` | streak<=2 + no_lower_shadow + body>0.5 (mua dau song) |
+| `ha_late_wave` | streak>=5 + upper_shadow>0.3 + body_shrinking (tranh fomo) |
+
+**Ly do HA features hieu qua (tu phan tich trades_v32.csv):**
+- Losers avg entry_ret_5d=+3.55% → model mua khi da tang (cuoi song)
+- `ha_streak_position` va `ha_late_wave` giup model nhan dien "cuoi song/fomo"
+- `ha_upper_shadow_growing` + `ha_body_shrinking` → phan phoi som hon MACD/RSI
+- Ket hop target gain=6% (vs 5%) → label chat luong cao hon, it nhieu hon
 
 ### Feature Ablation
 
-Su dung `run_feature_ablation.py` de test tung group:
+Su dung `experiments/run_feature_ablation.py` de test tung group:
 
 ```bash
-python run_feature_ablation.py              # Test tat ca groups
-python run_feature_ablation.py --group A    # Chi test Group A
-python run_feature_ablation.py --group A,B  # Test Group A va B
+python experiments/run_feature_ablation.py              # Test tat ca groups
+python experiments/run_feature_ablation.py --group A    # Chi test Group A
+python experiments/run_feature_ablation.py --group A,B  # Test Group A va B
 ```
 
 ## Quy uoc & Best Practices
 
 ### Dat ten file
 
-- `run_v{N}.py` -- Backtest function + standalone runner cho version N
-- `run_v{N}_experiments.py` -- Script experiment cho version N
+- `experiments/run_v{N}.py` -- Backtest function `backtest_vN()` + standalone runner cho version N
+- `experiments/run_v{N}_experiments.py` -- Script ablation/experiment cho version N
 - `trades_v{N}.csv` -- Output trades CSV
 - `trades_v{N}.meta.json` -- Metadata cho trades CSV
+
+### Quy tac import (QUAN TRONG)
+
+**Dependency graph hop le:**
+
+```
+experiments/run_vXX.py  ->  src/backtest/engine.py       (backtest_unified)
+                         ->  src/evaluation/scoring.py   (composite_score, calc_metrics)
+                         ->  experiments/run_v{N-1}.py   (chi khi can compare voi version truoc, trong if __name__ == "__main__)
+
+experiments/run_vXX_experiments.py  ->  src/experiment_runner.py   (run_test, run_rule_test)
+                                     ->  src/evaluation/scoring.py  (composite_score, calc_metrics)
+                                     ->  experiments/run_vXX.py      (backtest_vXX)
+
+run_pipeline.py  ->  src/*  (tat ca src modules)
+                 ->  experiments/run_vXX.py (qua dynamic import trong get_backtest_function)
+
+experiments/run_feature_ablation.py  ->  experiments/run_v27.py
+                                      ->  src/features/engine.py
+```
+
+**KHONG duoc phep:**
+- Import bat ky thu gi tu `archive/` trong code dang active
+- Import `experiments/run_vXX.py` mot cach tuy tien trong utility scripts khong lien quan pipeline/ablation
+- Import `comp_score` tu `run_v25` -- dung truc tiep `from src.evaluation.scoring import composite_score`
 
 ### Quy trinh phat trien
 
@@ -804,4 +1012,5 @@ python run_feature_ablation.py --group A,B  # Test Group A va B
 
 ---
 
-*Cap nhat lan cuoi: 2026-04-22*
+*Cap nhat lan cuoi: 2026-04-24 - Them Separate Exit Model (Model B): train doc lap tren exit signal, override engine khi predict EXIT. V37a+ExitModel la BEST hien tai (score 597, WR 57.4%, MaxLoss -23.9%). Architecture: `exit_model:` config trong models.yaml, `TargetGenerator.generate_exit_labels()`, `_build_predictions(exit_model_cfg)`, `backtest_unified(y_pred_exit)`. Fix critical bug y_pred_sell/y_pred_exit naming. 14 active models da duoc cap nhat exit_model config.*
+

@@ -28,7 +28,7 @@ from src.config_loader import (
     get_model_config,
     get_visualization_config,
 )
-from src.env import get_results_dir
+from src.env import get_results_dir, get_experiment_dir
 
 
 def make_markers(trades, version_key, color, marker_shape="arrowUp"):
@@ -220,7 +220,13 @@ def export_version(version_key, model_cfg, results_dir, viz_dir):
 
 
 def generate_manifest(exported_versions, viz_dir, base_data_dir="data"):
-    """Generate manifest.json for the dynamic dashboard."""
+    """Generate manifest.json for the dynamic dashboard.
+
+    Merges with existing manifest: preserves prior model entries whose
+    data_{version}/ folder still exists on disk and that were not part of
+    this export run. This prevents partial exports (e.g. running just one
+    version) from wiping other models from the dashboard.
+    """
     # Check if base OHLCV data exists
     base_index_path = os.path.join(viz_dir, base_data_dir, "index.json")
     base_symbols = []
@@ -229,11 +235,39 @@ def generate_manifest(exported_versions, viz_dir, base_data_dir="data"):
             base_index = json.load(f)
         base_symbols = [row.get("symbol") for row in base_index.get("symbols", []) if row.get("symbol")]
 
+    manifest_path = os.path.join(viz_dir, "manifest.json")
+    exported_keys = {m["version_key"] for m in exported_versions}
+    merged_models = list(exported_versions)
+    preserved_keys = []
+    dropped_keys = []
+
+    if os.path.exists(manifest_path):
+        try:
+            with open(manifest_path, "r", encoding="utf-8") as f:
+                old_manifest = json.load(f)
+            for old_model in old_manifest.get("models", []):
+                vk = old_model.get("version_key")
+                if not vk or vk in exported_keys:
+                    continue
+                data_dir = old_model.get("data_dir", f"data_{vk}")
+                if os.path.isdir(os.path.join(viz_dir, data_dir)):
+                    merged_models.append(old_model)
+                    preserved_keys.append(vk)
+                else:
+                    dropped_keys.append(vk)
+        except (json.JSONDecodeError, OSError) as e:
+            print(f"  ⚠ Could not read existing manifest ({e}); overwriting fresh")
+
+    if preserved_keys:
+        print(f"  Preserved {len(preserved_keys)} existing model(s): {', '.join(preserved_keys)}")
+    if dropped_keys:
+        print(f"  Dropped {len(dropped_keys)} stale model(s) (data dir missing): {', '.join(dropped_keys)}")
+
     manifest = {
         "generated_at": datetime.now().isoformat(),
         "base_data_dir": base_data_dir,
         "base_symbols": base_symbols,
-        "models": sorted(exported_versions, key=lambda x: x["order"]),
+        "models": sorted(merged_models, key=lambda x: x.get("order", 99)),
         "exit_abbreviations": get_exit_abbreviations(),
     }
 
@@ -254,10 +288,12 @@ def main():
                         help="Include retired models in export")
     parser.add_argument("--base-data-dir", type=str, default="data",
                         help="Directory name for base OHLCV data (default: data)")
+    parser.add_argument("--experiment", type=str, default="",
+                        help="Read CSV from experiment subfolder (e.g., leading_v2__lightgbm)")
     args = parser.parse_args()
 
     base_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")
-    results_dir = get_results_dir()
+    results_dir = get_experiment_dir(args.experiment) if args.experiment else get_results_dir()
     viz_dir = os.path.join(base_dir, "visualization")
 
     # Determine which models to export

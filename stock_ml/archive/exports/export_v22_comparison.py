@@ -25,7 +25,7 @@ from src.data.splitter import WalkForwardSplitter
 from src.data.target import TargetGenerator
 from src.features.engine import FeatureEngine
 from src.models.registry import build_model
-from run_v22_final import backtest_v22_final
+from run_v22_final import backtest_v22
 from run_v19_1_compare import backtest_v19_1
 from run_v19_3_compare import backtest_v19_3
 from compare_rule_vs_model import backtest_rule
@@ -175,7 +175,7 @@ def get_all_viable_symbols(data_dir):
 
 
 def backtest_v22_wrapper(y_pred, rets, sym_test, feature_cols, **kwargs):
-    return backtest_v22_final(y_pred, rets, sym_test, feature_cols,
+    return backtest_v22(y_pred, rets, sym_test, feature_cols,
                               fast_exit_threshold_std=-0.06, **kwargs)
 
 

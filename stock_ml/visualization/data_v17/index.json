@@ -1,0 +1,372 @@
+{
+  "symbols": [
+    {
+      "symbol": "VND",
+      "v17_trades": 34,
+      "v17_pnl": 320.5,
+      "v17_wr": 64.7
+    },
+    {
+      "symbol": "VDS",
+      "v17_trades": 23,
+      "v17_pnl": 287.4,
+      "v17_wr": 60.9
+    },
+    {
+      "symbol": "VCI",
+      "v17_trades": 28,
+      "v17_pnl": 276.8,
+      "v17_wr": 64.3
+    },
+    {
+      "symbol": "NKG",
+      "v17_trades": 30,
+      "v17_pnl": 249.4,
+      "v17_wr": 46.7
+    },
+    {
+      "symbol": "HSG",
+      "v17_trades": 32,
+      "v17_pnl": 226.9,
+      "v17_wr": 46.9
+    },
+    {
+      "symbol": "FRT",
+      "v17_trades": 28,
+      "v17_pnl": 219.7,
+      "v17_wr": 42.9
+    },
+    {
+      "symbol": "LPB",
+      "v17_trades": 29,
+      "v17_pnl": 219.6,
+      "v17_wr": 55.2
+    },
+    {
+      "symbol": "SHB",
+      "v17_trades": 28,
+      "v17_pnl": 210.0,
+      "v17_wr": 50.0
+    },
+    {
+      "symbol": "SSI",
+      "v17_trades": 33,
+      "v17_pnl": 190.2,
+      "v17_wr": 39.4
+    },
+    {
+      "symbol": "DCM",
+      "v17_trades": 27,
+      "v17_pnl": 163.8,
+      "v17_wr": 66.7
+    },
+    {
+      "symbol": "AAV",
+      "v17_trades": 25,
+      "v17_pnl": 159.4,
+      "v17_wr": 40.0
+    },
+    {
+      "symbol": "HPG",
+      "v17_trades": 28,
+      "v17_pnl": 158.2,
+      "v17_wr": 39.3
+    },
+    {
+      "symbol": "GEX",
+      "v17_trades": 33,
+      "v17_pnl": 157.2,
+      "v17_wr": 60.6
+    },
+    {
+      "symbol": "PDR",
+      "v17_trades": 32,
+      "v17_pnl": 152.3,
+      "v17_wr": 40.6
+    },
+    {
+      "symbol": "DIG",
+      "v17_trades": 36,
+      "v17_pnl": 146.2,
+      "v17_wr": 44.4
+    },
+    {
+      "symbol": "AAS",
+      "v17_trades": 27,
+      "v17_pnl": 145.4,
+      "v17_wr": 48.1
+    },
+    {
+      "symbol": "HCM",
+      "v17_trades": 32,
+      "v17_pnl": 123.7,
+      "v17_wr": 62.5
+    },
+    {
+      "symbol": "DGC",
+      "v17_trades": 27,
+      "v17_pnl": 122.7,
+      "v17_wr": 40.7
+    },
+    {
+      "symbol": "BCG",
+      "v17_trades": 26,
+      "v17_pnl": 121.3,
+      "v17_wr": 46.2
+    },
+    {
+      "symbol": "PC1",
+      "v17_trades": 30,
+      "v17_pnl": 119.1,
+      "v17_wr": 53.3
+    },
+    {
+      "symbol": "VIC",
+      "v17_trades": 23,
+      "v17_pnl": 114.8,
+      "v17_wr": 47.8
+    },
+    {
+      "symbol": "DPM",
+      "v17_trades": 29,
+      "v17_pnl": 95.5,
+      "v17_wr": 44.8
+    },
+    {
+      "symbol": "BSR",
+      "v17_trades": 35,
+      "v17_pnl": 95.0,
+      "v17_wr": 45.7
+    },
+    {
+      "symbol": "HDB",
+      "v17_trades": 35,
+      "v17_pnl": 94.2,
+      "v17_wr": 60.0
+    },
+    {
+      "symbol": "FPT",
+      "v17_trades": 26,
+      "v17_pnl": 93.7,
+      "v17_wr": 50.0
+    },
+    {
+      "symbol": "HDG",
+      "v17_trades": 31,
+      "v17_pnl": 93.5,
+      "v17_wr": 54.8
+    },
+    {
+      "symbol": "KBC",
+      "v17_trades": 32,
+      "v17_pnl": 89.4,
+      "v17_wr": 37.5
+    },
+    {
+      "symbol": "CTG",
+      "v17_trades": 32,
+      "v17_pnl": 86.1,
+      "v17_wr": 50.0
+    },
+    {
+      "symbol": "KDH",
+      "v17_trades": 34,
+      "v17_pnl": 84.6,
+      "v17_wr": 41.2
+    },
+    {
+      "symbol": "MBB",
+      "v17_trades": 31,
+      "v17_pnl": 82.9,
+      "v17_wr": 54.8
+    },
+    {
+      "symbol": "SBT",
+      "v17_trades": 32,
+      "v17_pnl": 74.2,
+      "v17_wr": 34.4
+    },
+    {
+      "symbol": "BCM",
+      "v17_trades": 24,
+      "v17_pnl": 74.1,
+      "v17_wr": 50.0
+    },
+    {
+      "symbol": "BVH",
+      "v17_trades": 35,
+      "v17_pnl": 69.5,
+      "v17_wr": 57.1
+    },
+    {
+      "symbol": "NLG",
+      "v17_trades": 30,
+      "v17_pnl": 68.9,
+      "v17_wr": 43.3
+    },
+    {
+      "symbol": "VTP",
+      "v17_trades": 30,
+      "v17_pnl": 53.7,
+      "v17_wr": 46.7
+    },
+    {
+      "symbol": "MWG",
+      "v17_trades": 33,
+      "v17_pnl": 46.0,
+      "v17_wr": 57.6
+    },
+    {
+      "symbol": "REE",
+      "v17_trades": 28,
+      "v17_pnl": 38.4,
+      "v17_wr": 39.3
+    },
+    {
+      "symbol": "ACV",
+      "v17_trades": 23,
+      "v17_pnl": 37.4,
+      "v17_wr": 43.5
+    },
+    {
+      "symbol": "ACB",
+      "v17_trades": 33,
+      "v17_pnl": 35.2,
+      "v17_wr": 48.5
+    },
+    {
+      "symbol": "STB",
+      "v17_trades": 36,
+      "v17_pnl": 34.3,
+      "v17_wr": 47.2
+    },
+    {
+      "symbol": "POW",
+      "v17_trades": 33,
+      "v17_pnl": 28.7,
+      "v17_wr": 45.5
+    },
+    {
+      "symbol": "EIB",
+      "v17_trades": 28,
+      "v17_pnl": 28.3,
+      "v17_wr": 42.9
+    },
+    {
+      "symbol": "MSN",
+      "v17_trades": 33,
+      "v17_pnl": 26.7,
+      "v17_wr": 45.5
+    },
+    {
+      "symbol": "VPB",
+      "v17_trades": 31,
+      "v17_pnl": 26.7,
+      "v17_wr": 32.3
+    },
+    {
+      "symbol": "PVS",
+      "v17_trades": 34,
+      "v17_pnl": 26.5,
+      "v17_wr": 50.0
+    },
+    {
+      "symbol": "BID",
+      "v17_trades": 34,
+      "v17_pnl": 25.0,
+      "v17_wr": 41.2
+    },
+    {
+      "symbol": "VJC",
+      "v17_trades": 27,
+      "v17_pnl": 20.0,
+      "v17_wr": 37.0
+    },
+    {
+      "symbol": "VCB",
+      "v17_trades": 27,
+      "v17_pnl": 16.5,
+      "v17_wr": 37.0
+    },
+    {
+      "symbol": "VNM",
+      "v17_trades": 24,
+      "v17_pnl": 15.6,
+      "v17_wr": 45.8
+    },
+    {
+      "symbol": "PVD",
+      "v17_trades": 33,
+      "v17_pnl": 13.0,
+      "v17_wr": 42.4
+    },
+    {
+      "symbol": "OCB",
+      "v17_trades": 25,
+      "v17_pnl": 10.7,
+      "v17_wr": 40.0
+    },
+    {
+      "symbol": "GAS",
+      "v17_trades": 24,
+      "v17_pnl": 7.8,
+      "v17_wr": 37.5
+    },
+    {
+      "symbol": "NT2",
+      "v17_trades": 31,
+      "v17_pnl": 0.2,
+      "v17_wr": 38.7
+    },
+    {
+      "symbol": "GMD",
+      "v17_trades": 29,
+      "v17_pnl": -0.3,
+      "v17_wr": 37.9
+    },
+    {
+      "symbol": "NVL",
+      "v17_trades": 26,
+      "v17_pnl": -5.9,
+      "v17_wr": 34.6
+    },
+    {
+      "symbol": "SAB",
+      "v17_trades": 23,
+      "v17_pnl": -15.0,
+      "v17_wr": 30.4
+    },
+    {
+      "symbol": "PNJ",
+      "v17_trades": 28,
+      "v17_pnl": -21.0,
+      "v17_wr": 28.6
+    },
+    {
+      "symbol": "PLX",
+      "v17_trades": 29,
+      "v17_pnl": -22.3,
+      "v17_wr": 31.0
+    },
+    {
+      "symbol": "TCB",
+      "v17_trades": 38,
+      "v17_pnl": -28.4,
+      "v17_wr": 34.2
+    },
+    {
+      "symbol": "VHM",
+      "v17_trades": 34,
+      "v17_pnl": -31.1,
+      "v17_wr": 29.4
+    },
+    {
+      "symbol": "TPB",
+      "v17_trades": 38,
+      "v17_pnl": -31.7,
+      "v17_wr": 28.9
+    }
+  ],
+  "version": "v17",
+  "generated_at": "2026-04-23T01:43:55.644798"
+}

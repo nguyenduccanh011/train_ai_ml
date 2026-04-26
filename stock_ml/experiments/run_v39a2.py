@@ -8,11 +8,13 @@ Thay vi block signal exit theo so ngay (V39a), V39a2 require rule confirm:
 Khi chi co ML signal ma rule van bullish -> defer exit.
 Van su dung V37a base (per-profile dispatch).
 """
-import os, sys
+
+import os
+import sys
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from experiments.run_v37a import backtest_v37a
-
 
 V39A2_FLAGS = dict(
     v39a_rule_confirm_exit=True,

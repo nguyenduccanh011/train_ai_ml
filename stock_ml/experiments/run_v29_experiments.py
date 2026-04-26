@@ -15,33 +15,51 @@ Proposed patches:
   P5 breakout_strength_entry — allow breakout entry with vol dry-then-spike
   P6 relstrength_filter     — skip entry when ret_20d < -5% and trend != strong
 """
-import sys, os, time
+
+import os
+import sys
+import time
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import src.safe_io  # noqa: F401
-
 import pandas as pd
-from src.experiment_runner import run_test as run_test_base, run_rule_test
-from src.evaluation.scoring import calc_metrics, composite_score as comp_score
+import src.safe_io  # noqa: F401
 from src.backtest.engine import backtest_unified
 from src.config_loader import get_pipeline_symbols
-
+from src.evaluation.scoring import calc_metrics
+from src.evaluation.scoring import composite_score as comp_score
+from src.experiment_runner import run_test as run_test_base
 
 # V28 final config = base to beat
 V28_BASE = dict(
-    patch_smart_hardcap=True, patch_pp_restore=True, patch_long_horizon=True,
-    patch_symbol_tuning=True, patch_rule_ensemble=True, patch_noise_filter=False,
-    patch_adaptive_hardcap=False, patch_pp_2of3=False,
-    v26_wider_hardcap=False, v26_relaxed_entry=True, v26_skip_choppy=True,
-    v26_extended_hold=False, v26_strong_rule_ensemble=True, v26_min_position=False,
-    v26_score5_penalty=False, v26_hardcap_confirm_strong=False,
-    v27_selective_choppy=False, v27_hardcap_two_step=True, v27_rule_priority=True,
-    v27_dynamic_score5_penalty=True, v27_trend_persistence_hold=True,
+    patch_smart_hardcap=True,
+    patch_pp_restore=True,
+    patch_long_horizon=True,
+    patch_symbol_tuning=True,
+    patch_rule_ensemble=True,
+    patch_noise_filter=False,
+    patch_adaptive_hardcap=False,
+    patch_pp_2of3=False,
+    v26_wider_hardcap=False,
+    v26_relaxed_entry=True,
+    v26_skip_choppy=True,
+    v26_extended_hold=False,
+    v26_strong_rule_ensemble=True,
+    v26_min_position=False,
+    v26_score5_penalty=False,
+    v26_hardcap_confirm_strong=False,
+    v27_selective_choppy=False,
+    v27_hardcap_two_step=True,
+    v27_rule_priority=True,
+    v27_dynamic_score5_penalty=True,
+    v27_trend_persistence_hold=True,
     v28_early_wave_filter=True,
-    v28_crash_guard=False, v28_wave_acceleration_entry=False,
-    v28_early_loss_cut=True, v28_cycle_peak_exit=False,
-    v28_early_loss_cut_threshold=-0.04, v28_early_loss_cut_days=5,
+    v28_crash_guard=False,
+    v28_wave_acceleration_entry=False,
+    v28_early_loss_cut=True,
+    v28_cycle_peak_exit=False,
+    v28_early_loss_cut_threshold=-0.04,
+    v28_early_loss_cut_days=5,
 )
 
 V29_OFF = dict(
@@ -56,25 +74,31 @@ V29_OFF = dict(
 
 def make_bt(**overrides):
     full = {**V28_BASE, **V29_OFF, **overrides}
+
     def bt(y_pred, returns, df_test, feature_cols, **kwargs):
         return backtest_unified(y_pred, returns, df_test, feature_cols, **{**full, **kwargs})
+
     return bt
 
 
 def run(symbols_str, bt_fn):
-    return run_test_base(symbols_str, True, True, False, False, True, True, True, True, True, True,
-                         backtest_fn=bt_fn)
+    return run_test_base(
+        symbols_str, True, True, False, False, True, True, True, True, True, True, backtest_fn=bt_fn
+    )
 
 
 def fmt(name, m, cs, base_cs=None):
-    delta = f"  ({cs-base_cs:+.0f})" if base_cs is not None else ""
-    return (f"  {name:<32} | {m['trades']:>5} {m['wr']:>5.1f}% {m['avg_pnl']:>+7.2f}% "
-            f"{m['total_pnl']:>+9.1f}% {m['pf']:>5.2f} {m['max_loss']:>+7.1f}% "
-            f"{m['avg_hold']:>4.1f}d | {cs:>6.0f}{delta}")
+    delta = f"  ({cs - base_cs:+.0f})" if base_cs is not None else ""
+    return (
+        f"  {name:<32} | {m['trades']:>5} {m['wr']:>5.1f}% {m['avg_pnl']:>+7.2f}% "
+        f"{m['total_pnl']:>+9.1f}% {m['pf']:>5.2f} {m['max_loss']:>+7.1f}% "
+        f"{m['avg_hold']:>4.1f}d | {cs:>6.0f}{delta}"
+    )
 
 
 if __name__ == "__main__":
     import argparse
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--symbols", type=str, default="")
     parser.add_argument("--phase", type=str, default="all")
@@ -99,45 +123,81 @@ if __name__ == "__main__":
     t_v28 = run(SYMBOLS, make_bt())
     m_v28 = calc_metrics(t_v28)
     cs_v28 = comp_score(m_v28, t_v28)
-    print(f"  Done in {time.time()-t0:.1f}s")
-    print(HDR); print(SEP)
+    print(f"  Done in {time.time() - t0:.1f}s")
+    print(HDR)
+    print(SEP)
     print(fmt("V28 baseline", m_v28, cs_v28))
     print(SEP)
 
     # Phase 1: individual patches (default settings)
     experiments = [
-        ("P1a: peak_lock 10%/40%",
-            dict(v29_adaptive_peak_lock=True,
-                 v29_adaptive_peak_lock_trigger=0.10, v29_adaptive_peak_lock_keep=0.40)),
-        ("P1b: peak_lock 12%/50%",
-            dict(v29_adaptive_peak_lock=True,
-                 v29_adaptive_peak_lock_trigger=0.12, v29_adaptive_peak_lock_keep=0.50)),
-        ("P1c: peak_lock 08%/35%",
-            dict(v29_adaptive_peak_lock=True,
-                 v29_adaptive_peak_lock_trigger=0.08, v29_adaptive_peak_lock_keep=0.35)),
-        ("P2a: atr_vel 1.6x/3%",
-            dict(v29_atr_velocity_exit=True,
-                 v29_atr_velocity_k=1.6, v29_atr_velocity_min_profit=0.03)),
-        ("P2b: atr_vel 2.0x/5%",
-            dict(v29_atr_velocity_exit=True,
-                 v29_atr_velocity_k=2.0, v29_atr_velocity_min_profit=0.05)),
-        ("P3: tighter trail 20%/12%",
-            dict(v29_tighter_trail_high_profit=True,
-                 v29_high_profit_trigger=0.20, v29_high_profit_trail=0.12)),
-        ("P4a: rev peak 10%/-4%",
-            dict(v29_reversal_after_peak=True,
-                 v29_reversal_peak_trigger=0.10, v29_reversal_ret2_threshold=-0.04)),
-        ("P4b: rev peak 08%/-3%",
-            dict(v29_reversal_after_peak=True,
-                 v29_reversal_peak_trigger=0.08, v29_reversal_ret2_threshold=-0.03)),
-        ("P5: bo_strength entry",
-            dict(v29_breakout_strength_entry=True)),
-        ("P6: relstrength filter",
-            dict(v29_relstrength_filter=True)),
+        (
+            "P1a: peak_lock 10%/40%",
+            dict(
+                v29_adaptive_peak_lock=True,
+                v29_adaptive_peak_lock_trigger=0.10,
+                v29_adaptive_peak_lock_keep=0.40,
+            ),
+        ),
+        (
+            "P1b: peak_lock 12%/50%",
+            dict(
+                v29_adaptive_peak_lock=True,
+                v29_adaptive_peak_lock_trigger=0.12,
+                v29_adaptive_peak_lock_keep=0.50,
+            ),
+        ),
+        (
+            "P1c: peak_lock 08%/35%",
+            dict(
+                v29_adaptive_peak_lock=True,
+                v29_adaptive_peak_lock_trigger=0.08,
+                v29_adaptive_peak_lock_keep=0.35,
+            ),
+        ),
+        (
+            "P2a: atr_vel 1.6x/3%",
+            dict(
+                v29_atr_velocity_exit=True, v29_atr_velocity_k=1.6, v29_atr_velocity_min_profit=0.03
+            ),
+        ),
+        (
+            "P2b: atr_vel 2.0x/5%",
+            dict(
+                v29_atr_velocity_exit=True, v29_atr_velocity_k=2.0, v29_atr_velocity_min_profit=0.05
+            ),
+        ),
+        (
+            "P3: tighter trail 20%/12%",
+            dict(
+                v29_tighter_trail_high_profit=True,
+                v29_high_profit_trigger=0.20,
+                v29_high_profit_trail=0.12,
+            ),
+        ),
+        (
+            "P4a: rev peak 10%/-4%",
+            dict(
+                v29_reversal_after_peak=True,
+                v29_reversal_peak_trigger=0.10,
+                v29_reversal_ret2_threshold=-0.04,
+            ),
+        ),
+        (
+            "P4b: rev peak 08%/-3%",
+            dict(
+                v29_reversal_after_peak=True,
+                v29_reversal_peak_trigger=0.08,
+                v29_reversal_ret2_threshold=-0.03,
+            ),
+        ),
+        ("P5: bo_strength entry", dict(v29_breakout_strength_entry=True)),
+        ("P6: relstrength filter", dict(v29_relstrength_filter=True)),
     ]
 
     print("\n[Phase 1] Individual patches...")
-    print(HDR); print(SEP)
+    print(HDR)
+    print(SEP)
     print(fmt("V28 baseline", m_v28, cs_v28))
     print(SEP)
 
@@ -155,12 +215,16 @@ if __name__ == "__main__":
     pos_sorted = sorted(pos, key=lambda x: x[1][3], reverse=True)
     print(f"\n  {len(pos)}/{len(experiments)} positive. Sorted:")
     for n, r in pos_sorted:
-        print(f"    {n}: comp={r[3]:.0f} (+{r[3]-cs_v28:.0f})  tot={r[2]['total_pnl']:+.1f}%  wr={r[2]['wr']:.1f}%")
+        print(
+            f"    {n}: comp={r[3]:.0f} (+{r[3] - cs_v28:.0f})  tot={r[2]['total_pnl']:+.1f}%  wr={r[2]['wr']:.1f}%"
+        )
 
     # Dedupe per-family (keep best variant)
     best_per_family = {}
+
     def family(name):
         return name.split(":")[0].strip()[:2]
+
     for name, r in pos_sorted:
         fam = family(name)
         if fam not in best_per_family:
@@ -169,13 +233,14 @@ if __name__ == "__main__":
     # Phase 2: 2-way combos of families
     fams = list(best_per_family.keys())
     print(f"\n[Phase 2] 2-way combos between families {fams}...")
-    print(HDR); print(SEP)
+    print(HDR)
+    print(SEP)
     print(fmt("V28 baseline", m_v28, cs_v28))
     print(SEP)
 
     combo_results = {}
     for i in range(len(fams)):
-        for j in range(i+1, len(fams)):
+        for j in range(i + 1, len(fams)):
             name_i, (f1, _, _, _) = best_per_family[fams[i]]
             name_j, (f2, _, _, _) = best_per_family[fams[j]]
             merged = {**f1, **f2}
@@ -189,18 +254,21 @@ if __name__ == "__main__":
 
     # Phase 3: all positive families combined
     print("\n[Phase 3] All-positive-families combo...")
-    print(HDR); print(SEP)
+    print(HDR)
+    print(SEP)
     print(fmt("V28 baseline", m_v28, cs_v28))
     all_flags = {}
     for fam, (name, (f, _, _, _)) in best_per_family.items():
         all_flags.update(f)
     t_all = run(SYMBOLS, make_bt(**all_flags))
-    m_all = calc_metrics(t_all); cs_all = comp_score(m_all, t_all)
+    m_all = calc_metrics(t_all)
+    cs_all = comp_score(m_all, t_all)
     print(fmt(f"ALL: {'+'.join(fams)}", m_all, cs_all, base_cs=cs_v28))
 
     # Phase 4: greedy — start from best single, add families that improve
     print("\n[Phase 4] Greedy build from best single...")
-    print(HDR); print(SEP)
+    print(HDR)
+    print(SEP)
     print(fmt("V28 baseline", m_v28, cs_v28))
 
     greedy_flags = {}
@@ -212,7 +280,8 @@ if __name__ == "__main__":
     for fam, (name, (f, _, m, cs)) in pack:
         trial_flags = {**greedy_flags, **f}
         t_exp = run(SYMBOLS, make_bt(**trial_flags))
-        mm = calc_metrics(t_exp); ccs = comp_score(mm, t_exp)
+        mm = calc_metrics(t_exp)
+        ccs = comp_score(mm, t_exp)
         added = "KEEP" if ccs > current_cs else "DROP"
         print(fmt(f"+ {fam} ({name})", mm, ccs, base_cs=cs_v28) + f"  [{added}]")
         if ccs > current_cs:
@@ -222,7 +291,7 @@ if __name__ == "__main__":
             current_metrics = mm
     print(SEP)
     print(f"  Greedy final families: {greedy_families}")
-    print(f"  Greedy final comp: {current_cs:.0f} (+{current_cs-cs_v28:.0f} vs V28)")
+    print(f"  Greedy final comp: {current_cs:.0f} (+{current_cs - cs_v28:.0f} vs V28)")
 
     # Save best config
     best_configs = [("greedy", greedy_flags, current_metrics, current_cs, None)]

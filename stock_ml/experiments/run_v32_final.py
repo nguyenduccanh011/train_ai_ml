@@ -59,30 +59,34 @@ Headline numbers vs V31 (comp~438):
   max loss    -28.6% → -28.6%  (unchanged)
   avg hold    33.5d → 33.1d   (-0.4d)
 """
-import os, sys, time
+
+import os
+import sys
+import time
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import src.safe_io  # noqa: F401
-
 import pandas as pd
-from src.experiment_runner import run_test as run_test_base, run_rule_test
-from src.evaluation.scoring import calc_metrics, composite_score as comp_score
+import src.safe_io  # noqa: F401
 from src.config_loader import get_pipeline_symbols
-from experiments.run_v29 import V29_TARGET, V29_FEATURE_SET, backtest_v29
-from experiments.run_v30 import V30_DELTA, backtest_v30
-from experiments.run_v31_final import V31_DELTA, backtest_v31
+from src.evaluation.scoring import calc_metrics
+from src.evaluation.scoring import composite_score as comp_score
+from src.experiment_runner import run_rule_test
+from src.experiment_runner import run_test as run_test_base
 
+from experiments.run_v29 import V29_FEATURE_SET, V29_TARGET
+from experiments.run_v31_final import backtest_v31
 
 V32_DELTA = dict(
     # A: HAP preempt — chạy TRƯỚC hard_cap để bắt trades "lên rồi rớt"
     # Fix ordering bug của V31-C: HAP chạy sau hard_cap nên không bao giờ trigger
     v32_hap_preempt=True,
-    v32_hap_pre_trigger=0.05,    # đã từng có >= 5% profit
-    v32_hap_pre_floor=-0.05,     # thì exit ngay khi rớt về -5% (vs hard_cap -12%)
+    v32_hap_pre_trigger=0.05,  # đã từng có >= 5% profit
+    v32_hap_pre_floor=-0.05,  # thì exit ngay khi rớt về -5% (vs hard_cap -12%)
     # B: Weak-oversold exit — khi trend=weak + giá quá xa SMA20 → thị trường đang sập
     v32_weak_oversold_exit=True,
-    v32_woe_dist_thresh=-0.09,   # dist_sma20 < -9%
-    v32_woe_min_profit=0.0,      # bất kể lãi/lỗ
-    v32_woe_hold_min=5,          # hold >= 5 ngày
+    v32_woe_dist_thresh=-0.09,  # dist_sma20 < -9%
+    v32_woe_min_profit=0.0,  # bất kể lãi/lỗ
+    v32_woe_hold_min=5,  # hold >= 5 ngày
     # Các patches khác off (test xong: C, D, E không cải thiện thêm)
     v32_dynamic_hc_dist=False,
     v32_profit_ratchet=False,
@@ -100,6 +104,7 @@ def backtest_v32(y_pred, returns, df_test, feature_cols, **kwargs):
 
 if __name__ == "__main__":
     import argparse
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--symbols", type=str, default="")
     args = parser.parse_args()
@@ -118,33 +123,71 @@ if __name__ == "__main__":
     print(f"  V32 delta: {V32_DELTA}")
     print()
 
-    t_rule = run_rule_test(SYMBOLS); m_rule = calc_metrics(t_rule)
+    t_rule = run_rule_test(SYMBOLS)
+    m_rule = calc_metrics(t_rule)
 
     t0 = time.time()
-    t_v31 = run_test_base(SYMBOLS, True, True, False, False, True, True, True, True, True, True,
-                          backtest_fn=backtest_v31,
-                          feature_set=V29_FEATURE_SET, target_override=V29_TARGET)
-    m_v31 = calc_metrics(t_v31); cs_v31 = comp_score(m_v31, t_v31)
+    t_v31 = run_test_base(
+        SYMBOLS,
+        True,
+        True,
+        False,
+        False,
+        True,
+        True,
+        True,
+        True,
+        True,
+        True,
+        backtest_fn=backtest_v31,
+        feature_set=V29_FEATURE_SET,
+        target_override=V29_TARGET,
+    )
+    m_v31 = calc_metrics(t_v31)
+    cs_v31 = comp_score(m_v31, t_v31)
 
-    t_v32 = run_test_base(SYMBOLS, True, True, False, False, True, True, True, True, True, True,
-                          backtest_fn=backtest_v32,
-                          feature_set=V29_FEATURE_SET, target_override=V29_TARGET)
+    t_v32 = run_test_base(
+        SYMBOLS,
+        True,
+        True,
+        False,
+        False,
+        True,
+        True,
+        True,
+        True,
+        True,
+        True,
+        backtest_fn=backtest_v32,
+        feature_set=V29_FEATURE_SET,
+        target_override=V29_TARGET,
+    )
     dt = time.time() - t0
-    m_v32 = calc_metrics(t_v32); cs_v32 = comp_score(m_v32, t_v32)
+    m_v32 = calc_metrics(t_v32)
+    cs_v32 = comp_score(m_v32, t_v32)
 
     HDR = f"  {'Config':<32} | {'#':>5} {'WR':>6} {'AvgPnL':>8} {'TotPnL':>10} {'PF':>6} {'MaxLoss':>8} {'AvgH':>6} | {'Comp':>7}"
     SEP = "  " + "-" * (len(HDR) - 2)
-    print(HDR); print(SEP)
-    print(f"  {'Rule baseline':<32} | {m_rule['trades']:>5} {m_rule['wr']:>5.1f}% {m_rule['avg_pnl']:>+7.2f}% {m_rule['total_pnl']:>+9.1f}% {m_rule['pf']:>5.2f} {m_rule['max_loss']:>+7.1f}% {m_rule['avg_hold']:>5.1f}d |")
-    print(f"  {'V31 (shef+hap)':<32} | {m_v31['trades']:>5} {m_v31['wr']:>5.1f}% {m_v31['avg_pnl']:>+7.2f}% {m_v31['total_pnl']:>+9.1f}% {m_v31['pf']:>5.2f} {m_v31['max_loss']:>+7.1f}% {m_v31['avg_hold']:>5.1f}d | {cs_v31:>6.0f}")
-    print(f"  {'V32 (hap_pre+weak_oversold)':<32} | {m_v32['trades']:>5} {m_v32['wr']:>5.1f}% {m_v32['avg_pnl']:>+7.2f}% {m_v32['total_pnl']:>+9.1f}% {m_v32['pf']:>5.2f} {m_v32['max_loss']:>+7.1f}% {m_v32['avg_hold']:>5.1f}d | {cs_v32:>6.0f}")
+    print(HDR)
     print(SEP)
-    print(f"  Delta vs V31:  Comp={cs_v32-cs_v31:+.0f}  WR={m_v32['wr']-m_v31['wr']:+.2f}pp  "
-          f"AvgPnL={m_v32['avg_pnl']-m_v31['avg_pnl']:+.3f}pp  "
-          f"TotPnL={m_v32['total_pnl']-m_v31['total_pnl']:+.1f}%  "
-          f"PF={m_v32['pf']-m_v31['pf']:+.3f}  "
-          f"MaxLoss={m_v32['max_loss']-m_v31['max_loss']:+.2f}pp  "
-          f"AvgHold={m_v32['avg_hold']-m_v31['avg_hold']:+.1f}d")
+    print(
+        f"  {'Rule baseline':<32} | {m_rule['trades']:>5} {m_rule['wr']:>5.1f}% {m_rule['avg_pnl']:>+7.2f}% {m_rule['total_pnl']:>+9.1f}% {m_rule['pf']:>5.2f} {m_rule['max_loss']:>+7.1f}% {m_rule['avg_hold']:>5.1f}d |"
+    )
+    print(
+        f"  {'V31 (shef+hap)':<32} | {m_v31['trades']:>5} {m_v31['wr']:>5.1f}% {m_v31['avg_pnl']:>+7.2f}% {m_v31['total_pnl']:>+9.1f}% {m_v31['pf']:>5.2f} {m_v31['max_loss']:>+7.1f}% {m_v31['avg_hold']:>5.1f}d | {cs_v31:>6.0f}"
+    )
+    print(
+        f"  {'V32 (hap_pre+weak_oversold)':<32} | {m_v32['trades']:>5} {m_v32['wr']:>5.1f}% {m_v32['avg_pnl']:>+7.2f}% {m_v32['total_pnl']:>+9.1f}% {m_v32['pf']:>5.2f} {m_v32['max_loss']:>+7.1f}% {m_v32['avg_hold']:>5.1f}d | {cs_v32:>6.0f}"
+    )
+    print(SEP)
+    print(
+        f"  Delta vs V31:  Comp={cs_v32 - cs_v31:+.0f}  WR={m_v32['wr'] - m_v31['wr']:+.2f}pp  "
+        f"AvgPnL={m_v32['avg_pnl'] - m_v31['avg_pnl']:+.3f}pp  "
+        f"TotPnL={m_v32['total_pnl'] - m_v31['total_pnl']:+.1f}%  "
+        f"PF={m_v32['pf'] - m_v31['pf']:+.3f}  "
+        f"MaxLoss={m_v32['max_loss'] - m_v31['max_loss']:+.2f}pp  "
+        f"AvgHold={m_v32['avg_hold'] - m_v31['avg_hold']:+.1f}d"
+    )
     print(f"  Time: {dt:.1f}s")
 
     # Save trades
@@ -159,25 +202,35 @@ if __name__ == "__main__":
     for reason, grp in df_v32.groupby("exit_reason"):
         pnl = grp["pnl_pct"]
         wr = (pnl > 0).mean() * 100
-        print(f"    {reason:<25} n={len(grp):4d} WR={wr:5.1f}% avg={pnl.mean():+.2f}% tot={pnl.sum():+.0f}%")
+        print(
+            f"    {reason:<25} n={len(grp):4d} WR={wr:5.1f}% avg={pnl.mean():+.2f}% tot={pnl.sum():+.0f}%"
+        )
 
     # V32 mechanism stats
     print("\n  V32 mechanism stats:")
-    hap_pre = df_v32[df_v32['exit_reason'] == 'v32_hap_preempt']
-    woe = df_v32[df_v32['exit_reason'] == 'v32_weak_oversold']
-    hc = df_v32[df_v32['exit_reason'] == 'signal_hard_cap']
-    print(f"    v32_hap_preempt exits  : {len(hap_pre):4d}  avg={hap_pre['pnl_pct'].mean():+.2f}% (vs hard_cap avg -12.81%)")
+    hap_pre = df_v32[df_v32["exit_reason"] == "v32_hap_preempt"]
+    woe = df_v32[df_v32["exit_reason"] == "v32_weak_oversold"]
+    hc = df_v32[df_v32["exit_reason"] == "signal_hard_cap"]
+    print(
+        f"    v32_hap_preempt exits  : {len(hap_pre):4d}  avg={hap_pre['pnl_pct'].mean():+.2f}% (vs hard_cap avg -12.81%)"
+    )
     print(f"    v32_weak_oversold exits: {len(woe):4d}  avg={woe['pnl_pct'].mean():+.2f}%")
-    print(f"    signal_hard_cap exits  : {len(hc):4d}  avg={hc['pnl_pct'].mean():+.2f}%  tot={hc['pnl_pct'].sum():+.0f}%")
+    print(
+        f"    signal_hard_cap exits  : {len(hc):4d}  avg={hc['pnl_pct'].mean():+.2f}%  tot={hc['pnl_pct'].sum():+.0f}%"
+    )
 
     # Compare V31 hard_cap
     try:
         df_v31_saved = pd.read_csv(os.path.join(OUT, "trades_v31.csv"))
-        hc_v31 = df_v31_saved[df_v31_saved['exit_reason'] == 'signal_hard_cap']
-        print(f"\n  signal_hard_cap comparison:")
-        print(f"    V31: n={len(hc_v31):4d}  WR={( hc_v31['pnl_pct']>0).mean()*100:.1f}%  avg={hc_v31['pnl_pct'].mean():+.2f}%  tot={hc_v31['pnl_pct'].sum():+.0f}%")
-        print(f"    V32: n={len(hc):4d}  WR={(hc['pnl_pct']>0).mean()*100:.1f}%  avg={hc['pnl_pct'].mean():+.2f}%  tot={hc['pnl_pct'].sum():+.0f}%")
-        print(f"    Saved by preempt/oversold: {len(hc_v31)-len(hc):+d} hard_cap exits avoided")
+        hc_v31 = df_v31_saved[df_v31_saved["exit_reason"] == "signal_hard_cap"]
+        print("\n  signal_hard_cap comparison:")
+        print(
+            f"    V31: n={len(hc_v31):4d}  WR={(hc_v31['pnl_pct'] > 0).mean() * 100:.1f}%  avg={hc_v31['pnl_pct'].mean():+.2f}%  tot={hc_v31['pnl_pct'].sum():+.0f}%"
+        )
+        print(
+            f"    V32: n={len(hc):4d}  WR={(hc['pnl_pct'] > 0).mean() * 100:.1f}%  avg={hc['pnl_pct'].mean():+.2f}%  tot={hc['pnl_pct'].sum():+.0f}%"
+        )
+        print(f"    Saved by preempt/oversold: {len(hc_v31) - len(hc):+d} hard_cap exits avoided")
     except FileNotFoundError:
         pass
 

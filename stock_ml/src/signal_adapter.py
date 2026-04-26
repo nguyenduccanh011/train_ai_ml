@@ -6,25 +6,33 @@ Canonical labels used by backtests:
   0  -> neutral / no-entry
  -1  -> avoid / bearish
 """
+
 from __future__ import annotations
 
 import json
-from typing import Any, Dict
+from typing import Any
 
 import numpy as np
 
 
-def _target_type(target_cfg: Dict[str, Any]) -> str:
+def _target_type(target_cfg: dict[str, Any]) -> str:
     return str(target_cfg.get("type", "trend_regime")).strip().lower()
 
 
-def canonicalize_predictions(y_pred, target_cfg: Dict[str, Any]):
+def canonicalize_predictions(y_pred, target_cfg: dict[str, Any]):
     """Map raw model predictions to canonical {-1, 0, 1} labels."""
     cfg = target_cfg or {}
     target_type = _target_type(cfg)
     arr = np.asarray(y_pred)
 
-    if target_type in ("trend_regime", "return_classification", "forward_risk_reward", "early_wave", "early_wave_v2", "early_wave_dual"):
+    if target_type in (
+        "trend_regime",
+        "return_classification",
+        "forward_risk_reward",
+        "early_wave",
+        "early_wave_v2",
+        "early_wave_dual",
+    ):
         buy_label = cfg.get("buy_label", 1)
         neutral_label = cfg.get("neutral_label", 0)
         sell_label = cfg.get("sell_label", -1)
@@ -53,8 +61,7 @@ def canonicalize_predictions(y_pred, target_cfg: Dict[str, Any]):
     raise ValueError(f"Unknown target type for signal adapter: {target_type}")
 
 
-def target_fingerprint(target_cfg: Dict[str, Any]) -> str:
+def target_fingerprint(target_cfg: dict[str, Any]) -> str:
     """Stable hash-like string for cache validation."""
     cfg = target_cfg or {}
     return json.dumps(cfg, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
-

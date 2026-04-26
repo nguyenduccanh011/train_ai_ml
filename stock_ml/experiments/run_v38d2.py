@@ -4,11 +4,13 @@ Thay doi tu V38d:
   - fomo threshold 0.08 (vs 0.06) — chi block FOMO that su nang
   - copilot min_hold 6 (vs 4), min_profit 0.05 (vs 0.03), keep ratio 0.7 (vs 0.6)
 """
-import os, sys
+
+import os
+import sys
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from experiments.run_v32_final import backtest_v32
-
 
 V38D2_FLAGS = dict(
     v38d_fomo_filter=True,

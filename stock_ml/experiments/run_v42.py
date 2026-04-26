@@ -15,17 +15,22 @@ So sánh:
   V42_base: V37a + early_wave fw=15 (không có model B)
   V42_a:    V37a + early_wave_dual fw=15 + model B exit
 """
-import os, sys, time
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import src.safe_io  # noqa: F401
 
+import os
+import sys
+import time
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import pandas as pd
-from src.experiment_runner import run_test as run_test_base, run_rule_test
-from src.evaluation.scoring import calc_metrics, composite_score as comp_score
+import src.safe_io  # noqa: F401
 from src.config_loader import get_pipeline_symbols
+from src.evaluation.scoring import calc_metrics
+from src.evaluation.scoring import composite_score as comp_score
+from src.experiment_runner import run_rule_test
+from src.experiment_runner import run_test as run_test_base
+
 from experiments.run_v34_final import V34_FEATURE_SET
 from experiments.run_v37a import backtest_v37a
-
 
 V42_FEATURE_SET = V34_FEATURE_SET  # leading_v4
 
@@ -56,7 +61,17 @@ def backtest_v42(y_pred, returns, df_test, feature_cols, **kwargs):
 
 def _run(symbols, target, label, use_exit_model=False):
     t = run_test_base(
-        symbols, True, True, False, False, True, True, True, True, True, True,
+        symbols,
+        True,
+        True,
+        False,
+        False,
+        True,
+        True,
+        True,
+        True,
+        True,
+        True,
         backtest_fn=backtest_v42,
         feature_set=V42_FEATURE_SET,
         target_override=target,
@@ -79,10 +94,12 @@ def _fmt_row(label, m, cs, base_cs=None):
 
 if __name__ == "__main__":
     import argparse
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--symbols", type=str, default="")
-    parser.add_argument("--variants", type=str, default="base,a",
-                        help="Comma-separated variants: base,a")
+    parser.add_argument(
+        "--variants", type=str, default="base,a", help="Comma-separated variants: base,a"
+    )
     args = parser.parse_args()
 
     sys.stdout = open(sys.stdout.fileno(), mode="w", encoding="utf-8", buffering=1)
@@ -95,10 +112,10 @@ if __name__ == "__main__":
     print("=" * 150)
     print("V42 — V37a engine + separate exit model B")
     print("=" * 150)
-    print(f"  Engine  : V37a (per-profile V35 relax flags)")
+    print("  Engine  : V37a (per-profile V35 relax flags)")
     print(f"  Features: {V42_FEATURE_SET}")
-    print(f"  Model A : early_wave fw=15, gain=6%, loss=3%")
-    print(f"  Model B : binary exit — drawdown >= 3% trong 15 ngày tới (min_hold=3d)")
+    print("  Model A : early_wave fw=15, gain=6%, loss=3%")
+    print("  Model B : binary exit — drawdown >= 3% trong 15 ngày tới (min_hold=3d)")
     print()
 
     t_rule = run_rule_test(SYMBOLS)
@@ -118,7 +135,9 @@ if __name__ == "__main__":
         results["base"] = (m, t, cs, lbl)
 
     if "a" in requested:
-        m, t, cs, lbl = _run(SYMBOLS, V42_TARGET_DUAL, "V42_a (V37a + exit model B, fw=15)", use_exit_model=True)
+        m, t, cs, lbl = _run(
+            SYMBOLS, V42_TARGET_DUAL, "V42_a (V37a + exit model B, fw=15)", use_exit_model=True
+        )
         results["a"] = (m, t, cs, lbl)
 
     dt = time.time() - t0

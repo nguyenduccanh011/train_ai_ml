@@ -26,18 +26,22 @@ Ablation plan:
   Phase 3: Greedy build
   Phase 4: Fine-tune params of winning combination
 """
-import os, sys, time, itertools
+
+import itertools
+import os
+import sys
+import time
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import src.safe_io  # noqa: F401
-
-import pandas as pd
-from src.experiment_runner import run_test as run_test_base, run_rule_test
-from src.evaluation.scoring import calc_metrics, composite_score as comp_score
 from src.config_loader import get_pipeline_symbols
-from experiments.run_v29 import V29_TARGET, V29_FEATURE_SET, backtest_v29
-from experiments.run_v30 import V30_DELTA, backtest_v30
-from experiments.run_v31_final import V31_DELTA, backtest_v31
+from src.evaluation.scoring import calc_metrics
+from src.evaluation.scoring import composite_score as comp_score
+from src.experiment_runner import run_test as run_test_base
 
+from experiments.run_v29 import V29_FEATURE_SET, V29_TARGET
+from experiments.run_v30 import backtest_v30
+from experiments.run_v31_final import V31_DELTA
 
 # ── V32 patch deltas ──────────────────────────────────────────────────────────
 
@@ -47,10 +51,30 @@ V32_A_5pct = dict(v32_hap_preempt=True, v32_hap_pre_trigger=0.05, v32_hap_pre_fl
 V32_A_tight = dict(v32_hap_preempt=True, v32_hap_pre_trigger=0.03, v32_hap_pre_floor=-0.02)
 
 # B: Trend-weak oversold exit
-V32_B_7pct = dict(v32_weak_oversold_exit=True, v32_woe_dist_thresh=-0.07, v32_woe_min_profit=0.0, v32_woe_hold_min=5)
-V32_B_9pct = dict(v32_weak_oversold_exit=True, v32_woe_dist_thresh=-0.09, v32_woe_min_profit=0.0, v32_woe_hold_min=5)
-V32_B_profit = dict(v32_weak_oversold_exit=True, v32_woe_dist_thresh=-0.07, v32_woe_min_profit=0.02, v32_woe_hold_min=5)
-V32_B_long = dict(v32_weak_oversold_exit=True, v32_woe_dist_thresh=-0.07, v32_woe_min_profit=0.0, v32_woe_hold_min=10)
+V32_B_7pct = dict(
+    v32_weak_oversold_exit=True,
+    v32_woe_dist_thresh=-0.07,
+    v32_woe_min_profit=0.0,
+    v32_woe_hold_min=5,
+)
+V32_B_9pct = dict(
+    v32_weak_oversold_exit=True,
+    v32_woe_dist_thresh=-0.09,
+    v32_woe_min_profit=0.0,
+    v32_woe_hold_min=5,
+)
+V32_B_profit = dict(
+    v32_weak_oversold_exit=True,
+    v32_woe_dist_thresh=-0.07,
+    v32_woe_min_profit=0.02,
+    v32_woe_hold_min=5,
+)
+V32_B_long = dict(
+    v32_weak_oversold_exit=True,
+    v32_woe_dist_thresh=-0.07,
+    v32_woe_min_profit=0.0,
+    v32_woe_hold_min=10,
+)
 
 # C: Dynamic hard_cap tighten when far below SMA20
 V32_C_7pct = dict(v32_dynamic_hc_dist=True, v32_dhc_dist_thresh=-0.08, v32_dhc_tight_cap=-0.07)
@@ -74,9 +98,22 @@ def backtest_v32(y_pred, returns, df_test, feature_cols, **kwargs):
 
 
 def run_v32(symbols, patches: dict, label: str):
-    t = run_test_base(symbols, True, True, False, False, True, True, True, True, True, True,
-                      backtest_fn=lambda *a, **kw: backtest_v32(*a, **kw, **patches),
-                      feature_set=V29_FEATURE_SET, target_override=V29_TARGET)
+    t = run_test_base(
+        symbols,
+        True,
+        True,
+        False,
+        False,
+        True,
+        True,
+        True,
+        True,
+        True,
+        True,
+        backtest_fn=lambda *a, **kw: backtest_v32(*a, **kw, **patches),
+        feature_set=V29_FEATURE_SET,
+        target_override=V29_TARGET,
+    )
     m = calc_metrics(t)
     cs = comp_score(m, t)
     return m, t, cs, label
@@ -84,14 +121,17 @@ def run_v32(symbols, patches: dict, label: str):
 
 def fmt_row(label, m, cs, delta=None):
     d = f"  D={delta:+.0f}" if delta is not None else ""
-    return (f"  {label:<50} | {m['trades']:>5} {m['wr']:>5.1f}% "
-            f"{m['avg_pnl']:>+7.2f}% {m['total_pnl']:>+9.1f}% "
-            f"{m['pf']:>5.2f} {m['max_loss']:>+7.1f}% {m['avg_hold']:>5.1f}d | "
-            f"{cs:>6.0f}{d}")
+    return (
+        f"  {label:<50} | {m['trades']:>5} {m['wr']:>5.1f}% "
+        f"{m['avg_pnl']:>+7.2f}% {m['total_pnl']:>+9.1f}% "
+        f"{m['pf']:>5.2f} {m['max_loss']:>+7.1f}% {m['avg_hold']:>5.1f}d | "
+        f"{cs:>6.0f}{d}"
+    )
 
 
 if __name__ == "__main__":
     import argparse
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--symbols", type=str, default="")
     parser.add_argument("--phase", type=int, default=0, help="0=all, 1-4=specific phase")
@@ -113,14 +153,16 @@ if __name__ == "__main__":
     print("\nBaseline V31...")
     m_v31, t_v31, cs_v31, _ = run_v32(SYMBOLS, {}, "V31 baseline")
 
-    print(HDR); print(SEP)
+    print(HDR)
+    print(SEP)
     print(fmt_row("V31 baseline", m_v31, cs_v31))
     print(SEP)
 
     # ── Phase 1: Individual patches ──────────────────────────────────────────
     if args.phase in (0, 1):
         print("\n== PHASE 1: Individual patches ==")
-        print(HDR); print(SEP)
+        print(HDR)
+        print(SEP)
 
         p1_variants = [
             # A: HAP preempt
@@ -161,7 +203,7 @@ if __name__ == "__main__":
         best_D = max((r for r in p1_results if r[0].startswith("D")), key=lambda x: x[4])
         best_E = max((r for r in p1_results if r[0].startswith("E")), key=lambda x: x[4])
 
-        print(f"\n  Phase 1 winners:")
+        print("\n  Phase 1 winners:")
         for r in [best_A, best_B, best_C, best_D, best_E]:
             print(f"    {r[0]:<50} comp={r[4]:.0f} D={r[5]:+.0f}")
 
@@ -174,10 +216,14 @@ if __name__ == "__main__":
         if args.phase == 2:
             # Re-run individual best variants to get winners
             p1_variants_min = [
-                ("A_hap_pre_3pct", V32_A_3pct), ("A_hap_pre_5pct", V32_A_5pct),
-                ("B_weak_oversold_7pct", V32_B_7pct), ("B_weak_oversold_9pct", V32_B_9pct),
-                ("C_dyn_hc_7pct", V32_C_7pct), ("C_dyn_hc_loose", V32_C_loose),
-                ("D_ratchet_30", V32_D_30), ("D_ratchet_50", V32_D_50),
+                ("A_hap_pre_3pct", V32_A_3pct),
+                ("A_hap_pre_5pct", V32_A_5pct),
+                ("B_weak_oversold_7pct", V32_B_7pct),
+                ("B_weak_oversold_9pct", V32_B_9pct),
+                ("C_dyn_hc_7pct", V32_C_7pct),
+                ("C_dyn_hc_loose", V32_C_loose),
+                ("D_ratchet_30", V32_D_30),
+                ("D_ratchet_50", V32_D_50),
                 ("E_sig_weak_5pct", V32_E_5pct),
             ]
             p1_results = []
@@ -191,7 +237,8 @@ if __name__ == "__main__":
             best_E = max((r for r in p1_results if r[0].startswith("E")), key=lambda x: x[4])
             p1_winners = [r for r in [best_A, best_B, best_C, best_D, best_E] if r[4] - cs_v31 > 0]
 
-        print(HDR); print(SEP)
+        print(HDR)
+        print(SEP)
         p2_results = []
         for (la, pa, *_), (lb, pb, *_) in itertools.combinations(p1_winners, 2):
             combo_patches = {**pa, **pb}
@@ -203,7 +250,7 @@ if __name__ == "__main__":
 
         print(SEP)
         p2_results.sort(key=lambda x: x[4], reverse=True)
-        print(f"\n  Top 3 combos:")
+        print("\n  Top 3 combos:")
         for r in p2_results[:3]:
             print(f"    {r[0]:<50} comp={r[4]:.0f} D={r[5]:+.0f}")
 
@@ -211,18 +258,27 @@ if __name__ == "__main__":
     if args.phase in (0, 3):
         print("\n== PHASE 3: Greedy build ==")
         candidates = {
-            "A_3pct": V32_A_3pct, "A_5pct": V32_A_5pct, "A_tight": V32_A_tight,
-            "B_7pct": V32_B_7pct, "B_9pct": V32_B_9pct, "B_profit": V32_B_profit,
-            "C_7pct": V32_C_7pct, "C_8pct": V32_C_8pct, "C_loose": V32_C_loose,
-            "D_30": V32_D_30, "D_50": V32_D_50,
-            "E_5pct": V32_E_5pct, "E_7pct": V32_E_7pct,
+            "A_3pct": V32_A_3pct,
+            "A_5pct": V32_A_5pct,
+            "A_tight": V32_A_tight,
+            "B_7pct": V32_B_7pct,
+            "B_9pct": V32_B_9pct,
+            "B_profit": V32_B_profit,
+            "C_7pct": V32_C_7pct,
+            "C_8pct": V32_C_8pct,
+            "C_loose": V32_C_loose,
+            "D_30": V32_D_30,
+            "D_50": V32_D_50,
+            "E_5pct": V32_E_5pct,
+            "E_7pct": V32_E_7pct,
         }
 
         greedy_patches = {}
         greedy_cs = cs_v31
         greedy_selected = []
 
-        print(HDR); print(SEP)
+        print(HDR)
+        print(SEP)
         for rnd in range(5):
             round_best = None
             for name, patch in candidates.items():
@@ -235,7 +291,7 @@ if __name__ == "__main__":
                     round_best = (name, patch, cs, m, t, delta)
 
             if round_best is None or round_best[5] <= 0:
-                print(f"  Round {rnd+1}: no improvement, stopping greedy.")
+                print(f"  Round {rnd + 1}: no improvement, stopping greedy.")
                 break
 
             name, patch, cs, m, t, delta = round_best
@@ -246,7 +302,9 @@ if __name__ == "__main__":
             print(f"  → Added {name} (D={delta:+.0f}). Stack: {greedy_selected}")
 
         print(SEP)
-        print(f"\n  Greedy final: {greedy_selected}  comp={greedy_cs:.0f} D={greedy_cs-cs_v31:+.0f}")
+        print(
+            f"\n  Greedy final: {greedy_selected}  comp={greedy_cs:.0f} D={greedy_cs - cs_v31:+.0f}"
+        )
 
     # ── Phase 4: Fine-tune best combo ─────────────────────────────────────────
     if args.phase in (0, 4):
@@ -255,19 +313,28 @@ if __name__ == "__main__":
         sweep_variants = []
         for trigger in [0.03, 0.05, 0.07, 0.10]:
             for floor_pct in [0.02, 0.03, 0.05]:
-                label = f"A_pre_t{int(trigger*100)}_f{int(floor_pct*100)}"
-                patch = dict(v32_hap_preempt=True, v32_hap_pre_trigger=trigger, v32_hap_pre_floor=-floor_pct)
+                label = f"A_pre_t{int(trigger * 100)}_f{int(floor_pct * 100)}"
+                patch = dict(
+                    v32_hap_preempt=True, v32_hap_pre_trigger=trigger, v32_hap_pre_floor=-floor_pct
+                )
                 sweep_variants.append((label, patch))
         # Sweep A + B combos
         for dist in [0.06, 0.07, 0.08, 0.09]:
             for hold_min in [3, 5, 7]:
-                label = f"A3+B_d{int(dist*100)}_h{hold_min}"
-                patch = {**V32_A_3pct,
-                         **dict(v32_weak_oversold_exit=True, v32_woe_dist_thresh=-dist,
-                                v32_woe_min_profit=0.0, v32_woe_hold_min=hold_min)}
+                label = f"A3+B_d{int(dist * 100)}_h{hold_min}"
+                patch = {
+                    **V32_A_3pct,
+                    **dict(
+                        v32_weak_oversold_exit=True,
+                        v32_woe_dist_thresh=-dist,
+                        v32_woe_min_profit=0.0,
+                        v32_woe_hold_min=hold_min,
+                    ),
+                }
                 sweep_variants.append((label, patch))
 
-        print(HDR); print(SEP)
+        print(HDR)
+        print(SEP)
         ft_results = []
         for label, patch in sweep_variants:
             m, t, cs, _ = run_v32(SYMBOLS, patch, label)
@@ -277,9 +344,11 @@ if __name__ == "__main__":
 
         print(SEP)
         ft_results.sort(key=lambda x: x[4], reverse=True)
-        print(f"\n  Top 5:")
+        print("\n  Top 5:")
         for r in ft_results[:5]:
-            print(f"    {r[0]:<50} comp={r[4]:.0f} tot={r[2]['total_pnl']:+.0f}% PF={r[2]['pf']:.2f} WR={r[2]['wr']:.1f}% D={r[5]:+.0f}")
+            print(
+                f"    {r[0]:<50} comp={r[4]:.0f} tot={r[2]['total_pnl']:+.0f}% PF={r[2]['pf']:.2f} WR={r[2]['wr']:.1f}% D={r[5]:+.0f}"
+            )
 
     dt = time.time() - t0
     print(f"\n  Total time: {dt:.1f}s")

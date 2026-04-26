@@ -8,11 +8,13 @@ V39a = V37a engine + v39a_signal_exit_min_hold=35
   - Signal exit chi duoc khoat tru sau 35 ngay hold
   - Tat ca risk exits khac (hard_cap, HAP, stop_loss...) van hoat dong binh thuong
 """
-import os, sys
+
+import os
+import sys
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from experiments.run_v37a import backtest_v37a
-
 
 V39A_FLAGS = dict(
     v39a_signal_exit_min_hold=35,

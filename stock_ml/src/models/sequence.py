@@ -3,13 +3,16 @@
 Used for V37d: sequence model on tabular features over a sliding window.
 Architecture: input (B, W, F) -> GRU(hidden, layers) -> mean pool -> Linear -> n_classes.
 """
+
 from __future__ import annotations
+
 import numpy as np
 
 try:
     import torch
     import torch.nn as nn
     from torch.utils.data import DataLoader, TensorDataset
+
     HAS_TORCH = True
 except ImportError:
     HAS_TORCH = False
@@ -20,10 +23,17 @@ from sklearn.base import BaseEstimator, ClassifierMixin
 class _GRUNet(nn.Module if HAS_TORCH else object):
     def __init__(self, n_features, hidden=64, n_layers=2, n_classes=3, dropout=0.2):
         super().__init__()
-        self.gru = nn.GRU(n_features, hidden, num_layers=n_layers,
-                          batch_first=True, dropout=dropout if n_layers > 1 else 0.0)
+        self.gru = nn.GRU(
+            n_features,
+            hidden,
+            num_layers=n_layers,
+            batch_first=True,
+            dropout=dropout if n_layers > 1 else 0.0,
+        )
         self.head = nn.Sequential(
-            nn.Linear(hidden, hidden // 2), nn.ReLU(), nn.Dropout(dropout),
+            nn.Linear(hidden, hidden // 2),
+            nn.ReLU(),
+            nn.Dropout(dropout),
             nn.Linear(hidden // 2, n_classes),
         )
 
@@ -43,9 +53,20 @@ class GRUClassifier(ClassifierMixin, BaseEstimator):
     our use-case where the LightGBM path also pools across symbols).
     """
 
-    def __init__(self, window=20, hidden=64, n_layers=2, dropout=0.2,
-                 epochs=8, batch_size=512, lr=1e-3, n_classes=3,
-                 device="auto", random_state=42, verbose=False):
+    def __init__(
+        self,
+        window=20,
+        hidden=64,
+        n_layers=2,
+        dropout=0.2,
+        epochs=8,
+        batch_size=512,
+        lr=1e-3,
+        n_classes=3,
+        device="auto",
+        random_state=42,
+        verbose=False,
+    ):
         if not HAS_TORCH:
             raise ImportError("torch is required for GRUClassifier")
         self.window = window
@@ -104,8 +125,9 @@ class GRUClassifier(ClassifierMixin, BaseEstimator):
         weights = weights / weights.sum() * len(self.classes_)
         cw = torch.tensor(weights, dtype=torch.float32, device=self.device)
 
-        self.model_ = _GRUNet(X.shape[1], self.hidden, self.n_layers,
-                              len(self.classes_), self.dropout).to(self.device)
+        self.model_ = _GRUNet(
+            X.shape[1], self.hidden, self.n_layers, len(self.classes_), self.dropout
+        ).to(self.device)
         opt = torch.optim.AdamW(self.model_.parameters(), lr=self.lr, weight_decay=1e-4)
         crit = nn.CrossEntropyLoss(weight=cw)
 
@@ -128,7 +150,7 @@ class GRUClassifier(ClassifierMixin, BaseEstimator):
                 tot += float(loss.item())
                 n_batches += 1
             if self.verbose:
-                print(f"  GRU epoch {epoch+1}/{self.epochs} loss={tot/max(n_batches,1):.4f}")
+                print(f"  GRU epoch {epoch + 1}/{self.epochs} loss={tot / max(n_batches, 1):.4f}")
         self.is_fitted_ = True
         return self
 
@@ -139,7 +161,7 @@ class GRUClassifier(ClassifierMixin, BaseEstimator):
         outs = []
         with torch.no_grad():
             for i in range(0, len(Xw), self.batch_size):
-                xb = torch.from_numpy(Xw[i:i + self.batch_size]).to(self.device)
+                xb = torch.from_numpy(Xw[i : i + self.batch_size]).to(self.device)
                 logits = self.model_(xb)
                 probs = torch.softmax(logits, dim=1).cpu().numpy()
                 outs.append(probs)

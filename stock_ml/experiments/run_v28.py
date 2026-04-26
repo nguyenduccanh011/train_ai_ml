@@ -11,13 +11,13 @@ Decision: V28 = K4b + K1
   - K4b raises avg_pnl +0.07%, WR 45.5->46.0%, PF 2.33->2.36
   - K1 adds marginal filtering, combined +9 comp pts
 """
+
 import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import src.safe_io  # noqa: F401
-
 from src.backtest.engine import backtest_unified
 
 
@@ -45,11 +45,11 @@ def backtest_v28(y_pred, returns, df_test, feature_cols, **kwargs):
         v27_dynamic_score5_penalty=True,
         v27_trend_persistence_hold=True,
         # V28 selected improvements
-        v28_early_wave_filter=True,           # K1: block mature wave entries (days_since_low_10 > 7 + ret_5d > 8%)
-        v28_crash_guard=False,                # K2: no improvement individually
-        v28_wave_acceleration_entry=False,    # K3: negative
-        v28_early_loss_cut=True,              # K4b: cut loss at -4% within 5 days (before hard_cap fires)
-        v28_cycle_peak_exit=False,            # K5: negative
+        v28_early_wave_filter=True,  # K1: block mature wave entries (days_since_low_10 > 7 + ret_5d > 8%)
+        v28_crash_guard=False,  # K2: no improvement individually
+        v28_wave_acceleration_entry=False,  # K3: negative
+        v28_early_loss_cut=True,  # K4b: cut loss at -4% within 5 days (before hard_cap fires)
+        v28_cycle_peak_exit=False,  # K5: negative
         v28_early_loss_cut_threshold=-0.04,
         v28_early_loss_cut_days=5,
     )
@@ -60,12 +60,15 @@ def backtest_v28(y_pred, returns, df_test, feature_cols, **kwargs):
 if __name__ == "__main__":
     import argparse
     import time
-    import pandas as pd
 
-    from src.experiment_runner import run_test as run_test_base, run_rule_test
-    from src.evaluation.scoring import calc_metrics, composite_score as comp_score
-    from experiments.run_v27 import backtest_v27
+    import pandas as pd
     from src.config_loader import get_pipeline_symbols
+    from src.evaluation.scoring import calc_metrics
+    from src.evaluation.scoring import composite_score as comp_score
+    from src.experiment_runner import run_rule_test
+    from src.experiment_runner import run_test as run_test_base
+
+    from experiments.run_v27 import backtest_v27
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--symbols", type=str, default="")
@@ -84,26 +87,60 @@ if __name__ == "__main__":
     m_rule = calc_metrics(t_rule)
 
     t0 = time.time()
-    t_v27 = run_test_base(SYMBOLS, True, True, False, False, True, True, True, True, True, True,
-                          backtest_fn=backtest_v27)
+    t_v27 = run_test_base(
+        SYMBOLS,
+        True,
+        True,
+        False,
+        False,
+        True,
+        True,
+        True,
+        True,
+        True,
+        True,
+        backtest_fn=backtest_v27,
+    )
     m_v27 = calc_metrics(t_v27)
     cs27 = comp_score(m_v27, t_v27)
 
-    t_v28 = run_test_base(SYMBOLS, True, True, False, False, True, True, True, True, True, True,
-                          backtest_fn=backtest_v28)
+    t_v28 = run_test_base(
+        SYMBOLS,
+        True,
+        True,
+        False,
+        False,
+        True,
+        True,
+        True,
+        True,
+        True,
+        True,
+        backtest_fn=backtest_v28,
+    )
     dt = time.time() - t0
     m_v28 = calc_metrics(t_v28)
     cs28 = comp_score(m_v28, t_v28)
 
-    print(f"\n{'='*120}")
-    print(f"  {'Config':<22} | {'#':>5} {'WR':>6} {'AvgPnL':>8} {'TotPnL':>10} {'PF':>6} {'MaxLoss':>8} {'AvgH':>6} | {'Comp':>7}")
+    print(f"\n{'=' * 120}")
+    print(
+        f"  {'Config':<22} | {'#':>5} {'WR':>6} {'AvgPnL':>8} {'TotPnL':>10} {'PF':>6} {'MaxLoss':>8} {'AvgH':>6} | {'Comp':>7}"
+    )
     print("  " + "-" * 102)
-    print(f"  {'Rule baseline':<22} | {m_rule['trades']:>5} {m_rule['wr']:>5.1f}% {m_rule['avg_pnl']:>+7.2f}% {m_rule['total_pnl']:>+9.1f}% {m_rule['pf']:>5.2f} {m_rule['max_loss']:>+7.1f}% {m_rule['avg_hold']:>5.1f}d |")
-    print(f"  {'V27 baseline':<22} | {m_v27['trades']:>5} {m_v27['wr']:>5.1f}% {m_v27['avg_pnl']:>+7.2f}% {m_v27['total_pnl']:>+9.1f}% {m_v27['pf']:>5.2f} {m_v27['max_loss']:>+7.1f}% {m_v27['avg_hold']:>5.1f}d | {cs27:>6.0f}")
-    print(f"  {'V28 selected':<22} | {m_v28['trades']:>5} {m_v28['wr']:>5.1f}% {m_v28['avg_pnl']:>+7.2f}% {m_v28['total_pnl']:>+9.1f}% {m_v28['pf']:>5.2f} {m_v28['max_loss']:>+7.1f}% {m_v28['avg_hold']:>5.1f}d | {cs28:>6.0f}")
+    print(
+        f"  {'Rule baseline':<22} | {m_rule['trades']:>5} {m_rule['wr']:>5.1f}% {m_rule['avg_pnl']:>+7.2f}% {m_rule['total_pnl']:>+9.1f}% {m_rule['pf']:>5.2f} {m_rule['max_loss']:>+7.1f}% {m_rule['avg_hold']:>5.1f}d |"
+    )
+    print(
+        f"  {'V27 baseline':<22} | {m_v27['trades']:>5} {m_v27['wr']:>5.1f}% {m_v27['avg_pnl']:>+7.2f}% {m_v27['total_pnl']:>+9.1f}% {m_v27['pf']:>5.2f} {m_v27['max_loss']:>+7.1f}% {m_v27['avg_hold']:>5.1f}d | {cs27:>6.0f}"
+    )
+    print(
+        f"  {'V28 selected':<22} | {m_v28['trades']:>5} {m_v28['wr']:>5.1f}% {m_v28['avg_pnl']:>+7.2f}% {m_v28['total_pnl']:>+9.1f}% {m_v28['pf']:>5.2f} {m_v28['max_loss']:>+7.1f}% {m_v28['avg_hold']:>5.1f}d | {cs28:>6.0f}"
+    )
     print("  " + "-" * 102)
-    print(f"  Delta vs V27:  TotPnL={m_v28['total_pnl']-m_v27['total_pnl']:+.1f}%, WR={m_v28['wr']-m_v27['wr']:+.2f}%, PF={m_v28['pf']-m_v27['pf']:+.3f}, Comp={cs28-cs27:+.0f}")
-    print(f"  Delta vs Rule: TotPnL={m_v28['total_pnl']-m_rule['total_pnl']:+.1f}%")
+    print(
+        f"  Delta vs V27:  TotPnL={m_v28['total_pnl'] - m_v27['total_pnl']:+.1f}%, WR={m_v28['wr'] - m_v27['wr']:+.2f}%, PF={m_v28['pf'] - m_v27['pf']:+.3f}, Comp={cs28 - cs27:+.0f}"
+    )
+    print(f"  Delta vs Rule: TotPnL={m_v28['total_pnl'] - m_rule['total_pnl']:+.1f}%")
     print(f"  Time: {dt:.1f}s")
 
     df_v28 = pd.DataFrame(t_v28)
@@ -111,6 +148,6 @@ if __name__ == "__main__":
         df_v28.to_csv(os.path.join(OUT, "trades_v28.csv"), index=False)
         print(f"\n  Saved {len(df_v28)} V28 trades to results/trades_v28.csv")
 
-    print(f"\n{'='*120}")
+    print(f"\n{'=' * 120}")
     print("  DONE")
-    print(f"{'='*120}")
+    print(f"{'=' * 120}")

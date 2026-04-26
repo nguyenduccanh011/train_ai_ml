@@ -5,11 +5,13 @@ Thay doi tu V38c:
   - require ca ha_bearish_reversal AND late_wave (cho V38c2 strict version)
   - hoac chi 1 trong 2 nhung pnl <= -2% (cho confirm)
 """
-import os, sys
+
+import os
+import sys
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from experiments.run_v32_final import backtest_v32
-
 
 V38C2_FLAGS = dict(
     v38c_ha_exit=True,

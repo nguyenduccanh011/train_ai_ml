@@ -10,20 +10,20 @@ Usage:
     python model_manager.py compare --versions v25,v24,v23,rule  # Compare specific versions
     python model_manager.py add v25 --name "V25 New" --color "#FF5722" --strategy v25
 """
-import sys
-import os
-import argparse
 
-import yaml
+import argparse
+import os
+import sys
+
 import numpy as np
 import pandas as pd
+import yaml
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import src.safe_io  # noqa: F401 — fix UnicodeEncodeError on Windows console
-
 from src.config_loader import get_config_path, load_config
-from src.env import get_results_dir, get_experiment_dir
+from src.env import get_experiment_dir, get_results_dir
 from src.evaluation.scoring import composite_score
 
 
@@ -36,7 +36,9 @@ def cmd_list(args):
     print("=" * 90)
     print("MODEL REGISTRY")
     print("=" * 90)
-    print(f"  {'Key':<10} {'Name':<20} {'Status':<10} {'Color':<10} {'Strategy':<10} {'Description'}")
+    print(
+        f"  {'Key':<10} {'Name':<20} {'Status':<10} {'Color':<10} {'Strategy':<10} {'Description'}"
+    )
     print("  " + "-" * 85)
 
     for key, m in sorted_models:
@@ -50,7 +52,9 @@ def cmd_list(args):
         retired_reason = m.get("retired_reason", "")
         if retired_reason:
             desc = f"[{retired_reason}]"
-        print(f"  {key:<10} {m.get('name','?'):<20} {status:<10} {color:<10} {strategy:<10} {desc}")
+        print(
+            f"  {key:<10} {m.get('name', '?'):<20} {status:<10} {color:<10} {strategy:<10} {desc}"
+        )
 
     # Check for trades CSV files
     experiment = getattr(args, "experiment", None) or ""
@@ -184,14 +188,17 @@ def cmd_compare(args):
 
     # Compute all extra metrics and composite scores
     from src.evaluation.scoring import (
-        calc_sharpe, calc_mdd_per_symbol, calc_yearly_consistency,
+        calc_mdd_per_symbol,
+        calc_sharpe,
+        calc_yearly_consistency,
     )
+
     for key, m in metrics.items():
         tl = trades_cache.get(key, [])
-        m["sharpe"]  = calc_sharpe(tl)
+        m["sharpe"] = calc_sharpe(tl)
         m["mdd_sym"] = calc_mdd_per_symbol(tl)
-        m["cv"]      = calc_yearly_consistency(tl)
-        m["score"]   = composite_score(m, trades=tl)
+        m["cv"] = calc_yearly_consistency(tl)
+        m["score"] = composite_score(m, trades=tl)
 
     # Check metadata consistency
     meta_warnings = []
@@ -200,7 +207,8 @@ def cmd_compare(args):
         meta_path = os.path.join(results_dir, f"trades_{key}.meta.json")
         if os.path.exists(meta_path):
             import json
-            with open(meta_path, "r", encoding="utf-8") as f:
+
+            with open(meta_path, encoding="utf-8") as f:
                 meta = json.load(f)
             symbol_sets[key] = set(meta.get("symbols", []))
         else:
@@ -208,12 +216,12 @@ def cmd_compare(args):
 
     if meta_warnings:
         print(f"\n  ⚠ Missing metadata for: {', '.join(meta_warnings)}")
-        print(f"    Re-run with --force to generate metadata for fair comparison.")
+        print("    Re-run with --force to generate metadata for fair comparison.")
 
     if len(symbol_sets) >= 2:
         sets_list = list(symbol_sets.values())
         if not all(s == sets_list[0] for s in sets_list[1:]):
-            print(f"\n  ⚠ WARNING: Symbol lists differ between models! Comparison may be unfair.")
+            print("\n  ⚠ WARNING: Symbol lists differ between models! Comparison may be unfair.")
             for key, syms in symbol_sets.items():
                 print(f"    {key}: {len(syms)} symbols")
 
@@ -224,24 +232,32 @@ def cmd_compare(args):
     best_score = max(m["score"] for m in metrics.values())
     for key, m in metrics.items():
         star = " ◀ BEST" if m["score"] == best_score else ""
-        print(f"  {m['name']:<20} | {m['trades']:>4} {m['avg_pnl']:>+7.2f}% "
-              f"{m['total_pnl']:>+9.1f}% {m['pf']:>5.2f} "
-              f"{m['sharpe']:>7.3f} {m['mdd_sym']:>7.1f}% {m['cv']:>5.2f} "
-              f"{m['score']:>6.1f}{star}")
+        print(
+            f"  {m['name']:<20} | {m['trades']:>4} {m['avg_pnl']:>+7.2f}% "
+            f"{m['total_pnl']:>+9.1f}% {m['pf']:>5.2f} "
+            f"{m['sharpe']:>7.3f} {m['mdd_sym']:>7.1f}% {m['cv']:>5.2f} "
+            f"{m['score']:>6.1f}{star}"
+        )
 
     # Scoring legend
-    print(f"\n  Sharpe = avg_pnl/std(pnl)  |  MDD/sym = avg per-symbol drawdown  |  CV = std/mean of yearly PnL")
+    print(
+        "\n  Sharpe = avg_pnl/std(pnl)  |  MDD/sym = avg per-symbol drawdown  |  CV = std/mean of yearly PnL"
+    )
 
     # Recommendation
-    print(f"\n  RECOMMENDATION (by composite score):")
+    print("\n  RECOMMENDATION (by composite score):")
     best_key = max(metrics, key=lambda k: metrics[k]["score"])
     worst_key = min(metrics, key=lambda k: metrics[k]["score"])
     worst = metrics[worst_key]
-    print(f"    Best:  {best_key} ({metrics[best_key]['name']}) — Score={metrics[best_key]['score']:.1f}, "
-          f"Sharpe={metrics[best_key]['sharpe']:.3f}, MDD/sym={metrics[best_key]['mdd_sym']:.1f}%")
+    print(
+        f"    Best:  {best_key} ({metrics[best_key]['name']}) — Score={metrics[best_key]['score']:.1f}, "
+        f"Sharpe={metrics[best_key]['sharpe']:.3f}, MDD/sym={metrics[best_key]['mdd_sym']:.1f}%"
+    )
     if worst["total_pnl"] < 0 or worst["score"] < 0:
-        print(f"    Consider retiring '{worst_key}' ({worst['name']}): "
-              f"Score={worst['score']:.1f}, TotalPnL={worst['total_pnl']:+.1f}%")
+        print(
+            f"    Consider retiring '{worst_key}' ({worst['name']}): "
+            f"Score={worst['score']:.1f}, TotalPnL={worst['total_pnl']:+.1f}%"
+        )
 
     print("=" * 130)
 
@@ -261,7 +277,8 @@ def cmd_experiments(args):
         exp_json = os.path.join(exp_path, "experiment.json")
         if os.path.exists(exp_json):
             import json
-            with open(exp_json, "r", encoding="utf-8") as f:
+
+            with open(exp_json, encoding="utf-8") as f:
                 meta = json.load(f)
             experiments.append((name, meta))
         else:
@@ -276,7 +293,9 @@ def cmd_experiments(args):
     print("=" * 110)
     print("EXPERIMENTS")
     print("=" * 110)
-    print(f"  {'Key':<35} {'feature_set':<15} {'ml_model':<12} {'versions':<25} {'#symbols':<10} {'generated_at'}")
+    print(
+        f"  {'Key':<35} {'feature_set':<15} {'ml_model':<12} {'versions':<25} {'#symbols':<10} {'generated_at'}"
+    )
     print("  " + "-" * 105)
     for name, meta in experiments:
         feat = meta.get("feature_set", "?")
@@ -294,7 +313,7 @@ def cmd_experiments(args):
         print(f"  {name:<35} {feat:<15} {ml:<12} {versions:<25} {str(n_sym):<10} {gen}")
 
     print("=" * 110)
-    print(f"\n  Usage: python model_manager.py compare --experiment <key> --versions v26,v27")
+    print("\n  Usage: python model_manager.py compare --experiment <key> --versions v26,v27")
 
 
 def cmd_add(args):
@@ -314,8 +333,18 @@ def cmd_add(args):
         "color": args.color or "#888888",
         "active": True,
         "strategy": args.strategy or args.version,
-        "mods": {"a": True, "b": True, "c": False, "d": False,
-                 "e": True, "f": True, "g": True, "h": True, "i": True, "j": True},
+        "mods": {
+            "a": True,
+            "b": True,
+            "c": False,
+            "d": False,
+            "e": True,
+            "f": True,
+            "g": True,
+            "h": True,
+            "i": True,
+            "j": True,
+        },
         "params": {},
         "marker_shape": "arrowUp",
         "order": max_order + 1,
@@ -329,11 +358,11 @@ def cmd_add(args):
     print(f"  Name: {new_model['name']}")
     print(f"  Color: {new_model['color']}")
     print(f"  Strategy: {new_model['strategy']}")
-    print(f"\n  Next steps:")
+    print("\n  Next steps:")
     print(f"    1. Create backtest function in experiments/run_{args.version}.py")
     print(f"    2. Run: python experiments/run_{args.version}.py")
     print(f"    3. Export: python -m src.export.unified_export --versions {args.version}")
-    print(f"    4. Open dashboard.html — model appears automatically!")
+    print("    4. Open dashboard.html — model appears automatically!")
 
 
 def main():
@@ -343,8 +372,12 @@ def main():
     # list
     p_list = sub.add_parser("list", help="List all models")
     p_list.add_argument("--active", action="store_true", help="Show only active models")
-    p_list.add_argument("--experiment", type=str, default="",
-                        help="Show CSV files from experiment subfolder (e.g., leading_v2__lightgbm)")
+    p_list.add_argument(
+        "--experiment",
+        type=str,
+        default="",
+        help="Show CSV files from experiment subfolder (e.g., leading_v2__lightgbm)",
+    )
 
     # retire
     p_retire = sub.add_parser("retire", help="Retire a model")
@@ -357,10 +390,18 @@ def main():
 
     # compare
     p_compare = sub.add_parser("compare", help="Compare all active models")
-    p_compare.add_argument("--versions", type=str, default="",
-                           help="Comma-separated versions to compare (e.g., v25,v24,v23,rule). Default: all active")
-    p_compare.add_argument("--experiment", type=str, default="",
-                           help="Read CSV files from experiment subfolder (e.g., leading_v2__lightgbm)")
+    p_compare.add_argument(
+        "--versions",
+        type=str,
+        default="",
+        help="Comma-separated versions to compare (e.g., v25,v24,v23,rule). Default: all active",
+    )
+    p_compare.add_argument(
+        "--experiment",
+        type=str,
+        default="",
+        help="Read CSV files from experiment subfolder (e.g., leading_v2__lightgbm)",
+    )
 
     # experiments
     sub.add_parser("experiments", help="List all experiment subfolders in results/")

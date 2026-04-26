@@ -45,17 +45,21 @@ Why it works:
 V30 = V29 engine (= V28 backtest + early_wave target + leading_v3 features)
        + v30_signal_exit_defer(bars=3, min_cum_ret=0.02)
 """
-import os, sys, time
+
+import os
+import sys
+import time
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import src.safe_io  # noqa: F401
-
 import pandas as pd
-from src.experiment_runner import run_test as run_test_base, run_rule_test
-from src.evaluation.scoring import calc_metrics, composite_score as comp_score
-from src.backtest.engine import backtest_unified
+import src.safe_io  # noqa: F401
 from src.config_loader import get_pipeline_symbols
-from experiments.run_v29 import V29_TARGET, V29_FEATURE_SET, backtest_v29
+from src.evaluation.scoring import calc_metrics
+from src.evaluation.scoring import composite_score as comp_score
+from src.experiment_runner import run_rule_test
+from src.experiment_runner import run_test as run_test_base
 
+from experiments.run_v29 import V29_FEATURE_SET, V29_TARGET, backtest_v29
 
 V30_DELTA = dict(
     v30_signal_exit_defer=True,
@@ -82,6 +86,7 @@ def backtest_v30(y_pred, returns, df_test, feature_cols, **kwargs):
 
 if __name__ == "__main__":
     import argparse
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--symbols", type=str, default="")
     args = parser.parse_args()
@@ -100,33 +105,71 @@ if __name__ == "__main__":
     print(f"  V30 delta: {V30_DELTA}")
     print()
 
-    t_rule = run_rule_test(SYMBOLS); m_rule = calc_metrics(t_rule)
+    t_rule = run_rule_test(SYMBOLS)
+    m_rule = calc_metrics(t_rule)
 
     t0 = time.time()
-    t_v29 = run_test_base(SYMBOLS, True, True, False, False, True, True, True, True, True, True,
-                          backtest_fn=backtest_v29,
-                          feature_set=V29_FEATURE_SET, target_override=V29_TARGET)
-    m_v29 = calc_metrics(t_v29); cs_v29 = comp_score(m_v29, t_v29)
+    t_v29 = run_test_base(
+        SYMBOLS,
+        True,
+        True,
+        False,
+        False,
+        True,
+        True,
+        True,
+        True,
+        True,
+        True,
+        backtest_fn=backtest_v29,
+        feature_set=V29_FEATURE_SET,
+        target_override=V29_TARGET,
+    )
+    m_v29 = calc_metrics(t_v29)
+    cs_v29 = comp_score(m_v29, t_v29)
 
-    t_v30 = run_test_base(SYMBOLS, True, True, False, False, True, True, True, True, True, True,
-                          backtest_fn=backtest_v30,
-                          feature_set=V29_FEATURE_SET, target_override=V29_TARGET)
+    t_v30 = run_test_base(
+        SYMBOLS,
+        True,
+        True,
+        False,
+        False,
+        True,
+        True,
+        True,
+        True,
+        True,
+        True,
+        backtest_fn=backtest_v30,
+        feature_set=V29_FEATURE_SET,
+        target_override=V29_TARGET,
+    )
     dt = time.time() - t0
-    m_v30 = calc_metrics(t_v30); cs_v30 = comp_score(m_v30, t_v30)
+    m_v30 = calc_metrics(t_v30)
+    cs_v30 = comp_score(m_v30, t_v30)
 
     HDR = f"  {'Config':<28} | {'#':>5} {'WR':>6} {'AvgPnL':>8} {'TotPnL':>10} {'PF':>6} {'MaxLoss':>8} {'AvgH':>6} | {'Comp':>7}"
     SEP = "  " + "-" * (len(HDR) - 2)
-    print(HDR); print(SEP)
-    print(f"  {'Rule baseline':<28} | {m_rule['trades']:>5} {m_rule['wr']:>5.1f}% {m_rule['avg_pnl']:>+7.2f}% {m_rule['total_pnl']:>+9.1f}% {m_rule['pf']:>5.2f} {m_rule['max_loss']:>+7.1f}% {m_rule['avg_hold']:>5.1f}d |")
-    print(f"  {'V29 (retrain final)':<28} | {m_v29['trades']:>5} {m_v29['wr']:>5.1f}% {m_v29['avg_pnl']:>+7.2f}% {m_v29['total_pnl']:>+9.1f}% {m_v29['pf']:>5.2f} {m_v29['max_loss']:>+7.1f}% {m_v29['avg_hold']:>5.1f}d | {cs_v29:>6.0f}")
-    print(f"  {'V30 (sig_defer final)':<28} | {m_v30['trades']:>5} {m_v30['wr']:>5.1f}% {m_v30['avg_pnl']:>+7.2f}% {m_v30['total_pnl']:>+9.1f}% {m_v30['pf']:>5.2f} {m_v30['max_loss']:>+7.1f}% {m_v30['avg_hold']:>5.1f}d | {cs_v30:>6.0f}")
+    print(HDR)
     print(SEP)
-    print(f"  Delta vs V29:  Comp={cs_v30-cs_v29:+.0f}  WR={m_v30['wr']-m_v29['wr']:+.2f}pp  "
-          f"AvgPnL={m_v30['avg_pnl']-m_v29['avg_pnl']:+.3f}pp  "
-          f"TotPnL={m_v30['total_pnl']-m_v29['total_pnl']:+.1f}%  "
-          f"PF={m_v30['pf']-m_v29['pf']:+.3f}  "
-          f"MaxLoss={m_v30['max_loss']-m_v29['max_loss']:+.2f}pp  "
-          f"AvgHold={m_v30['avg_hold']-m_v29['avg_hold']:+.1f}d")
+    print(
+        f"  {'Rule baseline':<28} | {m_rule['trades']:>5} {m_rule['wr']:>5.1f}% {m_rule['avg_pnl']:>+7.2f}% {m_rule['total_pnl']:>+9.1f}% {m_rule['pf']:>5.2f} {m_rule['max_loss']:>+7.1f}% {m_rule['avg_hold']:>5.1f}d |"
+    )
+    print(
+        f"  {'V29 (retrain final)':<28} | {m_v29['trades']:>5} {m_v29['wr']:>5.1f}% {m_v29['avg_pnl']:>+7.2f}% {m_v29['total_pnl']:>+9.1f}% {m_v29['pf']:>5.2f} {m_v29['max_loss']:>+7.1f}% {m_v29['avg_hold']:>5.1f}d | {cs_v29:>6.0f}"
+    )
+    print(
+        f"  {'V30 (sig_defer final)':<28} | {m_v30['trades']:>5} {m_v30['wr']:>5.1f}% {m_v30['avg_pnl']:>+7.2f}% {m_v30['total_pnl']:>+9.1f}% {m_v30['pf']:>5.2f} {m_v30['max_loss']:>+7.1f}% {m_v30['avg_hold']:>5.1f}d | {cs_v30:>6.0f}"
+    )
+    print(SEP)
+    print(
+        f"  Delta vs V29:  Comp={cs_v30 - cs_v29:+.0f}  WR={m_v30['wr'] - m_v29['wr']:+.2f}pp  "
+        f"AvgPnL={m_v30['avg_pnl'] - m_v29['avg_pnl']:+.3f}pp  "
+        f"TotPnL={m_v30['total_pnl'] - m_v29['total_pnl']:+.1f}%  "
+        f"PF={m_v30['pf'] - m_v29['pf']:+.3f}  "
+        f"MaxLoss={m_v30['max_loss'] - m_v29['max_loss']:+.2f}pp  "
+        f"AvgHold={m_v30['avg_hold'] - m_v29['avg_hold']:+.1f}d"
+    )
     print(f"  Time: {dt:.1f}s")
 
     df_v30 = pd.DataFrame(t_v30)

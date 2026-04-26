@@ -2,9 +2,11 @@
 Feature engineering engine.
 Computes all technical indicators and features from OHLCV data.
 """
-import pandas as pd
+
+from typing import Any
+
 import numpy as np
-from typing import List, Optional, Dict, Any
+import pandas as pd
 
 
 class FeatureEngine:
@@ -15,13 +17,17 @@ class FeatureEngine:
 
     EXTRA_GROUPS = {"A", "B", "C", "D", "E", "F"}
 
-    def __init__(self, feature_set: str = "minimal", scaling: str = "robust",
-                 extra_groups: Optional[List[str]] = None):
+    def __init__(
+        self,
+        feature_set: str = "minimal",
+        scaling: str = "robust",
+        extra_groups: list[str] | None = None,
+    ):
         self.feature_set = feature_set
         self.scaling = scaling
         self.extra_groups = set(extra_groups or [])
         self._scaler = None
-        self._feature_columns: List[str] = []
+        self._feature_columns: list[str] = []
 
     def compute(self, df: pd.DataFrame) -> pd.DataFrame:
         """Compute all enabled features for a single symbol DataFrame."""
@@ -108,12 +114,22 @@ class FeatureEngine:
 
         return result
 
-    def get_feature_columns(self, df: pd.DataFrame) -> List[str]:
+    def get_feature_columns(self, df: pd.DataFrame) -> list[str]:
         """Get list of computed feature column names (exclude metadata & target)."""
         exclude = {
-            "timestamp", "symbol", "exchange", "asset_type",
-            "data_provider", "timeframe", "open", "high", "low",
-            "close", "volume", "traded_value", "target",
+            "timestamp",
+            "symbol",
+            "exchange",
+            "asset_type",
+            "data_provider",
+            "timeframe",
+            "open",
+            "high",
+            "low",
+            "close",
+            "volume",
+            "traded_value",
+            "target",
         }
         return [c for c in df.columns if c not in exclude]
 
@@ -203,11 +219,14 @@ class FeatureEngine:
         high, low = df["high"], df["low"]
         plus_dm = high.diff().clip(lower=0)
         minus_dm = (-low.diff()).clip(lower=0)
-        tr = pd.concat([
-            high - low,
-            (high - c.shift(1)).abs(),
-            (low - c.shift(1)).abs(),
-        ], axis=1).max(axis=1)
+        tr = pd.concat(
+            [
+                high - low,
+                (high - c.shift(1)).abs(),
+                (low - c.shift(1)).abs(),
+            ],
+            axis=1,
+        ).max(axis=1)
         atr14 = tr.rolling(14).mean()
         df["plus_di"] = 100 * plus_dm.rolling(14).mean() / atr14.replace(0, np.nan)
         df["minus_di"] = 100 * minus_dm.rolling(14).mean() / atr14.replace(0, np.nan)
@@ -225,12 +244,8 @@ class FeatureEngine:
         df["cci_20"] = (tp - sma_tp) / (0.015 * mad).replace(0, np.nan)
 
         # Aroon
-        df["aroon_up"] = df["high"].rolling(25).apply(
-            lambda x: x.argmax() / 24 * 100, raw=True
-        )
-        df["aroon_down"] = df["low"].rolling(25).apply(
-            lambda x: x.argmin() / 24 * 100, raw=True
-        )
+        df["aroon_up"] = df["high"].rolling(25).apply(lambda x: x.argmax() / 24 * 100, raw=True)
+        df["aroon_down"] = df["low"].rolling(25).apply(lambda x: x.argmin() / 24 * 100, raw=True)
 
         return df
 
@@ -249,11 +264,14 @@ class FeatureEngine:
 
         # ATR
         high, low = df["high"], df["low"]
-        tr = pd.concat([
-            high - low,
-            (high - c.shift(1)).abs(),
-            (low - c.shift(1)).abs(),
-        ], axis=1).max(axis=1)
+        tr = pd.concat(
+            [
+                high - low,
+                (high - c.shift(1)).abs(),
+                (low - c.shift(1)).abs(),
+            ],
+            axis=1,
+        ).max(axis=1)
         df["atr_14"] = tr.rolling(14).mean()
         df["atr_ratio"] = df["atr_14"] / c
 
@@ -331,7 +349,9 @@ class FeatureEngine:
         vol_ma20 = v.rolling(20).mean()
         df["vol_surge_ratio"] = vol_ma5 / vol_ma20  # >1.5 = volume building
         # Price-volume divergence: volume up but price flat
-        df["pv_divergence"] = df.get("volume_ratio_20d", v / vol_ma20) - abs(df.get("return_5d", c.pct_change(5)))
+        df["pv_divergence"] = df.get("volume_ratio_20d", v / vol_ma20) - abs(
+            df.get("return_5d", c.pct_change(5))
+        )
 
         # 2. VOLATILITY CONTRACTION (precedes expansion/breakout)
         if "bb_width" not in df.columns:
@@ -341,15 +361,25 @@ class FeatureEngine:
         else:
             bb_w = df["bb_width"]
         df["bb_width_percentile"] = bb_w.rolling(60).rank(pct=True)  # low = squeeze
-        
-        atr5 = pd.concat([h - l, (h - c.shift(1)).abs(), (l - c.shift(1)).abs()], axis=1).max(axis=1).rolling(5).mean()
-        atr20 = pd.concat([h - l, (h - c.shift(1)).abs(), (l - c.shift(1)).abs()], axis=1).max(axis=1).rolling(20).mean()
+
+        atr5 = (
+            pd.concat([h - l, (h - c.shift(1)).abs(), (l - c.shift(1)).abs()], axis=1)
+            .max(axis=1)
+            .rolling(5)
+            .mean()
+        )
+        atr20 = (
+            pd.concat([h - l, (h - c.shift(1)).abs(), (l - c.shift(1)).abs()], axis=1)
+            .max(axis=1)
+            .rolling(20)
+            .mean()
+        )
         df["atr_contraction"] = atr5 / atr20.replace(0, np.nan)  # <0.8 = squeezing
 
         # 3. ACCUMULATION PATTERNS
         df["close_position_in_range"] = (c - l) / (h - l).replace(0, np.nan)  # >0.7 = bullish close
         df["close_pos_ma5"] = df["close_position_in_range"].rolling(5).mean()  # sustained buying
-        
+
         # OBV trend vs price trend divergence
         obv = (np.sign(c.diff()) * v).fillna(0).cumsum()
         obv_slope = obv.diff(10) / obv.rolling(10).mean().abs().replace(0, np.nan)
@@ -370,14 +400,16 @@ class FeatureEngine:
         for i in range(4, len(lows)):
             cnt = 0
             for j in range(1, 5):
-                if i-j >= 0 and lows[i-j+1] > lows[i-j]:
+                if i - j >= 0 and lows[i - j + 1] > lows[i - j]:
                     cnt += 1
             hl_count.iloc[i] = cnt
         df["higher_lows_count"] = hl_count  # 4 = strong bullish structure
 
         # Consolidation detection: days with range < 2%
         daily_range_pct = (h - l) / c
-        df["consolidation_score"] = (daily_range_pct < 0.02).rolling(10).sum()  # high = tight consolidation
+        df["consolidation_score"] = (
+            (daily_range_pct < 0.02).rolling(10).sum()
+        )  # high = tight consolidation
 
         # 6. MOMENTUM SHIFT DETECTION
         # RSI divergence: price making lower lows but RSI making higher lows
@@ -389,18 +421,18 @@ class FeatureEngine:
             loss = (-delta.clip(upper=0)).rolling(14).mean()
             rs = gain / loss.replace(0, np.nan)
             rsi = 100 - (100 / (1 + rs))
-        
+
         df["rsi_slope_5d"] = rsi.diff(5)  # positive = momentum building
         df["price_rsi_divergence"] = rsi.diff(10) - (c.pct_change(10) * 100)  # bullish divergence
 
         # 7. BREAKOUT SETUP SCORE (composite)
         # Combine signals: vol building + tight range + near resistance + accumulation
         df["breakout_setup_score"] = (
-            (df["vol_surge_ratio"] > 1.2).astype(float) +
-            (df["bb_width_percentile"] < 0.3).astype(float) +
-            (df["dist_to_resistance"] < 0.02).astype(float) +
-            (df["close_pos_ma5"] > 0.6).astype(float) +
-            (df["higher_lows_count"] >= 3).astype(float)
+            (df["vol_surge_ratio"] > 1.2).astype(float)
+            + (df["bb_width_percentile"] < 0.3).astype(float)
+            + (df["dist_to_resistance"] < 0.02).astype(float)
+            + (df["close_pos_ma5"] > 0.6).astype(float)
+            + (df["higher_lows_count"] >= 3).astype(float)
         )
 
         return df
@@ -417,11 +449,13 @@ class FeatureEngine:
             ph = np.zeros(n)
             pl = np.zeros(n)
             for i in range(order, n - order):
-                if all(h[i] >= h[i - j] for j in range(1, order + 1)) and \
-                   all(h[i] >= h[i + j] for j in range(1, min(order + 1, n - i))):
+                if all(h[i] >= h[i - j] for j in range(1, order + 1)) and all(
+                    h[i] >= h[i + j] for j in range(1, min(order + 1, n - i))
+                ):
                     ph[i] = 1.0
-                if all(l[i] <= l[i - j] for j in range(1, order + 1)) and \
-                   all(l[i] <= l[i + j] for j in range(1, min(order + 1, n - i))):
+                if all(l[i] <= l[i - j] for j in range(1, order + 1)) and all(
+                    l[i] <= l[i + j] for j in range(1, min(order + 1, n - i))
+                ):
                     pl[i] = 1.0
             df[f"pivot_high_{order}"] = ph
             df[f"pivot_low_{order}"] = pl
@@ -471,8 +505,8 @@ class FeatureEngine:
         for window in [20, 40]:
             regime = np.zeros(n)
             for i in range(window, n):
-                seg_h = h[i - window:i + 1]
-                seg_l = l[i - window:i + 1]
+                seg_h = h[i - window : i + 1]
+                seg_l = l[i - window : i + 1]
                 hh_count = sum(1 for j in range(1, len(seg_h)) if seg_h[j] > seg_h[j - 1])
                 hl_count = sum(1 for j in range(1, len(seg_l)) if seg_l[j] > seg_l[j - 1])
                 lh_count = sum(1 for j in range(1, len(seg_h)) if seg_h[j] < seg_h[j - 1])
@@ -508,8 +542,8 @@ class FeatureEngine:
                 continue
             upper_wick = h[i] - max(o[i], c[i])
             lower_wick = min(o[i], c[i]) - l[i]
-            prev_high = np.max(h[max(0, i - 20):i]) if i >= 1 else h[i]
-            prev_low = np.min(l[max(0, i - 20):i]) if i >= 1 else l[i]
+            prev_high = np.max(h[max(0, i - 20) : i]) if i >= 1 else h[i]
+            prev_low = np.min(l[max(0, i - 20) : i]) if i >= 1 else l[i]
             if h[i] > prev_high and c[i] < o[i] and upper_wick > 0.5 * rng:
                 upthrust[i] = 1.0
             if l[i] < prev_low and c[i] > o[i] and lower_wick > 0.5 * rng:
@@ -554,7 +588,9 @@ class FeatureEngine:
 
         reversal = np.zeros(n)
         for i in range(3, n):
-            vol_ok = v[i] > vol_ma20[i] * 1.2 if not np.isnan(vol_ma20[i]) and vol_ma20[i] > 0 else False
+            vol_ok = (
+                v[i] > vol_ma20[i] * 1.2 if not np.isnan(vol_ma20[i]) and vol_ma20[i] > 0 else False
+            )
             if c[i - 3] > c[i - 2] > c[i - 1] and c[i] > c[i - 1] and vol_ok:
                 reversal[i] = 1.0
             elif c[i - 3] < c[i - 2] < c[i - 1] and c[i] < c[i - 1] and vol_ok:
@@ -571,11 +607,14 @@ class FeatureEngine:
         l = df["low"]
         o = df["open"]
 
-        tr = pd.concat([
-            h - l,
-            (h - c.shift(1)).abs(),
-            (l - c.shift(1)).abs(),
-        ], axis=1).max(axis=1)
+        tr = pd.concat(
+            [
+                h - l,
+                (h - c.shift(1)).abs(),
+                (l - c.shift(1)).abs(),
+            ],
+            axis=1,
+        ).max(axis=1)
         atr14 = tr.rolling(14).mean()
 
         df["atr_percentile_60d"] = atr14.rolling(60, min_periods=20).rank(pct=True)
@@ -671,10 +710,9 @@ class FeatureEngine:
         vol20 = v.rolling(20).mean()
         df["acc_vol_dry_ratio"] = vol5 / vol20.replace(0, np.nan)
         df["acc_vol_spike_ratio"] = v / vol20.replace(0, np.nan)
-        df["acc_vol_dry_then_spike"] = (
-            (df["acc_vol_dry_ratio"] < 0.85).astype(float)
-            * (df["acc_vol_spike_ratio"] > 1.5).astype(float)
-        )
+        df["acc_vol_dry_then_spike"] = (df["acc_vol_dry_ratio"] < 0.85).astype(float) * (
+            df["acc_vol_spike_ratio"] > 1.5
+        ).astype(float)
 
         # Sideway score: % days where |daily ret| < 0.005 in last 10
         small_day = (ret1.abs() < 0.005).astype(float)
@@ -760,7 +798,7 @@ class FeatureEngine:
         return df
 
     def add_market_context(
-        self, df: pd.DataFrame, context_data: Dict[str, pd.DataFrame]
+        self, df: pd.DataFrame, context_data: dict[str, pd.DataFrame]
     ) -> pd.DataFrame:
         """
         Merge market context features (VNIndex, HNXIndex, futures) into stock data.
@@ -786,8 +824,7 @@ class FeatureEngine:
 
             # Select only computed columns
             merge_cols = ["timestamp"] + [
-                c for c in ctx.columns
-                if c.startswith(prefix) and c != "timestamp"
+                c for c in ctx.columns if c.startswith(prefix) and c != "timestamp"
             ]
             ctx_merge = ctx[merge_cols].copy()
 
@@ -820,17 +857,17 @@ class FeatureEngine:
             ha_open[i] = (ha_open[i - 1] + ha_close[i - 1]) / 2.0
 
         ha_high = np.maximum(h, np.maximum(ha_open, ha_close))
-        ha_low  = np.minimum(l, np.minimum(ha_open, ha_close))
+        ha_low = np.minimum(l, np.minimum(ha_open, ha_close))
 
-        ha_body   = ha_close - ha_open   # >0 = bullish candle
-        ha_range  = ha_high - ha_low
-        ha_range  = np.where(ha_range == 0, 1e-8, ha_range)
+        ha_body = ha_close - ha_open  # >0 = bullish candle
+        ha_range = ha_high - ha_low
+        ha_range = np.where(ha_range == 0, 1e-8, ha_range)
 
         # ── 2. Color and streak ───────────────────────────────────────
-        ha_green = (ha_body > 0).astype(float)   # 1=green, 0=red
+        ha_green = (ha_body > 0).astype(float)  # 1=green, 0=red
 
         green_streak = np.zeros(n)
-        red_streak   = np.zeros(n)
+        red_streak = np.zeros(n)
         for i in range(n):
             if ha_green[i] == 1:
                 green_streak[i] = (green_streak[i - 1] + 1) if i > 0 else 1
@@ -839,9 +876,9 @@ class FeatureEngine:
                 red_streak[i] = (red_streak[i - 1] + 1) if i > 0 else 1
                 green_streak[i] = 0
 
-        df["ha_green"]        = ha_green
-        df["ha_green_streak"] = green_streak   # liên tiếp xanh: 1-2=đầu, 5+=cuối sóng
-        df["ha_red_streak"]   = red_streak
+        df["ha_green"] = ha_green
+        df["ha_green_streak"] = green_streak  # liên tiếp xanh: 1-2=đầu, 5+=cuối sóng
+        df["ha_red_streak"] = red_streak
         # Đổi màu ngày hôm nay (0→1 hoặc 1→0): tín hiệu đảo chiều sớm
         df["ha_color_switch"] = (np.diff(ha_green, prepend=ha_green[0]) != 0).astype(float)
 
@@ -852,8 +889,8 @@ class FeatureEngine:
 
         df["ha_upper_shadow_ratio"] = upper_shadow / ha_range
         df["ha_lower_shadow_ratio"] = lower_shadow / ha_range
-        df["ha_no_lower_shadow"]    = (lower_shadow < ha_range * 0.05).astype(float)
-        df["ha_no_upper_shadow"]    = (upper_shadow < ha_range * 0.05).astype(float)
+        df["ha_no_lower_shadow"] = (lower_shadow < ha_range * 0.05).astype(float)
+        df["ha_no_upper_shadow"] = (upper_shadow < ha_range * 0.05).astype(float)
 
         # Râu trên đang tăng dần (cuối sóng tăng / phân phối)
         # Fix: dùng pd.Series với index=df.index tránh NaN khi assign về grouped sub-DataFrame
@@ -869,7 +906,7 @@ class FeatureEngine:
         ).astype(float)
 
         # ── 4. Body strength (momentum quality) ──────────────────────
-        df["ha_body_ratio"]  = np.abs(ha_body) / ha_range
+        df["ha_body_ratio"] = np.abs(ha_body) / ha_range
         body_s = pd.Series(np.abs(ha_body) / ha_range, index=idx)
         df["ha_body_shrinking"] = (
             body_s.rolling(3, min_periods=3).mean() < body_s.rolling(10, min_periods=5).mean()
@@ -884,49 +921,49 @@ class FeatureEngine:
 
         # ── 6. Doji detection (body rất nhỏ, cả 2 râu) ───────────────
         df["ha_doji"] = (
-            (np.abs(ha_body) / ha_range < 0.15) &
-            (upper_shadow / ha_range > 0.2) &
-            (lower_shadow / ha_range > 0.2)
+            (np.abs(ha_body) / ha_range < 0.15)
+            & (upper_shadow / ha_range > 0.2)
+            & (lower_shadow / ha_range > 0.2)
         ).astype(float)
 
         # ── 7. Reversal candle patterns (kết hợp HA + price real) ────
         # Bearish reversal signal: green streak >= 5 + upper shadow growing + body shrinking
         df["ha_bearish_reversal_signal"] = (
-            (green_streak >= 4) &
-            (df["ha_upper_shadow_growing"] == 1) &
-            (df["ha_body_shrinking"] == 1)
+            (green_streak >= 4)
+            & (df["ha_upper_shadow_growing"] == 1)
+            & (df["ha_body_shrinking"] == 1)
         ).astype(float)
 
         # Bullish reversal signal: đã đỏ >= 3 ngày TRƯỚC + ngày nay đổi xanh + lower shadow growing
         # Fix: dùng red_streak shifted (ngày hôm qua đỏ >= 3) chứ không phải hôm nay (=0 khi switch)
         prev_red_streak = pd.Series(red_streak, index=idx).shift(1).fillna(0).values
         df["ha_bullish_reversal_signal"] = (
-            (prev_red_streak >= 3) &
-            (df["ha_lower_shadow_growing"] == 1) &
-            (df["ha_color_switch"] == 1)
+            (prev_red_streak >= 3)
+            & (df["ha_lower_shadow_growing"] == 1)
+            & (df["ha_color_switch"] == 1)
         ).astype(float)
 
         # ── 8. Early wave detection (mua đầu sóng, không fomo) ───────
         # Điều kiện lý tưởng: streak ngắn (1-2) + lower shadow absent + body ratio lớn
         df["ha_early_wave"] = (
-            (green_streak <= 2) &
-            (green_streak >= 1) &
-            (df["ha_no_lower_shadow"] == 1) &
-            (df["ha_body_ratio"] > 0.5)
+            (green_streak <= 2)
+            & (green_streak >= 1)
+            & (df["ha_no_lower_shadow"] == 1)
+            & (df["ha_body_ratio"] > 0.5)
         ).astype(float)
 
         # ── 9. Late wave / fomo signal (tránh vào) ───────────────────
         # green streak dài + upper shadow lớn + body thu nhỏ
         df["ha_late_wave"] = (
-            (green_streak >= 5) &
-            (df["ha_upper_shadow_ratio"] > 0.3) &
-            (df["ha_body_shrinking"] == 1)
+            (green_streak >= 5)
+            & (df["ha_upper_shadow_ratio"] > 0.3)
+            & (df["ha_body_shrinking"] == 1)
         ).astype(float)
 
         return df
 
     @classmethod
-    def from_config(cls, config: Dict[str, Any]) -> "FeatureEngine":
+    def from_config(cls, config: dict[str, Any]) -> "FeatureEngine":
         feat_cfg = config.get("features", config)
         return cls(
             feature_set=feat_cfg.get("feature_set", "minimal"),

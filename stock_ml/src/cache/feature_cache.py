@@ -6,12 +6,13 @@ Cache layout:
   results/cache/features/<feature_set>/<cache_key>.pkl
   results/cache/features/<feature_set>/<cache_key>.json
 """
+
 from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Iterable, Sequence
 from pathlib import Path
-from typing import Iterable, List, Optional, Sequence
 
 import pandas as pd
 
@@ -25,7 +26,7 @@ class FeatureCacheManager:
         self.cache_root = Path(cache_root)
 
     @staticmethod
-    def _normalize_symbols(symbols: Sequence[str]) -> List[str]:
+    def _normalize_symbols(symbols: Sequence[str]) -> list[str]:
         return sorted({s.strip() for s in symbols if str(s).strip()})
 
     @staticmethod
@@ -48,7 +49,7 @@ class FeatureCacheManager:
         return hashlib.sha1(payload.encode("utf-8")).hexdigest()
 
     @staticmethod
-    def _compute_code_fingerprint(code_paths: Optional[Iterable[str]]) -> str:
+    def _compute_code_fingerprint(code_paths: Iterable[str] | None) -> str:
         if not code_paths:
             return "na"
 
@@ -71,8 +72,8 @@ class FeatureCacheManager:
         timeframe: str,
         feature_set: str,
         target_config: dict,
-        extra_groups: Optional[Sequence[str]] = None,
-        code_paths: Optional[Iterable[str]] = None,
+        extra_groups: Sequence[str] | None = None,
+        code_paths: Iterable[str] | None = None,
     ) -> dict:
         norm_symbols = self._normalize_symbols(symbols)
         signature = {
@@ -112,9 +113,9 @@ class FeatureCacheManager:
         timeframe: str,
         feature_set: str,
         target_config: dict,
-        extra_groups: Optional[Sequence[str]] = None,
-        code_paths: Optional[Iterable[str]] = None,
-    ) -> tuple[Optional[pd.DataFrame], str]:
+        extra_groups: Sequence[str] | None = None,
+        code_paths: Iterable[str] | None = None,
+    ) -> tuple[pd.DataFrame | None, str]:
         signature = self.build_signature(
             data_dir=data_dir,
             symbols=symbols,
@@ -142,8 +143,8 @@ class FeatureCacheManager:
         timeframe: str,
         feature_set: str,
         target_config: dict,
-        extra_groups: Optional[Sequence[str]] = None,
-        code_paths: Optional[Iterable[str]] = None,
+        extra_groups: Sequence[str] | None = None,
+        code_paths: Iterable[str] | None = None,
     ) -> tuple[str, str]:
         signature = self.build_signature(
             data_dir=data_dir,

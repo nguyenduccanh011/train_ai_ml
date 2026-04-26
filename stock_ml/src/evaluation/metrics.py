@@ -1,17 +1,23 @@
 """
 Evaluation metrics for stock prediction models.
 """
+
+from typing import Any
+
 import numpy as np
 import pandas as pd
-from typing import Dict, Any, List
 from sklearn.metrics import (
-    accuracy_score, precision_score, recall_score, f1_score,
-    classification_report, confusion_matrix, cohen_kappa_score,
-    matthews_corrcoef, balanced_accuracy_score,
+    accuracy_score,
+    balanced_accuracy_score,
+    cohen_kappa_score,
+    f1_score,
+    matthews_corrcoef,
+    precision_score,
+    recall_score,
 )
 
 
-def compute_metrics(y_true, y_pred, average: str = "weighted") -> Dict[str, float]:
+def compute_metrics(y_true, y_pred, average: str = "weighted") -> dict[str, float]:
     """Compute comprehensive classification metrics."""
     return {
         "accuracy": accuracy_score(y_true, y_pred),
@@ -26,17 +32,17 @@ def compute_metrics(y_true, y_pred, average: str = "weighted") -> Dict[str, floa
 
 
 def compute_trading_metrics(
-    y_true, y_pred, returns: pd.Series, target_classes: Dict[int, str] = None
-) -> Dict[str, float]:
+    y_true, y_pred, returns: pd.Series, target_classes: dict[int, str] = None
+) -> dict[str, float]:
     """
     Compute trading-oriented metrics.
     Assumes: 1=UPTREND (buy), 0=SIDEWAYS (hold), -1=DOWNTREND (sell/avoid)
     """
     target_classes = target_classes or {1: "UPTREND", 0: "SIDEWAYS", -1: "DOWNTREND"}
 
-    pred_up = (np.array(y_pred) == 1)
-    pred_down = (np.array(y_pred) == -1)
-    actual_up = (np.array(y_true) == 1)
+    pred_up = np.array(y_pred) == 1
+    pred_down = np.array(y_pred) == -1
+    actual_up = np.array(y_true) == 1
 
     # When model says BUY, what's the actual return?
     buy_returns = returns[pred_up] if pred_up.any() else pd.Series([0])
@@ -59,7 +65,7 @@ def compute_trading_metrics(
     }
 
 
-def format_results_table(results: List[Dict[str, Any]]) -> pd.DataFrame:
+def format_results_table(results: list[dict[str, Any]]) -> pd.DataFrame:
     """Format experiment results into a comparison table."""
     df = pd.DataFrame(results)
 
@@ -73,9 +79,15 @@ def format_results_table(results: List[Dict[str, Any]]) -> pd.DataFrame:
 def print_leaderboard(results_df: pd.DataFrame, top_n: int = 10):
     """Print a formatted leaderboard of model results."""
     display_cols = [
-        "model", "feature_set", "window",
-        "accuracy", "balanced_accuracy", "f1_macro", "mcc",
-        "hit_rate_buy", "avg_return_when_buy",
+        "model",
+        "feature_set",
+        "window",
+        "accuracy",
+        "balanced_accuracy",
+        "f1_macro",
+        "mcc",
+        "hit_rate_buy",
+        "avg_return_when_buy",
     ]
     cols = [c for c in display_cols if c in results_df.columns]
     top = results_df.head(top_n)[cols]

@@ -8,11 +8,13 @@ Ky vong: vuot V37a (score 420.7) khi giai quyet ca 2 diem yeu:
   1. HAP cat dau song (87 trades, 100% loss, -778%)
   2. Signal exit sai khi rule van bullish
 """
-import os, sys
+
+import os
+import sys
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from experiments.run_v37a import backtest_v37a
-
 
 V39F_FLAGS = dict(
     v39b_hap_trigger=0.08,

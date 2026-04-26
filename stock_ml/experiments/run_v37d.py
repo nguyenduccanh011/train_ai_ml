@@ -4,7 +4,10 @@ Engine identical to V34 — breakthrough attempt comes from RNN capturing HA
 streak dynamics (3-5 consecutive candles, body/shadow evolution) that
 tabular GBT treats as independent bars.
 """
-import os, sys
+
+import os
+import sys
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from experiments.run_v32_final import backtest_v32

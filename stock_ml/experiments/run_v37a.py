@@ -8,12 +8,15 @@ V37a = V34 engine + per-profile dispatch:
   - bank/defensive/balanced → V35b flags ON (rule_override + skip_proximity + relax_cooldown(2,1))
   - momentum/high_beta     → V34 engine giữ nguyên
 """
-import os, sys
+
+import os
+import sys
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from experiments.run_v32_final import backtest_v32
 from src.backtest.defaults import SYMBOL_PROFILES
 
+from experiments.run_v32_final import backtest_v32
 
 V37A_RELAX_PROFILES = {"bank", "defensive", "balanced"}
 

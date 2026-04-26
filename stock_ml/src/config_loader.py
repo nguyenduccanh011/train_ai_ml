@@ -1,11 +1,12 @@
 """
 Config loader — reads models.yaml and base.yaml, provides helper functions.
 """
+
 import os
+
 import yaml
 
-from src.env import resolve_data_dir, get_results_dir
-
+from src.env import resolve_data_dir
 
 _CONFIG_CACHE = {}
 
@@ -25,7 +26,7 @@ def load_config(force_reload=False):
     path = get_config_path()
     if path in _CONFIG_CACHE and not force_reload:
         return _CONFIG_CACHE[path]
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         cfg = yaml.safe_load(f)
     _CONFIG_CACHE[path] = cfg
     return cfg
@@ -37,7 +38,7 @@ def load_base_config(force_reload=False):
     if path in _CONFIG_CACHE and not force_reload:
         return _CONFIG_CACHE[path]
     try:
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             cfg = yaml.safe_load(f)
         _CONFIG_CACHE[path] = cfg
         return cfg
@@ -47,7 +48,7 @@ def load_base_config(force_reload=False):
 
 def get_training_device():
     """Get the training device setting from base.yaml.
-    
+
     Returns:
         str: "auto" | "gpu" | "cuda" | "cpu" (default: "cpu")
     """
@@ -75,8 +76,9 @@ def get_model_config(version_key):
     cfg = load_config()
     models = cfg.get("models", {})
     if version_key not in models:
-        raise KeyError(f"Model '{version_key}' not found in models.yaml. "
-                       f"Available: {list(models.keys())}")
+        raise KeyError(
+            f"Model '{version_key}' not found in models.yaml. Available: {list(models.keys())}"
+        )
     return models[version_key]
 
 
@@ -114,7 +116,7 @@ def get_symbol_profiles():
     cfg = load_config()
     profiles = {}
     for profile_name, syms in cfg.get("symbol_profiles", {}).items():
-        for sym in (syms or []):
+        for sym in syms or []:
             profiles[str(sym)] = profile_name
     return profiles
 

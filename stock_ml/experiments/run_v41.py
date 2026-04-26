@@ -32,23 +32,27 @@ Direction E — Combo tốt nhất:
   E4: B3(hap_min_hold=20) + C1(trailing_ratchet)
   E5: A1 + B3 + C1  ← "all three"
 """
-import os, sys, time
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import src.safe_io  # noqa: F401
 
+import os
+import sys
+import time
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import pandas as pd
-from src.experiment_runner import run_test as run_test_base
-from src.evaluation.scoring import calc_metrics, composite_score as comp_score
+import src.safe_io  # noqa: F401
 from src.config_loader import get_pipeline_symbols
+from src.evaluation.scoring import calc_metrics
+from src.evaluation.scoring import composite_score as comp_score
+from src.experiment_runner import run_test as run_test_base
+
 from experiments.run_v29 import V29_TARGET
 from experiments.run_v34_final import V34_FEATURE_SET
 from experiments.run_v39a2 import backtest_v39a2
 
-
 # V39a2 (score=410) được train với V29_TARGET (g5%,l4%), leading_v4
 # → giữ nguyên để so sánh fair với file trades_v39a2.csv
-V41_TARGET   = V29_TARGET      # early_wave fw=8,g5%,l4% — same as V39a2
-V41_FEATURES = V34_FEATURE_SET # leading_v4
+V41_TARGET = V29_TARGET  # early_wave fw=8,g5%,l4% — same as V39a2
+V41_FEATURES = V34_FEATURE_SET  # leading_v4
 
 
 # ── Base layer flags (V39a2 = rule_confirm_exit) ──────────────────────────────
@@ -58,102 +62,148 @@ V39A2_FLAGS = dict(v39a_rule_confirm_exit=True)
 def _make_bt(extra: dict):
     """Return a backtest fn = V39a2 + extra flags."""
     flags = {**V39A2_FLAGS, **extra}
+
     def bt(y_pred, returns, df_test, feature_cols, **kwargs):
         merged = {**flags, **kwargs}
         for k, v in flags.items():
             merged[k] = v
         return backtest_v39a2(y_pred, returns, df_test, feature_cols, **merged)
+
     return bt
 
 
 VARIANTS = {
     # Baseline
     "V39a2-base": (dict(), "rule_confirm only (baseline)"),
-
     # Direction A — signal exit hold
-    "A1-hold25":  (dict(v39a_signal_exit_min_hold=25),
-                   "A1: signal exit min_hold=25"),
-    "A2-hold30":  (dict(v39a_signal_exit_min_hold=30),
-                   "A2: signal exit min_hold=30"),
-    "A3-hold25+rc": (dict(v39a_signal_exit_min_hold=25,
-                          v39a_rule_confirm_exit=True),
-                     "A3: min_hold=25 + rule_confirm"),
-
+    "A1-hold25": (dict(v39a_signal_exit_min_hold=25), "A1: signal exit min_hold=25"),
+    "A2-hold30": (dict(v39a_signal_exit_min_hold=30), "A2: signal exit min_hold=30"),
+    "A3-hold25+rc": (
+        dict(v39a_signal_exit_min_hold=25, v39a_rule_confirm_exit=True),
+        "A3: min_hold=25 + rule_confirm",
+    ),
     # Direction B — HAP reform
-    "B1-floor7":  (dict(v32_hap_pre_floor=-0.07),
-                   "B1: HAP floor=-7%"),
-    "B2-trig8f7": (dict(v39b_hap_trigger=0.08, v32_hap_pre_floor=-0.07),
-                   "B2: HAP trig=8%+floor=-7%"),
-    "B3-hold20":  (dict(v39b_hap_min_hold=20),
-                   "B3: HAP min_hold=20d"),
-    "B4-trig10":  (dict(v39b_hap_trigger=0.10),
-                   "B4: HAP trigger=10%"),
-    "B5-trig8h15":(dict(v39b_hap_trigger=0.08, v39b_hap_min_hold=15),
-                   "B5: HAP trig=8%+min_hold=15 (V39b params on V39a2)"),
-
+    "B1-floor7": (dict(v32_hap_pre_floor=-0.07), "B1: HAP floor=-7%"),
+    "B2-trig8f7": (
+        dict(v39b_hap_trigger=0.08, v32_hap_pre_floor=-0.07),
+        "B2: HAP trig=8%+floor=-7%",
+    ),
+    "B3-hold20": (dict(v39b_hap_min_hold=20), "B3: HAP min_hold=20d"),
+    "B4-trig10": (dict(v39b_hap_trigger=0.10), "B4: HAP trigger=10%"),
+    "B5-trig8h15": (
+        dict(v39b_hap_trigger=0.08, v39b_hap_min_hold=15),
+        "B5: HAP trig=8%+min_hold=15 (V39b params on V39a2)",
+    ),
     # Direction C — profit protection
-    "C1-ratchet": (dict(v33_trailing_ratchet=True,
-                        v33_tr_tier1_trigger=0.12, v33_tr_tier1_keep=0.40,
-                        v33_tr_tier2_trigger=0.25, v33_tr_tier2_keep=0.60,
-                        v33_tr_tier3_trigger=0.40, v33_tr_tier3_keep=0.70),
-                   "C1: trailing ratchet 12/25/40%"),
-    "C2-trev":    (dict(v33_trend_rev_exit=True,
-                        v33_tre_min_profit=0.08,
-                        v33_tre_rsi_thresh=50.0,
-                        v33_tre_hold_min=5),
-                   "C2: trend reversal exit (profit>8%+rsi<50)"),
-
+    "C1-ratchet": (
+        dict(
+            v33_trailing_ratchet=True,
+            v33_tr_tier1_trigger=0.12,
+            v33_tr_tier1_keep=0.40,
+            v33_tr_tier2_trigger=0.25,
+            v33_tr_tier2_keep=0.60,
+            v33_tr_tier3_trigger=0.40,
+            v33_tr_tier3_keep=0.70,
+        ),
+        "C1: trailing ratchet 12/25/40%",
+    ),
+    "C2-trev": (
+        dict(
+            v33_trend_rev_exit=True,
+            v33_tre_min_profit=0.08,
+            v33_tre_rsi_thresh=50.0,
+            v33_tre_hold_min=5,
+        ),
+        "C2: trend reversal exit (profit>8%+rsi<50)",
+    ),
     # Direction D — dead trade cleanup
-    "D1-stall":   (dict(v38b_stall_exit=True,
-                        v38b_stall_min_hold=10,
-                        v38b_stall_max_profit=0.02,
-                        v38b_stall_pnl_thresh=-0.025),
-                   "D1: stall exit h>=10+mp<2%+ret<-2.5%"),
-
+    "D1-stall": (
+        dict(
+            v38b_stall_exit=True,
+            v38b_stall_min_hold=10,
+            v38b_stall_max_profit=0.02,
+            v38b_stall_pnl_thresh=-0.025,
+        ),
+        "D1: stall exit h>=10+mp<2%+ret<-2.5%",
+    ),
     # Direction E — combos
-    "E1-A1B3":    (dict(v39a_signal_exit_min_hold=25,
-                        v39b_hap_min_hold=20),
-                   "E1: A1(hold25)+B3(hap_h20)"),
-    "E2-A2B2":    (dict(v39a_signal_exit_min_hold=30,
-                        v39b_hap_trigger=0.08, v32_hap_pre_floor=-0.07),
-                   "E2: A2(hold30)+B2(trig8+fl7)"),
-    "E3-A1C1":    (dict(v39a_signal_exit_min_hold=25,
-                        v33_trailing_ratchet=True,
-                        v33_tr_tier1_trigger=0.12, v33_tr_tier1_keep=0.40,
-                        v33_tr_tier2_trigger=0.25, v33_tr_tier2_keep=0.60,
-                        v33_tr_tier3_trigger=0.40, v33_tr_tier3_keep=0.70),
-                   "E3: A1(hold25)+C1(ratchet)"),
-    "E4-B3C1":    (dict(v39b_hap_min_hold=20,
-                        v33_trailing_ratchet=True,
-                        v33_tr_tier1_trigger=0.12, v33_tr_tier1_keep=0.40,
-                        v33_tr_tier2_trigger=0.25, v33_tr_tier2_keep=0.60,
-                        v33_tr_tier3_trigger=0.40, v33_tr_tier3_keep=0.70),
-                   "E4: B3(hap_h20)+C1(ratchet)"),
-    "E5-A1B3C1":  (dict(v39a_signal_exit_min_hold=25,
-                        v39b_hap_min_hold=20,
-                        v33_trailing_ratchet=True,
-                        v33_tr_tier1_trigger=0.12, v33_tr_tier1_keep=0.40,
-                        v33_tr_tier2_trigger=0.25, v33_tr_tier2_keep=0.60,
-                        v33_tr_tier3_trigger=0.40, v33_tr_tier3_keep=0.70),
-                   "E5: A1+B3+C1 all three"),
-    "E6-A1B3D1":  (dict(v39a_signal_exit_min_hold=25,
-                        v39b_hap_min_hold=20,
-                        v38b_stall_exit=True,
-                        v38b_stall_min_hold=10,
-                        v38b_stall_max_profit=0.02,
-                        v38b_stall_pnl_thresh=-0.025),
-                   "E6: A1+B3+D1(stall)"),
-    "E7-A1B3C1D1":(dict(v39a_signal_exit_min_hold=25,
-                        v39b_hap_min_hold=20,
-                        v33_trailing_ratchet=True,
-                        v33_tr_tier1_trigger=0.12, v33_tr_tier1_keep=0.40,
-                        v33_tr_tier2_trigger=0.25, v33_tr_tier2_keep=0.60,
-                        v33_tr_tier3_trigger=0.40, v33_tr_tier3_keep=0.70,
-                        v38b_stall_exit=True,
-                        v38b_stall_min_hold=10,
-                        v38b_stall_max_profit=0.02,
-                        v38b_stall_pnl_thresh=-0.025),
-                   "E7: A1+B3+C1+D1 kitchen sink"),
+    "E1-A1B3": (
+        dict(v39a_signal_exit_min_hold=25, v39b_hap_min_hold=20),
+        "E1: A1(hold25)+B3(hap_h20)",
+    ),
+    "E2-A2B2": (
+        dict(v39a_signal_exit_min_hold=30, v39b_hap_trigger=0.08, v32_hap_pre_floor=-0.07),
+        "E2: A2(hold30)+B2(trig8+fl7)",
+    ),
+    "E3-A1C1": (
+        dict(
+            v39a_signal_exit_min_hold=25,
+            v33_trailing_ratchet=True,
+            v33_tr_tier1_trigger=0.12,
+            v33_tr_tier1_keep=0.40,
+            v33_tr_tier2_trigger=0.25,
+            v33_tr_tier2_keep=0.60,
+            v33_tr_tier3_trigger=0.40,
+            v33_tr_tier3_keep=0.70,
+        ),
+        "E3: A1(hold25)+C1(ratchet)",
+    ),
+    "E4-B3C1": (
+        dict(
+            v39b_hap_min_hold=20,
+            v33_trailing_ratchet=True,
+            v33_tr_tier1_trigger=0.12,
+            v33_tr_tier1_keep=0.40,
+            v33_tr_tier2_trigger=0.25,
+            v33_tr_tier2_keep=0.60,
+            v33_tr_tier3_trigger=0.40,
+            v33_tr_tier3_keep=0.70,
+        ),
+        "E4: B3(hap_h20)+C1(ratchet)",
+    ),
+    "E5-A1B3C1": (
+        dict(
+            v39a_signal_exit_min_hold=25,
+            v39b_hap_min_hold=20,
+            v33_trailing_ratchet=True,
+            v33_tr_tier1_trigger=0.12,
+            v33_tr_tier1_keep=0.40,
+            v33_tr_tier2_trigger=0.25,
+            v33_tr_tier2_keep=0.60,
+            v33_tr_tier3_trigger=0.40,
+            v33_tr_tier3_keep=0.70,
+        ),
+        "E5: A1+B3+C1 all three",
+    ),
+    "E6-A1B3D1": (
+        dict(
+            v39a_signal_exit_min_hold=25,
+            v39b_hap_min_hold=20,
+            v38b_stall_exit=True,
+            v38b_stall_min_hold=10,
+            v38b_stall_max_profit=0.02,
+            v38b_stall_pnl_thresh=-0.025,
+        ),
+        "E6: A1+B3+D1(stall)",
+    ),
+    "E7-A1B3C1D1": (
+        dict(
+            v39a_signal_exit_min_hold=25,
+            v39b_hap_min_hold=20,
+            v33_trailing_ratchet=True,
+            v33_tr_tier1_trigger=0.12,
+            v33_tr_tier1_keep=0.40,
+            v33_tr_tier2_trigger=0.25,
+            v33_tr_tier2_keep=0.60,
+            v33_tr_tier3_trigger=0.40,
+            v33_tr_tier3_keep=0.70,
+            v38b_stall_exit=True,
+            v38b_stall_min_hold=10,
+            v38b_stall_max_profit=0.02,
+            v38b_stall_pnl_thresh=-0.025,
+        ),
+        "E7: A1+B3+C1+D1 kitchen sink",
+    ),
 }
 
 
@@ -169,12 +219,15 @@ def _fmt_row(label, m, cs, base_cs):
 
 if __name__ == "__main__":
     import argparse
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--symbols", type=str, default="")
-    parser.add_argument("--variants", type=str, default="",
-                        help="Comma-separated variant keys to run (empty=all)")
-    parser.add_argument("--save-best", action="store_true",
-                        help="Save trades CSV for variants that beat base")
+    parser.add_argument(
+        "--variants", type=str, default="", help="Comma-separated variant keys to run (empty=all)"
+    )
+    parser.add_argument(
+        "--save-best", action="store_true", help="Save trades CSV for variants that beat base"
+    )
     args = parser.parse_args()
 
     sys.stdout = open(sys.stdout.fileno(), mode="w", encoding="utf-8", buffering=1)
@@ -184,13 +237,14 @@ if __name__ == "__main__":
 
     requested = (
         {v.strip() for v in args.variants.split(",") if v.strip()}
-        if args.variants else set(VARIANTS.keys())
+        if args.variants
+        else set(VARIANTS.keys())
     )
 
     print("=" * 140)
     print("V41 — Sweep toàn diện tất cả cải tiến trên V39a2 base (score=410)")
     print("=" * 140)
-    print(f"  Engine  : V37a → V39a2 (rule_confirm_exit)")
+    print("  Engine  : V37a → V39a2 (rule_confirm_exit)")
     print(f"  Features: {V41_FEATURES}")
     print(f"  Target  : {V41_TARGET}")
     print(f"  Variants: {len(requested)} to run")
@@ -201,7 +255,8 @@ if __name__ == "__main__":
         f" {'PF':>6} {'MaxLoss':>8} {'AvgH':>6} | {'Comp':>7}"
     )
     SEP = "  " + "-" * (len(HDR) - 2)
-    print(HDR); print(SEP)
+    print(HDR)
+    print(SEP)
 
     base_cs = None
     results = {}
@@ -213,7 +268,17 @@ if __name__ == "__main__":
 
         bt_fn = _make_bt(extra_flags)
         trades = run_test_base(
-            SYMBOLS, True, True, False, False, True, True, True, True, True, True,
+            SYMBOLS,
+            True,
+            True,
+            False,
+            False,
+            True,
+            True,
+            True,
+            True,
+            True,
+            True,
             backtest_fn=bt_fn,
             feature_set=V41_FEATURES,
             target_override=V41_TARGET,
@@ -230,13 +295,13 @@ if __name__ == "__main__":
 
     dt = time.time() - t0
     print(SEP)
-    print(f"  Time: {dt:.1f}s  ({dt/60:.1f} min)")
+    print(f"  Time: {dt:.1f}s  ({dt / 60:.1f} min)")
 
     # Ranked summary
     ranked = sorted(results.items(), key=lambda x: -x[1][2])
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("RANKING (top 10):")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     for rank, (key, (m, t, cs, desc)) in enumerate(ranked[:10], 1):
         delta = cs - (base_cs or cs)
         print(f"  #{rank:<2} {key:<16} score={cs:>6.0f}  ({delta:+.0f})  {desc}")
@@ -250,7 +315,7 @@ if __name__ == "__main__":
                 fname = f"trades_v41_{key.lower().replace('-', '_')}.csv"
                 out_path = os.path.join(OUT, fname)
                 df_t.to_csv(out_path, index=False)
-                print(f"  +{cs-base_cs:.0f} | {key} → results/{fname}")
+                print(f"  +{cs - base_cs:.0f} | {key} → results/{fname}")
 
                 # Exit breakdown
                 if "exit_reason" in df_t.columns:

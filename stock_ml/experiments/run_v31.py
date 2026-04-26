@@ -16,31 +16,63 @@ Ablation plan:
 
 Decision rule: composite_score (higher = better)
 """
-import os, sys, time, itertools
+
+import itertools
+import os
+import sys
+import time
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import src.safe_io  # noqa: F401
-
-import pandas as pd
-from src.experiment_runner import run_test as run_test_base, run_rule_test
-from src.evaluation.scoring import calc_metrics, composite_score as comp_score
-from src.backtest.engine import backtest_unified
 from src.config_loader import get_pipeline_symbols
-from experiments.run_v29 import V29_TARGET, V29_FEATURE_SET, backtest_v29
-from experiments.run_v30 import V30_DELTA, backtest_v30
+from src.evaluation.scoring import calc_metrics
+from src.evaluation.scoring import composite_score as comp_score
+from src.experiment_runner import run_test as run_test_base
 
+from experiments.run_v29 import V29_FEATURE_SET, V29_TARGET, backtest_v29
+from experiments.run_v30 import V30_DELTA
 
 # ── V31 patch deltas (each can be switched on/off independently) ──────────────
 
 # A: Peak-chasing guard
-V31_A_half = dict(v31_peak_chasing_guard=True, v31_pcg_ret5d_thresh=0.08, v31_pcg_dist_thresh=8.0, v31_pcg_action="half_size")
-V31_A_skip = dict(v31_peak_chasing_guard=True, v31_pcg_ret5d_thresh=0.08, v31_pcg_dist_thresh=8.0, v31_pcg_action="skip")
-V31_A_tight = dict(v31_peak_chasing_guard=True, v31_pcg_ret5d_thresh=0.06, v31_pcg_dist_thresh=6.0, v31_pcg_action="half_size")
+V31_A_half = dict(
+    v31_peak_chasing_guard=True,
+    v31_pcg_ret5d_thresh=0.08,
+    v31_pcg_dist_thresh=8.0,
+    v31_pcg_action="half_size",
+)
+V31_A_skip = dict(
+    v31_peak_chasing_guard=True,
+    v31_pcg_ret5d_thresh=0.08,
+    v31_pcg_dist_thresh=8.0,
+    v31_pcg_action="skip",
+)
+V31_A_tight = dict(
+    v31_peak_chasing_guard=True,
+    v31_pcg_ret5d_thresh=0.06,
+    v31_pcg_dist_thresh=6.0,
+    v31_pcg_action="half_size",
+)
 
 # B: Adaptive defer (replaces / stacks with V30-B1)
-V31_B_5bars = dict(v31_adaptive_defer=True, v31_ad_min_cum_ret=0.02, v31_ad_max_bars=5, v31_ad_use_ema_confirm=True)
-V31_B_7bars = dict(v31_adaptive_defer=True, v31_ad_min_cum_ret=0.02, v31_ad_max_bars=7, v31_ad_use_ema_confirm=True)
-V31_B_10bars = dict(v31_adaptive_defer=True, v31_ad_min_cum_ret=0.02, v31_ad_max_bars=10, v31_ad_use_ema_confirm=True)
-V31_B_noema = dict(v31_adaptive_defer=True, v31_ad_min_cum_ret=0.02, v31_ad_max_bars=7, v31_ad_use_ema_confirm=False)
+V31_B_5bars = dict(
+    v31_adaptive_defer=True, v31_ad_min_cum_ret=0.02, v31_ad_max_bars=5, v31_ad_use_ema_confirm=True
+)
+V31_B_7bars = dict(
+    v31_adaptive_defer=True, v31_ad_min_cum_ret=0.02, v31_ad_max_bars=7, v31_ad_use_ema_confirm=True
+)
+V31_B_10bars = dict(
+    v31_adaptive_defer=True,
+    v31_ad_min_cum_ret=0.02,
+    v31_ad_max_bars=10,
+    v31_ad_use_ema_confirm=True,
+)
+V31_B_noema = dict(
+    v31_adaptive_defer=True,
+    v31_ad_min_cum_ret=0.02,
+    v31_ad_max_bars=7,
+    v31_ad_use_ema_confirm=False,
+)
 
 # C: Hardcap-after-profit
 V31_C_3pct = dict(v31_hardcap_after_profit=True, v31_hap_profit_trigger=0.05, v31_hap_floor=-0.03)
@@ -48,10 +80,20 @@ V31_C_5pct = dict(v31_hardcap_after_profit=True, v31_hap_profit_trigger=0.05, v3
 V31_C_strict = dict(v31_hardcap_after_profit=True, v31_hap_profit_trigger=0.03, v31_hap_floor=-0.02)
 
 # D: Profile sizing
-V31_D = dict(v31_profile_sizing=True, v31_ps_momentum_mult=1.4, v31_ps_highbeta_mult=1.2,
-             v31_ps_defensive_mult=0.80, v31_ps_bank_mult=0.85)
-V31_D_mild = dict(v31_profile_sizing=True, v31_ps_momentum_mult=1.2, v31_ps_highbeta_mult=1.1,
-                  v31_ps_defensive_mult=0.85, v31_ps_bank_mult=0.90)
+V31_D = dict(
+    v31_profile_sizing=True,
+    v31_ps_momentum_mult=1.4,
+    v31_ps_highbeta_mult=1.2,
+    v31_ps_defensive_mult=0.80,
+    v31_ps_bank_mult=0.85,
+)
+V31_D_mild = dict(
+    v31_profile_sizing=True,
+    v31_ps_momentum_mult=1.2,
+    v31_ps_highbeta_mult=1.1,
+    v31_ps_defensive_mult=0.85,
+    v31_ps_bank_mult=0.90,
+)
 
 # E: Short-hold exit filter
 V31_E_10d = dict(v31_short_hold_exit_filter=True, v31_shef_min_hold=10, v31_shef_min_pnl=-0.03)
@@ -67,9 +109,22 @@ def backtest_v31(y_pred, returns, df_test, feature_cols, **kwargs):
 
 def run_v31(symbols, patches: dict, label: str):
     """Run one V31 variant and return (metrics, trades, comp_score, label)."""
-    t = run_test_base(symbols, True, True, False, False, True, True, True, True, True, True,
-                      backtest_fn=lambda *a, **kw: backtest_v31(*a, **kw, **patches),
-                      feature_set=V29_FEATURE_SET, target_override=V29_TARGET)
+    t = run_test_base(
+        symbols,
+        True,
+        True,
+        False,
+        False,
+        True,
+        True,
+        True,
+        True,
+        True,
+        True,
+        backtest_fn=lambda *a, **kw: backtest_v31(*a, **kw, **patches),
+        feature_set=V29_FEATURE_SET,
+        target_override=V29_TARGET,
+    )
     m = calc_metrics(t)
     cs = comp_score(m, t)
     return m, t, cs, label
@@ -77,14 +132,17 @@ def run_v31(symbols, patches: dict, label: str):
 
 def fmt_row(label, m, cs, delta=None):
     d = f"  Δcomp={delta:+.0f}" if delta is not None else ""
-    return (f"  {label:<38} | {m['trades']:>5} {m['wr']:>5.1f}% "
-            f"{m['avg_pnl']:>+7.2f}% {m['total_pnl']:>+9.1f}% "
-            f"{m['pf']:>5.2f} {m['max_loss']:>+7.1f}% {m['avg_hold']:>5.1f}d | "
-            f"{cs:>6.0f}{d}")
+    return (
+        f"  {label:<38} | {m['trades']:>5} {m['wr']:>5.1f}% "
+        f"{m['avg_pnl']:>+7.2f}% {m['total_pnl']:>+9.1f}% "
+        f"{m['pf']:>5.2f} {m['max_loss']:>+7.1f}% {m['avg_hold']:>5.1f}d | "
+        f"{cs:>6.0f}{d}"
+    )
 
 
 if __name__ == "__main__":
     import argparse
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--symbols", type=str, default="")
     parser.add_argument("--phase", type=int, default=0, help="0=all, 1-4=specific phase")
@@ -107,14 +165,16 @@ if __name__ == "__main__":
     print("\nBaseline V30...")
     m_v30, t_v30, cs_v30, _ = run_v31(SYMBOLS, {}, "V30 baseline")
 
-    print(HDR); print(SEP)
+    print(HDR)
+    print(SEP)
     print(fmt_row("V30 baseline", m_v30, cs_v30))
     print(SEP)
 
     # ── Phase 1: Individual patches ──────────────────────────────────────────
     if args.phase in (0, 1):
         print("\n── PHASE 1: Individual patches ──")
-        print(HDR); print(SEP)
+        print(HDR)
+        print(SEP)
 
         p1_variants = [
             # A variants
@@ -156,7 +216,7 @@ if __name__ == "__main__":
         best_D = max((r for r in p1_results if r[0].startswith("D")), key=lambda x: x[4])
         best_E = max((r for r in p1_results if r[0].startswith("E")), key=lambda x: x[4])
 
-        print(f"\n  Phase 1 winners:")
+        print("\n  Phase 1 winners:")
         for r in [best_A, best_B, best_C, best_D, best_E]:
             print(f"    {r[0]:<38} comp={r[4]:.0f} Δ={r[5]:+.0f}")
 
@@ -170,10 +230,17 @@ if __name__ == "__main__":
         if args.phase == 2:
             # Re-run phase 1 to get winners
             p1_variants = [
-                ("A_half", V31_A_half), ("A_skip", V31_A_skip), ("A_tight", V31_A_tight),
-                ("B_5bars_ema", V31_B_5bars), ("B_7bars_ema", V31_B_7bars), ("B_10bars_ema", V31_B_10bars),
-                ("C_hap_floor-3pct", V31_C_3pct), ("C_hap_floor-5pct", V31_C_5pct),
-                ("D_profile_sizing", V31_D), ("E_shef_10d", V31_E_10d), ("E_shef_15d", V31_E_15d),
+                ("A_half", V31_A_half),
+                ("A_skip", V31_A_skip),
+                ("A_tight", V31_A_tight),
+                ("B_5bars_ema", V31_B_5bars),
+                ("B_7bars_ema", V31_B_7bars),
+                ("B_10bars_ema", V31_B_10bars),
+                ("C_hap_floor-3pct", V31_C_3pct),
+                ("C_hap_floor-5pct", V31_C_5pct),
+                ("D_profile_sizing", V31_D),
+                ("E_shef_10d", V31_E_10d),
+                ("E_shef_15d", V31_E_15d),
             ]
             p1_results = []
             for label, patches in p1_variants:
@@ -186,7 +253,8 @@ if __name__ == "__main__":
             best_E = max((r for r in p1_results if r[0].startswith("E")), key=lambda x: x[4])
             p1_winners = [r for r in [best_A, best_B, best_C, best_D, best_E] if r[4] - cs_v30 > 0]
 
-        print(HDR); print(SEP)
+        print(HDR)
+        print(SEP)
         p2_results = []
         for (la, pa, *_), (lb, pb, *_) in itertools.combinations(p1_winners, 2):
             combo_patches = {**pa, **pb}
@@ -198,7 +266,7 @@ if __name__ == "__main__":
 
         print(SEP)
         p2_results.sort(key=lambda x: x[4], reverse=True)
-        print(f"\n  Top 3 combos:")
+        print("\n  Top 3 combos:")
         for r in p2_results[:3]:
             print(f"    {r[0]:<38} comp={r[4]:.0f} Δ={r[5]:+.0f}")
 
@@ -209,11 +277,18 @@ if __name__ == "__main__":
             # Use the best from phase 1 & 2 analysis
             # Start with best single patch, try adding each other
             candidates = {
-                "A_half": V31_A_half, "A_tight": V31_A_tight, "A_skip": V31_A_skip,
-                "B_7bars": V31_B_7bars, "B_5bars": V31_B_5bars, "B_10bars": V31_B_10bars,
-                "C_3pct": V31_C_3pct, "C_5pct": V31_C_5pct,
-                "D": V31_D, "D_mild": V31_D_mild,
-                "E_10d": V31_E_10d, "E_15d": V31_E_15d,
+                "A_half": V31_A_half,
+                "A_tight": V31_A_tight,
+                "A_skip": V31_A_skip,
+                "B_7bars": V31_B_7bars,
+                "B_5bars": V31_B_5bars,
+                "B_10bars": V31_B_10bars,
+                "C_3pct": V31_C_3pct,
+                "C_5pct": V31_C_5pct,
+                "D": V31_D,
+                "D_mild": V31_D_mild,
+                "E_10d": V31_E_10d,
+                "E_15d": V31_E_15d,
             }
 
         greedy_patches = {}
@@ -221,7 +296,8 @@ if __name__ == "__main__":
         greedy_label = "V30 base"
         greedy_selected = []
 
-        print(HDR); print(SEP)
+        print(HDR)
+        print(SEP)
         max_rounds = 5
         for rnd in range(max_rounds):
             round_best = None
@@ -235,7 +311,7 @@ if __name__ == "__main__":
                     round_best = (name, patch, cs, m, t, delta)
 
             if round_best is None or round_best[5] <= 0:
-                print(f"  Round {rnd+1}: no improvement, stopping greedy.")
+                print(f"  Round {rnd + 1}: no improvement, stopping greedy.")
                 break
 
             name, patch, cs, m, t, delta = round_best
@@ -246,7 +322,9 @@ if __name__ == "__main__":
             print(f"  → Added {name} (Δcomp={delta:+.0f}). Stack: {greedy_selected}")
 
         print(SEP)
-        print(f"\n  Greedy final: {greedy_selected}  comp={greedy_cs:.0f} Δ={greedy_cs-cs_v30:+.0f}")
+        print(
+            f"\n  Greedy final: {greedy_selected}  comp={greedy_cs:.0f} Δ={greedy_cs - cs_v30:+.0f}"
+        )
 
     # ── Phase 4: Fine-tune best combo ─────────────────────────────────────────
     if args.phase in (0, 4):
@@ -256,12 +334,17 @@ if __name__ == "__main__":
         for bars in [3, 5, 7, 10, 14]:
             for cr in [0.01, 0.02, 0.03]:
                 for ema in [True, False]:
-                    label = f"B_bars{bars}_cr{int(cr*100)}{'_ema' if ema else ''}"
-                    patch = dict(v31_adaptive_defer=True, v31_ad_max_bars=bars,
-                                v31_ad_min_cum_ret=cr, v31_ad_use_ema_confirm=ema)
+                    label = f"B_bars{bars}_cr{int(cr * 100)}{'_ema' if ema else ''}"
+                    patch = dict(
+                        v31_adaptive_defer=True,
+                        v31_ad_max_bars=bars,
+                        v31_ad_min_cum_ret=cr,
+                        v31_ad_use_ema_confirm=ema,
+                    )
                     sweep_variants.append((label, patch))
 
-        print(HDR); print(SEP)
+        print(HDR)
+        print(SEP)
         ft_results = []
         for label, patch in sweep_variants:
             m, t, cs, _ = run_v31(SYMBOLS, patch, label)
@@ -271,9 +354,11 @@ if __name__ == "__main__":
 
         print(SEP)
         ft_results.sort(key=lambda x: x[4], reverse=True)
-        print(f"\n  Top 5 fine-tune:")
+        print("\n  Top 5 fine-tune:")
         for r in ft_results[:5]:
-            print(f"    {r[0]:<40} comp={r[4]:.0f} tot={r[2]['total_pnl']:+.0f}% PF={r[2]['pf']:.2f} Δ={r[5]:+.0f}")
+            print(
+                f"    {r[0]:<40} comp={r[4]:.0f} tot={r[2]['total_pnl']:+.0f}% PF={r[2]['pf']:.2f} Δ={r[5]:+.0f}"
+            )
 
     dt = time.time() - t0
     print(f"\n  Total time: {dt:.1f}s")

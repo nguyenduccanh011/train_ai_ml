@@ -2,15 +2,18 @@
 Walk-forward and time-based data splitting.
 Supports rolling window, expanding window, and simple train/test split.
 """
-import pandas as pd
-import numpy as np
-from typing import List, Tuple, Generator, Dict, Any
+
+from collections.abc import Generator
 from dataclasses import dataclass
+from typing import Any
+
+import pandas as pd
 
 
 @dataclass
 class SplitWindow:
     """A single train/test split window."""
+
     window_id: int
     train_start: pd.Timestamp
     train_end: pd.Timestamp
@@ -51,7 +54,7 @@ class WalkForwardSplitter:
         self.first_test_year = first_test_year
         self.last_test_year = last_test_year
 
-    def get_windows(self) -> List[SplitWindow]:
+    def get_windows(self) -> list[SplitWindow]:
         """Generate all walk-forward windows."""
         windows = []
         window_id = 0
@@ -67,25 +70,22 @@ class WalkForwardSplitter:
                 )
             else:
                 # Rolling: fixed window size
-                train_start = pd.Timestamp(
-                    f"{test_year - self.train_years}-01-01", tz="UTC"
-                )
+                train_start = pd.Timestamp(f"{test_year - self.train_years}-01-01", tz="UTC")
 
             train_end = test_start - pd.Timedelta(days=self.gap_days + 1)
 
-            label = (
-                f"train_{train_start.year}-{train_end.year}"
-                f"_test_{test_year}"
-            )
+            label = f"train_{train_start.year}-{train_end.year}_test_{test_year}"
 
-            windows.append(SplitWindow(
-                window_id=window_id,
-                train_start=train_start,
-                train_end=train_end,
-                test_start=test_start,
-                test_end=test_end,
-                label=label,
-            ))
+            windows.append(
+                SplitWindow(
+                    window_id=window_id,
+                    train_start=train_start,
+                    train_end=train_end,
+                    test_start=test_start,
+                    test_end=test_end,
+                    label=label,
+                )
+            )
             window_id += 1
 
         return windows
@@ -94,7 +94,7 @@ class WalkForwardSplitter:
         self,
         df: pd.DataFrame,
         time_col: str = "timestamp",
-    ) -> Generator[Tuple[SplitWindow, pd.DataFrame, pd.DataFrame], None, None]:
+    ) -> Generator[tuple[SplitWindow, pd.DataFrame, pd.DataFrame], None, None]:
         """
         Yield (window, train_df, test_df) for each walk-forward window.
 
@@ -105,14 +105,8 @@ class WalkForwardSplitter:
         windows = self.get_windows()
 
         for window in windows:
-            train_mask = (
-                (df[time_col] >= window.train_start)
-                & (df[time_col] <= window.train_end)
-            )
-            test_mask = (
-                (df[time_col] >= window.test_start)
-                & (df[time_col] <= window.test_end)
-            )
+            train_mask = (df[time_col] >= window.train_start) & (df[time_col] <= window.train_end)
+            test_mask = (df[time_col] >= window.test_start) & (df[time_col] <= window.test_end)
 
             train_df = df[train_mask].copy()
             test_df = df[test_mask].copy()
@@ -131,7 +125,7 @@ class WalkForwardSplitter:
         return "\n".join(lines)
 
     @classmethod
-    def from_config(cls, config: Dict[str, Any]) -> "WalkForwardSplitter":
+    def from_config(cls, config: dict[str, Any]) -> "WalkForwardSplitter":
         """Create splitter from config dict."""
         split_cfg = config.get("split", config)
         return cls(

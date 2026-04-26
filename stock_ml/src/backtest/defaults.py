@@ -1,33 +1,42 @@
 import os as _os
+
 import yaml as _yaml
 
 
 def _load_symbol_configs():
     """Load symbol classification configs from models.yaml. Fallback to hardcoded values."""
     try:
-        config_path = _os.path.join(
-            _os.path.dirname(__file__), '..', '..', 'config', 'models.yaml'
-        )
-        with open(config_path, 'r', encoding='utf-8') as f:
+        config_path = _os.path.join(_os.path.dirname(__file__), "..", "..", "config", "models.yaml")
+        with open(config_path, encoding="utf-8") as f:
             cfg = _yaml.safe_load(f)
 
         profiles = {}
-        for profile_name, syms in cfg.get('symbol_profiles', {}).items():
-            for sym in (syms or []):
+        for profile_name, syms in cfg.get("symbol_profiles", {}).items():
+            for sym in syms or []:
                 profiles[str(sym)] = profile_name
 
-        rule_priority = set(str(s) for s in cfg.get('rule_priority_symbols', []))
-        score5_risky = set(str(s) for s in cfg.get('score5_risky_symbols', []))
+        rule_priority = set(str(s) for s in cfg.get("rule_priority_symbols", []))
+        score5_risky = set(str(s) for s in cfg.get("score5_risky_symbols", []))
         return profiles, rule_priority, score5_risky
     except Exception:
         return _FALLBACK_SYMBOL_PROFILES, _FALLBACK_RULE_PRIORITY, _FALLBACK_SCORE5_RISKY
 
 
 _FALLBACK_SYMBOL_PROFILES = {
-    "ACB": "bank", "BID": "bank", "MBB": "bank", "TCB": "bank",
-    "AAV": "high_beta", "AAS": "high_beta", "SSI": "high_beta", "VND": "high_beta",
-    "DGC": "momentum", "HPG": "momentum", "VIC": "momentum",
-    "FPT": "defensive", "REE": "defensive", "VNM": "defensive",
+    "ACB": "bank",
+    "BID": "bank",
+    "MBB": "bank",
+    "TCB": "bank",
+    "AAV": "high_beta",
+    "AAS": "high_beta",
+    "SSI": "high_beta",
+    "VND": "high_beta",
+    "DGC": "momentum",
+    "HPG": "momentum",
+    "VIC": "momentum",
+    "FPT": "defensive",
+    "REE": "defensive",
+    "VNM": "defensive",
 }
 _FALLBACK_RULE_PRIORITY = {"AAA", "SSN", "TEG", "GAS", "PLX", "IJC", "DQC"}
 _FALLBACK_SCORE5_RISKY = {"AAA", "IJC", "ITC", "VHM", "TEG", "QBS", "KMR", "SSN", "PLX"}
@@ -36,15 +45,25 @@ SYMBOL_PROFILES, RULE_PRIORITY_SYMBOLS, SCORE5_RISKY_SYMBOLS = _load_symbol_conf
 
 
 FEATURE_NAMES = [
-    "rsi_slope_5d", "vol_surge_ratio", "range_position_20d",
-    "dist_to_resistance", "breakout_setup_score", "bb_width_percentile",
-    "higher_lows_count", "obv_price_divergence",
+    "rsi_slope_5d",
+    "vol_surge_ratio",
+    "range_position_20d",
+    "dist_to_resistance",
+    "breakout_setup_score",
+    "bb_width_percentile",
+    "higher_lows_count",
+    "obv_price_divergence",
 ]
 
 FEATURE_DEFAULTS = {
-    "rsi_slope_5d": 0, "vol_surge_ratio": 1.0, "range_position_20d": 0.5,
-    "dist_to_resistance": 0.05, "breakout_setup_score": 0, "bb_width_percentile": 0.5,
-    "higher_lows_count": 0, "obv_price_divergence": 0,
+    "rsi_slope_5d": 0,
+    "vol_surge_ratio": 1.0,
+    "range_position_20d": 0.5,
+    "dist_to_resistance": 0.05,
+    "breakout_setup_score": 0,
+    "bb_width_percentile": 0.5,
+    "higher_lows_count": 0,
+    "obv_price_divergence": 0,
 }
 
 DEFAULT_PARAMS = {
@@ -54,9 +73,16 @@ DEFAULT_PARAMS = {
     "record_trades": True,
     "model_b_min_hold": 3,
     # Mods
-    "mod_a": True, "mod_b": True, "mod_c": False, "mod_d": False,
-    "mod_e": True, "mod_f": True, "mod_g": True, "mod_h": True,
-    "mod_i": True, "mod_j": True,
+    "mod_a": True,
+    "mod_b": True,
+    "mod_c": False,
+    "mod_d": False,
+    "mod_e": True,
+    "mod_f": True,
+    "mod_g": True,
+    "mod_h": True,
+    "mod_i": True,
+    "mod_j": True,
     # V23 tunable params
     "fast_exit_strong": -0.08,
     "fast_exit_moderate": -0.06,
@@ -152,58 +178,47 @@ DEFAULT_PARAMS = {
     "v29_hardcap_after_peak": False,
     "v29_hardcap_after_peak_trigger": 0.15,
     "v29_hardcap_after_peak_floor": -0.03,
-
     # ── V30 patch flags ──────────────────────────────────────────────────────
     # A1: Peak-proximity entry filter — block entry when price ≤2% from 20d high AND rally10d > thresh
     "v30_peak_proximity_filter": False,
-    "v30_peak_prox_dist_threshold": -0.02,   # dist_from_peak_20 >= this means near peak
-    "v30_peak_prox_rally10_min": 0.08,        # rally_10d threshold to trigger block
-
+    "v30_peak_prox_dist_threshold": -0.02,  # dist_from_peak_20 >= this means near peak
+    "v30_peak_prox_rally10_min": 0.08,  # rally_10d threshold to trigger block
     # A2: Rally-extension entry filter — block entry when ret_10d or ret_20d too hot
     "v30_rally_extension_filter": False,
-    "v30_rally10_hard_block": 0.12,          # ret_10d > this => block unconditionally
-    "v30_rally20_hard_block": 0.18,          # ret_20d > this => block unconditionally
-
+    "v30_rally10_hard_block": 0.12,  # ret_10d > this => block unconditionally
+    "v30_rally20_hard_block": 0.18,  # ret_20d > this => block unconditionally
     # A3: Pullback-only entry — only allow entry when price has pulled back ≥ thresh from 5d high
     "v30_pullback_only_entry": False,
-    "v30_pullback_min_pct": 0.03,            # require close to be ≥ 3% below recent 5d high
-
+    "v30_pullback_min_pct": 0.03,  # require close to be ≥ 3% below recent 5d high
     # A4: Rally-aware position scaling — reduce size when entry is extended
     "v30_rally_position_scaling": False,
-    "v30_rps_tier1_rally": 0.05,             # rally_10d above this → scale to 0.75
-    "v30_rps_tier2_rally": 0.10,             # rally_10d above this → skip (block)
-
+    "v30_rps_tier1_rally": 0.05,  # rally_10d above this → scale to 0.75
+    "v30_rps_tier2_rally": 0.10,  # rally_10d above this → skip (block)
     # B1: Signal-exit defer — when signal exit fires, hold extra N days if still in uptrend
     "v30_signal_exit_defer": False,
-    "v30_sed_defer_bars": 3,                  # bars to defer
-    "v30_sed_min_cum_ret": 0.03,             # only defer when in profit
-
+    "v30_sed_defer_bars": 3,  # bars to defer
+    "v30_sed_min_cum_ret": 0.03,  # only defer when in profit
     # B2: Momentum-hold override — suppress signal exit when momentum still healthy
     "v30_momentum_hold_override": False,
-    "v30_mho_min_profit": 0.05,             # only apply when trade already up 5%
-    "v30_mho_rsi_max": 72,                  # only apply when RSI below this (not overbought)
-
+    "v30_mho_min_profit": 0.05,  # only apply when trade already up 5%
+    "v30_mho_rsi_max": 72,  # only apply when RSI below this (not overbought)
     # B3: Chandelier trailing — ATR×k from max_high when profit >= trigger
     "v30_chandelier_trail": False,
     "v30_chand_atr_mult": 3.0,
     "v30_chand_profit_trigger": 0.05,
-
     # C1: ATR-aware hard cap — replace fixed floor with ATR-based cap
     "v30_atr_aware_hardcap": False,
-    "v30_atr_hc_mult": 1.5,                 # cap = atr_mult × atr_ratio (min 0.08, max 0.20)
+    "v30_atr_hc_mult": 1.5,  # cap = atr_mult × atr_ratio (min 0.08, max 0.20)
     "v30_atr_hc_floor": 0.08,
     "v30_atr_hc_ceiling": 0.20,
-
     # C2: Two-step hard cap — partial exit at step1, full at step2
     "v30_hardcap_two_step_v2": False,
-    "v30_hc2_step1_loss": -0.04,            # at this loss, halve position
-    "v30_hc2_step2_loss": -0.08,            # at this loss, full exit
-
+    "v30_hc2_step1_loss": -0.04,  # at this loss, halve position
+    "v30_hc2_step2_loss": -0.08,  # at this loss, full exit
     # C3: Regime-aware hard cap — tighter in choppy, wider in trending
     "v30_regime_aware_hardcap": False,
     "v30_rah_choppy_cap": -0.05,
     "v30_rah_trending_cap": -0.12,
-
     # === V35 flags (loosen entry filters for V-shape recoveries) ===
     # V35b: Relaxed cooldown — only N bar after big loss instead of 3-5
     "v35_relax_cooldown": False,

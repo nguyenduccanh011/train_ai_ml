@@ -1,21 +1,22 @@
 """
 Shared experiment runners for version comparison scripts.
 """
+
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
-
 from compare_rule_vs_model import backtest_rule
+
+import src.data.target as target_module
+import src.features.engine as feature_engine_module
 from src.cache.feature_cache import FeatureCacheManager
 from src.config_loader import get_training_device, load_config
 from src.data.loader import DataLoader
 from src.data.splitter import WalkForwardSplitter
 from src.data.target import TargetGenerator
 from src.env import get_results_dir, resolve_data_dir
-import src.data.target as target_module
 from src.features.engine import FeatureEngine
-import src.features.engine as feature_engine_module
 from src.models.registry import build_model, detect_device
 from src.signal_adapter import canonicalize_predictions
 
@@ -125,10 +126,7 @@ def run_test(
             target_config=config.get("target", {}),
             code_paths=code_paths,
         )
-        print(
-            f"    Feature cache: STORED ({feature_set}) "
-            f"key={saved_key[:8]} format={saved_fmt}"
-        )
+        print(f"    Feature cache: STORED ({feature_set}) key={saved_key[:8]} format={saved_fmt}")
     else:
         print(f"    Feature cache: HIT ({feature_set}) key={cache_key[:8]}")
 

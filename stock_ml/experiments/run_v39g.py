@@ -12,11 +12,13 @@ V39g = V37a + rule_confirm_exit chi khi max_profit_pct >= 150%
   - Chi giu lai cac trade da chung to tiem nang lon (max_profit >= 150%)
   - Ket hop V39b HAP reform de tranh cat dau song
 """
-import os, sys
+
+import os
+import sys
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from experiments.run_v37a import backtest_v37a
-
 
 V39G_FLAGS = dict(
     v39b_hap_trigger=0.08,

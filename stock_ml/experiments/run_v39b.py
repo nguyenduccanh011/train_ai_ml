@@ -9,11 +9,13 @@ V39b = V37a engine + HAP trigger 8% + HAP chi active sau 15 ngay hold.
   - v39b_hap_min_hold=15: HAP khong active trong 15 ngay dau (tranh cat song moi bat dau)
   - Giu v32_hap_pre_floor=-0.07 de van co bao ve khi da co big profit
 """
-import os, sys
+
+import os
+import sys
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from experiments.run_v37a import backtest_v37a
-
 
 V39B_FLAGS = dict(
     v39b_hap_trigger=0.08,

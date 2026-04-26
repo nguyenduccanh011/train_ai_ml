@@ -2,11 +2,10 @@
 Data loader for VN stock dataset.
 Loads OHLCV data from Hive-partitioned parquet/csv structure.
 """
-import os
-import pandas as pd
-import numpy as np
+
 from pathlib import Path
-from typing import List, Optional, Dict
+
+import pandas as pd
 from tqdm import tqdm
 
 
@@ -18,11 +17,11 @@ class DataLoader:
         self.all_symbols_dir = self.data_dir / "all_symbols"
         self.context_dir = self.data_dir / "context_features"
         self.timeframe = timeframe
-        self._symbols_cache: Optional[List[str]] = None
-        self._data_cache: Dict[str, pd.DataFrame] = {}
+        self._symbols_cache: list[str] | None = None
+        self._data_cache: dict[str, pd.DataFrame] = {}
 
     @property
-    def symbols(self) -> List[str]:
+    def symbols(self) -> list[str]:
         """Get list of available symbols."""
         if self._symbols_cache is None:
             symbols_file = self.data_dir / "clean_symbols.txt"
@@ -30,11 +29,13 @@ class DataLoader:
                 self._symbols_cache = symbols_file.read_text().strip().split("\n")
             else:
                 # Discover from directory
-                self._symbols_cache = sorted([
-                    d.name.replace("symbol=", "")
-                    for d in self.all_symbols_dir.iterdir()
-                    if d.is_dir() and d.name.startswith("symbol=")
-                ])
+                self._symbols_cache = sorted(
+                    [
+                        d.name.replace("symbol=", "")
+                        for d in self.all_symbols_dir.iterdir()
+                        if d.is_dir() and d.name.startswith("symbol=")
+                    ]
+                )
         return self._symbols_cache
 
     def load_symbol(self, symbol: str, use_cache: bool = True) -> pd.DataFrame:
@@ -43,10 +44,7 @@ class DataLoader:
             return self._data_cache[symbol].copy()
 
         csv_path = (
-            self.all_symbols_dir
-            / f"symbol={symbol}"
-            / f"timeframe={self.timeframe}"
-            / "data.csv"
+            self.all_symbols_dir / f"symbol={symbol}" / f"timeframe={self.timeframe}" / "data.csv"
         )
 
         if not csv_path.exists():
@@ -63,7 +61,7 @@ class DataLoader:
 
     def load_all(
         self,
-        symbols: Optional[List[str]] = None,
+        symbols: list[str] | None = None,
         show_progress: bool = True,
     ) -> pd.DataFrame:
         """Load data for multiple symbols, concatenated into one DataFrame."""
@@ -101,7 +99,7 @@ class DataLoader:
         df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True)
         return df
 
-    def load_all_context(self) -> Dict[str, pd.DataFrame]:
+    def load_all_context(self) -> dict[str, pd.DataFrame]:
         """Load all context features (indices + futures)."""
         result = {}
         for d in self.context_dir.iterdir():
@@ -129,8 +127,8 @@ class DataLoader:
             "data_dir": str(self.data_dir),
             "timeframe": self.timeframe,
             "context_symbols": [
-                d.name.replace("symbol=", "")
-                for d in self.context_dir.iterdir()
-                if d.is_dir()
-            ] if self.context_dir.exists() else [],
+                d.name.replace("symbol=", "") for d in self.context_dir.iterdir() if d.is_dir()
+            ]
+            if self.context_dir.exists()
+            else [],
         }

@@ -5,24 +5,31 @@ These implementations are kept verbatim (logic unchanged) from the original
 run_v*_compare.py files. They exist here as importable baselines for comparison
 with newer strategies that use backtest_unified.
 """
+
 import numpy as np
 import pandas as pd
-from collections import defaultdict
 
 
-def backtest_v17(y_pred, returns, df_test, feature_cols,
-                 initial_capital=100_000_000, commission=0.0015, tax=0.001,
-                 record_trades=True,
-                 mod_a=True,    # V-shape entry
-                 mod_b=True,    # Profit-peak protection
-                 mod_c=False,   # Fast loss cut (disabled)
-                 mod_d=False,   # Adaptive exit confirm (disabled)
-                 mod_e=True,    # Secondary breakout
-                 mod_f=True,    # BO Quality Filter
-                 mod_g=True,    # Bear Regime Defense
-                 mod_h=True,    # Confirmed signal exit
-                 mod_i=True,    # Trend-carry override
-                 mod_j=True):   # Anti-chop entry filter
+def backtest_v17(
+    y_pred,
+    returns,
+    df_test,
+    feature_cols,
+    initial_capital=100_000_000,
+    commission=0.0015,
+    tax=0.001,
+    record_trades=True,
+    mod_a=True,  # V-shape entry
+    mod_b=True,  # Profit-peak protection
+    mod_c=False,  # Fast loss cut (disabled)
+    mod_d=False,  # Adaptive exit confirm (disabled)
+    mod_e=True,  # Secondary breakout
+    mod_f=True,  # BO Quality Filter
+    mod_g=True,  # Bear Regime Defense
+    mod_h=True,  # Confirmed signal exit
+    mod_i=True,  # Trend-carry override
+    mod_j=True,
+):  # Anti-chop entry filter
     """V17: V16 + H (confirmed signal exit) + I (trend carry) + J (anti-chop entry)."""
     n = len(y_pred)
     equity = np.zeros(n)
@@ -56,12 +63,26 @@ def backtest_v17(y_pred, returns, df_test, feature_cols,
     last_exit_bar = -999
     entry_close = 0
 
-    feat_names = ["rsi_slope_5d", "vol_surge_ratio", "range_position_20d",
-                  "dist_to_resistance", "breakout_setup_score", "bb_width_percentile",
-                  "higher_lows_count", "obv_price_divergence"]
-    defaults = {"rsi_slope_5d": 0, "vol_surge_ratio": 1.0, "range_position_20d": 0.5,
-                "dist_to_resistance": 0.05, "breakout_setup_score": 0, "bb_width_percentile": 0.5,
-                "higher_lows_count": 0, "obv_price_divergence": 0}
+    feat_names = [
+        "rsi_slope_5d",
+        "vol_surge_ratio",
+        "range_position_20d",
+        "dist_to_resistance",
+        "breakout_setup_score",
+        "bb_width_percentile",
+        "higher_lows_count",
+        "obv_price_divergence",
+    ]
+    defaults = {
+        "rsi_slope_5d": 0,
+        "vol_surge_ratio": 1.0,
+        "range_position_20d": 0.5,
+        "dist_to_resistance": 0.05,
+        "breakout_setup_score": 0,
+        "bb_width_percentile": 0.5,
+        "higher_lows_count": 0,
+        "obv_price_divergence": 0,
+    }
     feat_arrays = {}
     for fn in feat_names:
         if fn in df_test.columns:
@@ -124,7 +145,7 @@ def backtest_v17(y_pred, returns, df_test, feature_cols,
             start = i - bars + 1
             if start < 0:
                 continue
-            band = np.max(high[start:i + 1]) - np.min(low[start:i + 1])
+            band = np.max(high[start : i + 1]) - np.min(low[start : i + 1])
             ref = close[i] if close[i] > 0 else 1.0
             if band / ref < 0.05:
                 stabilized_sideways[i] = True
@@ -132,8 +153,8 @@ def backtest_v17(y_pred, returns, df_test, feature_cols,
 
     consolidation_breakout = np.zeros(n, dtype=bool)
     for i in range(10, n):
-        prev_high = np.max(high[i - 10:i])
-        prev_low = np.min(low[i - 10:i])
+        prev_high = np.max(high[i - 10 : i])
+        prev_low = np.min(low[i - 10 : i])
         ref = close[i - 1] if close[i - 1] > 0 else close[i]
         tight_range = ((prev_high - prev_low) / ref) < 0.08 if ref > 0 else False
         vol_ok = volume[i] > 1.2 * avg_vol20[i] if not np.isnan(avg_vol20[i]) else False
@@ -144,18 +165,21 @@ def backtest_v17(y_pred, returns, df_test, feature_cols,
     secondary_breakout = np.zeros(n, dtype=bool)
     if mod_e:
         for i in range(10, n):
-            prev_high = np.max(high[i - 10:i])
-            prev_low = np.min(low[i - 10:i])
+            prev_high = np.max(high[i - 10 : i])
+            prev_low = np.min(low[i - 10 : i])
             ref = close[i - 1] if close[i - 1] > 0 else close[i]
             # Looser: range up to 10%
             tight_range = ((prev_high - prev_low) / ref) < 0.10 if ref > 0 else False
-            uptrend_macro = (not np.isnan(sma20[i]) and not np.isnan(sma50[i])
-                             and sma20[i] > sma50[i])
+            uptrend_macro = (
+                not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and sma20[i] > sma50[i]
+            )
             # Lower volume bar if uptrend confirmed
             vol_threshold = 1.1 if uptrend_macro else 1.2
-            vol_ok = volume[i] > vol_threshold * avg_vol20[i] if not np.isnan(avg_vol20[i]) else False
+            vol_ok = (
+                volume[i] > vol_threshold * avg_vol20[i] if not np.isnan(avg_vol20[i]) else False
+            )
             # Use max_high_5d instead of prev_high (10d)
-            max_high_5d = np.max(high[max(0, i - 5):i])
+            max_high_5d = np.max(high[max(0, i - 5) : i])
             breakout_5d = close[i] > max_high_5d
             if tight_range and breakout_5d and vol_ok and uptrend_macro:
                 secondary_breakout[i] = True
@@ -178,7 +202,9 @@ def backtest_v17(y_pred, returns, df_test, feature_cols,
         bullish = close[i] > opn[i] + rng * 0.5 and close[i] > close[i - 1]
         if not bullish:
             continue
-        oversold = (not np.isnan(rsi14[i - 1]) and rsi14[i - 1] < 35) or drop_from_peak_20[i] <= -0.18
+        oversold = (not np.isnan(rsi14[i - 1]) and rsi14[i - 1] < 35) or drop_from_peak_20[
+            i
+        ] <= -0.18
         if not oversold:
             continue
         if np.isnan(avg_vol20[i]) or volume[i] < 1.3 * avg_vol20[i]:
@@ -196,7 +222,11 @@ def backtest_v17(y_pred, returns, df_test, feature_cols,
     rolling_high_250 = pd.Series(close).rolling(250, min_periods=20).max().values
     dist_from_52w_high = np.where(rolling_high_250 > 0, (close / rolling_high_250), 1.0)
 
-    date_col = "date" if "date" in df_test.columns else ("timestamp" if "timestamp" in df_test.columns else None)
+    date_col = (
+        "date"
+        if "date" in df_test.columns
+        else ("timestamp" if "timestamp" in df_test.columns else None)
+    )
     dates = df_test[date_col].values if date_col else np.arange(n)
     symbols = df_test["symbol"].values if "symbol" in df_test.columns else ["?"] * n
 
@@ -255,10 +285,13 @@ def backtest_v17(y_pred, returns, df_test, feature_cols,
 
         if new_position == 0 and position == 0 and last_exit_reason == "trailing_stop":
             bars_since_exit = i - last_exit_bar
-            if (bars_since_exit <= QUICK_REENTRY_WINDOW and
-                trend in ("strong", "moderate") and
-                macd_line[i] > 0 and
-                not np.isnan(sma20[i]) and close[i] > sma20[i]):
+            if (
+                bars_since_exit <= QUICK_REENTRY_WINDOW
+                and trend in ("strong", "moderate")
+                and macd_line[i] > 0
+                and not np.isnan(sma20[i])
+                and close[i] > sma20[i]
+            ):
                 new_position = 1
                 quick_reentry = True
 
@@ -266,14 +299,20 @@ def backtest_v17(y_pred, returns, df_test, feature_cols,
         if mod_f:
             macd_pos = macd_hist[i] > 0
             bullish = close[i] > opn[i]
-            heavy_vol = (not np.isnan(avg_vol20[i]) and volume[i] > 1.5 * avg_vol20[i])
+            heavy_vol = not np.isnan(avg_vol20[i]) and volume[i] > 1.5 * avg_vol20[i]
             bo_quality_ok = macd_pos and bullish and heavy_vol
 
         if new_position == 0 and position == 0 and consolidation_breakout[i] and bo_quality_ok:
             new_position = 1
             breakout_entry = True
 
-        if mod_e and new_position == 0 and position == 0 and secondary_breakout[i] and bo_quality_ok:
+        if (
+            mod_e
+            and new_position == 0
+            and position == 0
+            and secondary_breakout[i]
+            and bo_quality_ok
+        ):
             new_position = 1
             breakout_entry = True
             n_secondary_breakout += 1
@@ -294,11 +333,15 @@ def backtest_v17(y_pred, returns, df_test, feature_cols,
                 if price_diff < 0.03:
                     new_position = 0
 
-        if new_position == 1 and position == 0 and not quick_reentry and not breakout_entry and not vshape_entry:
+        if (
+            new_position == 1
+            and position == 0
+            and not quick_reentry
+            and not breakout_entry
+            and not vshape_entry
+        ):
             prev_pred = int(y_pred[i - 2]) if i >= 2 else 0
-            if bs >= 4 and vs > 1.2:
-                pass
-            elif trend == "strong" and rs > 0:
+            if bs >= 4 and vs > 1.2 or trend == "strong" and rs > 0:
                 pass
             elif prev_pred != 1:
                 new_position = 0
@@ -311,19 +354,24 @@ def backtest_v17(y_pred, returns, df_test, feature_cols,
 
         if new_position == 1 and position == 0 and not quick_reentry and not vshape_entry:
             entry_score = sum([wp < 0.75, dp > 0.02, rs > 0, vs > 1.1, hl >= 2])
-            near_sma_support = (not np.isnan(sma20[i]) and
-                               close[i] <= sma20[i] * 1.02 and
-                               close[i] >= sma20[i] * 0.97)
-            near_local_low = (not np.isnan(local_low_20[i]) and
-                             close[i] <= local_low_20[i] * 1.05)
-            in_uptrend_macro = (not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and
-                               sma20[i] > sma50[i])
+            near_sma_support = (
+                not np.isnan(sma20[i])
+                and close[i] <= sma20[i] * 1.02
+                and close[i] >= sma20[i] * 0.97
+            )
+            near_local_low = not np.isnan(local_low_20[i]) and close[i] <= local_low_20[i] * 1.05
+            in_uptrend_macro = (
+                not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and sma20[i] > sma50[i]
+            )
 
             if trend == "strong":
                 min_score = 1
-            elif (near_sma_support or near_local_low) and in_uptrend_macro:
-                min_score = 2
-            elif in_uptrend_macro and rs > 0:
+            elif (
+                (near_sma_support or near_local_low)
+                and in_uptrend_macro
+                or in_uptrend_macro
+                and rs > 0
+            ):
                 min_score = 2
             else:
                 min_score = 3
@@ -332,7 +380,13 @@ def backtest_v17(y_pred, returns, df_test, feature_cols,
                 new_position = 0
             if wp > 0.9 and rs <= 0 and bs < 2 and trend != "strong" and not breakout_entry:
                 new_position = 0
-            if bb > 0.85 and bs < 2 and entry_score < 4 and trend != "strong" and not breakout_entry:
+            if (
+                bb > 0.85
+                and bs < 2
+                and entry_score < 4
+                and trend != "strong"
+                and not breakout_entry
+            ):
                 new_position = 0
             if new_position == 1:
                 if wp > 0.78 and bb < 0.35 and trend == "weak" and not breakout_entry:
@@ -355,17 +409,27 @@ def backtest_v17(y_pred, returns, df_test, feature_cols,
                 new_position = 0
 
         if mod_g and new_position == 1 and position == 0 and not vshape_entry:
-            sma20_below_50 = (not np.isnan(sma20[i]) and not np.isnan(sma50[i])
-                              and sma20[i] < sma50[i])
-            close_below_50 = (not np.isnan(sma50[i]) and close[i] < sma50[i])
+            sma20_below_50 = (
+                not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and sma20[i] < sma50[i]
+            )
+            close_below_50 = not np.isnan(sma50[i]) and close[i] < sma50[i]
             deep_60d_loss = ret_60d[i] < -0.10
             if sma20_below_50 and close_below_50 and deep_60d_loss:
                 new_position = 0
                 n_bear_blocked += 1
 
-        if mod_j and new_position == 1 and position == 0 and not vshape_entry and not breakout_entry:
-            ma_flat = (not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and
-                       abs(sma20[i] / sma50[i] - 1) < 0.02)
+        if (
+            mod_j
+            and new_position == 1
+            and position == 0
+            and not vshape_entry
+            and not breakout_entry
+        ):
+            ma_flat = (
+                not np.isnan(sma20[i])
+                and not np.isnan(sma50[i])
+                and abs(sma20[i] / sma50[i] - 1) < 0.02
+            )
             weak_momo = abs(ret_20d[i]) < 0.06
             narrow_vol = bb < 0.45
             weak_trend = trend == "weak"
@@ -400,7 +464,9 @@ def backtest_v17(y_pred, returns, df_test, feature_cols,
             if close[i] > max_price_in_trade:
                 max_price_in_trade = close[i]
             cum_ret = (projected - entry_equity) / entry_equity if entry_equity > 0 else 0
-            max_profit = (max_equity_in_trade - entry_equity) / entry_equity if entry_equity > 0 else 0
+            max_profit = (
+                (max_equity_in_trade - entry_equity) / entry_equity if entry_equity > 0 else 0
+            )
             price_max_profit = (max_price_in_trade / entry_close - 1) if entry_close > 0 else 0
             price_cur_ret = (close[i] / entry_close - 1) if entry_close > 0 else 0
 
@@ -421,15 +487,20 @@ def backtest_v17(y_pred, returns, df_test, feature_cols,
                 new_position = 0
                 exit_reason = "stop_loss"
 
-            elif (mod_c and hold_days < 5 and cum_ret < -0.03
-                  and macd_hist[i] < 0 and close[i] < opn[i]):
+            elif (
+                mod_c
+                and hold_days < 5
+                and cum_ret < -0.03
+                and macd_hist[i] < 0
+                and close[i] < opn[i]
+            ):
                 new_position = 0
                 exit_reason = "fast_loss_cut"
                 n_fast_loss_cut += 1
 
             elif mod_b and price_max_profit >= 0.20:
-                price_below_sma10 = (not np.isnan(sma10[i]) and close[i] < sma10[i])
-                heavy_vol = (not np.isnan(avg_vol20[i]) and volume[i] > 1.5 * avg_vol20[i])
+                price_below_sma10 = not np.isnan(sma10[i]) and close[i] < sma10[i]
+                heavy_vol = not np.isnan(avg_vol20[i]) and volume[i] > 1.5 * avg_vol20[i]
                 bearish_candle = close[i] < opn[i]
                 if price_below_sma10 and heavy_vol and bearish_candle:
                     new_position = 0
@@ -450,10 +521,12 @@ def backtest_v17(y_pred, returns, df_test, feature_cols,
                 macd_bearish = macd_hist[i] < 0 and macd_hist[i - 1] >= 0 if i > 0 else False
                 price_below_ma20 = close[i] < sma20[i] if not np.isnan(sma20[i]) else False
 
-                if macd_bearish and price_below_ma20:
-                    new_position = 0
-                    exit_reason = "hybrid_exit"
-                elif price_below_ma20 and cum_ret < max_profit * 0.5:
+                if (
+                    macd_bearish
+                    and price_below_ma20
+                    or price_below_ma20
+                    and cum_ret < max_profit * 0.5
+                ):
                     new_position = 0
                     exit_reason = "hybrid_exit"
                 else:
@@ -490,16 +563,26 @@ def backtest_v17(y_pred, returns, df_test, feature_cols,
                     new_position = 0
                     exit_reason = "zombie_exit"
 
-            if new_position == 0 and exit_reason not in (
-                    "stop_loss", "hard_stop", "hybrid_exit", "peak_protect_dist",
-                    "peak_protect_ema", "fast_loss_cut") and hold_days < MIN_HOLD:
+            if (
+                new_position == 0
+                and exit_reason
+                not in (
+                    "stop_loss",
+                    "hard_stop",
+                    "hybrid_exit",
+                    "peak_protect_dist",
+                    "peak_protect_ema",
+                    "fast_loss_cut",
+                )
+                and hold_days < MIN_HOLD
+            ):
                 if cum_ret > -atr_stop:
                     new_position = 1
 
             if new_position == 0 and exit_reason == "signal":
                 if mod_h:
-                    below_ma20 = (not np.isnan(sma20[i]) and close[i] < sma20[i])
-                    below_ma50 = (not np.isnan(sma50[i]) and close[i] < sma50[i])
+                    below_ma20 = not np.isnan(sma20[i]) and close[i] < sma20[i]
+                    below_ma50 = not np.isnan(sma50[i]) and close[i] < sma50[i]
                     bearish_confirm = (below_ma20 and macd_hist[i] < 0) or below_ma50
                     if not bearish_confirm:
                         new_position = 1
@@ -507,9 +590,7 @@ def backtest_v17(y_pred, returns, df_test, feature_cols,
 
             if new_position == 0 and exit_reason == "signal":
                 if mod_d:
-                    if cum_ret < 0:
-                        confirm_bars = 1
-                    elif max_profit > 0 and cum_ret < max_profit * 0.6:
+                    if cum_ret < 0 or max_profit > 0 and cum_ret < max_profit * 0.6:
                         confirm_bars = 1
                     else:
                         confirm_bars = EXIT_CONFIRM
@@ -529,9 +610,15 @@ def backtest_v17(y_pred, returns, df_test, feature_cols,
                     new_position = 1
 
             if mod_i and new_position == 0 and exit_reason == "signal":
-                still_supported = (not np.isnan(sma20[i]) and close[i] >= sma20[i] * 0.99)
+                still_supported = not np.isnan(sma20[i]) and close[i] >= sma20[i] * 0.99
                 trend_ok = trend in ("strong", "moderate")
-                if cum_ret > 0.03 and max_profit > 0.06 and trend_ok and still_supported and macd_hist[i] > -0.02:
+                if (
+                    cum_ret > 0.03
+                    and max_profit > 0.06
+                    and trend_ok
+                    and still_supported
+                    and macd_hist[i] > -0.02
+                ):
                     new_position = 1
                     n_trend_carry_saved += 1
 
@@ -553,9 +640,14 @@ def backtest_v17(y_pred, returns, df_test, feature_cols,
                 entry_close = close[i]
                 max_price_in_trade = close[i]
                 entry_features = {
-                    "entry_wp": wp, "entry_dp": dp, "entry_rs": rs,
-                    "entry_vs": vs, "entry_bs": bs, "entry_hl": hl,
-                    "entry_od": od, "entry_bb": bb,
+                    "entry_wp": wp,
+                    "entry_dp": dp,
+                    "entry_rs": rs,
+                    "entry_vs": vs,
+                    "entry_bs": bs,
+                    "entry_hl": hl,
+                    "entry_od": od,
+                    "entry_bb": bb,
                     "entry_score": sum([wp < 0.75, dp > 0.02, rs > 0, vs > 1.1, hl >= 2]),
                     "entry_date": str(dates[i])[:10],
                     "entry_symbol": str(symbols[i]),
@@ -582,16 +674,23 @@ def backtest_v17(y_pred, returns, df_test, feature_cols,
 
                 if record_trades and entry_equity > 0:
                     pnl_pct = (close[i] / entry_close - 1) * 100 if entry_close > 0 else 0
-                    max_pnl_pct = (max_equity_in_trade - entry_equity) / entry_equity * 100 if entry_equity > 0 else 0
-                    trades.append({
-                        "entry_day": current_entry_day, "exit_day": i,
-                        "holding_days": i - current_entry_day,
-                        "pnl_pct": round(pnl_pct, 2),
-                        "max_profit_pct": round(max_pnl_pct, 2),
-                        "exit_reason": exit_reason,
-                        "exit_date": str(dates[i])[:10],
-                        **entry_features,
-                    })
+                    max_pnl_pct = (
+                        (max_equity_in_trade - entry_equity) / entry_equity * 100
+                        if entry_equity > 0
+                        else 0
+                    )
+                    trades.append(
+                        {
+                            "entry_day": current_entry_day,
+                            "exit_day": i,
+                            "holding_days": i - current_entry_day,
+                            "pnl_pct": round(pnl_pct, 2),
+                            "max_profit_pct": round(max_pnl_pct, 2),
+                            "exit_reason": exit_reason,
+                            "exit_date": str(dates[i])[:10],
+                            **entry_features,
+                        }
+                    )
                 entry_equity = 0
                 max_equity_in_trade = 0
                 max_price_in_trade = 0
@@ -606,15 +705,21 @@ def backtest_v17(y_pred, returns, df_test, feature_cols,
 
     if position == 1 and entry_equity > 0 and record_trades:
         pnl_pct = (close[-1] / entry_close - 1) * 100 if entry_close > 0 else 0
-        trades.append({
-            "entry_day": current_entry_day, "exit_day": n - 1,
-            "holding_days": n - 1 - current_entry_day,
-            "pnl_pct": round(pnl_pct, 2), "exit_reason": "end",
-            "exit_date": str(dates[-1])[:10], **entry_features,
-        })
+        trades.append(
+            {
+                "entry_day": current_entry_day,
+                "exit_day": n - 1,
+                "holding_days": n - 1 - current_entry_day,
+                "pnl_pct": round(pnl_pct, 2),
+                "exit_reason": "end",
+                "exit_date": str(dates[-1])[:10],
+                **entry_features,
+            }
+        )
 
     return {
-        "equity_curve": equity, "trades": trades,
+        "equity_curve": equity,
+        "trades": trades,
         "total_return_pct": round((equity[-1] / initial_capital - 1) * 100, 2),
         "final_equity": round(equity[-1]),
         "n_vshape_entries": n_vshape_entries,
@@ -628,11 +733,26 @@ def backtest_v17(y_pred, returns, df_test, feature_cols,
     }
 
 
-def backtest_v18(y_pred, returns, df_test, feature_cols,
-                 initial_capital=100_000_000, commission=0.0015, tax=0.001,
-                 record_trades=True,
-                 mod_a=True, mod_b=True, mod_c=False, mod_d=False, mod_e=True,
-                 mod_f=True, mod_g=True, mod_h=True, mod_i=True, mod_j=True):
+def backtest_v18(
+    y_pred,
+    returns,
+    df_test,
+    feature_cols,
+    initial_capital=100_000_000,
+    commission=0.0015,
+    tax=0.001,
+    record_trades=True,
+    mod_a=True,
+    mod_b=True,
+    mod_c=False,
+    mod_d=False,
+    mod_e=True,
+    mod_f=True,
+    mod_g=True,
+    mod_h=True,
+    mod_i=True,
+    mod_j=True,
+):
     """V18: V17 + adaptive anti-chasing entry + stronger signal-exit quality checks."""
     n = len(y_pred)
     equity = np.zeros(n)
@@ -665,12 +785,26 @@ def backtest_v18(y_pred, returns, df_test, feature_cols,
     last_exit_bar = -999
     entry_close = 0
 
-    feat_names = ["rsi_slope_5d", "vol_surge_ratio", "range_position_20d",
-                  "dist_to_resistance", "breakout_setup_score", "bb_width_percentile",
-                  "higher_lows_count", "obv_price_divergence"]
-    defaults = {"rsi_slope_5d": 0, "vol_surge_ratio": 1.0, "range_position_20d": 0.5,
-                "dist_to_resistance": 0.05, "breakout_setup_score": 0, "bb_width_percentile": 0.5,
-                "higher_lows_count": 0, "obv_price_divergence": 0}
+    feat_names = [
+        "rsi_slope_5d",
+        "vol_surge_ratio",
+        "range_position_20d",
+        "dist_to_resistance",
+        "breakout_setup_score",
+        "bb_width_percentile",
+        "higher_lows_count",
+        "obv_price_divergence",
+    ]
+    defaults = {
+        "rsi_slope_5d": 0,
+        "vol_surge_ratio": 1.0,
+        "range_position_20d": 0.5,
+        "dist_to_resistance": 0.05,
+        "breakout_setup_score": 0,
+        "bb_width_percentile": 0.5,
+        "higher_lows_count": 0,
+        "obv_price_divergence": 0,
+    }
     feat_arrays = {}
     for fn in feat_names:
         if fn in df_test.columns:
@@ -732,7 +866,7 @@ def backtest_v18(y_pred, returns, df_test, feature_cols,
             start = i - bars + 1
             if start < 0:
                 continue
-            band = np.max(high[start:i + 1]) - np.min(low[start:i + 1])
+            band = np.max(high[start : i + 1]) - np.min(low[start : i + 1])
             ref = close[i] if close[i] > 0 else 1.0
             if band / ref < 0.05:
                 stabilized_sideways[i] = True
@@ -740,8 +874,8 @@ def backtest_v18(y_pred, returns, df_test, feature_cols,
 
     consolidation_breakout = np.zeros(n, dtype=bool)
     for i in range(10, n):
-        prev_high = np.max(high[i - 10:i])
-        prev_low = np.min(low[i - 10:i])
+        prev_high = np.max(high[i - 10 : i])
+        prev_low = np.min(low[i - 10 : i])
         ref = close[i - 1] if close[i - 1] > 0 else close[i]
         tight_range = ((prev_high - prev_low) / ref) < 0.08 if ref > 0 else False
         vol_ok = volume[i] > 1.2 * avg_vol20[i] if not np.isnan(avg_vol20[i]) else False
@@ -751,15 +885,18 @@ def backtest_v18(y_pred, returns, df_test, feature_cols,
     secondary_breakout = np.zeros(n, dtype=bool)
     if mod_e:
         for i in range(10, n):
-            prev_high = np.max(high[i - 10:i])
-            prev_low = np.min(low[i - 10:i])
+            prev_high = np.max(high[i - 10 : i])
+            prev_low = np.min(low[i - 10 : i])
             ref = close[i - 1] if close[i - 1] > 0 else close[i]
             tight_range = ((prev_high - prev_low) / ref) < 0.10 if ref > 0 else False
-            uptrend_macro = (not np.isnan(sma20[i]) and not np.isnan(sma50[i])
-                             and sma20[i] > sma50[i])
+            uptrend_macro = (
+                not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and sma20[i] > sma50[i]
+            )
             vol_threshold = 1.1 if uptrend_macro else 1.2
-            vol_ok = volume[i] > vol_threshold * avg_vol20[i] if not np.isnan(avg_vol20[i]) else False
-            max_high_5d = np.max(high[max(0, i - 5):i])
+            vol_ok = (
+                volume[i] > vol_threshold * avg_vol20[i] if not np.isnan(avg_vol20[i]) else False
+            )
+            max_high_5d = np.max(high[max(0, i - 5) : i])
             breakout_5d = close[i] > max_high_5d
             if tight_range and breakout_5d and vol_ok and uptrend_macro:
                 secondary_breakout[i] = True
@@ -779,7 +916,9 @@ def backtest_v18(y_pred, returns, df_test, feature_cols,
         bullish = close[i] > opn[i] + rng * 0.5 and close[i] > close[i - 1]
         if not bullish:
             continue
-        oversold = (not np.isnan(rsi14[i - 1]) and rsi14[i - 1] < 35) or drop_from_peak_20[i] <= -0.18
+        oversold = (not np.isnan(rsi14[i - 1]) and rsi14[i - 1] < 35) or drop_from_peak_20[
+            i
+        ] <= -0.18
         if not oversold:
             continue
         if np.isnan(avg_vol20[i]) or volume[i] < 1.3 * avg_vol20[i]:
@@ -797,7 +936,11 @@ def backtest_v18(y_pred, returns, df_test, feature_cols,
     rolling_high_250 = pd.Series(close).rolling(250, min_periods=20).max().values
     dist_from_52w_high = np.where(rolling_high_250 > 0, (close / rolling_high_250), 1.0)
 
-    date_col = "date" if "date" in df_test.columns else ("timestamp" if "timestamp" in df_test.columns else None)
+    date_col = (
+        "date"
+        if "date" in df_test.columns
+        else ("timestamp" if "timestamp" in df_test.columns else None)
+    )
     dates = df_test[date_col].values if date_col else np.arange(n)
     symbols = df_test["symbol"].values if "symbol" in df_test.columns else ["?"] * n
 
@@ -859,10 +1002,13 @@ def backtest_v18(y_pred, returns, df_test, feature_cols,
 
         if new_position == 0 and position == 0 and last_exit_reason == "trailing_stop":
             bars_since_exit = i - last_exit_bar
-            if (bars_since_exit <= QUICK_REENTRY_WINDOW and
-                trend in ("strong", "moderate") and
-                macd_line[i] > 0 and
-                not np.isnan(sma20[i]) and close[i] > sma20[i]):
+            if (
+                bars_since_exit <= QUICK_REENTRY_WINDOW
+                and trend in ("strong", "moderate")
+                and macd_line[i] > 0
+                and not np.isnan(sma20[i])
+                and close[i] > sma20[i]
+            ):
                 new_position = 1
                 quick_reentry = True
 
@@ -870,14 +1016,20 @@ def backtest_v18(y_pred, returns, df_test, feature_cols,
         if mod_f:
             macd_pos = macd_hist[i] > 0
             bullish = close[i] > opn[i]
-            heavy_vol = (not np.isnan(avg_vol20[i]) and volume[i] > 1.5 * avg_vol20[i])
+            heavy_vol = not np.isnan(avg_vol20[i]) and volume[i] > 1.5 * avg_vol20[i]
             bo_quality_ok = macd_pos and bullish and heavy_vol
 
         if new_position == 0 and position == 0 and consolidation_breakout[i] and bo_quality_ok:
             new_position = 1
             breakout_entry = True
 
-        if mod_e and new_position == 0 and position == 0 and secondary_breakout[i] and bo_quality_ok:
+        if (
+            mod_e
+            and new_position == 0
+            and position == 0
+            and secondary_breakout[i]
+            and bo_quality_ok
+        ):
             new_position = 1
             breakout_entry = True
             n_secondary_breakout += 1
@@ -898,11 +1050,15 @@ def backtest_v18(y_pred, returns, df_test, feature_cols,
                 if price_diff < 0.03:
                     new_position = 0
 
-        if new_position == 1 and position == 0 and not quick_reentry and not breakout_entry and not vshape_entry:
+        if (
+            new_position == 1
+            and position == 0
+            and not quick_reentry
+            and not breakout_entry
+            and not vshape_entry
+        ):
             prev_pred = int(y_pred[i - 2]) if i >= 2 else 0
-            if bs >= 4 and vs > 1.2:
-                pass
-            elif trend == "strong" and rs > 0:
+            if bs >= 4 and vs > 1.2 or trend == "strong" and rs > 0:
                 pass
             elif prev_pred != 1:
                 new_position = 0
@@ -913,25 +1069,28 @@ def backtest_v18(y_pred, returns, df_test, feature_cols,
                     if bs < 3 and not breakout_entry:
                         new_position = 0
 
-        strong_breakout_context = (
-            trend == "strong" and (bs >= 3 or vs > 1.5 or breakout_entry)
-        )
+        strong_breakout_context = trend == "strong" and (bs >= 3 or vs > 1.5 or breakout_entry)
 
         if new_position == 1 and position == 0 and not quick_reentry and not vshape_entry:
             entry_score = sum([wp < 0.75, dp > 0.02, rs > 0, vs > 1.1, hl >= 2])
-            near_sma_support = (not np.isnan(sma20[i]) and
-                               close[i] <= sma20[i] * 1.02 and
-                               close[i] >= sma20[i] * 0.97)
-            near_local_low = (not np.isnan(local_low_20[i]) and
-                             close[i] <= local_low_20[i] * 1.05)
-            in_uptrend_macro = (not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and
-                               sma20[i] > sma50[i])
+            near_sma_support = (
+                not np.isnan(sma20[i])
+                and close[i] <= sma20[i] * 1.02
+                and close[i] >= sma20[i] * 0.97
+            )
+            near_local_low = not np.isnan(local_low_20[i]) and close[i] <= local_low_20[i] * 1.05
+            in_uptrend_macro = (
+                not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and sma20[i] > sma50[i]
+            )
 
             if trend == "strong":
                 min_score = 1
-            elif (near_sma_support or near_local_low) and in_uptrend_macro:
-                min_score = 2
-            elif in_uptrend_macro and rs > 0:
+            elif (
+                (near_sma_support or near_local_low)
+                and in_uptrend_macro
+                or in_uptrend_macro
+                and rs > 0
+            ):
                 min_score = 2
             else:
                 min_score = 3
@@ -940,7 +1099,13 @@ def backtest_v18(y_pred, returns, df_test, feature_cols,
                 new_position = 0
             if wp > 0.9 and rs <= 0 and bs < 2 and trend != "strong" and not breakout_entry:
                 new_position = 0
-            if bb > 0.85 and bs < 2 and entry_score < 4 and trend != "strong" and not breakout_entry:
+            if (
+                bb > 0.85
+                and bs < 2
+                and entry_score < 4
+                and trend != "strong"
+                and not breakout_entry
+            ):
                 new_position = 0
             if new_position == 1:
                 if wp > 0.78 and bb < 0.35 and trend == "weak" and not breakout_entry:
@@ -967,17 +1132,27 @@ def backtest_v18(y_pred, returns, df_test, feature_cols,
                 new_position = 0
 
         if mod_g and new_position == 1 and position == 0 and not vshape_entry:
-            sma20_below_50 = (not np.isnan(sma20[i]) and not np.isnan(sma50[i])
-                              and sma20[i] < sma50[i])
-            close_below_50 = (not np.isnan(sma50[i]) and close[i] < sma50[i])
+            sma20_below_50 = (
+                not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and sma20[i] < sma50[i]
+            )
+            close_below_50 = not np.isnan(sma50[i]) and close[i] < sma50[i]
             deep_60d_loss = ret_60d[i] < -0.10
             if sma20_below_50 and close_below_50 and deep_60d_loss:
                 new_position = 0
                 n_bear_blocked += 1
 
-        if mod_j and new_position == 1 and position == 0 and not vshape_entry and not breakout_entry:
-            ma_flat = (not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and
-                       abs(sma20[i] / sma50[i] - 1) < 0.02)
+        if (
+            mod_j
+            and new_position == 1
+            and position == 0
+            and not vshape_entry
+            and not breakout_entry
+        ):
+            ma_flat = (
+                not np.isnan(sma20[i])
+                and not np.isnan(sma50[i])
+                and abs(sma20[i] / sma50[i] - 1) < 0.02
+            )
             weak_momo = abs(ret_20d[i]) < 0.06
             narrow_vol = bb < 0.45
             weak_trend = trend == "weak"
@@ -1014,7 +1189,9 @@ def backtest_v18(y_pred, returns, df_test, feature_cols,
             if close[i] > max_price_in_trade:
                 max_price_in_trade = close[i]
             cum_ret = (projected - entry_equity) / entry_equity if entry_equity > 0 else 0
-            max_profit = (max_equity_in_trade - entry_equity) / entry_equity if entry_equity > 0 else 0
+            max_profit = (
+                (max_equity_in_trade - entry_equity) / entry_equity if entry_equity > 0 else 0
+            )
             price_max_profit = (max_price_in_trade / entry_close - 1) if entry_close > 0 else 0
             price_cur_ret = (close[i] / entry_close - 1) if entry_close > 0 else 0
 
@@ -1035,15 +1212,20 @@ def backtest_v18(y_pred, returns, df_test, feature_cols,
                 new_position = 0
                 exit_reason = "stop_loss"
 
-            elif (mod_c and hold_days < 5 and cum_ret < -0.03
-                  and macd_hist[i] < 0 and close[i] < opn[i]):
+            elif (
+                mod_c
+                and hold_days < 5
+                and cum_ret < -0.03
+                and macd_hist[i] < 0
+                and close[i] < opn[i]
+            ):
                 new_position = 0
                 exit_reason = "fast_loss_cut"
                 n_fast_loss_cut += 1
 
             elif mod_b and price_max_profit >= 0.20:
-                price_below_sma10 = (not np.isnan(sma10[i]) and close[i] < sma10[i])
-                heavy_vol = (not np.isnan(avg_vol20[i]) and volume[i] > 1.5 * avg_vol20[i])
+                price_below_sma10 = not np.isnan(sma10[i]) and close[i] < sma10[i]
+                heavy_vol = not np.isnan(avg_vol20[i]) and volume[i] > 1.5 * avg_vol20[i]
                 bearish_candle = close[i] < opn[i]
                 if price_below_sma10 and heavy_vol and bearish_candle:
                     new_position = 0
@@ -1064,10 +1246,12 @@ def backtest_v18(y_pred, returns, df_test, feature_cols,
                 macd_bearish = macd_hist[i] < 0 and macd_hist[i - 1] >= 0 if i > 0 else False
                 price_below_ma20 = close[i] < sma20[i] if not np.isnan(sma20[i]) else False
 
-                if macd_bearish and price_below_ma20:
-                    new_position = 0
-                    exit_reason = "hybrid_exit"
-                elif price_below_ma20 and cum_ret < max_profit * 0.5:
+                if (
+                    macd_bearish
+                    and price_below_ma20
+                    or price_below_ma20
+                    and cum_ret < max_profit * 0.5
+                ):
                     new_position = 0
                     exit_reason = "hybrid_exit"
                 else:
@@ -1104,25 +1288,40 @@ def backtest_v18(y_pred, returns, df_test, feature_cols,
                     new_position = 0
                     exit_reason = "zombie_exit"
 
-            if new_position == 0 and exit_reason not in (
-                    "stop_loss", "hard_stop", "hybrid_exit", "peak_protect_dist",
-                    "peak_protect_ema", "fast_loss_cut") and hold_days < MIN_HOLD:
+            if (
+                new_position == 0
+                and exit_reason
+                not in (
+                    "stop_loss",
+                    "hard_stop",
+                    "hybrid_exit",
+                    "peak_protect_dist",
+                    "peak_protect_ema",
+                    "fast_loss_cut",
+                )
+                and hold_days < MIN_HOLD
+            ):
                 if cum_ret > -atr_stop:
                     new_position = 1
 
             if new_position == 0 and exit_reason == "signal":
                 if mod_h:
-                    below_ma20 = (not np.isnan(sma20[i]) and close[i] < sma20[i])
-                    below_ma50 = (not np.isnan(sma50[i]) and close[i] < sma50[i])
+                    below_ma20 = not np.isnan(sma20[i]) and close[i] < sma20[i]
+                    below_ma50 = not np.isnan(sma50[i]) and close[i] < sma50[i]
                     old_bearish_confirm = (below_ma20 and macd_hist[i] < 0) or below_ma50
-                    heavy_vol = (not np.isnan(avg_vol20[i]) and volume[i] > 1.4 * avg_vol20[i])
+                    heavy_vol = not np.isnan(avg_vol20[i]) and volume[i] > 1.4 * avg_vol20[i]
                     bearish_candle = close[i] < opn[i]
                     bearish_confirm = (
                         below_ma50
                         or (below_ma20 and macd_hist[i] < -0.03)
                         or (below_ma20 and bearish_candle and heavy_vol and macd_hist[i] < 0)
                     )
-                    if cum_ret > 0.05 and trend == "strong" and macd_hist[i] > -0.05 and not below_ma50:
+                    if (
+                        cum_ret > 0.05
+                        and trend == "strong"
+                        and macd_hist[i] > -0.05
+                        and not below_ma50
+                    ):
                         bearish_confirm = False
                     if old_bearish_confirm and not bearish_confirm:
                         n_v18_signal_quality_saves += 1
@@ -1132,9 +1331,7 @@ def backtest_v18(y_pred, returns, df_test, feature_cols,
 
             if new_position == 0 and exit_reason == "signal":
                 if mod_d:
-                    if cum_ret < 0:
-                        confirm_bars = 1
-                    elif max_profit > 0 and cum_ret < max_profit * 0.6:
+                    if cum_ret < 0 or max_profit > 0 and cum_ret < max_profit * 0.6:
                         confirm_bars = 1
                     else:
                         confirm_bars = EXIT_CONFIRM
@@ -1154,9 +1351,15 @@ def backtest_v18(y_pred, returns, df_test, feature_cols,
                     new_position = 1
 
             if mod_i and new_position == 0 and exit_reason == "signal":
-                still_supported = (not np.isnan(sma20[i]) and close[i] >= sma20[i] * 0.99)
+                still_supported = not np.isnan(sma20[i]) and close[i] >= sma20[i] * 0.99
                 trend_ok = trend in ("strong", "moderate")
-                if cum_ret > 0.03 and max_profit > 0.06 and trend_ok and still_supported and macd_hist[i] > -0.02:
+                if (
+                    cum_ret > 0.03
+                    and max_profit > 0.06
+                    and trend_ok
+                    and still_supported
+                    and macd_hist[i] > -0.02
+                ):
                     new_position = 1
                     n_trend_carry_saved += 1
 
@@ -1178,9 +1381,14 @@ def backtest_v18(y_pred, returns, df_test, feature_cols,
                 entry_close = close[i]
                 max_price_in_trade = close[i]
                 entry_features = {
-                    "entry_wp": wp, "entry_dp": dp, "entry_rs": rs,
-                    "entry_vs": vs, "entry_bs": bs, "entry_hl": hl,
-                    "entry_od": od, "entry_bb": bb,
+                    "entry_wp": wp,
+                    "entry_dp": dp,
+                    "entry_rs": rs,
+                    "entry_vs": vs,
+                    "entry_bs": bs,
+                    "entry_hl": hl,
+                    "entry_od": od,
+                    "entry_bb": bb,
                     "entry_score": sum([wp < 0.75, dp > 0.02, rs > 0, vs > 1.1, hl >= 2]),
                     "entry_date": str(dates[i])[:10],
                     "entry_symbol": str(symbols[i]),
@@ -1207,16 +1415,23 @@ def backtest_v18(y_pred, returns, df_test, feature_cols,
 
                 if record_trades and entry_equity > 0:
                     pnl_pct = (close[i] / entry_close - 1) * 100 if entry_close > 0 else 0
-                    max_pnl_pct = (max_equity_in_trade - entry_equity) / entry_equity * 100 if entry_equity > 0 else 0
-                    trades.append({
-                        "entry_day": current_entry_day, "exit_day": i,
-                        "holding_days": i - current_entry_day,
-                        "pnl_pct": round(pnl_pct, 2),
-                        "max_profit_pct": round(max_pnl_pct, 2),
-                        "exit_reason": exit_reason,
-                        "exit_date": str(dates[i])[:10],
-                        **entry_features,
-                    })
+                    max_pnl_pct = (
+                        (max_equity_in_trade - entry_equity) / entry_equity * 100
+                        if entry_equity > 0
+                        else 0
+                    )
+                    trades.append(
+                        {
+                            "entry_day": current_entry_day,
+                            "exit_day": i,
+                            "holding_days": i - current_entry_day,
+                            "pnl_pct": round(pnl_pct, 2),
+                            "max_profit_pct": round(max_pnl_pct, 2),
+                            "exit_reason": exit_reason,
+                            "exit_date": str(dates[i])[:10],
+                            **entry_features,
+                        }
+                    )
                 entry_equity = 0
                 max_equity_in_trade = 0
                 max_price_in_trade = 0
@@ -1231,15 +1446,21 @@ def backtest_v18(y_pred, returns, df_test, feature_cols,
 
     if position == 1 and entry_equity > 0 and record_trades:
         pnl_pct = (close[-1] / entry_close - 1) * 100 if entry_close > 0 else 0
-        trades.append({
-            "entry_day": current_entry_day, "exit_day": n - 1,
-            "holding_days": n - 1 - current_entry_day,
-            "pnl_pct": round(pnl_pct, 2), "exit_reason": "end",
-            "exit_date": str(dates[-1])[:10], **entry_features,
-        })
+        trades.append(
+            {
+                "entry_day": current_entry_day,
+                "exit_day": n - 1,
+                "holding_days": n - 1 - current_entry_day,
+                "pnl_pct": round(pnl_pct, 2),
+                "exit_reason": "end",
+                "exit_date": str(dates[-1])[:10],
+                **entry_features,
+            }
+        )
 
     return {
-        "equity_curve": equity, "trades": trades,
+        "equity_curve": equity,
+        "trades": trades,
         "total_return_pct": round((equity[-1] / initial_capital - 1) * 100, 2),
         "final_equity": round(equity[-1]),
         "n_vshape_entries": n_vshape_entries,
@@ -1259,11 +1480,27 @@ def backtest_v18(y_pred, returns, df_test, feature_cols,
 # V19.1 and V19.3 are imported verbatim from their original run files.
 # The full function bodies are identical; only imports are consolidated here.
 
-def backtest_v19_1(y_pred, returns, df_test, feature_cols,
-                   initial_capital=100_000_000, commission=0.0015, tax=0.001,
-                   record_trades=True,
-                   mod_a=True, mod_b=True, mod_c=False, mod_d=False, mod_e=True,
-                   mod_f=True, mod_g=True, mod_h=True, mod_i=True, mod_j=True):
+
+def backtest_v19_1(
+    y_pred,
+    returns,
+    df_test,
+    feature_cols,
+    initial_capital=100_000_000,
+    commission=0.0015,
+    tax=0.001,
+    record_trades=True,
+    mod_a=True,
+    mod_b=True,
+    mod_c=False,
+    mod_d=False,
+    mod_e=True,
+    mod_f=True,
+    mod_g=True,
+    mod_h=True,
+    mod_i=True,
+    mod_j=True,
+):
     """V19.1: V19 risk-tuned for momentum/high-beta drawdown control."""
     n = len(y_pred)
     equity = np.zeros(n)
@@ -1296,12 +1533,26 @@ def backtest_v19_1(y_pred, returns, df_test, feature_cols,
     last_exit_bar = -999
     entry_close = 0
 
-    feat_names = ["rsi_slope_5d", "vol_surge_ratio", "range_position_20d",
-                  "dist_to_resistance", "breakout_setup_score", "bb_width_percentile",
-                  "higher_lows_count", "obv_price_divergence"]
-    defaults = {"rsi_slope_5d": 0, "vol_surge_ratio": 1.0, "range_position_20d": 0.5,
-                "dist_to_resistance": 0.05, "breakout_setup_score": 0, "bb_width_percentile": 0.5,
-                "higher_lows_count": 0, "obv_price_divergence": 0}
+    feat_names = [
+        "rsi_slope_5d",
+        "vol_surge_ratio",
+        "range_position_20d",
+        "dist_to_resistance",
+        "breakout_setup_score",
+        "bb_width_percentile",
+        "higher_lows_count",
+        "obv_price_divergence",
+    ]
+    defaults = {
+        "rsi_slope_5d": 0,
+        "vol_surge_ratio": 1.0,
+        "range_position_20d": 0.5,
+        "dist_to_resistance": 0.05,
+        "breakout_setup_score": 0,
+        "bb_width_percentile": 0.5,
+        "higher_lows_count": 0,
+        "obv_price_divergence": 0,
+    }
     feat_arrays = {}
     for fn in feat_names:
         if fn in df_test.columns:
@@ -1363,7 +1614,7 @@ def backtest_v19_1(y_pred, returns, df_test, feature_cols,
             start = i - bars + 1
             if start < 0:
                 continue
-            band = np.max(high[start:i + 1]) - np.min(low[start:i + 1])
+            band = np.max(high[start : i + 1]) - np.min(low[start : i + 1])
             ref = close[i] if close[i] > 0 else 1.0
             if band / ref < 0.05:
                 stabilized_sideways[i] = True
@@ -1371,8 +1622,8 @@ def backtest_v19_1(y_pred, returns, df_test, feature_cols,
 
     consolidation_breakout = np.zeros(n, dtype=bool)
     for i in range(10, n):
-        prev_high = np.max(high[i - 10:i])
-        prev_low = np.min(low[i - 10:i])
+        prev_high = np.max(high[i - 10 : i])
+        prev_low = np.min(low[i - 10 : i])
         ref = close[i - 1] if close[i - 1] > 0 else close[i]
         tight_range = ((prev_high - prev_low) / ref) < 0.08 if ref > 0 else False
         vol_ok = volume[i] > 1.2 * avg_vol20[i] if not np.isnan(avg_vol20[i]) else False
@@ -1382,15 +1633,18 @@ def backtest_v19_1(y_pred, returns, df_test, feature_cols,
     secondary_breakout = np.zeros(n, dtype=bool)
     if mod_e:
         for i in range(10, n):
-            prev_high = np.max(high[i - 10:i])
-            prev_low = np.min(low[i - 10:i])
+            prev_high = np.max(high[i - 10 : i])
+            prev_low = np.min(low[i - 10 : i])
             ref = close[i - 1] if close[i - 1] > 0 else close[i]
             tight_range = ((prev_high - prev_low) / ref) < 0.10 if ref > 0 else False
-            uptrend_macro = (not np.isnan(sma20[i]) and not np.isnan(sma50[i])
-                             and sma20[i] > sma50[i])
+            uptrend_macro = (
+                not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and sma20[i] > sma50[i]
+            )
             vol_threshold = 1.1 if uptrend_macro else 1.2
-            vol_ok = volume[i] > vol_threshold * avg_vol20[i] if not np.isnan(avg_vol20[i]) else False
-            max_high_5d = np.max(high[max(0, i - 5):i])
+            vol_ok = (
+                volume[i] > vol_threshold * avg_vol20[i] if not np.isnan(avg_vol20[i]) else False
+            )
+            max_high_5d = np.max(high[max(0, i - 5) : i])
             breakout_5d = close[i] > max_high_5d
             if tight_range and breakout_5d and vol_ok and uptrend_macro:
                 secondary_breakout[i] = True
@@ -1410,7 +1664,9 @@ def backtest_v19_1(y_pred, returns, df_test, feature_cols,
         bullish = close[i] > opn[i] + rng * 0.5 and close[i] > close[i - 1]
         if not bullish:
             continue
-        oversold = (not np.isnan(rsi14[i - 1]) and rsi14[i - 1] < 35) or drop_from_peak_20[i] <= -0.18
+        oversold = (not np.isnan(rsi14[i - 1]) and rsi14[i - 1] < 35) or drop_from_peak_20[
+            i
+        ] <= -0.18
         if not oversold:
             continue
         if np.isnan(avg_vol20[i]) or volume[i] < 1.3 * avg_vol20[i]:
@@ -1428,7 +1684,11 @@ def backtest_v19_1(y_pred, returns, df_test, feature_cols,
     rolling_high_250 = pd.Series(close).rolling(250, min_periods=20).max().values
     dist_from_52w_high = np.where(rolling_high_250 > 0, (close / rolling_high_250), 1.0)
 
-    date_col = "date" if "date" in df_test.columns else ("timestamp" if "timestamp" in df_test.columns else None)
+    date_col = (
+        "date"
+        if "date" in df_test.columns
+        else ("timestamp" if "timestamp" in df_test.columns else None)
+    )
     dates = df_test[date_col].values if date_col else np.arange(n)
     symbols = df_test["symbol"].values if "symbol" in df_test.columns else ["?"] * n
 
@@ -1451,10 +1711,20 @@ def backtest_v19_1(y_pred, returns, df_test, feature_cols,
         return "weak"
 
     symbol_profiles = {
-        "ACB": "bank", "BID": "bank", "MBB": "bank", "TCB": "bank",
-        "AAV": "high_beta", "AAS": "high_beta", "SSI": "high_beta", "VND": "high_beta",
-        "DGC": "momentum", "HPG": "momentum", "VIC": "momentum",
-        "FPT": "defensive", "REE": "defensive", "VNM": "defensive",
+        "ACB": "bank",
+        "BID": "bank",
+        "MBB": "bank",
+        "TCB": "bank",
+        "AAV": "high_beta",
+        "AAS": "high_beta",
+        "SSI": "high_beta",
+        "VND": "high_beta",
+        "DGC": "momentum",
+        "HPG": "momentum",
+        "VIC": "momentum",
+        "FPT": "defensive",
+        "REE": "defensive",
+        "VNM": "defensive",
     }
 
     def get_regime_adapter(i, trend):
@@ -1464,7 +1734,9 @@ def backtest_v19_1(y_pred, returns, df_test, feature_cols,
         low_vol = bb_i < 0.35
         weak_move = abs(ret_20d[i]) < 0.05
         choppy_regime = low_vol and weak_move and trend == "weak"
-        atr_ratio = (atr14[i] / close[i]) if (i < n and close[i] > 0 and not np.isnan(atr14[i])) else 0.03
+        atr_ratio = (
+            (atr14[i] / close[i]) if (i < n and close[i] > 0 and not np.isnan(atr14[i])) else 0.03
+        )
 
         params = {
             "profile": profile,
@@ -1476,13 +1748,45 @@ def backtest_v19_1(y_pred, returns, df_test, feature_cols,
             "choppy_regime": choppy_regime,
         }
         if profile == "high_beta":
-            params.update({"dp_floor": 0.015, "ret5_hot": 0.090, "size_mult": 0.98, "base_confirm_bars": 2, "exit_score_threshold": 2.35})
+            params.update(
+                {
+                    "dp_floor": 0.015,
+                    "ret5_hot": 0.090,
+                    "size_mult": 0.98,
+                    "base_confirm_bars": 2,
+                    "exit_score_threshold": 2.35,
+                }
+            )
         elif profile == "bank":
-            params.update({"dp_floor": 0.020, "ret5_hot": 0.070, "size_mult": 0.92, "base_confirm_bars": 3, "exit_score_threshold": 2.2})
+            params.update(
+                {
+                    "dp_floor": 0.020,
+                    "ret5_hot": 0.070,
+                    "size_mult": 0.92,
+                    "base_confirm_bars": 3,
+                    "exit_score_threshold": 2.2,
+                }
+            )
         elif profile == "defensive":
-            params.update({"dp_floor": 0.025, "ret5_hot": 0.050, "size_mult": 0.85, "base_confirm_bars": 3, "exit_score_threshold": 1.8})
+            params.update(
+                {
+                    "dp_floor": 0.025,
+                    "ret5_hot": 0.050,
+                    "size_mult": 0.85,
+                    "base_confirm_bars": 3,
+                    "exit_score_threshold": 1.8,
+                }
+            )
         elif profile == "momentum":
-            params.update({"dp_floor": 0.018, "ret5_hot": 0.080, "size_mult": 0.92, "base_confirm_bars": 2, "exit_score_threshold": 2.2})
+            params.update(
+                {
+                    "dp_floor": 0.018,
+                    "ret5_hot": 0.080,
+                    "size_mult": 0.92,
+                    "base_confirm_bars": 2,
+                    "exit_score_threshold": 2.2,
+                }
+            )
 
         if choppy_regime:
             params["dp_floor"] += 0.004
@@ -1555,10 +1859,13 @@ def backtest_v19_1(y_pred, returns, df_test, feature_cols,
 
         if new_position == 0 and position == 0 and last_exit_reason == "trailing_stop":
             bars_since_exit = i - last_exit_bar
-            if (bars_since_exit <= QUICK_REENTRY_WINDOW and
-                trend in ("strong", "moderate") and
-                macd_line[i] > 0 and
-                not np.isnan(sma20[i]) and close[i] > sma20[i]):
+            if (
+                bars_since_exit <= QUICK_REENTRY_WINDOW
+                and trend in ("strong", "moderate")
+                and macd_line[i] > 0
+                and not np.isnan(sma20[i])
+                and close[i] > sma20[i]
+            ):
                 new_position = 1
                 quick_reentry = True
 
@@ -1566,14 +1873,20 @@ def backtest_v19_1(y_pred, returns, df_test, feature_cols,
         if mod_f:
             macd_pos = macd_hist[i] > 0
             bullish = close[i] > opn[i]
-            heavy_vol = (not np.isnan(avg_vol20[i]) and volume[i] > 1.5 * avg_vol20[i])
+            heavy_vol = not np.isnan(avg_vol20[i]) and volume[i] > 1.5 * avg_vol20[i]
             bo_quality_ok = macd_pos and bullish and heavy_vol
 
         if new_position == 0 and position == 0 and consolidation_breakout[i] and bo_quality_ok:
             new_position = 1
             breakout_entry = True
 
-        if mod_e and new_position == 0 and position == 0 and secondary_breakout[i] and bo_quality_ok:
+        if (
+            mod_e
+            and new_position == 0
+            and position == 0
+            and secondary_breakout[i]
+            and bo_quality_ok
+        ):
             new_position = 1
             breakout_entry = True
             n_secondary_breakout += 1
@@ -1594,11 +1907,15 @@ def backtest_v19_1(y_pred, returns, df_test, feature_cols,
                 if price_diff < 0.03:
                     new_position = 0
 
-        if new_position == 1 and position == 0 and not quick_reentry and not breakout_entry and not vshape_entry:
+        if (
+            new_position == 1
+            and position == 0
+            and not quick_reentry
+            and not breakout_entry
+            and not vshape_entry
+        ):
             prev_pred = int(y_pred[i - 2]) if i >= 2 else 0
-            if bs >= 4 and vs > 1.2:
-                pass
-            elif trend == "strong" and rs > 0:
+            if bs >= 4 and vs > 1.2 or trend == "strong" and rs > 0:
                 pass
             elif prev_pred != 1:
                 new_position = 0
@@ -1609,26 +1926,29 @@ def backtest_v19_1(y_pred, returns, df_test, feature_cols,
                     if bs < 3 and not breakout_entry:
                         new_position = 0
 
-        strong_breakout_context = (
-            trend == "strong" and (bs >= 3 or vs > 1.5 or breakout_entry)
-        )
+        strong_breakout_context = trend == "strong" and (bs >= 3 or vs > 1.5 or breakout_entry)
         entry_alpha_ok = True
 
         if new_position == 1 and position == 0 and not quick_reentry and not vshape_entry:
             entry_score = sum([wp < 0.75, dp > 0.02, rs > 0, vs > 1.1, hl >= 2])
-            near_sma_support = (not np.isnan(sma20[i]) and
-                               close[i] <= sma20[i] * 1.02 and
-                               close[i] >= sma20[i] * 0.97)
-            near_local_low = (not np.isnan(local_low_20[i]) and
-                             close[i] <= local_low_20[i] * 1.05)
-            in_uptrend_macro = (not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and
-                               sma20[i] > sma50[i])
+            near_sma_support = (
+                not np.isnan(sma20[i])
+                and close[i] <= sma20[i] * 1.02
+                and close[i] >= sma20[i] * 0.97
+            )
+            near_local_low = not np.isnan(local_low_20[i]) and close[i] <= local_low_20[i] * 1.05
+            in_uptrend_macro = (
+                not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and sma20[i] > sma50[i]
+            )
 
             if trend == "strong":
                 min_score = 1
-            elif (near_sma_support or near_local_low) and in_uptrend_macro:
-                min_score = 2
-            elif in_uptrend_macro and rs > 0:
+            elif (
+                (near_sma_support or near_local_low)
+                and in_uptrend_macro
+                or in_uptrend_macro
+                and rs > 0
+            ):
                 min_score = 2
             else:
                 min_score = 3
@@ -1637,7 +1957,13 @@ def backtest_v19_1(y_pred, returns, df_test, feature_cols,
                 entry_alpha_ok = False
             if wp > 0.9 and rs <= 0 and bs < 2 and trend != "strong" and not breakout_entry:
                 entry_alpha_ok = False
-            if bb > 0.85 and bs < 2 and entry_score < 4 and trend != "strong" and not breakout_entry:
+            if (
+                bb > 0.85
+                and bs < 2
+                and entry_score < 4
+                and trend != "strong"
+                and not breakout_entry
+            ):
                 entry_alpha_ok = False
             if entry_alpha_ok:
                 if wp > 0.78 and bb < 0.35 and trend == "weak" and not breakout_entry:
@@ -1664,17 +1990,28 @@ def backtest_v19_1(y_pred, returns, df_test, feature_cols,
                 entry_alpha_ok = False
 
         if mod_g and new_position == 1 and position == 0 and not vshape_entry and entry_alpha_ok:
-            sma20_below_50 = (not np.isnan(sma20[i]) and not np.isnan(sma50[i])
-                              and sma20[i] < sma50[i])
-            close_below_50 = (not np.isnan(sma50[i]) and close[i] < sma50[i])
+            sma20_below_50 = (
+                not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and sma20[i] < sma50[i]
+            )
+            close_below_50 = not np.isnan(sma50[i]) and close[i] < sma50[i]
             deep_60d_loss = ret_60d[i] < -0.10
             if sma20_below_50 and close_below_50 and deep_60d_loss:
                 entry_alpha_ok = False
                 n_bear_blocked += 1
 
-        if mod_j and new_position == 1 and position == 0 and not vshape_entry and not breakout_entry and entry_alpha_ok:
-            ma_flat = (not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and
-                       abs(sma20[i] / sma50[i] - 1) < 0.02)
+        if (
+            mod_j
+            and new_position == 1
+            and position == 0
+            and not vshape_entry
+            and not breakout_entry
+            and entry_alpha_ok
+        ):
+            ma_flat = (
+                not np.isnan(sma20[i])
+                and not np.isnan(sma50[i])
+                and abs(sma20[i] / sma50[i] - 1) < 0.02
+            )
             weak_momo = abs(ret_20d[i]) < 0.06
             narrow_vol = bb < 0.45
             weak_trend = trend == "weak"
@@ -1720,7 +2057,9 @@ def backtest_v19_1(y_pred, returns, df_test, feature_cols,
             if close[i] > max_price_in_trade:
                 max_price_in_trade = close[i]
             cum_ret = (projected - entry_equity) / entry_equity if entry_equity > 0 else 0
-            max_profit = (max_equity_in_trade - entry_equity) / entry_equity if entry_equity > 0 else 0
+            max_profit = (
+                (max_equity_in_trade - entry_equity) / entry_equity if entry_equity > 0 else 0
+            )
             price_max_profit = (max_price_in_trade / entry_close - 1) if entry_close > 0 else 0
             price_cur_ret = (close[i] / entry_close - 1) if entry_close > 0 else 0
 
@@ -1741,15 +2080,20 @@ def backtest_v19_1(y_pred, returns, df_test, feature_cols,
                 new_position = 0
                 exit_reason = "stop_loss"
 
-            elif (mod_c and hold_days < 5 and cum_ret < -0.03
-                  and macd_hist[i] < 0 and close[i] < opn[i]):
+            elif (
+                mod_c
+                and hold_days < 5
+                and cum_ret < -0.03
+                and macd_hist[i] < 0
+                and close[i] < opn[i]
+            ):
                 new_position = 0
                 exit_reason = "fast_loss_cut"
                 n_fast_loss_cut += 1
 
             elif mod_b and price_max_profit >= 0.20:
-                price_below_sma10 = (not np.isnan(sma10[i]) and close[i] < sma10[i])
-                heavy_vol = (not np.isnan(avg_vol20[i]) and volume[i] > 1.5 * avg_vol20[i])
+                price_below_sma10 = not np.isnan(sma10[i]) and close[i] < sma10[i]
+                heavy_vol = not np.isnan(avg_vol20[i]) and volume[i] > 1.5 * avg_vol20[i]
                 bearish_candle = close[i] < opn[i]
                 if price_below_sma10 and heavy_vol and bearish_candle:
                     new_position = 0
@@ -1770,10 +2114,12 @@ def backtest_v19_1(y_pred, returns, df_test, feature_cols,
                 macd_bearish = macd_hist[i] < 0 and macd_hist[i - 1] >= 0 if i > 0 else False
                 price_below_ma20 = close[i] < sma20[i] if not np.isnan(sma20[i]) else False
 
-                if macd_bearish and price_below_ma20:
-                    new_position = 0
-                    exit_reason = "hybrid_exit"
-                elif price_below_ma20 and cum_ret < max_profit * 0.5:
+                if (
+                    macd_bearish
+                    and price_below_ma20
+                    or price_below_ma20
+                    and cum_ret < max_profit * 0.5
+                ):
                     new_position = 0
                     exit_reason = "hybrid_exit"
                 else:
@@ -1810,22 +2156,32 @@ def backtest_v19_1(y_pred, returns, df_test, feature_cols,
                     new_position = 0
                     exit_reason = "zombie_exit"
 
-            if new_position == 0 and exit_reason not in (
-                    "stop_loss", "hard_stop", "hybrid_exit", "peak_protect_dist",
-                    "peak_protect_ema", "fast_loss_cut") and hold_days < MIN_HOLD:
+            if (
+                new_position == 0
+                and exit_reason
+                not in (
+                    "stop_loss",
+                    "hard_stop",
+                    "hybrid_exit",
+                    "peak_protect_dist",
+                    "peak_protect_ema",
+                    "fast_loss_cut",
+                )
+                and hold_days < MIN_HOLD
+            ):
                 if cum_ret > -atr_stop:
                     new_position = 1
 
             if new_position == 0 and exit_reason == "signal":
                 if mod_h:
-                    below_ma20 = (not np.isnan(sma20[i]) and close[i] < sma20[i])
-                    below_ma50 = (not np.isnan(sma50[i]) and close[i] < sma50[i])
+                    below_ma20 = not np.isnan(sma20[i]) and close[i] < sma20[i]
+                    below_ma50 = not np.isnan(sma50[i]) and close[i] < sma50[i]
                     old_bearish_confirm = (below_ma20 and macd_hist[i] < 0) or below_ma50
-                    heavy_vol = (not np.isnan(avg_vol20[i]) and volume[i] > 1.4 * avg_vol20[i])
+                    heavy_vol = not np.isnan(avg_vol20[i]) and volume[i] > 1.4 * avg_vol20[i]
                     bearish_candle = close[i] < opn[i]
                     macd_falling = macd_hist[i] < macd_hist[i - 1] if i > 0 else False
-                    below_ema8 = (not np.isnan(ema8[i]) and close[i] < ema8[i] * 0.997)
-                    weak_rebound = (ret_5d[i] < 0.01 and rs <= 0)
+                    below_ema8 = not np.isnan(ema8[i]) and close[i] < ema8[i] * 0.997
+                    weak_rebound = ret_5d[i] < 0.01 and rs <= 0
 
                     bearish_score = 0.0
                     bearish_score += 2.0 if below_ma50 else 0.0
@@ -1854,9 +2210,7 @@ def backtest_v19_1(y_pred, returns, df_test, feature_cols,
 
             if new_position == 0 and exit_reason == "signal":
                 if mod_d:
-                    if cum_ret < 0:
-                        confirm_bars = 1
-                    elif max_profit > 0 and cum_ret < max_profit * 0.6:
+                    if cum_ret < 0 or max_profit > 0 and cum_ret < max_profit * 0.6:
                         confirm_bars = 1
                     else:
                         confirm_bars = EXIT_CONFIRM
@@ -1878,9 +2232,15 @@ def backtest_v19_1(y_pred, returns, df_test, feature_cols,
                     new_position = 1
 
             if mod_i and new_position == 0 and exit_reason == "signal":
-                still_supported = (not np.isnan(sma20[i]) and close[i] >= sma20[i] * 0.99)
+                still_supported = not np.isnan(sma20[i]) and close[i] >= sma20[i] * 0.99
                 trend_ok = trend in ("strong", "moderate")
-                if cum_ret > 0.03 and max_profit > 0.06 and trend_ok and still_supported and macd_hist[i] > -0.02:
+                if (
+                    cum_ret > 0.03
+                    and max_profit > 0.06
+                    and trend_ok
+                    and still_supported
+                    and macd_hist[i] > -0.02
+                ):
                     new_position = 1
                     n_trend_carry_saved += 1
 
@@ -1902,9 +2262,14 @@ def backtest_v19_1(y_pred, returns, df_test, feature_cols,
                 entry_close = close[i]
                 max_price_in_trade = close[i]
                 entry_features = {
-                    "entry_wp": wp, "entry_dp": dp, "entry_rs": rs,
-                    "entry_vs": vs, "entry_bs": bs, "entry_hl": hl,
-                    "entry_od": od, "entry_bb": bb,
+                    "entry_wp": wp,
+                    "entry_dp": dp,
+                    "entry_rs": rs,
+                    "entry_vs": vs,
+                    "entry_bs": bs,
+                    "entry_hl": hl,
+                    "entry_od": od,
+                    "entry_bb": bb,
                     "entry_score": sum([wp < 0.75, dp > 0.02, rs > 0, vs > 1.1, hl >= 2]),
                     "entry_date": str(dates[i])[:10],
                     "entry_symbol": str(symbols[i]),
@@ -1933,16 +2298,23 @@ def backtest_v19_1(y_pred, returns, df_test, feature_cols,
 
                 if record_trades and entry_equity > 0:
                     pnl_pct = (close[i] / entry_close - 1) * 100 if entry_close > 0 else 0
-                    max_pnl_pct = (max_equity_in_trade - entry_equity) / entry_equity * 100 if entry_equity > 0 else 0
-                    trades.append({
-                        "entry_day": current_entry_day, "exit_day": i,
-                        "holding_days": i - current_entry_day,
-                        "pnl_pct": round(pnl_pct, 2),
-                        "max_profit_pct": round(max_pnl_pct, 2),
-                        "exit_reason": exit_reason,
-                        "exit_date": str(dates[i])[:10],
-                        **entry_features,
-                    })
+                    max_pnl_pct = (
+                        (max_equity_in_trade - entry_equity) / entry_equity * 100
+                        if entry_equity > 0
+                        else 0
+                    )
+                    trades.append(
+                        {
+                            "entry_day": current_entry_day,
+                            "exit_day": i,
+                            "holding_days": i - current_entry_day,
+                            "pnl_pct": round(pnl_pct, 2),
+                            "max_profit_pct": round(max_pnl_pct, 2),
+                            "exit_reason": exit_reason,
+                            "exit_date": str(dates[i])[:10],
+                            **entry_features,
+                        }
+                    )
                 entry_equity = 0
                 max_equity_in_trade = 0
                 max_price_in_trade = 0
@@ -1957,15 +2329,21 @@ def backtest_v19_1(y_pred, returns, df_test, feature_cols,
 
     if position == 1 and entry_equity > 0 and record_trades:
         pnl_pct = (close[-1] / entry_close - 1) * 100 if entry_close > 0 else 0
-        trades.append({
-            "entry_day": current_entry_day, "exit_day": n - 1,
-            "holding_days": n - 1 - current_entry_day,
-            "pnl_pct": round(pnl_pct, 2), "exit_reason": "end",
-            "exit_date": str(dates[-1])[:10], **entry_features,
-        })
+        trades.append(
+            {
+                "entry_day": current_entry_day,
+                "exit_day": n - 1,
+                "holding_days": n - 1 - current_entry_day,
+                "pnl_pct": round(pnl_pct, 2),
+                "exit_reason": "end",
+                "exit_date": str(dates[-1])[:10],
+                **entry_features,
+            }
+        )
 
     return {
-        "equity_curve": equity, "trades": trades,
+        "equity_curve": equity,
+        "trades": trades,
         "total_return_pct": round((equity[-1] / initial_capital - 1) * 100, 2),
         "final_equity": round(equity[-1]),
         "n_vshape_entries": n_vshape_entries,
@@ -1985,19 +2363,26 @@ def backtest_v19_1(y_pred, returns, df_test, feature_cols,
     }
 
 
-def backtest_v19_3(y_pred, returns, df_test, feature_cols,
-                 initial_capital=100_000_000, commission=0.0015, tax=0.001,
-                 record_trades=True,
-                 mod_a=True,    # V-shape entry
-                 mod_b=True,    # Profit-peak protection
-                 mod_c=False,   # Fast loss cut (disabled)
-                 mod_d=False,   # Adaptive exit confirm (disabled)
-                 mod_e=True,    # Secondary breakout
-                 mod_f=True,    # BO Quality Filter
-                 mod_g=True,    # Bear Regime Defense
-                 mod_h=True,    # Confirmed signal exit
-                 mod_i=True,    # Trend-carry override
-                 mod_j=True):   # Anti-chop entry filter
+def backtest_v19_3(
+    y_pred,
+    returns,
+    df_test,
+    feature_cols,
+    initial_capital=100_000_000,
+    commission=0.0015,
+    tax=0.001,
+    record_trades=True,
+    mod_a=True,  # V-shape entry
+    mod_b=True,  # Profit-peak protection
+    mod_c=False,  # Fast loss cut (disabled)
+    mod_d=False,  # Adaptive exit confirm (disabled)
+    mod_e=True,  # Secondary breakout
+    mod_f=True,  # BO Quality Filter
+    mod_g=True,  # Bear Regime Defense
+    mod_h=True,  # Confirmed signal exit
+    mod_i=True,  # Trend-carry override
+    mod_j=True,
+):  # Anti-chop entry filter
     """V19.3: V19.2 + binary position sizing + ATR cap."""
     n = len(y_pred)
     equity = np.zeros(n)
@@ -2031,12 +2416,26 @@ def backtest_v19_3(y_pred, returns, df_test, feature_cols,
     last_exit_bar = -999
     entry_close = 0
 
-    feat_names = ["rsi_slope_5d", "vol_surge_ratio", "range_position_20d",
-                  "dist_to_resistance", "breakout_setup_score", "bb_width_percentile",
-                  "higher_lows_count", "obv_price_divergence"]
-    defaults = {"rsi_slope_5d": 0, "vol_surge_ratio": 1.0, "range_position_20d": 0.5,
-                "dist_to_resistance": 0.05, "breakout_setup_score": 0, "bb_width_percentile": 0.5,
-                "higher_lows_count": 0, "obv_price_divergence": 0}
+    feat_names = [
+        "rsi_slope_5d",
+        "vol_surge_ratio",
+        "range_position_20d",
+        "dist_to_resistance",
+        "breakout_setup_score",
+        "bb_width_percentile",
+        "higher_lows_count",
+        "obv_price_divergence",
+    ]
+    defaults = {
+        "rsi_slope_5d": 0,
+        "vol_surge_ratio": 1.0,
+        "range_position_20d": 0.5,
+        "dist_to_resistance": 0.05,
+        "breakout_setup_score": 0,
+        "bb_width_percentile": 0.5,
+        "higher_lows_count": 0,
+        "obv_price_divergence": 0,
+    }
     feat_arrays = {}
     for fn in feat_names:
         if fn in df_test.columns:
@@ -2098,7 +2497,7 @@ def backtest_v19_3(y_pred, returns, df_test, feature_cols,
             start = i - bars + 1
             if start < 0:
                 continue
-            band = np.max(high[start:i + 1]) - np.min(low[start:i + 1])
+            band = np.max(high[start : i + 1]) - np.min(low[start : i + 1])
             ref = close[i] if close[i] > 0 else 1.0
             if band / ref < 0.05:
                 stabilized_sideways[i] = True
@@ -2106,8 +2505,8 @@ def backtest_v19_3(y_pred, returns, df_test, feature_cols,
 
     consolidation_breakout = np.zeros(n, dtype=bool)
     for i in range(10, n):
-        prev_high = np.max(high[i - 10:i])
-        prev_low = np.min(low[i - 10:i])
+        prev_high = np.max(high[i - 10 : i])
+        prev_low = np.min(low[i - 10 : i])
         ref = close[i - 1] if close[i - 1] > 0 else close[i]
         tight_range = ((prev_high - prev_low) / ref) < 0.08 if ref > 0 else False
         vol_ok = volume[i] > 1.2 * avg_vol20[i] if not np.isnan(avg_vol20[i]) else False
@@ -2117,15 +2516,18 @@ def backtest_v19_3(y_pred, returns, df_test, feature_cols,
     secondary_breakout = np.zeros(n, dtype=bool)
     if mod_e:
         for i in range(10, n):
-            prev_high = np.max(high[i - 10:i])
-            prev_low = np.min(low[i - 10:i])
+            prev_high = np.max(high[i - 10 : i])
+            prev_low = np.min(low[i - 10 : i])
             ref = close[i - 1] if close[i - 1] > 0 else close[i]
             tight_range = ((prev_high - prev_low) / ref) < 0.10 if ref > 0 else False
-            uptrend_macro = (not np.isnan(sma20[i]) and not np.isnan(sma50[i])
-                             and sma20[i] > sma50[i])
+            uptrend_macro = (
+                not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and sma20[i] > sma50[i]
+            )
             vol_threshold = 1.1 if uptrend_macro else 1.2
-            vol_ok = volume[i] > vol_threshold * avg_vol20[i] if not np.isnan(avg_vol20[i]) else False
-            max_high_5d = np.max(high[max(0, i - 5):i])
+            vol_ok = (
+                volume[i] > vol_threshold * avg_vol20[i] if not np.isnan(avg_vol20[i]) else False
+            )
+            max_high_5d = np.max(high[max(0, i - 5) : i])
             breakout_5d = close[i] > max_high_5d
             if tight_range and breakout_5d and vol_ok and uptrend_macro:
                 secondary_breakout[i] = True
@@ -2145,7 +2547,9 @@ def backtest_v19_3(y_pred, returns, df_test, feature_cols,
         bullish = close[i] > opn[i] + rng * 0.5 and close[i] > close[i - 1]
         if not bullish:
             continue
-        oversold = (not np.isnan(rsi14[i - 1]) and rsi14[i - 1] < 35) or drop_from_peak_20[i] <= -0.18
+        oversold = (not np.isnan(rsi14[i - 1]) and rsi14[i - 1] < 35) or drop_from_peak_20[
+            i
+        ] <= -0.18
         if not oversold:
             continue
         if np.isnan(avg_vol20[i]) or volume[i] < 1.3 * avg_vol20[i]:
@@ -2163,7 +2567,11 @@ def backtest_v19_3(y_pred, returns, df_test, feature_cols,
     rolling_high_250 = pd.Series(close).rolling(250, min_periods=20).max().values
     dist_from_52w_high = np.where(rolling_high_250 > 0, (close / rolling_high_250), 1.0)
 
-    date_col = "date" if "date" in df_test.columns else ("timestamp" if "timestamp" in df_test.columns else None)
+    date_col = (
+        "date"
+        if "date" in df_test.columns
+        else ("timestamp" if "timestamp" in df_test.columns else None)
+    )
     dates = df_test[date_col].values if date_col else np.arange(n)
     symbols = df_test["symbol"].values if "symbol" in df_test.columns else ["?"] * n
 
@@ -2186,10 +2594,20 @@ def backtest_v19_3(y_pred, returns, df_test, feature_cols,
         return "weak"
 
     symbol_profiles = {
-        "ACB": "bank", "BID": "bank", "MBB": "bank", "TCB": "bank",
-        "AAV": "high_beta", "AAS": "high_beta", "SSI": "high_beta", "VND": "high_beta",
-        "DGC": "momentum", "HPG": "momentum", "VIC": "momentum",
-        "FPT": "defensive", "REE": "defensive", "VNM": "defensive",
+        "ACB": "bank",
+        "BID": "bank",
+        "MBB": "bank",
+        "TCB": "bank",
+        "AAV": "high_beta",
+        "AAS": "high_beta",
+        "SSI": "high_beta",
+        "VND": "high_beta",
+        "DGC": "momentum",
+        "HPG": "momentum",
+        "VIC": "momentum",
+        "FPT": "defensive",
+        "REE": "defensive",
+        "VNM": "defensive",
     }
 
     def get_regime_adapter(i, trend):
@@ -2199,7 +2617,9 @@ def backtest_v19_3(y_pred, returns, df_test, feature_cols,
         low_vol = bb_i < 0.35
         weak_move = abs(ret_20d[i]) < 0.05
         choppy_regime = low_vol and weak_move and trend == "weak"
-        atr_ratio = (atr14[i] / close[i]) if (i < n and close[i] > 0 and not np.isnan(atr14[i])) else 0.03
+        atr_ratio = (
+            (atr14[i] / close[i]) if (i < n and close[i] > 0 and not np.isnan(atr14[i])) else 0.03
+        )
 
         params = {
             "profile": profile,
@@ -2211,13 +2631,45 @@ def backtest_v19_3(y_pred, returns, df_test, feature_cols,
             "choppy_regime": choppy_regime,
         }
         if profile == "high_beta":
-            params.update({"dp_floor": 0.015, "ret5_hot": 0.090, "size_mult": 0.98, "base_confirm_bars": 2, "exit_score_threshold": 2.35})
+            params.update(
+                {
+                    "dp_floor": 0.015,
+                    "ret5_hot": 0.090,
+                    "size_mult": 0.98,
+                    "base_confirm_bars": 2,
+                    "exit_score_threshold": 2.35,
+                }
+            )
         elif profile == "bank":
-            params.update({"dp_floor": 0.020, "ret5_hot": 0.070, "size_mult": 0.92, "base_confirm_bars": 3, "exit_score_threshold": 2.2})
+            params.update(
+                {
+                    "dp_floor": 0.020,
+                    "ret5_hot": 0.070,
+                    "size_mult": 0.92,
+                    "base_confirm_bars": 3,
+                    "exit_score_threshold": 2.2,
+                }
+            )
         elif profile == "defensive":
-            params.update({"dp_floor": 0.025, "ret5_hot": 0.050, "size_mult": 0.85, "base_confirm_bars": 3, "exit_score_threshold": 1.8})
+            params.update(
+                {
+                    "dp_floor": 0.025,
+                    "ret5_hot": 0.050,
+                    "size_mult": 0.85,
+                    "base_confirm_bars": 3,
+                    "exit_score_threshold": 1.8,
+                }
+            )
         elif profile == "momentum":
-            params.update({"dp_floor": 0.018, "ret5_hot": 0.080, "size_mult": 0.92, "base_confirm_bars": 2, "exit_score_threshold": 2.2})
+            params.update(
+                {
+                    "dp_floor": 0.018,
+                    "ret5_hot": 0.080,
+                    "size_mult": 0.92,
+                    "base_confirm_bars": 2,
+                    "exit_score_threshold": 2.2,
+                }
+            )
 
         if choppy_regime:
             params["dp_floor"] += 0.004
@@ -2293,10 +2745,13 @@ def backtest_v19_3(y_pred, returns, df_test, feature_cols,
 
         if new_position == 0 and position == 0 and last_exit_reason == "trailing_stop":
             bars_since_exit = i - last_exit_bar
-            if (bars_since_exit <= QUICK_REENTRY_WINDOW and
-                trend in ("strong", "moderate") and
-                macd_line[i] > 0 and
-                not np.isnan(sma20[i]) and close[i] > sma20[i]):
+            if (
+                bars_since_exit <= QUICK_REENTRY_WINDOW
+                and trend in ("strong", "moderate")
+                and macd_line[i] > 0
+                and not np.isnan(sma20[i])
+                and close[i] > sma20[i]
+            ):
                 new_position = 1
                 quick_reentry = True
 
@@ -2304,14 +2759,20 @@ def backtest_v19_3(y_pred, returns, df_test, feature_cols,
         if mod_f:
             macd_pos = macd_hist[i] > 0
             bullish = close[i] > opn[i]
-            heavy_vol = (not np.isnan(avg_vol20[i]) and volume[i] > 1.5 * avg_vol20[i])
+            heavy_vol = not np.isnan(avg_vol20[i]) and volume[i] > 1.5 * avg_vol20[i]
             bo_quality_ok = macd_pos and bullish and heavy_vol
 
         if new_position == 0 and position == 0 and consolidation_breakout[i] and bo_quality_ok:
             new_position = 1
             breakout_entry = True
 
-        if mod_e and new_position == 0 and position == 0 and secondary_breakout[i] and bo_quality_ok:
+        if (
+            mod_e
+            and new_position == 0
+            and position == 0
+            and secondary_breakout[i]
+            and bo_quality_ok
+        ):
             new_position = 1
             breakout_entry = True
             n_secondary_breakout += 1
@@ -2332,11 +2793,15 @@ def backtest_v19_3(y_pred, returns, df_test, feature_cols,
                 if price_diff < 0.03:
                     new_position = 0
 
-        if new_position == 1 and position == 0 and not quick_reentry and not breakout_entry and not vshape_entry:
+        if (
+            new_position == 1
+            and position == 0
+            and not quick_reentry
+            and not breakout_entry
+            and not vshape_entry
+        ):
             prev_pred = int(y_pred[i - 2]) if i >= 2 else 0
-            if bs >= 4 and vs > 1.2:
-                pass
-            elif trend == "strong" and rs > 0:
+            if bs >= 4 and vs > 1.2 or trend == "strong" and rs > 0:
                 pass
             elif prev_pred != 1:
                 new_position = 0
@@ -2347,26 +2812,29 @@ def backtest_v19_3(y_pred, returns, df_test, feature_cols,
                     if bs < 3 and not breakout_entry:
                         new_position = 0
 
-        strong_breakout_context = (
-            trend == "strong" and (bs >= 3 or vs > 1.5 or breakout_entry)
-        )
+        strong_breakout_context = trend == "strong" and (bs >= 3 or vs > 1.5 or breakout_entry)
         entry_alpha_ok = True
 
         if new_position == 1 and position == 0 and not quick_reentry and not vshape_entry:
             entry_score = sum([wp < 0.75, dp > 0.02, rs > 0, vs > 1.1, hl >= 2])
-            near_sma_support = (not np.isnan(sma20[i]) and
-                               close[i] <= sma20[i] * 1.02 and
-                               close[i] >= sma20[i] * 0.97)
-            near_local_low = (not np.isnan(local_low_20[i]) and
-                             close[i] <= local_low_20[i] * 1.05)
-            in_uptrend_macro = (not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and
-                               sma20[i] > sma50[i])
+            near_sma_support = (
+                not np.isnan(sma20[i])
+                and close[i] <= sma20[i] * 1.02
+                and close[i] >= sma20[i] * 0.97
+            )
+            near_local_low = not np.isnan(local_low_20[i]) and close[i] <= local_low_20[i] * 1.05
+            in_uptrend_macro = (
+                not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and sma20[i] > sma50[i]
+            )
 
             if trend == "strong":
                 min_score = 1
-            elif (near_sma_support or near_local_low) and in_uptrend_macro:
-                min_score = 2
-            elif in_uptrend_macro and rs > 0:
+            elif (
+                (near_sma_support or near_local_low)
+                and in_uptrend_macro
+                or in_uptrend_macro
+                and rs > 0
+            ):
                 min_score = 2
             else:
                 min_score = 3
@@ -2375,7 +2843,13 @@ def backtest_v19_3(y_pred, returns, df_test, feature_cols,
                 entry_alpha_ok = False
             if wp > 0.9 and rs <= 0 and bs < 2 and trend != "strong" and not breakout_entry:
                 entry_alpha_ok = False
-            if bb > 0.85 and bs < 2 and entry_score < 4 and trend != "strong" and not breakout_entry:
+            if (
+                bb > 0.85
+                and bs < 2
+                and entry_score < 4
+                and trend != "strong"
+                and not breakout_entry
+            ):
                 entry_alpha_ok = False
             if entry_alpha_ok:
                 if wp > 0.78 and bb < 0.35 and trend == "weak" and not breakout_entry:
@@ -2402,17 +2876,28 @@ def backtest_v19_3(y_pred, returns, df_test, feature_cols,
                 entry_alpha_ok = False
 
         if mod_g and new_position == 1 and position == 0 and not vshape_entry and entry_alpha_ok:
-            sma20_below_50 = (not np.isnan(sma20[i]) and not np.isnan(sma50[i])
-                              and sma20[i] < sma50[i])
-            close_below_50 = (not np.isnan(sma50[i]) and close[i] < sma50[i])
+            sma20_below_50 = (
+                not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and sma20[i] < sma50[i]
+            )
+            close_below_50 = not np.isnan(sma50[i]) and close[i] < sma50[i]
             deep_60d_loss = ret_60d[i] < -0.10
             if sma20_below_50 and close_below_50 and deep_60d_loss:
                 entry_alpha_ok = False
                 n_bear_blocked += 1
 
-        if mod_j and new_position == 1 and position == 0 and not vshape_entry and not breakout_entry and entry_alpha_ok:
-            ma_flat = (not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and
-                       abs(sma20[i] / sma50[i] - 1) < 0.02)
+        if (
+            mod_j
+            and new_position == 1
+            and position == 0
+            and not vshape_entry
+            and not breakout_entry
+            and entry_alpha_ok
+        ):
+            ma_flat = (
+                not np.isnan(sma20[i])
+                and not np.isnan(sma50[i])
+                and abs(sma20[i] / sma50[i] - 1) < 0.02
+            )
             weak_momo = abs(ret_20d[i]) < 0.06
             narrow_vol = bb < 0.45
             weak_trend = trend == "weak"
@@ -2467,7 +2952,9 @@ def backtest_v19_3(y_pred, returns, df_test, feature_cols,
             if close[i] > max_price_in_trade:
                 max_price_in_trade = close[i]
             cum_ret = (projected - entry_equity) / entry_equity if entry_equity > 0 else 0
-            max_profit = (max_equity_in_trade - entry_equity) / entry_equity if entry_equity > 0 else 0
+            max_profit = (
+                (max_equity_in_trade - entry_equity) / entry_equity if entry_equity > 0 else 0
+            )
             price_max_profit = (max_price_in_trade / entry_close - 1) if entry_close > 0 else 0
             price_cur_ret = (close[i] / entry_close - 1) if entry_close > 0 else 0
 
@@ -2489,14 +2976,16 @@ def backtest_v19_3(y_pred, returns, df_test, feature_cols,
                 exit_reason = "signal_hard_cap"
                 n_signal_hard_cap += 1
 
-            elif price_cur_ret < -0.05 and hold_days > 3:
-                new_position = 0
-                exit_reason = "fast_exit_loss"
-                n_fast_exit_loss += 1
-
-            elif (price_cur_ret < -0.03 and hold_days > 2
-                  and macd_hist[i] < 0
-                  and (not np.isnan(ema8[i]) and close[i] < ema8[i])):
+            elif (
+                price_cur_ret < -0.05
+                and hold_days > 3
+                or (
+                    price_cur_ret < -0.03
+                    and hold_days > 2
+                    and macd_hist[i] < 0
+                    and (not np.isnan(ema8[i]) and close[i] < ema8[i])
+                )
+            ):
                 new_position = 0
                 exit_reason = "fast_exit_loss"
                 n_fast_exit_loss += 1
@@ -2505,15 +2994,20 @@ def backtest_v19_3(y_pred, returns, df_test, feature_cols,
                 new_position = 0
                 exit_reason = "stop_loss"
 
-            elif (mod_c and hold_days < 5 and cum_ret < -0.03
-                  and macd_hist[i] < 0 and close[i] < opn[i]):
+            elif (
+                mod_c
+                and hold_days < 5
+                and cum_ret < -0.03
+                and macd_hist[i] < 0
+                and close[i] < opn[i]
+            ):
                 new_position = 0
                 exit_reason = "fast_loss_cut"
                 n_fast_loss_cut += 1
 
             elif mod_b and price_max_profit >= 0.20:
-                price_below_sma10 = (not np.isnan(sma10[i]) and close[i] < sma10[i])
-                heavy_vol = (not np.isnan(avg_vol20[i]) and volume[i] > 1.5 * avg_vol20[i])
+                price_below_sma10 = not np.isnan(sma10[i]) and close[i] < sma10[i]
+                heavy_vol = not np.isnan(avg_vol20[i]) and volume[i] > 1.5 * avg_vol20[i]
                 bearish_candle = close[i] < opn[i]
                 if price_below_sma10 and heavy_vol and bearish_candle:
                     new_position = 0
@@ -2534,10 +3028,12 @@ def backtest_v19_3(y_pred, returns, df_test, feature_cols,
                 macd_bearish = macd_hist[i] < 0 and macd_hist[i - 1] >= 0 if i > 0 else False
                 price_below_ma20 = close[i] < sma20[i] if not np.isnan(sma20[i]) else False
 
-                if macd_bearish and price_below_ma20:
-                    new_position = 0
-                    exit_reason = "hybrid_exit"
-                elif price_below_ma20 and cum_ret < max_profit * 0.5:
+                if (
+                    macd_bearish
+                    and price_below_ma20
+                    or price_below_ma20
+                    and cum_ret < max_profit * 0.5
+                ):
                     new_position = 0
                     exit_reason = "hybrid_exit"
                 else:
@@ -2574,23 +3070,34 @@ def backtest_v19_3(y_pred, returns, df_test, feature_cols,
                     new_position = 0
                     exit_reason = "zombie_exit"
 
-            if new_position == 0 and exit_reason not in (
-                    "stop_loss", "hard_stop", "hybrid_exit", "peak_protect_dist",
-                    "peak_protect_ema", "fast_loss_cut", "signal_hard_cap",
-                    "fast_exit_loss") and hold_days < MIN_HOLD:
+            if (
+                new_position == 0
+                and exit_reason
+                not in (
+                    "stop_loss",
+                    "hard_stop",
+                    "hybrid_exit",
+                    "peak_protect_dist",
+                    "peak_protect_ema",
+                    "fast_loss_cut",
+                    "signal_hard_cap",
+                    "fast_exit_loss",
+                )
+                and hold_days < MIN_HOLD
+            ):
                 if cum_ret > -atr_stop:
                     new_position = 1
 
             if new_position == 0 and exit_reason == "signal":
                 if mod_h:
-                    below_ma20 = (not np.isnan(sma20[i]) and close[i] < sma20[i])
-                    below_ma50 = (not np.isnan(sma50[i]) and close[i] < sma50[i])
+                    below_ma20 = not np.isnan(sma20[i]) and close[i] < sma20[i]
+                    below_ma50 = not np.isnan(sma50[i]) and close[i] < sma50[i]
                     old_bearish_confirm = (below_ma20 and macd_hist[i] < 0) or below_ma50
-                    heavy_vol = (not np.isnan(avg_vol20[i]) and volume[i] > 1.4 * avg_vol20[i])
+                    heavy_vol = not np.isnan(avg_vol20[i]) and volume[i] > 1.4 * avg_vol20[i]
                     bearish_candle = close[i] < opn[i]
                     macd_falling = macd_hist[i] < macd_hist[i - 1] if i > 0 else False
-                    below_ema8 = (not np.isnan(ema8[i]) and close[i] < ema8[i] * 0.997)
-                    weak_rebound = (ret_5d[i] < 0.01 and rs <= 0)
+                    below_ema8 = not np.isnan(ema8[i]) and close[i] < ema8[i] * 0.997
+                    weak_rebound = ret_5d[i] < 0.01 and rs <= 0
 
                     bearish_score = 0.0
                     bearish_score += 2.0 if below_ma50 else 0.0
@@ -2626,9 +3133,7 @@ def backtest_v19_3(y_pred, returns, df_test, feature_cols,
                 if cum_ret < 0:
                     confirm_bars = 0
                 elif mod_d:
-                    if cum_ret < 0:
-                        confirm_bars = 1
-                    elif max_profit > 0 and cum_ret < max_profit * 0.6:
+                    if cum_ret < 0 or max_profit > 0 and cum_ret < max_profit * 0.6:
                         confirm_bars = 1
                     else:
                         confirm_bars = EXIT_CONFIRM
@@ -2650,9 +3155,15 @@ def backtest_v19_3(y_pred, returns, df_test, feature_cols,
                     new_position = 1
 
             if mod_i and new_position == 0 and exit_reason == "signal":
-                still_supported = (not np.isnan(sma20[i]) and close[i] >= sma20[i] * 0.99)
+                still_supported = not np.isnan(sma20[i]) and close[i] >= sma20[i] * 0.99
                 trend_ok = trend in ("strong", "moderate")
-                if cum_ret > 0.03 and max_profit > 0.06 and trend_ok and still_supported and macd_hist[i] > -0.02:
+                if (
+                    cum_ret > 0.03
+                    and max_profit > 0.06
+                    and trend_ok
+                    and still_supported
+                    and macd_hist[i] > -0.02
+                ):
                     new_position = 1
                     n_trend_carry_saved += 1
 
@@ -2674,9 +3185,14 @@ def backtest_v19_3(y_pred, returns, df_test, feature_cols,
                 entry_close = close[i]
                 max_price_in_trade = close[i]
                 entry_features = {
-                    "entry_wp": wp, "entry_dp": dp, "entry_rs": rs,
-                    "entry_vs": vs, "entry_bs": bs, "entry_hl": hl,
-                    "entry_od": od, "entry_bb": bb,
+                    "entry_wp": wp,
+                    "entry_dp": dp,
+                    "entry_rs": rs,
+                    "entry_vs": vs,
+                    "entry_bs": bs,
+                    "entry_hl": hl,
+                    "entry_od": od,
+                    "entry_bb": bb,
                     "entry_score": sum([wp < 0.75, dp > 0.02, rs > 0, vs > 1.1, hl >= 2]),
                     "entry_date": str(dates[i])[:10],
                     "entry_symbol": str(symbols[i]),
@@ -2705,16 +3221,23 @@ def backtest_v19_3(y_pred, returns, df_test, feature_cols,
 
                 if record_trades and entry_equity > 0:
                     pnl_pct = (close[i] / entry_close - 1) * 100 if entry_close > 0 else 0
-                    max_pnl_pct = (max_equity_in_trade - entry_equity) / entry_equity * 100 if entry_equity > 0 else 0
-                    trades.append({
-                        "entry_day": current_entry_day, "exit_day": i,
-                        "holding_days": i - current_entry_day,
-                        "pnl_pct": round(pnl_pct, 2),
-                        "max_profit_pct": round(max_pnl_pct, 2),
-                        "exit_reason": exit_reason,
-                        "exit_date": str(dates[i])[:10],
-                        **entry_features,
-                    })
+                    max_pnl_pct = (
+                        (max_equity_in_trade - entry_equity) / entry_equity * 100
+                        if entry_equity > 0
+                        else 0
+                    )
+                    trades.append(
+                        {
+                            "entry_day": current_entry_day,
+                            "exit_day": i,
+                            "holding_days": i - current_entry_day,
+                            "pnl_pct": round(pnl_pct, 2),
+                            "max_profit_pct": round(max_pnl_pct, 2),
+                            "exit_reason": exit_reason,
+                            "exit_date": str(dates[i])[:10],
+                            **entry_features,
+                        }
+                    )
                 entry_equity = 0
                 max_equity_in_trade = 0
                 max_price_in_trade = 0
@@ -2729,15 +3252,21 @@ def backtest_v19_3(y_pred, returns, df_test, feature_cols,
 
     if position == 1 and entry_equity > 0 and record_trades:
         pnl_pct = (close[-1] / entry_close - 1) * 100 if entry_close > 0 else 0
-        trades.append({
-            "entry_day": current_entry_day, "exit_day": n - 1,
-            "holding_days": n - 1 - current_entry_day,
-            "pnl_pct": round(pnl_pct, 2), "exit_reason": "end",
-            "exit_date": str(dates[-1])[:10], **entry_features,
-        })
+        trades.append(
+            {
+                "entry_day": current_entry_day,
+                "exit_day": n - 1,
+                "holding_days": n - 1 - current_entry_day,
+                "pnl_pct": round(pnl_pct, 2),
+                "exit_reason": "end",
+                "exit_date": str(dates[-1])[:10],
+                **entry_features,
+            }
+        )
 
     return {
-        "equity_curve": equity, "trades": trades,
+        "equity_curve": equity,
+        "trades": trades,
         "total_return_pct": round((equity[-1] / initial_capital - 1) * 100, 2),
         "final_equity": round(equity[-1]),
         "n_vshape_entries": n_vshape_entries,
@@ -2760,10 +3289,16 @@ def backtest_v19_3(y_pred, returns, df_test, feature_cols,
     }
 
 
-
-def backtest_v11(y_pred, returns, df_test, feature_cols,
-                 initial_capital=100_000_000, commission=0.0015, tax=0.001,
-                 record_trades=True):
+def backtest_v11(
+    y_pred,
+    returns,
+    df_test,
+    feature_cols,
+    initial_capital=100_000_000,
+    commission=0.0015,
+    tax=0.001,
+    record_trades=True,
+):
     """V11: V10 exits + stricter entry quality filters + breakout scanner."""
     n = len(y_pred)
     equity = np.zeros(n)
@@ -2779,16 +3314,16 @@ def backtest_v11(y_pred, returns, df_test, feature_cols,
 
     # V10 params (inherited from V9 where unchanged)
     MIN_HOLD = 6
-    ZOMBIE_BARS = 14           # V10: slightly longer than V9(12) — give trends more time
+    ZOMBIE_BARS = 14  # V10: slightly longer than V9(12) — give trends more time
     EXIT_CONFIRM = 3
     PROFIT_LOCK_THRESHOLD = 0.12  # V10: higher threshold (V9=0.10) — let winners run more
-    PROFIT_LOCK_MIN = 0.06        # V10: lock 6% (V9=5%)
+    PROFIT_LOCK_MIN = 0.06  # V10: lock 6% (V9=5%)
     HARD_STOP = 0.08
     ATR_MULT = 1.8
 
     # V10 NEW params
     COOLDOWN_AFTER_BIG_LOSS = 5
-    QUICK_REENTRY_WINDOW = 3      # bars after trailing_stop exit to allow quick re-entry
+    QUICK_REENTRY_WINDOW = 3  # bars after trailing_stop exit to allow quick re-entry
     STRONG_TREND_TRAIL_MULT = 0.45  # multiply trail_pct by this in strong trends (wider)
 
     cooldown_remaining = 0
@@ -2798,12 +3333,26 @@ def backtest_v11(y_pred, returns, df_test, feature_cols,
     entry_close = 0
 
     # Feature arrays
-    feat_names = ["rsi_slope_5d", "vol_surge_ratio", "range_position_20d",
-                  "dist_to_resistance", "breakout_setup_score", "bb_width_percentile",
-                  "higher_lows_count", "obv_price_divergence"]
-    defaults = {"rsi_slope_5d": 0, "vol_surge_ratio": 1.0, "range_position_20d": 0.5,
-                "dist_to_resistance": 0.05, "breakout_setup_score": 0, "bb_width_percentile": 0.5,
-                "higher_lows_count": 0, "obv_price_divergence": 0}
+    feat_names = [
+        "rsi_slope_5d",
+        "vol_surge_ratio",
+        "range_position_20d",
+        "dist_to_resistance",
+        "breakout_setup_score",
+        "bb_width_percentile",
+        "higher_lows_count",
+        "obv_price_divergence",
+    ]
+    defaults = {
+        "rsi_slope_5d": 0,
+        "vol_surge_ratio": 1.0,
+        "range_position_20d": 0.5,
+        "dist_to_resistance": 0.05,
+        "breakout_setup_score": 0,
+        "bb_width_percentile": 0.5,
+        "higher_lows_count": 0,
+        "obv_price_divergence": 0,
+    }
     feat_arrays = {}
     for fn in feat_names:
         if fn in df_test.columns:
@@ -2852,7 +3401,7 @@ def backtest_v11(y_pred, returns, df_test, feature_cols,
             start = i - bars + 1
             if start < 0:
                 continue
-            band = np.max(high[start:i + 1]) - np.min(low[start:i + 1])
+            band = np.max(high[start : i + 1]) - np.min(low[start : i + 1])
             ref = close[i] if close[i] > 0 else 1.0
             if band / ref < 0.05:
                 stabilized_sideways[i] = True
@@ -2861,8 +3410,8 @@ def backtest_v11(y_pred, returns, df_test, feature_cols,
     # V11: new consolidation breakout scanner
     consolidation_breakout = np.zeros(n, dtype=bool)
     for i in range(10, n):
-        prev_high = np.max(high[i - 10:i])
-        prev_low = np.min(low[i - 10:i])
+        prev_high = np.max(high[i - 10 : i])
+        prev_low = np.min(low[i - 10 : i])
         ref = close[i - 1] if close[i - 1] > 0 else close[i]
         tight_range = ((prev_high - prev_low) / ref) < 0.08 if ref > 0 else False
         vol_ok = volume[i] > 1.2 * avg_vol20[i] if not np.isnan(avg_vol20[i]) else False
@@ -2881,7 +3430,11 @@ def backtest_v11(y_pred, returns, df_test, feature_cols,
     rolling_high_250 = pd.Series(close).rolling(250, min_periods=20).max().values
     dist_from_52w_high = np.where(rolling_high_250 > 0, (close / rolling_high_250), 1.0)
 
-    date_col = "date" if "date" in df_test.columns else ("timestamp" if "timestamp" in df_test.columns else None)
+    date_col = (
+        "date"
+        if "date" in df_test.columns
+        else ("timestamp" if "timestamp" in df_test.columns else None)
+    )
     dates = df_test[date_col].values if date_col else np.arange(n)
     symbols = df_test["symbol"].values if "symbol" in df_test.columns else ["?"] * n
 
@@ -2954,10 +3507,13 @@ def backtest_v11(y_pred, returns, df_test, feature_cols,
         breakout_entry = False
         if new_position == 0 and position == 0 and last_exit_reason == "trailing_stop":
             bars_since_exit = i - last_exit_bar
-            if (bars_since_exit <= QUICK_REENTRY_WINDOW and
-                trend in ("strong", "moderate") and
-                macd_line[i] > 0 and
-                not np.isnan(sma20[i]) and close[i] > sma20[i]):
+            if (
+                bars_since_exit <= QUICK_REENTRY_WINDOW
+                and trend in ("strong", "moderate")
+                and macd_line[i] > 0
+                and not np.isnan(sma20[i])
+                and close[i] > sma20[i]
+            ):
                 # Quick re-entry: override ML signal
                 new_position = 1
                 quick_reentry = True
@@ -2997,20 +3553,25 @@ def backtest_v11(y_pred, returns, df_test, feature_cols,
 
         if new_position == 1 and position == 0 and not quick_reentry:
             entry_score = sum([wp < 0.75, dp > 0.02, rs > 0, vs > 1.1, hl >= 2])
-            near_sma_support = (not np.isnan(sma20[i]) and
-                               close[i] <= sma20[i] * 1.02 and
-                               close[i] >= sma20[i] * 0.97)
-            near_local_low = (not np.isnan(local_low_20[i]) and
-                             close[i] <= local_low_20[i] * 1.05)
-            in_uptrend_macro = (not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and
-                               sma20[i] > sma50[i])
+            near_sma_support = (
+                not np.isnan(sma20[i])
+                and close[i] <= sma20[i] * 1.02
+                and close[i] >= sma20[i] * 0.97
+            )
+            near_local_low = not np.isnan(local_low_20[i]) and close[i] <= local_low_20[i] * 1.05
+            in_uptrend_macro = (
+                not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and sma20[i] > sma50[i]
+            )
 
             # V10: Even easier entry in strong trend
             if trend == "strong":
                 min_score = 1
-            elif (near_sma_support or near_local_low) and in_uptrend_macro:
-                min_score = 2
-            elif in_uptrend_macro and rs > 0:
+            elif (
+                (near_sma_support or near_local_low)
+                and in_uptrend_macro
+                or in_uptrend_macro
+                and rs > 0
+            ):
                 min_score = 2
             else:
                 min_score = 3
@@ -3019,7 +3580,13 @@ def backtest_v11(y_pred, returns, df_test, feature_cols,
                 new_position = 0
             if wp > 0.9 and rs <= 0 and bs < 2 and trend != "strong" and not breakout_entry:
                 new_position = 0
-            if bb > 0.85 and bs < 2 and entry_score < 4 and trend != "strong" and not breakout_entry:
+            if (
+                bb > 0.85
+                and bs < 2
+                and entry_score < 4
+                and trend != "strong"
+                and not breakout_entry
+            ):
                 new_position = 0
             if new_position == 1:
                 if wp > 0.78 and bb < 0.35 and trend == "weak" and not breakout_entry:
@@ -3073,7 +3640,9 @@ def backtest_v11(y_pred, returns, df_test, feature_cols,
             projected = equity[i - 1] * (1 + ret * position_size)
             max_equity_in_trade = max(max_equity_in_trade, projected)
             cum_ret = (projected - entry_equity) / entry_equity if entry_equity > 0 else 0
-            max_profit = (max_equity_in_trade - entry_equity) / entry_equity if entry_equity > 0 else 0
+            max_profit = (
+                (max_equity_in_trade - entry_equity) / entry_equity if entry_equity > 0 else 0
+            )
 
             in_uptrend = rs > 0 and hl >= 2
             strong_uptrend = trend == "strong"
@@ -3156,7 +3725,11 @@ def backtest_v11(y_pred, returns, df_test, feature_cols,
                     n_zombie_exit += 1
 
             # 5) Min hold
-            if new_position == 0 and exit_reason not in ("stop_loss", "hard_stop", "hybrid_exit") and hold_days < MIN_HOLD:
+            if (
+                new_position == 0
+                and exit_reason not in ("stop_loss", "hard_stop", "hybrid_exit")
+                and hold_days < MIN_HOLD
+            ):
                 if cum_ret > -atr_stop:
                     new_position = 1
                     n_min_hold_saved += 1
@@ -3195,9 +3768,14 @@ def backtest_v11(y_pred, returns, df_test, feature_cols,
                 consecutive_exit_signals = 0
                 entry_close = close[i]
                 entry_features = {
-                    "entry_wp": wp, "entry_dp": dp, "entry_rs": rs,
-                    "entry_vs": vs, "entry_bs": bs, "entry_hl": hl,
-                    "entry_od": od, "entry_bb": bb,
+                    "entry_wp": wp,
+                    "entry_dp": dp,
+                    "entry_rs": rs,
+                    "entry_vs": vs,
+                    "entry_bs": bs,
+                    "entry_hl": hl,
+                    "entry_od": od,
+                    "entry_bb": bb,
                     "entry_score": sum([wp < 0.75, dp > 0.02, rs > 0, vs > 1.1, hl >= 2]),
                     "entry_date": str(dates[i])[:10],
                     "entry_symbol": str(symbols[i]),
@@ -3223,16 +3801,23 @@ def backtest_v11(y_pred, returns, df_test, feature_cols,
 
                 if record_trades and entry_equity > 0:
                     pnl_pct = (close[i] / entry_close - 1) * 100 if entry_close > 0 else 0
-                    max_pnl_pct = (max_equity_in_trade - entry_equity) / entry_equity * 100 if entry_equity > 0 else 0
-                    trades.append({
-                        "entry_day": current_entry_day, "exit_day": i,
-                        "holding_days": i - current_entry_day,
-                        "pnl_pct": round(pnl_pct, 2),
-                        "max_profit_pct": round(max_pnl_pct, 2),
-                        "exit_reason": exit_reason,
-                        "exit_date": str(dates[i])[:10],
-                        **entry_features,
-                    })
+                    max_pnl_pct = (
+                        (max_equity_in_trade - entry_equity) / entry_equity * 100
+                        if entry_equity > 0
+                        else 0
+                    )
+                    trades.append(
+                        {
+                            "entry_day": current_entry_day,
+                            "exit_day": i,
+                            "holding_days": i - current_entry_day,
+                            "pnl_pct": round(pnl_pct, 2),
+                            "max_profit_pct": round(max_pnl_pct, 2),
+                            "exit_reason": exit_reason,
+                            "exit_date": str(dates[i])[:10],
+                            **entry_features,
+                        }
+                    )
                 entry_equity = 0
                 max_equity_in_trade = 0
                 position_size = 1.0
@@ -3248,21 +3833,31 @@ def backtest_v11(y_pred, returns, df_test, feature_cols,
         # Keep end-of-data PnL definition consistent with normal exits:
         # use price change from entry_close to last close, not account equity delta.
         pnl_pct = (close[-1] / entry_close - 1) * 100 if entry_close > 0 else 0
-        trades.append({
-            "entry_day": current_entry_day, "exit_day": n - 1,
-            "holding_days": n - 1 - current_entry_day,
-            "pnl_pct": round(pnl_pct, 2), "exit_reason": "end",
-            "exit_date": str(dates[-1])[:10], **entry_features,
-        })
+        trades.append(
+            {
+                "entry_day": current_entry_day,
+                "exit_day": n - 1,
+                "holding_days": n - 1 - current_entry_day,
+                "pnl_pct": round(pnl_pct, 2),
+                "exit_reason": "end",
+                "exit_date": str(dates[-1])[:10],
+                **entry_features,
+            }
+        )
 
     return {
-        "equity_curve": equity, "trades": trades,
+        "equity_curve": equity,
+        "trades": trades,
         "total_return_pct": round((equity[-1] / initial_capital - 1) * 100, 2),
         "final_equity": round(equity[-1]),
-        "n_stop_loss": n_stop_loss, "n_trailing_stop": n_trailing_stop,
-        "n_zombie_exit": n_zombie_exit, "n_profit_lock": n_profit_lock,
-        "n_hard_stop": n_hard_stop, "n_min_hold_saved": n_min_hold_saved,
-        "n_quick_reentry": n_quick_reentry, "n_hybrid_exit": n_hybrid_exit,
+        "n_stop_loss": n_stop_loss,
+        "n_trailing_stop": n_trailing_stop,
+        "n_zombie_exit": n_zombie_exit,
+        "n_profit_lock": n_profit_lock,
+        "n_hard_stop": n_hard_stop,
+        "n_min_hold_saved": n_min_hold_saved,
+        "n_quick_reentry": n_quick_reentry,
+        "n_hybrid_exit": n_hybrid_exit,
         "n_breakout_entries": n_breakout_entries,
         "n_late_entry_blocked": n_late_entry_blocked,
         "n_falling_knife_blocked": n_falling_knife_blocked,
@@ -3272,16 +3867,21 @@ def backtest_v11(y_pred, returns, df_test, feature_cols,
     }
 
 
-
-def backtest_v12(y_pred, returns, df_test, feature_cols,
-                 initial_capital=100_000_000, commission=0.0015, tax=0.001,
-                 record_trades=True,
-                 # Toggle individual fixes
-                 fix_a=True,   # Profit floor lock
-                 fix_b=True,   # Time-decay trailing
-                 fix_c=True,   # Weaken strong trend override
-                 fix_d=True,   # RSI slope cap
-                 ):
+def backtest_v12(
+    y_pred,
+    returns,
+    df_test,
+    feature_cols,
+    initial_capital=100_000_000,
+    commission=0.0015,
+    tax=0.001,
+    record_trades=True,
+    # Toggle individual fixes
+    fix_a=True,  # Profit floor lock
+    fix_b=True,  # Time-decay trailing
+    fix_c=True,  # Weaken strong trend override
+    fix_d=True,  # RSI slope cap
+):
     """V12: V11 + profit protection + smarter exits."""
     n = len(y_pred)
     equity = np.zeros(n)
@@ -3316,12 +3916,26 @@ def backtest_v12(y_pred, returns, df_test, feature_cols,
     max_price_in_trade = 0  # Fix A: track price-based max profit
 
     # Feature arrays
-    feat_names = ["rsi_slope_5d", "vol_surge_ratio", "range_position_20d",
-                  "dist_to_resistance", "breakout_setup_score", "bb_width_percentile",
-                  "higher_lows_count", "obv_price_divergence"]
-    defaults = {"rsi_slope_5d": 0, "vol_surge_ratio": 1.0, "range_position_20d": 0.5,
-                "dist_to_resistance": 0.05, "breakout_setup_score": 0, "bb_width_percentile": 0.5,
-                "higher_lows_count": 0, "obv_price_divergence": 0}
+    feat_names = [
+        "rsi_slope_5d",
+        "vol_surge_ratio",
+        "range_position_20d",
+        "dist_to_resistance",
+        "breakout_setup_score",
+        "bb_width_percentile",
+        "higher_lows_count",
+        "obv_price_divergence",
+    ]
+    defaults = {
+        "rsi_slope_5d": 0,
+        "vol_surge_ratio": 1.0,
+        "range_position_20d": 0.5,
+        "dist_to_resistance": 0.05,
+        "breakout_setup_score": 0,
+        "bb_width_percentile": 0.5,
+        "higher_lows_count": 0,
+        "obv_price_divergence": 0,
+    }
     feat_arrays = {}
     for fn in feat_names:
         if fn in df_test.columns:
@@ -3365,7 +3979,7 @@ def backtest_v12(y_pred, returns, df_test, feature_cols,
             start = i - bars + 1
             if start < 0:
                 continue
-            band = np.max(high[start:i + 1]) - np.min(low[start:i + 1])
+            band = np.max(high[start : i + 1]) - np.min(low[start : i + 1])
             ref = close[i] if close[i] > 0 else 1.0
             if band / ref < 0.05:
                 stabilized_sideways[i] = True
@@ -3373,8 +3987,8 @@ def backtest_v12(y_pred, returns, df_test, feature_cols,
 
     consolidation_breakout = np.zeros(n, dtype=bool)
     for i in range(10, n):
-        prev_high = np.max(high[i - 10:i])
-        prev_low = np.min(low[i - 10:i])
+        prev_high = np.max(high[i - 10 : i])
+        prev_low = np.min(low[i - 10 : i])
         ref = close[i - 1] if close[i - 1] > 0 else close[i]
         tight_range = ((prev_high - prev_low) / ref) < 0.08 if ref > 0 else False
         vol_ok = volume[i] > 1.2 * avg_vol20[i] if not np.isnan(avg_vol20[i]) else False
@@ -3391,7 +4005,11 @@ def backtest_v12(y_pred, returns, df_test, feature_cols,
     rolling_high_250 = pd.Series(close).rolling(250, min_periods=20).max().values
     dist_from_52w_high = np.where(rolling_high_250 > 0, (close / rolling_high_250), 1.0)
 
-    date_col = "date" if "date" in df_test.columns else ("timestamp" if "timestamp" in df_test.columns else None)
+    date_col = (
+        "date"
+        if "date" in df_test.columns
+        else ("timestamp" if "timestamp" in df_test.columns else None)
+    )
     dates = df_test[date_col].values if date_col else np.arange(n)
     symbols = df_test["symbol"].values if "symbol" in df_test.columns else ["?"] * n
 
@@ -3447,10 +4065,13 @@ def backtest_v12(y_pred, returns, df_test, feature_cols,
         breakout_entry = False
         if new_position == 0 and position == 0 and last_exit_reason == "trailing_stop":
             bars_since_exit = i - last_exit_bar
-            if (bars_since_exit <= QUICK_REENTRY_WINDOW and
-                trend in ("strong", "moderate") and
-                macd_line[i] > 0 and
-                not np.isnan(sma20[i]) and close[i] > sma20[i]):
+            if (
+                bars_since_exit <= QUICK_REENTRY_WINDOW
+                and trend in ("strong", "moderate")
+                and macd_line[i] > 0
+                and not np.isnan(sma20[i])
+                and close[i] > sma20[i]
+            ):
                 new_position = 1
                 quick_reentry = True
 
@@ -3470,9 +4091,7 @@ def backtest_v12(y_pred, returns, df_test, feature_cols,
 
         if new_position == 1 and position == 0 and not quick_reentry and not breakout_entry:
             prev_pred = int(y_pred[i - 2]) if i >= 2 else 0
-            if bs >= 4 and vs > 1.2:
-                pass
-            elif trend == "strong" and rs > 0:
+            if bs >= 4 and vs > 1.2 or trend == "strong" and rs > 0:
                 pass
             elif prev_pred != 1:
                 new_position = 0
@@ -3485,19 +4104,24 @@ def backtest_v12(y_pred, returns, df_test, feature_cols,
 
         if new_position == 1 and position == 0 and not quick_reentry:
             entry_score = sum([wp < 0.75, dp > 0.02, rs > 0, vs > 1.1, hl >= 2])
-            near_sma_support = (not np.isnan(sma20[i]) and
-                               close[i] <= sma20[i] * 1.02 and
-                               close[i] >= sma20[i] * 0.97)
-            near_local_low = (not np.isnan(local_low_20[i]) and
-                             close[i] <= local_low_20[i] * 1.05)
-            in_uptrend_macro = (not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and
-                               sma20[i] > sma50[i])
+            near_sma_support = (
+                not np.isnan(sma20[i])
+                and close[i] <= sma20[i] * 1.02
+                and close[i] >= sma20[i] * 0.97
+            )
+            near_local_low = not np.isnan(local_low_20[i]) and close[i] <= local_low_20[i] * 1.05
+            in_uptrend_macro = (
+                not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and sma20[i] > sma50[i]
+            )
 
             if trend == "strong":
                 min_score = 1
-            elif (near_sma_support or near_local_low) and in_uptrend_macro:
-                min_score = 2
-            elif in_uptrend_macro and rs > 0:
+            elif (
+                (near_sma_support or near_local_low)
+                and in_uptrend_macro
+                or in_uptrend_macro
+                and rs > 0
+            ):
                 min_score = 2
             else:
                 min_score = 3
@@ -3506,7 +4130,13 @@ def backtest_v12(y_pred, returns, df_test, feature_cols,
                 new_position = 0
             if wp > 0.9 and rs <= 0 and bs < 2 and trend != "strong" and not breakout_entry:
                 new_position = 0
-            if bb > 0.85 and bs < 2 and entry_score < 4 and trend != "strong" and not breakout_entry:
+            if (
+                bb > 0.85
+                and bs < 2
+                and entry_score < 4
+                and trend != "strong"
+                and not breakout_entry
+            ):
                 new_position = 0
             if new_position == 1:
                 if wp > 0.78 and bb < 0.35 and trend == "weak" and not breakout_entry:
@@ -3559,14 +4189,14 @@ def backtest_v12(y_pred, returns, df_test, feature_cols,
         # ═══════════════════════════════════════
         if position == 1:
             projected = equity[i - 1] * (1 + ret * position_size)
-            
+
             # Use price-based profit tracking (fixes bug with position_size < 1)
             price_ret = (close[i] / entry_close - 1) if entry_close > 0 else 0
             if close[i] > max_price_in_trade:
                 max_price_in_trade = close[i]
                 last_new_high_bar = i
             max_price_ret = (max_price_in_trade / entry_close - 1) if entry_close > 0 else 0
-            
+
             cum_ret = price_ret
             max_profit = max_price_ret
 
@@ -3601,10 +4231,12 @@ def backtest_v12(y_pred, returns, df_test, feature_cols,
                 macd_bearish = macd_hist[i] < 0 and macd_hist[i - 1] >= 0 if i > 0 else False
                 price_below_ma20 = close[i] < sma20[i] if not np.isnan(sma20[i]) else False
 
-                if macd_bearish and price_below_ma20:
-                    new_position = 0
-                    exit_reason = "hybrid_exit"
-                elif price_below_ma20 and cum_ret < max_profit * 0.5:
+                if (
+                    macd_bearish
+                    and price_below_ma20
+                    or price_below_ma20
+                    and cum_ret < max_profit * 0.5
+                ):
                     new_position = 0
                     exit_reason = "hybrid_exit"
                 else:
@@ -3654,7 +4286,11 @@ def backtest_v12(y_pred, returns, df_test, feature_cols,
                     exit_reason = "zombie_exit"
 
             # Min hold
-            if new_position == 0 and exit_reason not in ("stop_loss", "hard_stop", "hybrid_exit", "profit_floor") and hold_days < MIN_HOLD:
+            if (
+                new_position == 0
+                and exit_reason not in ("stop_loss", "hard_stop", "hybrid_exit", "profit_floor")
+                and hold_days < MIN_HOLD
+            ):
                 if cum_ret > -atr_stop:
                     new_position = 1
 
@@ -3700,9 +4336,14 @@ def backtest_v12(y_pred, returns, df_test, feature_cols,
                 max_price_in_trade = close[i]
                 last_new_high_bar = i
                 entry_features = {
-                    "entry_wp": wp, "entry_dp": dp, "entry_rs": rs,
-                    "entry_vs": vs, "entry_bs": bs, "entry_hl": hl,
-                    "entry_od": od, "entry_bb": bb,
+                    "entry_wp": wp,
+                    "entry_dp": dp,
+                    "entry_rs": rs,
+                    "entry_vs": vs,
+                    "entry_bs": bs,
+                    "entry_hl": hl,
+                    "entry_od": od,
+                    "entry_bb": bb,
                     "entry_score": sum([wp < 0.75, dp > 0.02, rs > 0, vs > 1.1, hl >= 2]),
                     "entry_date": str(dates[i])[:10],
                     "entry_symbol": str(symbols[i]),
@@ -3728,16 +4369,23 @@ def backtest_v12(y_pred, returns, df_test, feature_cols,
 
                 if record_trades and entry_equity > 0:
                     pnl_pct = (close[i] / entry_close - 1) * 100 if entry_close > 0 else 0
-                    max_pnl_pct = (max_equity_in_trade - entry_equity) / entry_equity * 100 if entry_equity > 0 else 0
-                    trades.append({
-                        "entry_day": current_entry_day, "exit_day": i,
-                        "holding_days": i - current_entry_day,
-                        "pnl_pct": round(pnl_pct, 2),
-                        "max_profit_pct": round(max_pnl_pct, 2),
-                        "exit_reason": exit_reason,
-                        "exit_date": str(dates[i])[:10],
-                        **entry_features,
-                    })
+                    max_pnl_pct = (
+                        (max_equity_in_trade - entry_equity) / entry_equity * 100
+                        if entry_equity > 0
+                        else 0
+                    )
+                    trades.append(
+                        {
+                            "entry_day": current_entry_day,
+                            "exit_day": i,
+                            "holding_days": i - current_entry_day,
+                            "pnl_pct": round(pnl_pct, 2),
+                            "max_profit_pct": round(max_pnl_pct, 2),
+                            "exit_reason": exit_reason,
+                            "exit_date": str(dates[i])[:10],
+                            **entry_features,
+                        }
+                    )
                 entry_equity = 0
                 max_equity_in_trade = 0
                 position_size = 1.0
@@ -3751,15 +4399,21 @@ def backtest_v12(y_pred, returns, df_test, feature_cols,
 
     if position == 1 and entry_close > 0 and record_trades:
         pnl_pct = (close[-1] / entry_close - 1) * 100
-        trades.append({
-            "entry_day": current_entry_day, "exit_day": n - 1,
-            "holding_days": n - 1 - current_entry_day,
-            "pnl_pct": round(pnl_pct, 2), "exit_reason": "end",
-            "exit_date": str(dates[-1])[:10], **entry_features,
-        })
+        trades.append(
+            {
+                "entry_day": current_entry_day,
+                "exit_day": n - 1,
+                "holding_days": n - 1 - current_entry_day,
+                "pnl_pct": round(pnl_pct, 2),
+                "exit_reason": "end",
+                "exit_date": str(dates[-1])[:10],
+                **entry_features,
+            }
+        )
 
     return {
-        "equity_curve": equity, "trades": trades,
+        "equity_curve": equity,
+        "trades": trades,
         "total_return_pct": round((equity[-1] / initial_capital - 1) * 100, 2),
         "final_equity": round(equity[-1]),
         "n_profit_floor": n_profit_floor,
@@ -3768,10 +4422,16 @@ def backtest_v12(y_pred, returns, df_test, feature_cols,
     }
 
 
-
-def backtest_v13(y_pred, returns, df_test, feature_cols,
-                 initial_capital=100_000_000, commission=0.0015, tax=0.001,
-                 record_trades=True):
+def backtest_v13(
+    y_pred,
+    returns,
+    df_test,
+    feature_cols,
+    initial_capital=100_000_000,
+    commission=0.0015,
+    tax=0.001,
+    record_trades=True,
+):
     """V13: V12 + wider stops, relaxed entries, smarter trailing."""
     n = len(y_pred)
     equity = np.zeros(n)
@@ -3786,15 +4446,15 @@ def backtest_v13(y_pred, returns, df_test, feature_cols,
     consecutive_exit_signals = 0
 
     # === V13 TUNED PARAMETERS ===
-    MIN_HOLD = 5              # was 6
-    ZOMBIE_BARS = 11          # was 14
+    MIN_HOLD = 5  # was 6
+    ZOMBIE_BARS = 11  # was 14
     EXIT_CONFIRM = 3
     PROFIT_LOCK_THRESHOLD = 0.20  # was 0.12
-    PROFIT_LOCK_MIN = 0.10        # was 0.06
-    HARD_STOP = 0.10              # was 0.08
-    ATR_MULT = 2.2                # was 1.8
+    PROFIT_LOCK_MIN = 0.10  # was 0.06
+    HARD_STOP = 0.10  # was 0.08
+    ATR_MULT = 2.2  # was 1.8
 
-    COOLDOWN_AFTER_BIG_LOSS = 3   # was 5
+    COOLDOWN_AFTER_BIG_LOSS = 3  # was 5
     QUICK_REENTRY_WINDOW = 3
     STRONG_TREND_TRAIL_MULT = 0.35  # was 0.45 (wider = hold longer)
 
@@ -3807,12 +4467,26 @@ def backtest_v13(y_pred, returns, df_test, feature_cols,
     max_price_in_trade = 0
 
     # Feature arrays
-    feat_names = ["rsi_slope_5d", "vol_surge_ratio", "range_position_20d",
-                  "dist_to_resistance", "breakout_setup_score", "bb_width_percentile",
-                  "higher_lows_count", "obv_price_divergence"]
-    defaults = {"rsi_slope_5d": 0, "vol_surge_ratio": 1.0, "range_position_20d": 0.5,
-                "dist_to_resistance": 0.05, "breakout_setup_score": 0, "bb_width_percentile": 0.5,
-                "higher_lows_count": 0, "obv_price_divergence": 0}
+    feat_names = [
+        "rsi_slope_5d",
+        "vol_surge_ratio",
+        "range_position_20d",
+        "dist_to_resistance",
+        "breakout_setup_score",
+        "bb_width_percentile",
+        "higher_lows_count",
+        "obv_price_divergence",
+    ]
+    defaults = {
+        "rsi_slope_5d": 0,
+        "vol_surge_ratio": 1.0,
+        "range_position_20d": 0.5,
+        "dist_to_resistance": 0.05,
+        "breakout_setup_score": 0,
+        "bb_width_percentile": 0.5,
+        "higher_lows_count": 0,
+        "obv_price_divergence": 0,
+    }
     feat_arrays = {}
     for fn in feat_names:
         if fn in df_test.columns:
@@ -3842,7 +4516,7 @@ def backtest_v13(y_pred, returns, df_test, feature_cols,
     loss_arr = np.where(delta < 0, -delta, 0)
     avg_gain = pd.Series(gain).rolling(14, min_periods=5).mean().values
     avg_loss = pd.Series(loss_arr).rolling(14, min_periods=5).mean().values
-    with np.errstate(divide='ignore', invalid='ignore'):
+    with np.errstate(divide="ignore", invalid="ignore"):
         rs_val = np.where(avg_loss > 0, avg_gain / avg_loss, 100)
         rsi_14 = 100 - 100 / (1 + rs_val)
     rsi_14 = np.where(np.isnan(rsi_14), 50, rsi_14)
@@ -3867,7 +4541,7 @@ def backtest_v13(y_pred, returns, df_test, feature_cols,
             start = i - bars + 1
             if start < 0:
                 continue
-            band = np.max(high[start:i + 1]) - np.min(low[start:i + 1])
+            band = np.max(high[start : i + 1]) - np.min(low[start : i + 1])
             ref = close[i] if close[i] > 0 else 1.0
             if band / ref < 0.05:
                 stabilized_sideways[i] = True
@@ -3875,8 +4549,8 @@ def backtest_v13(y_pred, returns, df_test, feature_cols,
 
     consolidation_breakout = np.zeros(n, dtype=bool)
     for i in range(10, n):
-        prev_high = np.max(high[i - 10:i])
-        prev_low = np.min(low[i - 10:i])
+        prev_high = np.max(high[i - 10 : i])
+        prev_low = np.min(low[i - 10 : i])
         ref = close[i - 1] if close[i - 1] > 0 else close[i]
         tight_range = ((prev_high - prev_low) / ref) < 0.08 if ref > 0 else False
         vol_ok = volume[i] > 1.2 * avg_vol20[i] if not np.isnan(avg_vol20[i]) else False
@@ -3897,13 +4571,17 @@ def backtest_v13(y_pred, returns, df_test, feature_cols,
     momentum_surge = np.zeros(n, dtype=bool)
     for i in range(2, n):
         above_sma20 = not np.isnan(sma20[i]) and close[i] > sma20[i]
-        was_below = not np.isnan(sma20[i-1]) and close[i-1] <= sma20[i-1]
+        was_below = not np.isnan(sma20[i - 1]) and close[i - 1] <= sma20[i - 1]
         vol_surge = volume[i] > 1.5 * avg_vol20[i] if not np.isnan(avg_vol20[i]) else False
         macd_pos = macd_line[i] > 0
         if above_sma20 and was_below and vol_surge and macd_pos:
             momentum_surge[i] = True
 
-    date_col = "date" if "date" in df_test.columns else ("timestamp" if "timestamp" in df_test.columns else None)
+    date_col = (
+        "date"
+        if "date" in df_test.columns
+        else ("timestamp" if "timestamp" in df_test.columns else None)
+    )
     dates = df_test[date_col].values if date_col else np.arange(n)
     symbols = df_test["symbol"].values if "symbol" in df_test.columns else ["?"] * n
 
@@ -3959,10 +4637,13 @@ def backtest_v13(y_pred, returns, df_test, feature_cols,
         # Quick reentry after trailing stop
         if new_position == 0 and position == 0 and last_exit_reason == "trailing_stop":
             bars_since_exit = i - last_exit_bar
-            if (bars_since_exit <= QUICK_REENTRY_WINDOW and
-                trend in ("strong", "moderate") and
-                macd_line[i] > 0 and
-                not np.isnan(sma20[i]) and close[i] > sma20[i]):
+            if (
+                bars_since_exit <= QUICK_REENTRY_WINDOW
+                and trend in ("strong", "moderate")
+                and macd_line[i] > 0
+                and not np.isnan(sma20[i])
+                and close[i] > sma20[i]
+            ):
                 new_position = 1
                 quick_reentry = True
 
@@ -3990,11 +4671,15 @@ def backtest_v13(y_pred, returns, df_test, feature_cols,
                     new_position = 0
 
         # Consecutive prediction (V13: relaxed for moderate trend)
-        if new_position == 1 and position == 0 and not quick_reentry and not breakout_entry and not momentum_entry:
+        if (
+            new_position == 1
+            and position == 0
+            and not quick_reentry
+            and not breakout_entry
+            and not momentum_entry
+        ):
             prev_pred = int(y_pred[i - 2]) if i >= 2 else 0
-            if bs >= 4 and vs > 1.2:
-                pass
-            elif trend == "strong" and rs > 0:
+            if bs >= 4 and vs > 1.2 or trend == "strong" and rs > 0:
                 pass
             elif trend == "moderate" and rs > 0 and macd_line[i] > 0:
                 pass  # V13: allow moderate trend entry without consecutive pred
@@ -4011,21 +4696,26 @@ def backtest_v13(y_pred, returns, df_test, feature_cols,
         # Entry score filter (V13: slightly relaxed)
         if new_position == 1 and position == 0 and not quick_reentry and not momentum_entry:
             entry_score = sum([wp < 0.75, dp > 0.02, rs > 0, vs > 1.1, hl >= 2])
-            near_sma_support = (not np.isnan(sma20[i]) and
-                               close[i] <= sma20[i] * 1.02 and
-                               close[i] >= sma20[i] * 0.97)
-            near_local_low = (not np.isnan(local_low_20[i]) and
-                             close[i] <= local_low_20[i] * 1.05)
-            in_uptrend_macro = (not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and
-                               sma20[i] > sma50[i])
+            near_sma_support = (
+                not np.isnan(sma20[i])
+                and close[i] <= sma20[i] * 1.02
+                and close[i] >= sma20[i] * 0.97
+            )
+            near_local_low = not np.isnan(local_low_20[i]) and close[i] <= local_low_20[i] * 1.05
+            in_uptrend_macro = (
+                not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and sma20[i] > sma50[i]
+            )
 
             if trend == "strong":
                 min_score = 1
             elif trend == "moderate" and in_uptrend_macro:
                 min_score = 1  # V13: relaxed from 2/3
-            elif (near_sma_support or near_local_low) and in_uptrend_macro:
-                min_score = 2
-            elif in_uptrend_macro and rs > 0:
+            elif (
+                (near_sma_support or near_local_low)
+                and in_uptrend_macro
+                or in_uptrend_macro
+                and rs > 0
+            ):
                 min_score = 2
             else:
                 min_score = 3
@@ -4126,10 +4816,12 @@ def backtest_v13(y_pred, returns, df_test, feature_cols,
                 macd_bearish = macd_hist[i] < 0 and macd_hist[i - 1] >= 0 if i > 0 else False
                 price_below_ma20 = close[i] < sma20[i] if not np.isnan(sma20[i]) else False
 
-                if macd_bearish and price_below_ma20:
-                    new_position = 0
-                    exit_reason = "hybrid_exit"
-                elif price_below_ma20 and cum_ret < max_profit * 0.4:  # V13: was 0.5
+                if (
+                    macd_bearish
+                    and price_below_ma20
+                    or price_below_ma20
+                    and cum_ret < max_profit * 0.4
+                ):
                     new_position = 0
                     exit_reason = "hybrid_exit"
                 else:
@@ -4181,7 +4873,11 @@ def backtest_v13(y_pred, returns, df_test, feature_cols,
                     exit_reason = "zombie_exit"
 
             # Min hold (V13: MIN_HOLD=5)
-            if new_position == 0 and exit_reason not in ("stop_loss", "hard_stop", "hybrid_exit", "profit_floor") and hold_days < MIN_HOLD:
+            if (
+                new_position == 0
+                and exit_reason not in ("stop_loss", "hard_stop", "hybrid_exit", "profit_floor")
+                and hold_days < MIN_HOLD
+            ):
                 if cum_ret > -atr_stop:
                     new_position = 1
 
@@ -4222,9 +4918,14 @@ def backtest_v13(y_pred, returns, df_test, feature_cols,
                 max_price_in_trade = close[i]
                 last_new_high_bar = i
                 entry_features = {
-                    "entry_wp": wp, "entry_dp": dp, "entry_rs": rs,
-                    "entry_vs": vs, "entry_bs": bs, "entry_hl": hl,
-                    "entry_od": od, "entry_bb": bb,
+                    "entry_wp": wp,
+                    "entry_dp": dp,
+                    "entry_rs": rs,
+                    "entry_vs": vs,
+                    "entry_bs": bs,
+                    "entry_hl": hl,
+                    "entry_od": od,
+                    "entry_bb": bb,
                     "entry_score": sum([wp < 0.75, dp > 0.02, rs > 0, vs > 1.1, hl >= 2]),
                     "entry_date": str(dates[i])[:10],
                     "entry_symbol": str(symbols[i]),
@@ -4251,16 +4952,23 @@ def backtest_v13(y_pred, returns, df_test, feature_cols,
 
                 if record_trades and entry_equity > 0:
                     pnl_pct = (close[i] / entry_close - 1) * 100 if entry_close > 0 else 0
-                    max_pnl_pct = (max_equity_in_trade - entry_equity) / entry_equity * 100 if entry_equity > 0 else 0
-                    trades.append({
-                        "entry_day": current_entry_day, "exit_day": i,
-                        "holding_days": i - current_entry_day,
-                        "pnl_pct": round(pnl_pct, 2),
-                        "max_profit_pct": round(max_pnl_pct, 2),
-                        "exit_reason": exit_reason,
-                        "exit_date": str(dates[i])[:10],
-                        **entry_features,
-                    })
+                    max_pnl_pct = (
+                        (max_equity_in_trade - entry_equity) / entry_equity * 100
+                        if entry_equity > 0
+                        else 0
+                    )
+                    trades.append(
+                        {
+                            "entry_day": current_entry_day,
+                            "exit_day": i,
+                            "holding_days": i - current_entry_day,
+                            "pnl_pct": round(pnl_pct, 2),
+                            "max_profit_pct": round(max_pnl_pct, 2),
+                            "exit_reason": exit_reason,
+                            "exit_date": str(dates[i])[:10],
+                            **entry_features,
+                        }
+                    )
                 entry_equity = 0
                 max_equity_in_trade = 0
                 position_size = 1.0
@@ -4274,26 +4982,38 @@ def backtest_v13(y_pred, returns, df_test, feature_cols,
 
     if position == 1 and entry_close > 0 and record_trades:
         pnl_pct = (close[-1] / entry_close - 1) * 100
-        trades.append({
-            "entry_day": current_entry_day, "exit_day": n - 1,
-            "holding_days": n - 1 - current_entry_day,
-            "pnl_pct": round(pnl_pct, 2), "exit_reason": "end",
-            "exit_date": str(dates[-1])[:10], **entry_features,
-        })
+        trades.append(
+            {
+                "entry_day": current_entry_day,
+                "exit_day": n - 1,
+                "holding_days": n - 1 - current_entry_day,
+                "pnl_pct": round(pnl_pct, 2),
+                "exit_reason": "end",
+                "exit_date": str(dates[-1])[:10],
+                **entry_features,
+            }
+        )
 
     return {
-        "equity_curve": equity, "trades": trades,
+        "equity_curve": equity,
+        "trades": trades,
         "total_return_pct": round((equity[-1] / initial_capital - 1) * 100, 2),
         "final_equity": round(equity[-1]),
     }
 
 
-
-def backtest_v14(y_pred, returns, df_test, feature_cols,
-                 initial_capital=100_000_000, commission=0.0015, tax=0.001,
-                 record_trades=True,
-                 mod_a=True,   # V-shape entry
-                 mod_b=True):  # Profit-peak protection
+def backtest_v14(
+    y_pred,
+    returns,
+    df_test,
+    feature_cols,
+    initial_capital=100_000_000,
+    commission=0.0015,
+    tax=0.001,
+    record_trades=True,
+    mod_a=True,  # V-shape entry
+    mod_b=True,
+):  # Profit-peak protection
     """V14: V11 + module A (V-shape entry) + module B (profit-peak protect)."""
     n = len(y_pred)
     equity = np.zeros(n)
@@ -4327,12 +5047,26 @@ def backtest_v14(y_pred, returns, df_test, feature_cols,
     last_exit_bar = -999
     entry_close = 0
 
-    feat_names = ["rsi_slope_5d", "vol_surge_ratio", "range_position_20d",
-                  "dist_to_resistance", "breakout_setup_score", "bb_width_percentile",
-                  "higher_lows_count", "obv_price_divergence"]
-    defaults = {"rsi_slope_5d": 0, "vol_surge_ratio": 1.0, "range_position_20d": 0.5,
-                "dist_to_resistance": 0.05, "breakout_setup_score": 0, "bb_width_percentile": 0.5,
-                "higher_lows_count": 0, "obv_price_divergence": 0}
+    feat_names = [
+        "rsi_slope_5d",
+        "vol_surge_ratio",
+        "range_position_20d",
+        "dist_to_resistance",
+        "breakout_setup_score",
+        "bb_width_percentile",
+        "higher_lows_count",
+        "obv_price_divergence",
+    ]
+    defaults = {
+        "rsi_slope_5d": 0,
+        "vol_surge_ratio": 1.0,
+        "range_position_20d": 0.5,
+        "dist_to_resistance": 0.05,
+        "breakout_setup_score": 0,
+        "bb_width_percentile": 0.5,
+        "higher_lows_count": 0,
+        "obv_price_divergence": 0,
+    }
     feat_arrays = {}
     for fn in feat_names:
         if fn in df_test.columns:
@@ -4387,7 +5121,7 @@ def backtest_v14(y_pred, returns, df_test, feature_cols,
             start = i - bars + 1
             if start < 0:
                 continue
-            band = np.max(high[start:i + 1]) - np.min(low[start:i + 1])
+            band = np.max(high[start : i + 1]) - np.min(low[start : i + 1])
             ref = close[i] if close[i] > 0 else 1.0
             if band / ref < 0.05:
                 stabilized_sideways[i] = True
@@ -4395,8 +5129,8 @@ def backtest_v14(y_pred, returns, df_test, feature_cols,
 
     consolidation_breakout = np.zeros(n, dtype=bool)
     for i in range(10, n):
-        prev_high = np.max(high[i - 10:i])
-        prev_low = np.min(low[i - 10:i])
+        prev_high = np.max(high[i - 10 : i])
+        prev_low = np.min(low[i - 10 : i])
         ref = close[i - 1] if close[i - 1] > 0 else close[i]
         tight_range = ((prev_high - prev_low) / ref) < 0.08 if ref > 0 else False
         vol_ok = volume[i] > 1.2 * avg_vol20[i] if not np.isnan(avg_vol20[i]) else False
@@ -4430,7 +5164,9 @@ def backtest_v14(y_pred, returns, df_test, feature_cols,
         if not bullish:
             continue
         # Oversold or deeper drop
-        oversold = (not np.isnan(rsi14[i - 1]) and rsi14[i - 1] < 35) or drop_from_peak_20[i] <= -0.18
+        oversold = (not np.isnan(rsi14[i - 1]) and rsi14[i - 1] < 35) or drop_from_peak_20[
+            i
+        ] <= -0.18
         if not oversold:
             continue
         # Volume confirmation
@@ -4450,7 +5186,11 @@ def backtest_v14(y_pred, returns, df_test, feature_cols,
     rolling_high_250 = pd.Series(close).rolling(250, min_periods=20).max().values
     dist_from_52w_high = np.where(rolling_high_250 > 0, (close / rolling_high_250), 1.0)
 
-    date_col = "date" if "date" in df_test.columns else ("timestamp" if "timestamp" in df_test.columns else None)
+    date_col = (
+        "date"
+        if "date" in df_test.columns
+        else ("timestamp" if "timestamp" in df_test.columns else None)
+    )
     dates = df_test[date_col].values if date_col else np.arange(n)
     symbols = df_test["symbol"].values if "symbol" in df_test.columns else ["?"] * n
 
@@ -4506,10 +5246,13 @@ def backtest_v14(y_pred, returns, df_test, feature_cols,
 
         if new_position == 0 and position == 0 and last_exit_reason == "trailing_stop":
             bars_since_exit = i - last_exit_bar
-            if (bars_since_exit <= QUICK_REENTRY_WINDOW and
-                trend in ("strong", "moderate") and
-                macd_line[i] > 0 and
-                not np.isnan(sma20[i]) and close[i] > sma20[i]):
+            if (
+                bars_since_exit <= QUICK_REENTRY_WINDOW
+                and trend in ("strong", "moderate")
+                and macd_line[i] > 0
+                and not np.isnan(sma20[i])
+                and close[i] > sma20[i]
+            ):
                 new_position = 1
                 quick_reentry = True
 
@@ -4536,11 +5279,15 @@ def backtest_v14(y_pred, returns, df_test, feature_cols,
                 if price_diff < 0.03:
                     new_position = 0
 
-        if new_position == 1 and position == 0 and not quick_reentry and not breakout_entry and not vshape_entry:
+        if (
+            new_position == 1
+            and position == 0
+            and not quick_reentry
+            and not breakout_entry
+            and not vshape_entry
+        ):
             prev_pred = int(y_pred[i - 2]) if i >= 2 else 0
-            if bs >= 4 and vs > 1.2:
-                pass
-            elif trend == "strong" and rs > 0:
+            if bs >= 4 and vs > 1.2 or trend == "strong" and rs > 0:
                 pass
             elif prev_pred != 1:
                 new_position = 0
@@ -4553,19 +5300,24 @@ def backtest_v14(y_pred, returns, df_test, feature_cols,
 
         if new_position == 1 and position == 0 and not quick_reentry and not vshape_entry:
             entry_score = sum([wp < 0.75, dp > 0.02, rs > 0, vs > 1.1, hl >= 2])
-            near_sma_support = (not np.isnan(sma20[i]) and
-                               close[i] <= sma20[i] * 1.02 and
-                               close[i] >= sma20[i] * 0.97)
-            near_local_low = (not np.isnan(local_low_20[i]) and
-                             close[i] <= local_low_20[i] * 1.05)
-            in_uptrend_macro = (not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and
-                               sma20[i] > sma50[i])
+            near_sma_support = (
+                not np.isnan(sma20[i])
+                and close[i] <= sma20[i] * 1.02
+                and close[i] >= sma20[i] * 0.97
+            )
+            near_local_low = not np.isnan(local_low_20[i]) and close[i] <= local_low_20[i] * 1.05
+            in_uptrend_macro = (
+                not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and sma20[i] > sma50[i]
+            )
 
             if trend == "strong":
                 min_score = 1
-            elif (near_sma_support or near_local_low) and in_uptrend_macro:
-                min_score = 2
-            elif in_uptrend_macro and rs > 0:
+            elif (
+                (near_sma_support or near_local_low)
+                and in_uptrend_macro
+                or in_uptrend_macro
+                and rs > 0
+            ):
                 min_score = 2
             else:
                 min_score = 3
@@ -4574,7 +5326,13 @@ def backtest_v14(y_pred, returns, df_test, feature_cols,
                 new_position = 0
             if wp > 0.9 and rs <= 0 and bs < 2 and trend != "strong" and not breakout_entry:
                 new_position = 0
-            if bb > 0.85 and bs < 2 and entry_score < 4 and trend != "strong" and not breakout_entry:
+            if (
+                bb > 0.85
+                and bs < 2
+                and entry_score < 4
+                and trend != "strong"
+                and not breakout_entry
+            ):
                 new_position = 0
             if new_position == 1:
                 if wp > 0.78 and bb < 0.35 and trend == "weak" and not breakout_entry:
@@ -4628,7 +5386,9 @@ def backtest_v14(y_pred, returns, df_test, feature_cols,
             if close[i] > max_price_in_trade:
                 max_price_in_trade = close[i]
             cum_ret = (projected - entry_equity) / entry_equity if entry_equity > 0 else 0
-            max_profit = (max_equity_in_trade - entry_equity) / entry_equity if entry_equity > 0 else 0
+            max_profit = (
+                (max_equity_in_trade - entry_equity) / entry_equity if entry_equity > 0 else 0
+            )
             # Price-based max for Module B (independent of position_size scaling)
             price_max_profit = (max_price_in_trade / entry_close - 1) if entry_close > 0 else 0
             price_cur_ret = (close[i] / entry_close - 1) if entry_close > 0 else 0
@@ -4656,8 +5416,8 @@ def backtest_v14(y_pred, returns, df_test, feature_cols,
             # Independent layer — protects realized profit when peak reached
             elif mod_b and price_max_profit >= 0.20:
                 # Aggressive protect: close < SMA10 + heavy volume = distribution
-                price_below_sma10 = (not np.isnan(sma10[i]) and close[i] < sma10[i])
-                heavy_vol = (not np.isnan(avg_vol20[i]) and volume[i] > 1.5 * avg_vol20[i])
+                price_below_sma10 = not np.isnan(sma10[i]) and close[i] < sma10[i]
+                heavy_vol = not np.isnan(avg_vol20[i]) and volume[i] > 1.5 * avg_vol20[i]
                 bearish_candle = close[i] < opn[i]
                 if price_below_sma10 and heavy_vol and bearish_candle:
                     new_position = 0
@@ -4680,10 +5440,12 @@ def backtest_v14(y_pred, returns, df_test, feature_cols,
                 macd_bearish = macd_hist[i] < 0 and macd_hist[i - 1] >= 0 if i > 0 else False
                 price_below_ma20 = close[i] < sma20[i] if not np.isnan(sma20[i]) else False
 
-                if macd_bearish and price_below_ma20:
-                    new_position = 0
-                    exit_reason = "hybrid_exit"
-                elif price_below_ma20 and cum_ret < max_profit * 0.5:
+                if (
+                    macd_bearish
+                    and price_below_ma20
+                    or price_below_ma20
+                    and cum_ret < max_profit * 0.5
+                ):
                     new_position = 0
                     exit_reason = "hybrid_exit"
                 else:
@@ -4724,8 +5486,18 @@ def backtest_v14(y_pred, returns, df_test, feature_cols,
                     exit_reason = "zombie_exit"
 
             # Min hold (Module B exits override min hold)
-            if new_position == 0 and exit_reason not in (
-                    "stop_loss", "hard_stop", "hybrid_exit", "peak_protect_dist", "peak_protect_ema") and hold_days < MIN_HOLD:
+            if (
+                new_position == 0
+                and exit_reason
+                not in (
+                    "stop_loss",
+                    "hard_stop",
+                    "hybrid_exit",
+                    "peak_protect_dist",
+                    "peak_protect_ema",
+                )
+                and hold_days < MIN_HOLD
+            ):
                 if cum_ret > -atr_stop:
                     new_position = 1
 
@@ -4764,9 +5536,14 @@ def backtest_v14(y_pred, returns, df_test, feature_cols,
                 entry_close = close[i]
                 max_price_in_trade = close[i]
                 entry_features = {
-                    "entry_wp": wp, "entry_dp": dp, "entry_rs": rs,
-                    "entry_vs": vs, "entry_bs": bs, "entry_hl": hl,
-                    "entry_od": od, "entry_bb": bb,
+                    "entry_wp": wp,
+                    "entry_dp": dp,
+                    "entry_rs": rs,
+                    "entry_vs": vs,
+                    "entry_bs": bs,
+                    "entry_hl": hl,
+                    "entry_od": od,
+                    "entry_bb": bb,
                     "entry_score": sum([wp < 0.75, dp > 0.02, rs > 0, vs > 1.1, hl >= 2]),
                     "entry_date": str(dates[i])[:10],
                     "entry_symbol": str(symbols[i]),
@@ -4793,16 +5570,23 @@ def backtest_v14(y_pred, returns, df_test, feature_cols,
 
                 if record_trades and entry_equity > 0:
                     pnl_pct = (close[i] / entry_close - 1) * 100 if entry_close > 0 else 0
-                    max_pnl_pct = (max_equity_in_trade - entry_equity) / entry_equity * 100 if entry_equity > 0 else 0
-                    trades.append({
-                        "entry_day": current_entry_day, "exit_day": i,
-                        "holding_days": i - current_entry_day,
-                        "pnl_pct": round(pnl_pct, 2),
-                        "max_profit_pct": round(max_pnl_pct, 2),
-                        "exit_reason": exit_reason,
-                        "exit_date": str(dates[i])[:10],
-                        **entry_features,
-                    })
+                    max_pnl_pct = (
+                        (max_equity_in_trade - entry_equity) / entry_equity * 100
+                        if entry_equity > 0
+                        else 0
+                    )
+                    trades.append(
+                        {
+                            "entry_day": current_entry_day,
+                            "exit_day": i,
+                            "holding_days": i - current_entry_day,
+                            "pnl_pct": round(pnl_pct, 2),
+                            "max_profit_pct": round(max_pnl_pct, 2),
+                            "exit_reason": exit_reason,
+                            "exit_date": str(dates[i])[:10],
+                            **entry_features,
+                        }
+                    )
                 entry_equity = 0
                 max_equity_in_trade = 0
                 max_price_in_trade = 0
@@ -4817,15 +5601,21 @@ def backtest_v14(y_pred, returns, df_test, feature_cols,
 
     if position == 1 and entry_equity > 0 and record_trades:
         pnl_pct = (close[-1] / entry_close - 1) * 100 if entry_close > 0 else 0
-        trades.append({
-            "entry_day": current_entry_day, "exit_day": n - 1,
-            "holding_days": n - 1 - current_entry_day,
-            "pnl_pct": round(pnl_pct, 2), "exit_reason": "end",
-            "exit_date": str(dates[-1])[:10], **entry_features,
-        })
+        trades.append(
+            {
+                "entry_day": current_entry_day,
+                "exit_day": n - 1,
+                "holding_days": n - 1 - current_entry_day,
+                "pnl_pct": round(pnl_pct, 2),
+                "exit_reason": "end",
+                "exit_date": str(dates[-1])[:10],
+                **entry_features,
+            }
+        )
 
     return {
-        "equity_curve": equity, "trades": trades,
+        "equity_curve": equity,
+        "trades": trades,
         "total_return_pct": round((equity[-1] / initial_capital - 1) * 100, 2),
         "final_equity": round(equity[-1]),
         "n_vshape_entries": n_vshape_entries,
@@ -4833,15 +5623,21 @@ def backtest_v14(y_pred, returns, df_test, feature_cols,
     }
 
 
-
-def backtest_v15(y_pred, returns, df_test, feature_cols,
-                 initial_capital=100_000_000, commission=0.0015, tax=0.001,
-                 record_trades=True,
-                 mod_a=True,    # V-shape entry (KEEP — proven positive)
-                 mod_b=True,    # Profit-peak protection (KEEP — proven positive)
-                 mod_c=False,   # Fast loss cut (DISABLED by default — proved negative)
-                 mod_d=False,   # Adaptive exit confirmation (DISABLED — proved negative)
-                 mod_e=True):   # Secondary breakout (KEEP — proven positive)
+def backtest_v15(
+    y_pred,
+    returns,
+    df_test,
+    feature_cols,
+    initial_capital=100_000_000,
+    commission=0.0015,
+    tax=0.001,
+    record_trades=True,
+    mod_a=True,  # V-shape entry (KEEP — proven positive)
+    mod_b=True,  # Profit-peak protection (KEEP — proven positive)
+    mod_c=False,  # Fast loss cut (DISABLED by default — proved negative)
+    mod_d=False,  # Adaptive exit confirmation (DISABLED — proved negative)
+    mod_e=True,
+):  # Secondary breakout (KEEP — proven positive)
     """V15 best = V11 + A + B + E. Modules C/D kept toggleable for research."""
     n = len(y_pred)
     equity = np.zeros(n)
@@ -4875,12 +5671,26 @@ def backtest_v15(y_pred, returns, df_test, feature_cols,
     last_exit_bar = -999
     entry_close = 0
 
-    feat_names = ["rsi_slope_5d", "vol_surge_ratio", "range_position_20d",
-                  "dist_to_resistance", "breakout_setup_score", "bb_width_percentile",
-                  "higher_lows_count", "obv_price_divergence"]
-    defaults = {"rsi_slope_5d": 0, "vol_surge_ratio": 1.0, "range_position_20d": 0.5,
-                "dist_to_resistance": 0.05, "breakout_setup_score": 0, "bb_width_percentile": 0.5,
-                "higher_lows_count": 0, "obv_price_divergence": 0}
+    feat_names = [
+        "rsi_slope_5d",
+        "vol_surge_ratio",
+        "range_position_20d",
+        "dist_to_resistance",
+        "breakout_setup_score",
+        "bb_width_percentile",
+        "higher_lows_count",
+        "obv_price_divergence",
+    ]
+    defaults = {
+        "rsi_slope_5d": 0,
+        "vol_surge_ratio": 1.0,
+        "range_position_20d": 0.5,
+        "dist_to_resistance": 0.05,
+        "breakout_setup_score": 0,
+        "bb_width_percentile": 0.5,
+        "higher_lows_count": 0,
+        "obv_price_divergence": 0,
+    }
     feat_arrays = {}
     for fn in feat_names:
         if fn in df_test.columns:
@@ -4935,7 +5745,7 @@ def backtest_v15(y_pred, returns, df_test, feature_cols,
             start = i - bars + 1
             if start < 0:
                 continue
-            band = np.max(high[start:i + 1]) - np.min(low[start:i + 1])
+            band = np.max(high[start : i + 1]) - np.min(low[start : i + 1])
             ref = close[i] if close[i] > 0 else 1.0
             if band / ref < 0.05:
                 stabilized_sideways[i] = True
@@ -4943,8 +5753,8 @@ def backtest_v15(y_pred, returns, df_test, feature_cols,
 
     consolidation_breakout = np.zeros(n, dtype=bool)
     for i in range(10, n):
-        prev_high = np.max(high[i - 10:i])
-        prev_low = np.min(low[i - 10:i])
+        prev_high = np.max(high[i - 10 : i])
+        prev_low = np.min(low[i - 10 : i])
         ref = close[i - 1] if close[i - 1] > 0 else close[i]
         tight_range = ((prev_high - prev_low) / ref) < 0.08 if ref > 0 else False
         vol_ok = volume[i] > 1.2 * avg_vol20[i] if not np.isnan(avg_vol20[i]) else False
@@ -4955,18 +5765,21 @@ def backtest_v15(y_pred, returns, df_test, feature_cols,
     secondary_breakout = np.zeros(n, dtype=bool)
     if mod_e:
         for i in range(10, n):
-            prev_high = np.max(high[i - 10:i])
-            prev_low = np.min(low[i - 10:i])
+            prev_high = np.max(high[i - 10 : i])
+            prev_low = np.min(low[i - 10 : i])
             ref = close[i - 1] if close[i - 1] > 0 else close[i]
             # Looser: range up to 10%
             tight_range = ((prev_high - prev_low) / ref) < 0.10 if ref > 0 else False
-            uptrend_macro = (not np.isnan(sma20[i]) and not np.isnan(sma50[i])
-                             and sma20[i] > sma50[i])
+            uptrend_macro = (
+                not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and sma20[i] > sma50[i]
+            )
             # Lower volume bar if uptrend confirmed
             vol_threshold = 1.1 if uptrend_macro else 1.2
-            vol_ok = volume[i] > vol_threshold * avg_vol20[i] if not np.isnan(avg_vol20[i]) else False
+            vol_ok = (
+                volume[i] > vol_threshold * avg_vol20[i] if not np.isnan(avg_vol20[i]) else False
+            )
             # Use max_high_5d instead of prev_high (10d)
-            max_high_5d = np.max(high[max(0, i - 5):i])
+            max_high_5d = np.max(high[max(0, i - 5) : i])
             breakout_5d = close[i] > max_high_5d
             if tight_range and breakout_5d and vol_ok and uptrend_macro:
                 secondary_breakout[i] = True
@@ -4998,7 +5811,9 @@ def backtest_v15(y_pred, returns, df_test, feature_cols,
         if not bullish:
             continue
         # Oversold or deeper drop
-        oversold = (not np.isnan(rsi14[i - 1]) and rsi14[i - 1] < 35) or drop_from_peak_20[i] <= -0.18
+        oversold = (not np.isnan(rsi14[i - 1]) and rsi14[i - 1] < 35) or drop_from_peak_20[
+            i
+        ] <= -0.18
         if not oversold:
             continue
         # Volume confirmation
@@ -5018,7 +5833,11 @@ def backtest_v15(y_pred, returns, df_test, feature_cols,
     rolling_high_250 = pd.Series(close).rolling(250, min_periods=20).max().values
     dist_from_52w_high = np.where(rolling_high_250 > 0, (close / rolling_high_250), 1.0)
 
-    date_col = "date" if "date" in df_test.columns else ("timestamp" if "timestamp" in df_test.columns else None)
+    date_col = (
+        "date"
+        if "date" in df_test.columns
+        else ("timestamp" if "timestamp" in df_test.columns else None)
+    )
     dates = df_test[date_col].values if date_col else np.arange(n)
     symbols = df_test["symbol"].values if "symbol" in df_test.columns else ["?"] * n
 
@@ -5076,10 +5895,13 @@ def backtest_v15(y_pred, returns, df_test, feature_cols,
 
         if new_position == 0 and position == 0 and last_exit_reason == "trailing_stop":
             bars_since_exit = i - last_exit_bar
-            if (bars_since_exit <= QUICK_REENTRY_WINDOW and
-                trend in ("strong", "moderate") and
-                macd_line[i] > 0 and
-                not np.isnan(sma20[i]) and close[i] > sma20[i]):
+            if (
+                bars_since_exit <= QUICK_REENTRY_WINDOW
+                and trend in ("strong", "moderate")
+                and macd_line[i] > 0
+                and not np.isnan(sma20[i])
+                and close[i] > sma20[i]
+            ):
                 new_position = 1
                 quick_reentry = True
 
@@ -5112,11 +5934,15 @@ def backtest_v15(y_pred, returns, df_test, feature_cols,
                 if price_diff < 0.03:
                     new_position = 0
 
-        if new_position == 1 and position == 0 and not quick_reentry and not breakout_entry and not vshape_entry:
+        if (
+            new_position == 1
+            and position == 0
+            and not quick_reentry
+            and not breakout_entry
+            and not vshape_entry
+        ):
             prev_pred = int(y_pred[i - 2]) if i >= 2 else 0
-            if bs >= 4 and vs > 1.2:
-                pass
-            elif trend == "strong" and rs > 0:
+            if bs >= 4 and vs > 1.2 or trend == "strong" and rs > 0:
                 pass
             elif prev_pred != 1:
                 new_position = 0
@@ -5129,19 +5955,24 @@ def backtest_v15(y_pred, returns, df_test, feature_cols,
 
         if new_position == 1 and position == 0 and not quick_reentry and not vshape_entry:
             entry_score = sum([wp < 0.75, dp > 0.02, rs > 0, vs > 1.1, hl >= 2])
-            near_sma_support = (not np.isnan(sma20[i]) and
-                               close[i] <= sma20[i] * 1.02 and
-                               close[i] >= sma20[i] * 0.97)
-            near_local_low = (not np.isnan(local_low_20[i]) and
-                             close[i] <= local_low_20[i] * 1.05)
-            in_uptrend_macro = (not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and
-                               sma20[i] > sma50[i])
+            near_sma_support = (
+                not np.isnan(sma20[i])
+                and close[i] <= sma20[i] * 1.02
+                and close[i] >= sma20[i] * 0.97
+            )
+            near_local_low = not np.isnan(local_low_20[i]) and close[i] <= local_low_20[i] * 1.05
+            in_uptrend_macro = (
+                not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and sma20[i] > sma50[i]
+            )
 
             if trend == "strong":
                 min_score = 1
-            elif (near_sma_support or near_local_low) and in_uptrend_macro:
-                min_score = 2
-            elif in_uptrend_macro and rs > 0:
+            elif (
+                (near_sma_support or near_local_low)
+                and in_uptrend_macro
+                or in_uptrend_macro
+                and rs > 0
+            ):
                 min_score = 2
             else:
                 min_score = 3
@@ -5150,7 +5981,13 @@ def backtest_v15(y_pred, returns, df_test, feature_cols,
                 new_position = 0
             if wp > 0.9 and rs <= 0 and bs < 2 and trend != "strong" and not breakout_entry:
                 new_position = 0
-            if bb > 0.85 and bs < 2 and entry_score < 4 and trend != "strong" and not breakout_entry:
+            if (
+                bb > 0.85
+                and bs < 2
+                and entry_score < 4
+                and trend != "strong"
+                and not breakout_entry
+            ):
                 new_position = 0
             if new_position == 1:
                 if wp > 0.78 and bb < 0.35 and trend == "weak" and not breakout_entry:
@@ -5204,7 +6041,9 @@ def backtest_v15(y_pred, returns, df_test, feature_cols,
             if close[i] > max_price_in_trade:
                 max_price_in_trade = close[i]
             cum_ret = (projected - entry_equity) / entry_equity if entry_equity > 0 else 0
-            max_profit = (max_equity_in_trade - entry_equity) / entry_equity if entry_equity > 0 else 0
+            max_profit = (
+                (max_equity_in_trade - entry_equity) / entry_equity if entry_equity > 0 else 0
+            )
             # Price-based max for Module B (independent of position_size scaling)
             price_max_profit = (max_price_in_trade / entry_close - 1) if entry_close > 0 else 0
             price_cur_ret = (close[i] / entry_close - 1) if entry_close > 0 else 0
@@ -5230,8 +6069,13 @@ def backtest_v15(y_pred, returns, df_test, feature_cols,
 
             # ═══ MODULE C: FAST LOSS CUT ═══
             # In first 5 bars, exit immediately if losing with bearish confirmation
-            elif (mod_c and hold_days < 5 and cum_ret < -0.03
-                  and macd_hist[i] < 0 and close[i] < opn[i]):
+            elif (
+                mod_c
+                and hold_days < 5
+                and cum_ret < -0.03
+                and macd_hist[i] < 0
+                and close[i] < opn[i]
+            ):
                 new_position = 0
                 exit_reason = "fast_loss_cut"
                 n_fast_loss_cut += 1
@@ -5240,8 +6084,8 @@ def backtest_v15(y_pred, returns, df_test, feature_cols,
             # Independent layer — protects realized profit when peak reached
             elif mod_b and price_max_profit >= 0.20:
                 # Aggressive protect: close < SMA10 + heavy volume = distribution
-                price_below_sma10 = (not np.isnan(sma10[i]) and close[i] < sma10[i])
-                heavy_vol = (not np.isnan(avg_vol20[i]) and volume[i] > 1.5 * avg_vol20[i])
+                price_below_sma10 = not np.isnan(sma10[i]) and close[i] < sma10[i]
+                heavy_vol = not np.isnan(avg_vol20[i]) and volume[i] > 1.5 * avg_vol20[i]
                 bearish_candle = close[i] < opn[i]
                 if price_below_sma10 and heavy_vol and bearish_candle:
                     new_position = 0
@@ -5264,10 +6108,12 @@ def backtest_v15(y_pred, returns, df_test, feature_cols,
                 macd_bearish = macd_hist[i] < 0 and macd_hist[i - 1] >= 0 if i > 0 else False
                 price_below_ma20 = close[i] < sma20[i] if not np.isnan(sma20[i]) else False
 
-                if macd_bearish and price_below_ma20:
-                    new_position = 0
-                    exit_reason = "hybrid_exit"
-                elif price_below_ma20 and cum_ret < max_profit * 0.5:
+                if (
+                    macd_bearish
+                    and price_below_ma20
+                    or price_below_ma20
+                    and cum_ret < max_profit * 0.5
+                ):
                     new_position = 0
                     exit_reason = "hybrid_exit"
                 else:
@@ -5308,9 +6154,19 @@ def backtest_v15(y_pred, returns, df_test, feature_cols,
                     exit_reason = "zombie_exit"
 
             # Min hold (Module B/C exits override min hold)
-            if new_position == 0 and exit_reason not in (
-                    "stop_loss", "hard_stop", "hybrid_exit", "peak_protect_dist",
-                    "peak_protect_ema", "fast_loss_cut") and hold_days < MIN_HOLD:
+            if (
+                new_position == 0
+                and exit_reason
+                not in (
+                    "stop_loss",
+                    "hard_stop",
+                    "hybrid_exit",
+                    "peak_protect_dist",
+                    "peak_protect_ema",
+                    "fast_loss_cut",
+                )
+                and hold_days < MIN_HOLD
+            ):
                 if cum_ret > -atr_stop:
                     new_position = 1
 
@@ -5318,9 +6174,7 @@ def backtest_v15(y_pred, returns, df_test, feature_cols,
             if new_position == 0 and exit_reason == "signal":
                 # Determine confirm bars: tight when losing, normal when winning
                 if mod_d:
-                    if cum_ret < 0:
-                        confirm_bars = 1
-                    elif max_profit > 0 and cum_ret < max_profit * 0.6:
+                    if cum_ret < 0 or max_profit > 0 and cum_ret < max_profit * 0.6:
                         confirm_bars = 1
                     else:
                         confirm_bars = EXIT_CONFIRM
@@ -5359,9 +6213,14 @@ def backtest_v15(y_pred, returns, df_test, feature_cols,
                 entry_close = close[i]
                 max_price_in_trade = close[i]
                 entry_features = {
-                    "entry_wp": wp, "entry_dp": dp, "entry_rs": rs,
-                    "entry_vs": vs, "entry_bs": bs, "entry_hl": hl,
-                    "entry_od": od, "entry_bb": bb,
+                    "entry_wp": wp,
+                    "entry_dp": dp,
+                    "entry_rs": rs,
+                    "entry_vs": vs,
+                    "entry_bs": bs,
+                    "entry_hl": hl,
+                    "entry_od": od,
+                    "entry_bb": bb,
                     "entry_score": sum([wp < 0.75, dp > 0.02, rs > 0, vs > 1.1, hl >= 2]),
                     "entry_date": str(dates[i])[:10],
                     "entry_symbol": str(symbols[i]),
@@ -5388,16 +6247,23 @@ def backtest_v15(y_pred, returns, df_test, feature_cols,
 
                 if record_trades and entry_equity > 0:
                     pnl_pct = (close[i] / entry_close - 1) * 100 if entry_close > 0 else 0
-                    max_pnl_pct = (max_equity_in_trade - entry_equity) / entry_equity * 100 if entry_equity > 0 else 0
-                    trades.append({
-                        "entry_day": current_entry_day, "exit_day": i,
-                        "holding_days": i - current_entry_day,
-                        "pnl_pct": round(pnl_pct, 2),
-                        "max_profit_pct": round(max_pnl_pct, 2),
-                        "exit_reason": exit_reason,
-                        "exit_date": str(dates[i])[:10],
-                        **entry_features,
-                    })
+                    max_pnl_pct = (
+                        (max_equity_in_trade - entry_equity) / entry_equity * 100
+                        if entry_equity > 0
+                        else 0
+                    )
+                    trades.append(
+                        {
+                            "entry_day": current_entry_day,
+                            "exit_day": i,
+                            "holding_days": i - current_entry_day,
+                            "pnl_pct": round(pnl_pct, 2),
+                            "max_profit_pct": round(max_pnl_pct, 2),
+                            "exit_reason": exit_reason,
+                            "exit_date": str(dates[i])[:10],
+                            **entry_features,
+                        }
+                    )
                 entry_equity = 0
                 max_equity_in_trade = 0
                 max_price_in_trade = 0
@@ -5412,15 +6278,21 @@ def backtest_v15(y_pred, returns, df_test, feature_cols,
 
     if position == 1 and entry_equity > 0 and record_trades:
         pnl_pct = (close[-1] / entry_close - 1) * 100 if entry_close > 0 else 0
-        trades.append({
-            "entry_day": current_entry_day, "exit_day": n - 1,
-            "holding_days": n - 1 - current_entry_day,
-            "pnl_pct": round(pnl_pct, 2), "exit_reason": "end",
-            "exit_date": str(dates[-1])[:10], **entry_features,
-        })
+        trades.append(
+            {
+                "entry_day": current_entry_day,
+                "exit_day": n - 1,
+                "holding_days": n - 1 - current_entry_day,
+                "pnl_pct": round(pnl_pct, 2),
+                "exit_reason": "end",
+                "exit_date": str(dates[-1])[:10],
+                **entry_features,
+            }
+        )
 
     return {
-        "equity_curve": equity, "trades": trades,
+        "equity_curve": equity,
+        "trades": trades,
         "total_return_pct": round((equity[-1] / initial_capital - 1) * 100, 2),
         "final_equity": round(equity[-1]),
         "n_vshape_entries": n_vshape_entries,
@@ -5430,17 +6302,23 @@ def backtest_v15(y_pred, returns, df_test, feature_cols,
     }
 
 
-
-def backtest_v16(y_pred, returns, df_test, feature_cols,
-                 initial_capital=100_000_000, commission=0.0015, tax=0.001,
-                 record_trades=True,
-                 mod_a=True,    # V-shape entry
-                 mod_b=True,    # Profit-peak protection
-                 mod_c=False,   # Fast loss cut (disabled)
-                 mod_d=False,   # Adaptive exit confirm (disabled)
-                 mod_e=True,    # Secondary breakout
-                 mod_f=True,    # BO Quality Filter
-                 mod_g=True):   # Bear Regime Defense
+def backtest_v16(
+    y_pred,
+    returns,
+    df_test,
+    feature_cols,
+    initial_capital=100_000_000,
+    commission=0.0015,
+    tax=0.001,
+    record_trades=True,
+    mod_a=True,  # V-shape entry
+    mod_b=True,  # Profit-peak protection
+    mod_c=False,  # Fast loss cut (disabled)
+    mod_d=False,  # Adaptive exit confirm (disabled)
+    mod_e=True,  # Secondary breakout
+    mod_f=True,  # BO Quality Filter
+    mod_g=True,
+):  # Bear Regime Defense
     """V16: V15 + F (BO quality) + G (bear regime)."""
     n = len(y_pred)
     equity = np.zeros(n)
@@ -5474,12 +6352,26 @@ def backtest_v16(y_pred, returns, df_test, feature_cols,
     last_exit_bar = -999
     entry_close = 0
 
-    feat_names = ["rsi_slope_5d", "vol_surge_ratio", "range_position_20d",
-                  "dist_to_resistance", "breakout_setup_score", "bb_width_percentile",
-                  "higher_lows_count", "obv_price_divergence"]
-    defaults = {"rsi_slope_5d": 0, "vol_surge_ratio": 1.0, "range_position_20d": 0.5,
-                "dist_to_resistance": 0.05, "breakout_setup_score": 0, "bb_width_percentile": 0.5,
-                "higher_lows_count": 0, "obv_price_divergence": 0}
+    feat_names = [
+        "rsi_slope_5d",
+        "vol_surge_ratio",
+        "range_position_20d",
+        "dist_to_resistance",
+        "breakout_setup_score",
+        "bb_width_percentile",
+        "higher_lows_count",
+        "obv_price_divergence",
+    ]
+    defaults = {
+        "rsi_slope_5d": 0,
+        "vol_surge_ratio": 1.0,
+        "range_position_20d": 0.5,
+        "dist_to_resistance": 0.05,
+        "breakout_setup_score": 0,
+        "bb_width_percentile": 0.5,
+        "higher_lows_count": 0,
+        "obv_price_divergence": 0,
+    }
     feat_arrays = {}
     for fn in feat_names:
         if fn in df_test.columns:
@@ -5538,7 +6430,7 @@ def backtest_v16(y_pred, returns, df_test, feature_cols,
             start = i - bars + 1
             if start < 0:
                 continue
-            band = np.max(high[start:i + 1]) - np.min(low[start:i + 1])
+            band = np.max(high[start : i + 1]) - np.min(low[start : i + 1])
             ref = close[i] if close[i] > 0 else 1.0
             if band / ref < 0.05:
                 stabilized_sideways[i] = True
@@ -5546,8 +6438,8 @@ def backtest_v16(y_pred, returns, df_test, feature_cols,
 
     consolidation_breakout = np.zeros(n, dtype=bool)
     for i in range(10, n):
-        prev_high = np.max(high[i - 10:i])
-        prev_low = np.min(low[i - 10:i])
+        prev_high = np.max(high[i - 10 : i])
+        prev_low = np.min(low[i - 10 : i])
         ref = close[i - 1] if close[i - 1] > 0 else close[i]
         tight_range = ((prev_high - prev_low) / ref) < 0.08 if ref > 0 else False
         vol_ok = volume[i] > 1.2 * avg_vol20[i] if not np.isnan(avg_vol20[i]) else False
@@ -5558,18 +6450,21 @@ def backtest_v16(y_pred, returns, df_test, feature_cols,
     secondary_breakout = np.zeros(n, dtype=bool)
     if mod_e:
         for i in range(10, n):
-            prev_high = np.max(high[i - 10:i])
-            prev_low = np.min(low[i - 10:i])
+            prev_high = np.max(high[i - 10 : i])
+            prev_low = np.min(low[i - 10 : i])
             ref = close[i - 1] if close[i - 1] > 0 else close[i]
             # Looser: range up to 10%
             tight_range = ((prev_high - prev_low) / ref) < 0.10 if ref > 0 else False
-            uptrend_macro = (not np.isnan(sma20[i]) and not np.isnan(sma50[i])
-                             and sma20[i] > sma50[i])
+            uptrend_macro = (
+                not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and sma20[i] > sma50[i]
+            )
             # Lower volume bar if uptrend confirmed
             vol_threshold = 1.1 if uptrend_macro else 1.2
-            vol_ok = volume[i] > vol_threshold * avg_vol20[i] if not np.isnan(avg_vol20[i]) else False
+            vol_ok = (
+                volume[i] > vol_threshold * avg_vol20[i] if not np.isnan(avg_vol20[i]) else False
+            )
             # Use max_high_5d instead of prev_high (10d)
-            max_high_5d = np.max(high[max(0, i - 5):i])
+            max_high_5d = np.max(high[max(0, i - 5) : i])
             breakout_5d = close[i] > max_high_5d
             if tight_range and breakout_5d and vol_ok and uptrend_macro:
                 secondary_breakout[i] = True
@@ -5601,7 +6496,9 @@ def backtest_v16(y_pred, returns, df_test, feature_cols,
         if not bullish:
             continue
         # Oversold or deeper drop
-        oversold = (not np.isnan(rsi14[i - 1]) and rsi14[i - 1] < 35) or drop_from_peak_20[i] <= -0.18
+        oversold = (not np.isnan(rsi14[i - 1]) and rsi14[i - 1] < 35) or drop_from_peak_20[
+            i
+        ] <= -0.18
         if not oversold:
             continue
         # Volume confirmation
@@ -5621,7 +6518,11 @@ def backtest_v16(y_pred, returns, df_test, feature_cols,
     rolling_high_250 = pd.Series(close).rolling(250, min_periods=20).max().values
     dist_from_52w_high = np.where(rolling_high_250 > 0, (close / rolling_high_250), 1.0)
 
-    date_col = "date" if "date" in df_test.columns else ("timestamp" if "timestamp" in df_test.columns else None)
+    date_col = (
+        "date"
+        if "date" in df_test.columns
+        else ("timestamp" if "timestamp" in df_test.columns else None)
+    )
     dates = df_test[date_col].values if date_col else np.arange(n)
     symbols = df_test["symbol"].values if "symbol" in df_test.columns else ["?"] * n
 
@@ -5680,10 +6581,13 @@ def backtest_v16(y_pred, returns, df_test, feature_cols,
 
         if new_position == 0 and position == 0 and last_exit_reason == "trailing_stop":
             bars_since_exit = i - last_exit_bar
-            if (bars_since_exit <= QUICK_REENTRY_WINDOW and
-                trend in ("strong", "moderate") and
-                macd_line[i] > 0 and
-                not np.isnan(sma20[i]) and close[i] > sma20[i]):
+            if (
+                bars_since_exit <= QUICK_REENTRY_WINDOW
+                and trend in ("strong", "moderate")
+                and macd_line[i] > 0
+                and not np.isnan(sma20[i])
+                and close[i] > sma20[i]
+            ):
                 new_position = 1
                 quick_reentry = True
 
@@ -5693,7 +6597,7 @@ def backtest_v16(y_pred, returns, df_test, feature_cols,
         if mod_f:
             macd_pos = macd_hist[i] > 0
             bullish = close[i] > opn[i]
-            heavy_vol = (not np.isnan(avg_vol20[i]) and volume[i] > 1.5 * avg_vol20[i])
+            heavy_vol = not np.isnan(avg_vol20[i]) and volume[i] > 1.5 * avg_vol20[i]
             bo_quality_ok = macd_pos and bullish and heavy_vol
 
         if new_position == 0 and position == 0 and consolidation_breakout[i] and bo_quality_ok:
@@ -5701,7 +6605,13 @@ def backtest_v16(y_pred, returns, df_test, feature_cols,
             breakout_entry = True
 
         # ═══ MODULE E: Secondary breakout entry ═══
-        if mod_e and new_position == 0 and position == 0 and secondary_breakout[i] and bo_quality_ok:
+        if (
+            mod_e
+            and new_position == 0
+            and position == 0
+            and secondary_breakout[i]
+            and bo_quality_ok
+        ):
             new_position = 1
             breakout_entry = True
             n_secondary_breakout += 1
@@ -5725,11 +6635,15 @@ def backtest_v16(y_pred, returns, df_test, feature_cols,
                 if price_diff < 0.03:
                     new_position = 0
 
-        if new_position == 1 and position == 0 and not quick_reentry and not breakout_entry and not vshape_entry:
+        if (
+            new_position == 1
+            and position == 0
+            and not quick_reentry
+            and not breakout_entry
+            and not vshape_entry
+        ):
             prev_pred = int(y_pred[i - 2]) if i >= 2 else 0
-            if bs >= 4 and vs > 1.2:
-                pass
-            elif trend == "strong" and rs > 0:
+            if bs >= 4 and vs > 1.2 or trend == "strong" and rs > 0:
                 pass
             elif prev_pred != 1:
                 new_position = 0
@@ -5742,19 +6656,24 @@ def backtest_v16(y_pred, returns, df_test, feature_cols,
 
         if new_position == 1 and position == 0 and not quick_reentry and not vshape_entry:
             entry_score = sum([wp < 0.75, dp > 0.02, rs > 0, vs > 1.1, hl >= 2])
-            near_sma_support = (not np.isnan(sma20[i]) and
-                               close[i] <= sma20[i] * 1.02 and
-                               close[i] >= sma20[i] * 0.97)
-            near_local_low = (not np.isnan(local_low_20[i]) and
-                             close[i] <= local_low_20[i] * 1.05)
-            in_uptrend_macro = (not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and
-                               sma20[i] > sma50[i])
+            near_sma_support = (
+                not np.isnan(sma20[i])
+                and close[i] <= sma20[i] * 1.02
+                and close[i] >= sma20[i] * 0.97
+            )
+            near_local_low = not np.isnan(local_low_20[i]) and close[i] <= local_low_20[i] * 1.05
+            in_uptrend_macro = (
+                not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and sma20[i] > sma50[i]
+            )
 
             if trend == "strong":
                 min_score = 1
-            elif (near_sma_support or near_local_low) and in_uptrend_macro:
-                min_score = 2
-            elif in_uptrend_macro and rs > 0:
+            elif (
+                (near_sma_support or near_local_low)
+                and in_uptrend_macro
+                or in_uptrend_macro
+                and rs > 0
+            ):
                 min_score = 2
             else:
                 min_score = 3
@@ -5763,7 +6682,13 @@ def backtest_v16(y_pred, returns, df_test, feature_cols,
                 new_position = 0
             if wp > 0.9 and rs <= 0 and bs < 2 and trend != "strong" and not breakout_entry:
                 new_position = 0
-            if bb > 0.85 and bs < 2 and entry_score < 4 and trend != "strong" and not breakout_entry:
+            if (
+                bb > 0.85
+                and bs < 2
+                and entry_score < 4
+                and trend != "strong"
+                and not breakout_entry
+            ):
                 new_position = 0
             if new_position == 1:
                 if wp > 0.78 and bb < 0.35 and trend == "weak" and not breakout_entry:
@@ -5789,9 +6714,10 @@ def backtest_v16(y_pred, returns, df_test, feature_cols,
         # ═══ MODULE G: BEAR REGIME DEFENSE ═══
         # Block all non-V-shape entries when in bear regime
         if mod_g and new_position == 1 and position == 0 and not vshape_entry:
-            sma20_below_50 = (not np.isnan(sma20[i]) and not np.isnan(sma50[i])
-                              and sma20[i] < sma50[i])
-            close_below_50 = (not np.isnan(sma50[i]) and close[i] < sma50[i])
+            sma20_below_50 = (
+                not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and sma20[i] < sma50[i]
+            )
+            close_below_50 = not np.isnan(sma50[i]) and close[i] < sma50[i]
             deep_60d_loss = ret_60d[i] < -0.10
             if sma20_below_50 and close_below_50 and deep_60d_loss:
                 new_position = 0
@@ -5828,7 +6754,9 @@ def backtest_v16(y_pred, returns, df_test, feature_cols,
             if close[i] > max_price_in_trade:
                 max_price_in_trade = close[i]
             cum_ret = (projected - entry_equity) / entry_equity if entry_equity > 0 else 0
-            max_profit = (max_equity_in_trade - entry_equity) / entry_equity if entry_equity > 0 else 0
+            max_profit = (
+                (max_equity_in_trade - entry_equity) / entry_equity if entry_equity > 0 else 0
+            )
             # Price-based max for Module B (independent of position_size scaling)
             price_max_profit = (max_price_in_trade / entry_close - 1) if entry_close > 0 else 0
             price_cur_ret = (close[i] / entry_close - 1) if entry_close > 0 else 0
@@ -5854,8 +6782,13 @@ def backtest_v16(y_pred, returns, df_test, feature_cols,
 
             # ═══ MODULE C: FAST LOSS CUT ═══
             # In first 5 bars, exit immediately if losing with bearish confirmation
-            elif (mod_c and hold_days < 5 and cum_ret < -0.03
-                  and macd_hist[i] < 0 and close[i] < opn[i]):
+            elif (
+                mod_c
+                and hold_days < 5
+                and cum_ret < -0.03
+                and macd_hist[i] < 0
+                and close[i] < opn[i]
+            ):
                 new_position = 0
                 exit_reason = "fast_loss_cut"
                 n_fast_loss_cut += 1
@@ -5864,8 +6797,8 @@ def backtest_v16(y_pred, returns, df_test, feature_cols,
             # Independent layer — protects realized profit when peak reached
             elif mod_b and price_max_profit >= 0.20:
                 # Aggressive protect: close < SMA10 + heavy volume = distribution
-                price_below_sma10 = (not np.isnan(sma10[i]) and close[i] < sma10[i])
-                heavy_vol = (not np.isnan(avg_vol20[i]) and volume[i] > 1.5 * avg_vol20[i])
+                price_below_sma10 = not np.isnan(sma10[i]) and close[i] < sma10[i]
+                heavy_vol = not np.isnan(avg_vol20[i]) and volume[i] > 1.5 * avg_vol20[i]
                 bearish_candle = close[i] < opn[i]
                 if price_below_sma10 and heavy_vol and bearish_candle:
                     new_position = 0
@@ -5888,10 +6821,12 @@ def backtest_v16(y_pred, returns, df_test, feature_cols,
                 macd_bearish = macd_hist[i] < 0 and macd_hist[i - 1] >= 0 if i > 0 else False
                 price_below_ma20 = close[i] < sma20[i] if not np.isnan(sma20[i]) else False
 
-                if macd_bearish and price_below_ma20:
-                    new_position = 0
-                    exit_reason = "hybrid_exit"
-                elif price_below_ma20 and cum_ret < max_profit * 0.5:
+                if (
+                    macd_bearish
+                    and price_below_ma20
+                    or price_below_ma20
+                    and cum_ret < max_profit * 0.5
+                ):
                     new_position = 0
                     exit_reason = "hybrid_exit"
                 else:
@@ -5932,9 +6867,19 @@ def backtest_v16(y_pred, returns, df_test, feature_cols,
                     exit_reason = "zombie_exit"
 
             # Min hold (Module B/C exits override min hold)
-            if new_position == 0 and exit_reason not in (
-                    "stop_loss", "hard_stop", "hybrid_exit", "peak_protect_dist",
-                    "peak_protect_ema", "fast_loss_cut") and hold_days < MIN_HOLD:
+            if (
+                new_position == 0
+                and exit_reason
+                not in (
+                    "stop_loss",
+                    "hard_stop",
+                    "hybrid_exit",
+                    "peak_protect_dist",
+                    "peak_protect_ema",
+                    "fast_loss_cut",
+                )
+                and hold_days < MIN_HOLD
+            ):
                 if cum_ret > -atr_stop:
                     new_position = 1
 
@@ -5942,9 +6887,7 @@ def backtest_v16(y_pred, returns, df_test, feature_cols,
             if new_position == 0 and exit_reason == "signal":
                 # Determine confirm bars: tight when losing, normal when winning
                 if mod_d:
-                    if cum_ret < 0:
-                        confirm_bars = 1
-                    elif max_profit > 0 and cum_ret < max_profit * 0.6:
+                    if cum_ret < 0 or max_profit > 0 and cum_ret < max_profit * 0.6:
                         confirm_bars = 1
                     else:
                         confirm_bars = EXIT_CONFIRM
@@ -5983,9 +6926,14 @@ def backtest_v16(y_pred, returns, df_test, feature_cols,
                 entry_close = close[i]
                 max_price_in_trade = close[i]
                 entry_features = {
-                    "entry_wp": wp, "entry_dp": dp, "entry_rs": rs,
-                    "entry_vs": vs, "entry_bs": bs, "entry_hl": hl,
-                    "entry_od": od, "entry_bb": bb,
+                    "entry_wp": wp,
+                    "entry_dp": dp,
+                    "entry_rs": rs,
+                    "entry_vs": vs,
+                    "entry_bs": bs,
+                    "entry_hl": hl,
+                    "entry_od": od,
+                    "entry_bb": bb,
                     "entry_score": sum([wp < 0.75, dp > 0.02, rs > 0, vs > 1.1, hl >= 2]),
                     "entry_date": str(dates[i])[:10],
                     "entry_symbol": str(symbols[i]),
@@ -6012,16 +6960,23 @@ def backtest_v16(y_pred, returns, df_test, feature_cols,
 
                 if record_trades and entry_equity > 0:
                     pnl_pct = (close[i] / entry_close - 1) * 100 if entry_close > 0 else 0
-                    max_pnl_pct = (max_equity_in_trade - entry_equity) / entry_equity * 100 if entry_equity > 0 else 0
-                    trades.append({
-                        "entry_day": current_entry_day, "exit_day": i,
-                        "holding_days": i - current_entry_day,
-                        "pnl_pct": round(pnl_pct, 2),
-                        "max_profit_pct": round(max_pnl_pct, 2),
-                        "exit_reason": exit_reason,
-                        "exit_date": str(dates[i])[:10],
-                        **entry_features,
-                    })
+                    max_pnl_pct = (
+                        (max_equity_in_trade - entry_equity) / entry_equity * 100
+                        if entry_equity > 0
+                        else 0
+                    )
+                    trades.append(
+                        {
+                            "entry_day": current_entry_day,
+                            "exit_day": i,
+                            "holding_days": i - current_entry_day,
+                            "pnl_pct": round(pnl_pct, 2),
+                            "max_profit_pct": round(max_pnl_pct, 2),
+                            "exit_reason": exit_reason,
+                            "exit_date": str(dates[i])[:10],
+                            **entry_features,
+                        }
+                    )
                 entry_equity = 0
                 max_equity_in_trade = 0
                 max_price_in_trade = 0
@@ -6036,15 +6991,21 @@ def backtest_v16(y_pred, returns, df_test, feature_cols,
 
     if position == 1 and entry_equity > 0 and record_trades:
         pnl_pct = (close[-1] / entry_close - 1) * 100 if entry_close > 0 else 0
-        trades.append({
-            "entry_day": current_entry_day, "exit_day": n - 1,
-            "holding_days": n - 1 - current_entry_day,
-            "pnl_pct": round(pnl_pct, 2), "exit_reason": "end",
-            "exit_date": str(dates[-1])[:10], **entry_features,
-        })
+        trades.append(
+            {
+                "entry_day": current_entry_day,
+                "exit_day": n - 1,
+                "holding_days": n - 1 - current_entry_day,
+                "pnl_pct": round(pnl_pct, 2),
+                "exit_reason": "end",
+                "exit_date": str(dates[-1])[:10],
+                **entry_features,
+            }
+        )
 
     return {
-        "equity_curve": equity, "trades": trades,
+        "equity_curve": equity,
+        "trades": trades,
         "total_return_pct": round((equity[-1] / initial_capital - 1) * 100, 2),
         "final_equity": round(equity[-1]),
         "n_vshape_entries": n_vshape_entries,
@@ -6055,20 +7016,26 @@ def backtest_v16(y_pred, returns, df_test, feature_cols,
     }
 
 
-
-def backtest_v19(y_pred, returns, df_test, feature_cols,
-                 initial_capital=100_000_000, commission=0.0015, tax=0.001,
-                 record_trades=True,
-                 mod_a=True,    # V-shape entry
-                 mod_b=True,    # Profit-peak protection
-                 mod_c=False,   # Fast loss cut (disabled)
-                 mod_d=False,   # Adaptive exit confirm (disabled)
-                 mod_e=True,    # Secondary breakout
-                 mod_f=True,    # BO Quality Filter
-                 mod_g=True,    # Bear Regime Defense
-                 mod_h=True,    # Confirmed signal exit
-                 mod_i=True,    # Trend-carry override
-                 mod_j=True):   # Anti-chop entry filter
+def backtest_v19(
+    y_pred,
+    returns,
+    df_test,
+    feature_cols,
+    initial_capital=100_000_000,
+    commission=0.0015,
+    tax=0.001,
+    record_trades=True,
+    mod_a=True,  # V-shape entry
+    mod_b=True,  # Profit-peak protection
+    mod_c=False,  # Fast loss cut (disabled)
+    mod_d=False,  # Adaptive exit confirm (disabled)
+    mod_e=True,  # Secondary breakout
+    mod_f=True,  # BO Quality Filter
+    mod_g=True,  # Bear Regime Defense
+    mod_h=True,  # Confirmed signal exit
+    mod_i=True,  # Trend-carry override
+    mod_j=True,
+):  # Anti-chop entry filter
     """V19: V18 + entry/size split + exit quality + symbol-regime adapter."""
     n = len(y_pred)
     equity = np.zeros(n)
@@ -6102,12 +7069,26 @@ def backtest_v19(y_pred, returns, df_test, feature_cols,
     last_exit_bar = -999
     entry_close = 0
 
-    feat_names = ["rsi_slope_5d", "vol_surge_ratio", "range_position_20d",
-                  "dist_to_resistance", "breakout_setup_score", "bb_width_percentile",
-                  "higher_lows_count", "obv_price_divergence"]
-    defaults = {"rsi_slope_5d": 0, "vol_surge_ratio": 1.0, "range_position_20d": 0.5,
-                "dist_to_resistance": 0.05, "breakout_setup_score": 0, "bb_width_percentile": 0.5,
-                "higher_lows_count": 0, "obv_price_divergence": 0}
+    feat_names = [
+        "rsi_slope_5d",
+        "vol_surge_ratio",
+        "range_position_20d",
+        "dist_to_resistance",
+        "breakout_setup_score",
+        "bb_width_percentile",
+        "higher_lows_count",
+        "obv_price_divergence",
+    ]
+    defaults = {
+        "rsi_slope_5d": 0,
+        "vol_surge_ratio": 1.0,
+        "range_position_20d": 0.5,
+        "dist_to_resistance": 0.05,
+        "breakout_setup_score": 0,
+        "bb_width_percentile": 0.5,
+        "higher_lows_count": 0,
+        "obv_price_divergence": 0,
+    }
     feat_arrays = {}
     for fn in feat_names:
         if fn in df_test.columns:
@@ -6170,7 +7151,7 @@ def backtest_v19(y_pred, returns, df_test, feature_cols,
             start = i - bars + 1
             if start < 0:
                 continue
-            band = np.max(high[start:i + 1]) - np.min(low[start:i + 1])
+            band = np.max(high[start : i + 1]) - np.min(low[start : i + 1])
             ref = close[i] if close[i] > 0 else 1.0
             if band / ref < 0.05:
                 stabilized_sideways[i] = True
@@ -6178,8 +7159,8 @@ def backtest_v19(y_pred, returns, df_test, feature_cols,
 
     consolidation_breakout = np.zeros(n, dtype=bool)
     for i in range(10, n):
-        prev_high = np.max(high[i - 10:i])
-        prev_low = np.min(low[i - 10:i])
+        prev_high = np.max(high[i - 10 : i])
+        prev_low = np.min(low[i - 10 : i])
         ref = close[i - 1] if close[i - 1] > 0 else close[i]
         tight_range = ((prev_high - prev_low) / ref) < 0.08 if ref > 0 else False
         vol_ok = volume[i] > 1.2 * avg_vol20[i] if not np.isnan(avg_vol20[i]) else False
@@ -6190,18 +7171,21 @@ def backtest_v19(y_pred, returns, df_test, feature_cols,
     secondary_breakout = np.zeros(n, dtype=bool)
     if mod_e:
         for i in range(10, n):
-            prev_high = np.max(high[i - 10:i])
-            prev_low = np.min(low[i - 10:i])
+            prev_high = np.max(high[i - 10 : i])
+            prev_low = np.min(low[i - 10 : i])
             ref = close[i - 1] if close[i - 1] > 0 else close[i]
             # Looser: range up to 10%
             tight_range = ((prev_high - prev_low) / ref) < 0.10 if ref > 0 else False
-            uptrend_macro = (not np.isnan(sma20[i]) and not np.isnan(sma50[i])
-                             and sma20[i] > sma50[i])
+            uptrend_macro = (
+                not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and sma20[i] > sma50[i]
+            )
             # Lower volume bar if uptrend confirmed
             vol_threshold = 1.1 if uptrend_macro else 1.2
-            vol_ok = volume[i] > vol_threshold * avg_vol20[i] if not np.isnan(avg_vol20[i]) else False
+            vol_ok = (
+                volume[i] > vol_threshold * avg_vol20[i] if not np.isnan(avg_vol20[i]) else False
+            )
             # Use max_high_5d instead of prev_high (10d)
-            max_high_5d = np.max(high[max(0, i - 5):i])
+            max_high_5d = np.max(high[max(0, i - 5) : i])
             breakout_5d = close[i] > max_high_5d
             if tight_range and breakout_5d and vol_ok and uptrend_macro:
                 secondary_breakout[i] = True
@@ -6233,7 +7217,9 @@ def backtest_v19(y_pred, returns, df_test, feature_cols,
         if not bullish:
             continue
         # Oversold or deeper drop
-        oversold = (not np.isnan(rsi14[i - 1]) and rsi14[i - 1] < 35) or drop_from_peak_20[i] <= -0.18
+        oversold = (not np.isnan(rsi14[i - 1]) and rsi14[i - 1] < 35) or drop_from_peak_20[
+            i
+        ] <= -0.18
         if not oversold:
             continue
         # Volume confirmation
@@ -6253,7 +7239,11 @@ def backtest_v19(y_pred, returns, df_test, feature_cols,
     rolling_high_250 = pd.Series(close).rolling(250, min_periods=20).max().values
     dist_from_52w_high = np.where(rolling_high_250 > 0, (close / rolling_high_250), 1.0)
 
-    date_col = "date" if "date" in df_test.columns else ("timestamp" if "timestamp" in df_test.columns else None)
+    date_col = (
+        "date"
+        if "date" in df_test.columns
+        else ("timestamp" if "timestamp" in df_test.columns else None)
+    )
     dates = df_test[date_col].values if date_col else np.arange(n)
     symbols = df_test["symbol"].values if "symbol" in df_test.columns else ["?"] * n
 
@@ -6276,10 +7266,20 @@ def backtest_v19(y_pred, returns, df_test, feature_cols,
         return "weak"
 
     symbol_profiles = {
-        "ACB": "bank", "BID": "bank", "MBB": "bank", "TCB": "bank",
-        "AAV": "high_beta", "AAS": "high_beta", "SSI": "high_beta", "VND": "high_beta",
-        "DGC": "momentum", "HPG": "momentum", "VIC": "momentum",
-        "FPT": "defensive", "REE": "defensive", "VNM": "defensive",
+        "ACB": "bank",
+        "BID": "bank",
+        "MBB": "bank",
+        "TCB": "bank",
+        "AAV": "high_beta",
+        "AAS": "high_beta",
+        "SSI": "high_beta",
+        "VND": "high_beta",
+        "DGC": "momentum",
+        "HPG": "momentum",
+        "VIC": "momentum",
+        "FPT": "defensive",
+        "REE": "defensive",
+        "VNM": "defensive",
     }
 
     def get_regime_adapter(i, trend):
@@ -6289,7 +7289,9 @@ def backtest_v19(y_pred, returns, df_test, feature_cols,
         low_vol = bb_i < 0.35
         weak_move = abs(ret_20d[i]) < 0.05
         choppy_regime = low_vol and weak_move and trend == "weak"
-        atr_ratio = (atr14[i] / close[i]) if (i < n and close[i] > 0 and not np.isnan(atr14[i])) else 0.03
+        atr_ratio = (
+            (atr14[i] / close[i]) if (i < n and close[i] > 0 and not np.isnan(atr14[i])) else 0.03
+        )
 
         params = {
             "profile": profile,
@@ -6301,13 +7303,45 @@ def backtest_v19(y_pred, returns, df_test, feature_cols,
             "choppy_regime": choppy_regime,
         }
         if profile == "high_beta":
-            params.update({"dp_floor": 0.015, "ret5_hot": 0.090, "size_mult": 1.08, "base_confirm_bars": 2, "exit_score_threshold": 2.3})
+            params.update(
+                {
+                    "dp_floor": 0.015,
+                    "ret5_hot": 0.090,
+                    "size_mult": 1.08,
+                    "base_confirm_bars": 2,
+                    "exit_score_threshold": 2.3,
+                }
+            )
         elif profile == "bank":
-            params.update({"dp_floor": 0.020, "ret5_hot": 0.070, "size_mult": 0.92, "base_confirm_bars": 3, "exit_score_threshold": 2.2})
+            params.update(
+                {
+                    "dp_floor": 0.020,
+                    "ret5_hot": 0.070,
+                    "size_mult": 0.92,
+                    "base_confirm_bars": 3,
+                    "exit_score_threshold": 2.2,
+                }
+            )
         elif profile == "defensive":
-            params.update({"dp_floor": 0.025, "ret5_hot": 0.050, "size_mult": 0.85, "base_confirm_bars": 3, "exit_score_threshold": 1.8})
+            params.update(
+                {
+                    "dp_floor": 0.025,
+                    "ret5_hot": 0.050,
+                    "size_mult": 0.85,
+                    "base_confirm_bars": 3,
+                    "exit_score_threshold": 1.8,
+                }
+            )
         elif profile == "momentum":
-            params.update({"dp_floor": 0.018, "ret5_hot": 0.080, "size_mult": 1.00, "base_confirm_bars": 2, "exit_score_threshold": 2.1})
+            params.update(
+                {
+                    "dp_floor": 0.018,
+                    "ret5_hot": 0.080,
+                    "size_mult": 1.00,
+                    "base_confirm_bars": 2,
+                    "exit_score_threshold": 2.1,
+                }
+            )
 
         if choppy_regime:
             params["dp_floor"] += 0.004
@@ -6372,10 +7406,13 @@ def backtest_v19(y_pred, returns, df_test, feature_cols,
 
         if new_position == 0 and position == 0 and last_exit_reason == "trailing_stop":
             bars_since_exit = i - last_exit_bar
-            if (bars_since_exit <= QUICK_REENTRY_WINDOW and
-                trend in ("strong", "moderate") and
-                macd_line[i] > 0 and
-                not np.isnan(sma20[i]) and close[i] > sma20[i]):
+            if (
+                bars_since_exit <= QUICK_REENTRY_WINDOW
+                and trend in ("strong", "moderate")
+                and macd_line[i] > 0
+                and not np.isnan(sma20[i])
+                and close[i] > sma20[i]
+            ):
                 new_position = 1
                 quick_reentry = True
 
@@ -6385,7 +7422,7 @@ def backtest_v19(y_pred, returns, df_test, feature_cols,
         if mod_f:
             macd_pos = macd_hist[i] > 0
             bullish = close[i] > opn[i]
-            heavy_vol = (not np.isnan(avg_vol20[i]) and volume[i] > 1.5 * avg_vol20[i])
+            heavy_vol = not np.isnan(avg_vol20[i]) and volume[i] > 1.5 * avg_vol20[i]
             bo_quality_ok = macd_pos and bullish and heavy_vol
 
         if new_position == 0 and position == 0 and consolidation_breakout[i] and bo_quality_ok:
@@ -6393,7 +7430,13 @@ def backtest_v19(y_pred, returns, df_test, feature_cols,
             breakout_entry = True
 
         # ═══ MODULE E: Secondary breakout entry ═══
-        if mod_e and new_position == 0 and position == 0 and secondary_breakout[i] and bo_quality_ok:
+        if (
+            mod_e
+            and new_position == 0
+            and position == 0
+            and secondary_breakout[i]
+            and bo_quality_ok
+        ):
             new_position = 1
             breakout_entry = True
             n_secondary_breakout += 1
@@ -6417,11 +7460,15 @@ def backtest_v19(y_pred, returns, df_test, feature_cols,
                 if price_diff < 0.03:
                     new_position = 0
 
-        if new_position == 1 and position == 0 and not quick_reentry and not breakout_entry and not vshape_entry:
+        if (
+            new_position == 1
+            and position == 0
+            and not quick_reentry
+            and not breakout_entry
+            and not vshape_entry
+        ):
             prev_pred = int(y_pred[i - 2]) if i >= 2 else 0
-            if bs >= 4 and vs > 1.2:
-                pass
-            elif trend == "strong" and rs > 0:
+            if bs >= 4 and vs > 1.2 or trend == "strong" and rs > 0:
                 pass
             elif prev_pred != 1:
                 new_position = 0
@@ -6432,26 +7479,29 @@ def backtest_v19(y_pred, returns, df_test, feature_cols,
                     if bs < 3 and not breakout_entry:
                         new_position = 0
 
-        strong_breakout_context = (
-            trend == "strong" and (bs >= 3 or vs > 1.5 or breakout_entry)
-        )
+        strong_breakout_context = trend == "strong" and (bs >= 3 or vs > 1.5 or breakout_entry)
         entry_alpha_ok = True
 
         if new_position == 1 and position == 0 and not quick_reentry and not vshape_entry:
             entry_score = sum([wp < 0.75, dp > 0.02, rs > 0, vs > 1.1, hl >= 2])
-            near_sma_support = (not np.isnan(sma20[i]) and
-                               close[i] <= sma20[i] * 1.02 and
-                               close[i] >= sma20[i] * 0.97)
-            near_local_low = (not np.isnan(local_low_20[i]) and
-                             close[i] <= local_low_20[i] * 1.05)
-            in_uptrend_macro = (not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and
-                               sma20[i] > sma50[i])
+            near_sma_support = (
+                not np.isnan(sma20[i])
+                and close[i] <= sma20[i] * 1.02
+                and close[i] >= sma20[i] * 0.97
+            )
+            near_local_low = not np.isnan(local_low_20[i]) and close[i] <= local_low_20[i] * 1.05
+            in_uptrend_macro = (
+                not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and sma20[i] > sma50[i]
+            )
 
             if trend == "strong":
                 min_score = 1
-            elif (near_sma_support or near_local_low) and in_uptrend_macro:
-                min_score = 2
-            elif in_uptrend_macro and rs > 0:
+            elif (
+                (near_sma_support or near_local_low)
+                and in_uptrend_macro
+                or in_uptrend_macro
+                and rs > 0
+            ):
                 min_score = 2
             else:
                 min_score = 3
@@ -6460,7 +7510,13 @@ def backtest_v19(y_pred, returns, df_test, feature_cols,
                 entry_alpha_ok = False
             if wp > 0.9 and rs <= 0 and bs < 2 and trend != "strong" and not breakout_entry:
                 entry_alpha_ok = False
-            if bb > 0.85 and bs < 2 and entry_score < 4 and trend != "strong" and not breakout_entry:
+            if (
+                bb > 0.85
+                and bs < 2
+                and entry_score < 4
+                and trend != "strong"
+                and not breakout_entry
+            ):
                 entry_alpha_ok = False
             if entry_alpha_ok:
                 if wp > 0.78 and bb < 0.35 and trend == "weak" and not breakout_entry:
@@ -6490,9 +7546,10 @@ def backtest_v19(y_pred, returns, df_test, feature_cols,
         # ═══ MODULE G: BEAR REGIME DEFENSE ═══
         # Block all non-V-shape entries when in bear regime
         if mod_g and new_position == 1 and position == 0 and not vshape_entry and entry_alpha_ok:
-            sma20_below_50 = (not np.isnan(sma20[i]) and not np.isnan(sma50[i])
-                              and sma20[i] < sma50[i])
-            close_below_50 = (not np.isnan(sma50[i]) and close[i] < sma50[i])
+            sma20_below_50 = (
+                not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and sma20[i] < sma50[i]
+            )
+            close_below_50 = not np.isnan(sma50[i]) and close[i] < sma50[i]
             deep_60d_loss = ret_60d[i] < -0.10
             if sma20_below_50 and close_below_50 and deep_60d_loss:
                 entry_alpha_ok = False
@@ -6500,9 +7557,19 @@ def backtest_v19(y_pred, returns, df_test, feature_cols,
 
         # ═══ MODULE J: ANTI-CHOP ENTRY FILTER ═══
         # Block weak non-breakout entries in sideways/chop regimes.
-        if mod_j and new_position == 1 and position == 0 and not vshape_entry and not breakout_entry and entry_alpha_ok:
-            ma_flat = (not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and
-                       abs(sma20[i] / sma50[i] - 1) < 0.02)
+        if (
+            mod_j
+            and new_position == 1
+            and position == 0
+            and not vshape_entry
+            and not breakout_entry
+            and entry_alpha_ok
+        ):
+            ma_flat = (
+                not np.isnan(sma20[i])
+                and not np.isnan(sma50[i])
+                and abs(sma20[i] / sma50[i] - 1) < 0.02
+            )
             weak_momo = abs(ret_20d[i]) < 0.06
             narrow_vol = bb < 0.45
             weak_trend = trend == "weak"
@@ -6553,7 +7620,9 @@ def backtest_v19(y_pred, returns, df_test, feature_cols,
             if close[i] > max_price_in_trade:
                 max_price_in_trade = close[i]
             cum_ret = (projected - entry_equity) / entry_equity if entry_equity > 0 else 0
-            max_profit = (max_equity_in_trade - entry_equity) / entry_equity if entry_equity > 0 else 0
+            max_profit = (
+                (max_equity_in_trade - entry_equity) / entry_equity if entry_equity > 0 else 0
+            )
             # Price-based max for Module B (independent of position_size scaling)
             price_max_profit = (max_price_in_trade / entry_close - 1) if entry_close > 0 else 0
             price_cur_ret = (close[i] / entry_close - 1) if entry_close > 0 else 0
@@ -6579,8 +7648,13 @@ def backtest_v19(y_pred, returns, df_test, feature_cols,
 
             # ═══ MODULE C: FAST LOSS CUT ═══
             # In first 5 bars, exit immediately if losing with bearish confirmation
-            elif (mod_c and hold_days < 5 and cum_ret < -0.03
-                  and macd_hist[i] < 0 and close[i] < opn[i]):
+            elif (
+                mod_c
+                and hold_days < 5
+                and cum_ret < -0.03
+                and macd_hist[i] < 0
+                and close[i] < opn[i]
+            ):
                 new_position = 0
                 exit_reason = "fast_loss_cut"
                 n_fast_loss_cut += 1
@@ -6589,8 +7663,8 @@ def backtest_v19(y_pred, returns, df_test, feature_cols,
             # Independent layer — protects realized profit when peak reached
             elif mod_b and price_max_profit >= 0.20:
                 # Aggressive protect: close < SMA10 + heavy volume = distribution
-                price_below_sma10 = (not np.isnan(sma10[i]) and close[i] < sma10[i])
-                heavy_vol = (not np.isnan(avg_vol20[i]) and volume[i] > 1.5 * avg_vol20[i])
+                price_below_sma10 = not np.isnan(sma10[i]) and close[i] < sma10[i]
+                heavy_vol = not np.isnan(avg_vol20[i]) and volume[i] > 1.5 * avg_vol20[i]
                 bearish_candle = close[i] < opn[i]
                 if price_below_sma10 and heavy_vol and bearish_candle:
                     new_position = 0
@@ -6613,10 +7687,12 @@ def backtest_v19(y_pred, returns, df_test, feature_cols,
                 macd_bearish = macd_hist[i] < 0 and macd_hist[i - 1] >= 0 if i > 0 else False
                 price_below_ma20 = close[i] < sma20[i] if not np.isnan(sma20[i]) else False
 
-                if macd_bearish and price_below_ma20:
-                    new_position = 0
-                    exit_reason = "hybrid_exit"
-                elif price_below_ma20 and cum_ret < max_profit * 0.5:
+                if (
+                    macd_bearish
+                    and price_below_ma20
+                    or price_below_ma20
+                    and cum_ret < max_profit * 0.5
+                ):
                     new_position = 0
                     exit_reason = "hybrid_exit"
                 else:
@@ -6657,23 +7733,33 @@ def backtest_v19(y_pred, returns, df_test, feature_cols,
                     exit_reason = "zombie_exit"
 
             # Min hold (Module B/C exits override min hold)
-            if new_position == 0 and exit_reason not in (
-                    "stop_loss", "hard_stop", "hybrid_exit", "peak_protect_dist",
-                    "peak_protect_ema", "fast_loss_cut") and hold_days < MIN_HOLD:
+            if (
+                new_position == 0
+                and exit_reason
+                not in (
+                    "stop_loss",
+                    "hard_stop",
+                    "hybrid_exit",
+                    "peak_protect_dist",
+                    "peak_protect_ema",
+                    "fast_loss_cut",
+                )
+                and hold_days < MIN_HOLD
+            ):
                 if cum_ret > -atr_stop:
                     new_position = 1
 
             # Exit confirmation (Module D adaptive + Module H confirmed signal exit)
             if new_position == 0 and exit_reason == "signal":
                 if mod_h:
-                    below_ma20 = (not np.isnan(sma20[i]) and close[i] < sma20[i])
-                    below_ma50 = (not np.isnan(sma50[i]) and close[i] < sma50[i])
+                    below_ma20 = not np.isnan(sma20[i]) and close[i] < sma20[i]
+                    below_ma50 = not np.isnan(sma50[i]) and close[i] < sma50[i]
                     old_bearish_confirm = (below_ma20 and macd_hist[i] < 0) or below_ma50
-                    heavy_vol = (not np.isnan(avg_vol20[i]) and volume[i] > 1.4 * avg_vol20[i])
+                    heavy_vol = not np.isnan(avg_vol20[i]) and volume[i] > 1.4 * avg_vol20[i]
                     bearish_candle = close[i] < opn[i]
                     macd_falling = macd_hist[i] < macd_hist[i - 1] if i > 0 else False
-                    below_ema8 = (not np.isnan(ema8[i]) and close[i] < ema8[i] * 0.997)
-                    weak_rebound = (ret_5d[i] < 0.01 and rs <= 0)
+                    below_ema8 = not np.isnan(ema8[i]) and close[i] < ema8[i] * 0.997
+                    weak_rebound = ret_5d[i] < 0.01 and rs <= 0
 
                     bearish_score = 0.0
                     bearish_score += 2.0 if below_ma50 else 0.0
@@ -6703,9 +7789,7 @@ def backtest_v19(y_pred, returns, df_test, feature_cols,
             if new_position == 0 and exit_reason == "signal":
                 # Determine confirm bars: tight when losing, normal when winning
                 if mod_d:
-                    if cum_ret < 0:
-                        confirm_bars = 1
-                    elif max_profit > 0 and cum_ret < max_profit * 0.6:
+                    if cum_ret < 0 or max_profit > 0 and cum_ret < max_profit * 0.6:
                         confirm_bars = 1
                     else:
                         confirm_bars = EXIT_CONFIRM
@@ -6730,9 +7814,15 @@ def backtest_v19(y_pred, returns, df_test, feature_cols,
             # ═══ MODULE I: TREND-CARRY OVERRIDE ═══
             # Keep profitable trades alive when trend health is still acceptable.
             if mod_i and new_position == 0 and exit_reason == "signal":
-                still_supported = (not np.isnan(sma20[i]) and close[i] >= sma20[i] * 0.99)
+                still_supported = not np.isnan(sma20[i]) and close[i] >= sma20[i] * 0.99
                 trend_ok = trend in ("strong", "moderate")
-                if cum_ret > 0.03 and max_profit > 0.06 and trend_ok and still_supported and macd_hist[i] > -0.02:
+                if (
+                    cum_ret > 0.03
+                    and max_profit > 0.06
+                    and trend_ok
+                    and still_supported
+                    and macd_hist[i] > -0.02
+                ):
                     new_position = 1
                     n_trend_carry_saved += 1
 
@@ -6755,9 +7845,14 @@ def backtest_v19(y_pred, returns, df_test, feature_cols,
                 entry_close = close[i]
                 max_price_in_trade = close[i]
                 entry_features = {
-                    "entry_wp": wp, "entry_dp": dp, "entry_rs": rs,
-                    "entry_vs": vs, "entry_bs": bs, "entry_hl": hl,
-                    "entry_od": od, "entry_bb": bb,
+                    "entry_wp": wp,
+                    "entry_dp": dp,
+                    "entry_rs": rs,
+                    "entry_vs": vs,
+                    "entry_bs": bs,
+                    "entry_hl": hl,
+                    "entry_od": od,
+                    "entry_bb": bb,
                     "entry_score": sum([wp < 0.75, dp > 0.02, rs > 0, vs > 1.1, hl >= 2]),
                     "entry_date": str(dates[i])[:10],
                     "entry_symbol": str(symbols[i]),
@@ -6786,16 +7881,23 @@ def backtest_v19(y_pred, returns, df_test, feature_cols,
 
                 if record_trades and entry_equity > 0:
                     pnl_pct = (close[i] / entry_close - 1) * 100 if entry_close > 0 else 0
-                    max_pnl_pct = (max_equity_in_trade - entry_equity) / entry_equity * 100 if entry_equity > 0 else 0
-                    trades.append({
-                        "entry_day": current_entry_day, "exit_day": i,
-                        "holding_days": i - current_entry_day,
-                        "pnl_pct": round(pnl_pct, 2),
-                        "max_profit_pct": round(max_pnl_pct, 2),
-                        "exit_reason": exit_reason,
-                        "exit_date": str(dates[i])[:10],
-                        **entry_features,
-                    })
+                    max_pnl_pct = (
+                        (max_equity_in_trade - entry_equity) / entry_equity * 100
+                        if entry_equity > 0
+                        else 0
+                    )
+                    trades.append(
+                        {
+                            "entry_day": current_entry_day,
+                            "exit_day": i,
+                            "holding_days": i - current_entry_day,
+                            "pnl_pct": round(pnl_pct, 2),
+                            "max_profit_pct": round(max_pnl_pct, 2),
+                            "exit_reason": exit_reason,
+                            "exit_date": str(dates[i])[:10],
+                            **entry_features,
+                        }
+                    )
                 entry_equity = 0
                 max_equity_in_trade = 0
                 max_price_in_trade = 0
@@ -6810,15 +7912,21 @@ def backtest_v19(y_pred, returns, df_test, feature_cols,
 
     if position == 1 and entry_equity > 0 and record_trades:
         pnl_pct = (close[-1] / entry_close - 1) * 100 if entry_close > 0 else 0
-        trades.append({
-            "entry_day": current_entry_day, "exit_day": n - 1,
-            "holding_days": n - 1 - current_entry_day,
-            "pnl_pct": round(pnl_pct, 2), "exit_reason": "end",
-            "exit_date": str(dates[-1])[:10], **entry_features,
-        })
+        trades.append(
+            {
+                "entry_day": current_entry_day,
+                "exit_day": n - 1,
+                "holding_days": n - 1 - current_entry_day,
+                "pnl_pct": round(pnl_pct, 2),
+                "exit_reason": "end",
+                "exit_date": str(dates[-1])[:10],
+                **entry_features,
+            }
+        )
 
     return {
-        "equity_curve": equity, "trades": trades,
+        "equity_curve": equity,
+        "trades": trades,
         "total_return_pct": round((equity[-1] / initial_capital - 1) * 100, 2),
         "final_equity": round(equity[-1]),
         "n_vshape_entries": n_vshape_entries,
@@ -6838,20 +7946,26 @@ def backtest_v19(y_pred, returns, df_test, feature_cols,
     }
 
 
-
-def backtest_v19_2(y_pred, returns, df_test, feature_cols,
-                 initial_capital=100_000_000, commission=0.0015, tax=0.001,
-                 record_trades=True,
-                 mod_a=True,    # V-shape entry
-                 mod_b=True,    # Profit-peak protection
-                 mod_c=False,   # Fast loss cut (disabled)
-                 mod_d=False,   # Adaptive exit confirm (disabled)
-                 mod_e=True,    # Secondary breakout
-                 mod_f=True,    # BO Quality Filter
-                 mod_g=True,    # Bear Regime Defense
-                 mod_h=True,    # Confirmed signal exit
-                 mod_i=True,    # Trend-carry override
-                 mod_j=True):   # Anti-chop entry filter
+def backtest_v19_2(
+    y_pred,
+    returns,
+    df_test,
+    feature_cols,
+    initial_capital=100_000_000,
+    commission=0.0015,
+    tax=0.001,
+    record_trades=True,
+    mod_a=True,  # V-shape entry
+    mod_b=True,  # Profit-peak protection
+    mod_c=False,  # Fast loss cut (disabled)
+    mod_d=False,  # Adaptive exit confirm (disabled)
+    mod_e=True,  # Secondary breakout
+    mod_f=True,  # BO Quality Filter
+    mod_g=True,  # Bear Regime Defense
+    mod_h=True,  # Confirmed signal exit
+    mod_i=True,  # Trend-carry override
+    mod_j=True,
+):  # Anti-chop entry filter
     """V19.2: Signal exit overhaul - hard cap losses + fast exit + time decay."""
     n = len(y_pred)
     equity = np.zeros(n)
@@ -6886,12 +8000,26 @@ def backtest_v19_2(y_pred, returns, df_test, feature_cols,
     last_exit_bar = -999
     entry_close = 0
 
-    feat_names = ["rsi_slope_5d", "vol_surge_ratio", "range_position_20d",
-                  "dist_to_resistance", "breakout_setup_score", "bb_width_percentile",
-                  "higher_lows_count", "obv_price_divergence"]
-    defaults = {"rsi_slope_5d": 0, "vol_surge_ratio": 1.0, "range_position_20d": 0.5,
-                "dist_to_resistance": 0.05, "breakout_setup_score": 0, "bb_width_percentile": 0.5,
-                "higher_lows_count": 0, "obv_price_divergence": 0}
+    feat_names = [
+        "rsi_slope_5d",
+        "vol_surge_ratio",
+        "range_position_20d",
+        "dist_to_resistance",
+        "breakout_setup_score",
+        "bb_width_percentile",
+        "higher_lows_count",
+        "obv_price_divergence",
+    ]
+    defaults = {
+        "rsi_slope_5d": 0,
+        "vol_surge_ratio": 1.0,
+        "range_position_20d": 0.5,
+        "dist_to_resistance": 0.05,
+        "breakout_setup_score": 0,
+        "bb_width_percentile": 0.5,
+        "higher_lows_count": 0,
+        "obv_price_divergence": 0,
+    }
     feat_arrays = {}
     for fn in feat_names:
         if fn in df_test.columns:
@@ -6954,7 +8082,7 @@ def backtest_v19_2(y_pred, returns, df_test, feature_cols,
             start = i - bars + 1
             if start < 0:
                 continue
-            band = np.max(high[start:i + 1]) - np.min(low[start:i + 1])
+            band = np.max(high[start : i + 1]) - np.min(low[start : i + 1])
             ref = close[i] if close[i] > 0 else 1.0
             if band / ref < 0.05:
                 stabilized_sideways[i] = True
@@ -6962,8 +8090,8 @@ def backtest_v19_2(y_pred, returns, df_test, feature_cols,
 
     consolidation_breakout = np.zeros(n, dtype=bool)
     for i in range(10, n):
-        prev_high = np.max(high[i - 10:i])
-        prev_low = np.min(low[i - 10:i])
+        prev_high = np.max(high[i - 10 : i])
+        prev_low = np.min(low[i - 10 : i])
         ref = close[i - 1] if close[i - 1] > 0 else close[i]
         tight_range = ((prev_high - prev_low) / ref) < 0.08 if ref > 0 else False
         vol_ok = volume[i] > 1.2 * avg_vol20[i] if not np.isnan(avg_vol20[i]) else False
@@ -6974,18 +8102,21 @@ def backtest_v19_2(y_pred, returns, df_test, feature_cols,
     secondary_breakout = np.zeros(n, dtype=bool)
     if mod_e:
         for i in range(10, n):
-            prev_high = np.max(high[i - 10:i])
-            prev_low = np.min(low[i - 10:i])
+            prev_high = np.max(high[i - 10 : i])
+            prev_low = np.min(low[i - 10 : i])
             ref = close[i - 1] if close[i - 1] > 0 else close[i]
             # Looser: range up to 10%
             tight_range = ((prev_high - prev_low) / ref) < 0.10 if ref > 0 else False
-            uptrend_macro = (not np.isnan(sma20[i]) and not np.isnan(sma50[i])
-                             and sma20[i] > sma50[i])
+            uptrend_macro = (
+                not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and sma20[i] > sma50[i]
+            )
             # Lower volume bar if uptrend confirmed
             vol_threshold = 1.1 if uptrend_macro else 1.2
-            vol_ok = volume[i] > vol_threshold * avg_vol20[i] if not np.isnan(avg_vol20[i]) else False
+            vol_ok = (
+                volume[i] > vol_threshold * avg_vol20[i] if not np.isnan(avg_vol20[i]) else False
+            )
             # Use max_high_5d instead of prev_high (10d)
-            max_high_5d = np.max(high[max(0, i - 5):i])
+            max_high_5d = np.max(high[max(0, i - 5) : i])
             breakout_5d = close[i] > max_high_5d
             if tight_range and breakout_5d and vol_ok and uptrend_macro:
                 secondary_breakout[i] = True
@@ -7017,7 +8148,9 @@ def backtest_v19_2(y_pred, returns, df_test, feature_cols,
         if not bullish:
             continue
         # Oversold or deeper drop
-        oversold = (not np.isnan(rsi14[i - 1]) and rsi14[i - 1] < 35) or drop_from_peak_20[i] <= -0.18
+        oversold = (not np.isnan(rsi14[i - 1]) and rsi14[i - 1] < 35) or drop_from_peak_20[
+            i
+        ] <= -0.18
         if not oversold:
             continue
         # Volume confirmation
@@ -7037,7 +8170,11 @@ def backtest_v19_2(y_pred, returns, df_test, feature_cols,
     rolling_high_250 = pd.Series(close).rolling(250, min_periods=20).max().values
     dist_from_52w_high = np.where(rolling_high_250 > 0, (close / rolling_high_250), 1.0)
 
-    date_col = "date" if "date" in df_test.columns else ("timestamp" if "timestamp" in df_test.columns else None)
+    date_col = (
+        "date"
+        if "date" in df_test.columns
+        else ("timestamp" if "timestamp" in df_test.columns else None)
+    )
     dates = df_test[date_col].values if date_col else np.arange(n)
     symbols = df_test["symbol"].values if "symbol" in df_test.columns else ["?"] * n
 
@@ -7060,10 +8197,20 @@ def backtest_v19_2(y_pred, returns, df_test, feature_cols,
         return "weak"
 
     symbol_profiles = {
-        "ACB": "bank", "BID": "bank", "MBB": "bank", "TCB": "bank",
-        "AAV": "high_beta", "AAS": "high_beta", "SSI": "high_beta", "VND": "high_beta",
-        "DGC": "momentum", "HPG": "momentum", "VIC": "momentum",
-        "FPT": "defensive", "REE": "defensive", "VNM": "defensive",
+        "ACB": "bank",
+        "BID": "bank",
+        "MBB": "bank",
+        "TCB": "bank",
+        "AAV": "high_beta",
+        "AAS": "high_beta",
+        "SSI": "high_beta",
+        "VND": "high_beta",
+        "DGC": "momentum",
+        "HPG": "momentum",
+        "VIC": "momentum",
+        "FPT": "defensive",
+        "REE": "defensive",
+        "VNM": "defensive",
     }
 
     def get_regime_adapter(i, trend):
@@ -7073,7 +8220,9 @@ def backtest_v19_2(y_pred, returns, df_test, feature_cols,
         low_vol = bb_i < 0.35
         weak_move = abs(ret_20d[i]) < 0.05
         choppy_regime = low_vol and weak_move and trend == "weak"
-        atr_ratio = (atr14[i] / close[i]) if (i < n and close[i] > 0 and not np.isnan(atr14[i])) else 0.03
+        atr_ratio = (
+            (atr14[i] / close[i]) if (i < n and close[i] > 0 and not np.isnan(atr14[i])) else 0.03
+        )
 
         params = {
             "profile": profile,
@@ -7085,13 +8234,45 @@ def backtest_v19_2(y_pred, returns, df_test, feature_cols,
             "choppy_regime": choppy_regime,
         }
         if profile == "high_beta":
-            params.update({"dp_floor": 0.015, "ret5_hot": 0.090, "size_mult": 0.98, "base_confirm_bars": 2, "exit_score_threshold": 2.35})
+            params.update(
+                {
+                    "dp_floor": 0.015,
+                    "ret5_hot": 0.090,
+                    "size_mult": 0.98,
+                    "base_confirm_bars": 2,
+                    "exit_score_threshold": 2.35,
+                }
+            )
         elif profile == "bank":
-            params.update({"dp_floor": 0.020, "ret5_hot": 0.070, "size_mult": 0.92, "base_confirm_bars": 3, "exit_score_threshold": 2.2})
+            params.update(
+                {
+                    "dp_floor": 0.020,
+                    "ret5_hot": 0.070,
+                    "size_mult": 0.92,
+                    "base_confirm_bars": 3,
+                    "exit_score_threshold": 2.2,
+                }
+            )
         elif profile == "defensive":
-            params.update({"dp_floor": 0.025, "ret5_hot": 0.050, "size_mult": 0.85, "base_confirm_bars": 3, "exit_score_threshold": 1.8})
+            params.update(
+                {
+                    "dp_floor": 0.025,
+                    "ret5_hot": 0.050,
+                    "size_mult": 0.85,
+                    "base_confirm_bars": 3,
+                    "exit_score_threshold": 1.8,
+                }
+            )
         elif profile == "momentum":
-            params.update({"dp_floor": 0.018, "ret5_hot": 0.080, "size_mult": 0.92, "base_confirm_bars": 2, "exit_score_threshold": 2.2})
+            params.update(
+                {
+                    "dp_floor": 0.018,
+                    "ret5_hot": 0.080,
+                    "size_mult": 0.92,
+                    "base_confirm_bars": 2,
+                    "exit_score_threshold": 2.2,
+                }
+            )
 
         if choppy_regime:
             params["dp_floor"] += 0.004
@@ -7171,10 +8352,13 @@ def backtest_v19_2(y_pred, returns, df_test, feature_cols,
 
         if new_position == 0 and position == 0 and last_exit_reason == "trailing_stop":
             bars_since_exit = i - last_exit_bar
-            if (bars_since_exit <= QUICK_REENTRY_WINDOW and
-                trend in ("strong", "moderate") and
-                macd_line[i] > 0 and
-                not np.isnan(sma20[i]) and close[i] > sma20[i]):
+            if (
+                bars_since_exit <= QUICK_REENTRY_WINDOW
+                and trend in ("strong", "moderate")
+                and macd_line[i] > 0
+                and not np.isnan(sma20[i])
+                and close[i] > sma20[i]
+            ):
                 new_position = 1
                 quick_reentry = True
 
@@ -7184,7 +8368,7 @@ def backtest_v19_2(y_pred, returns, df_test, feature_cols,
         if mod_f:
             macd_pos = macd_hist[i] > 0
             bullish = close[i] > opn[i]
-            heavy_vol = (not np.isnan(avg_vol20[i]) and volume[i] > 1.5 * avg_vol20[i])
+            heavy_vol = not np.isnan(avg_vol20[i]) and volume[i] > 1.5 * avg_vol20[i]
             bo_quality_ok = macd_pos and bullish and heavy_vol
 
         if new_position == 0 and position == 0 and consolidation_breakout[i] and bo_quality_ok:
@@ -7192,7 +8376,13 @@ def backtest_v19_2(y_pred, returns, df_test, feature_cols,
             breakout_entry = True
 
         # ═══ MODULE E: Secondary breakout entry ═══
-        if mod_e and new_position == 0 and position == 0 and secondary_breakout[i] and bo_quality_ok:
+        if (
+            mod_e
+            and new_position == 0
+            and position == 0
+            and secondary_breakout[i]
+            and bo_quality_ok
+        ):
             new_position = 1
             breakout_entry = True
             n_secondary_breakout += 1
@@ -7216,11 +8406,15 @@ def backtest_v19_2(y_pred, returns, df_test, feature_cols,
                 if price_diff < 0.03:
                     new_position = 0
 
-        if new_position == 1 and position == 0 and not quick_reentry and not breakout_entry and not vshape_entry:
+        if (
+            new_position == 1
+            and position == 0
+            and not quick_reentry
+            and not breakout_entry
+            and not vshape_entry
+        ):
             prev_pred = int(y_pred[i - 2]) if i >= 2 else 0
-            if bs >= 4 and vs > 1.2:
-                pass
-            elif trend == "strong" and rs > 0:
+            if bs >= 4 and vs > 1.2 or trend == "strong" and rs > 0:
                 pass
             elif prev_pred != 1:
                 new_position = 0
@@ -7231,26 +8425,29 @@ def backtest_v19_2(y_pred, returns, df_test, feature_cols,
                     if bs < 3 and not breakout_entry:
                         new_position = 0
 
-        strong_breakout_context = (
-            trend == "strong" and (bs >= 3 or vs > 1.5 or breakout_entry)
-        )
+        strong_breakout_context = trend == "strong" and (bs >= 3 or vs > 1.5 or breakout_entry)
         entry_alpha_ok = True
 
         if new_position == 1 and position == 0 and not quick_reentry and not vshape_entry:
             entry_score = sum([wp < 0.75, dp > 0.02, rs > 0, vs > 1.1, hl >= 2])
-            near_sma_support = (not np.isnan(sma20[i]) and
-                               close[i] <= sma20[i] * 1.02 and
-                               close[i] >= sma20[i] * 0.97)
-            near_local_low = (not np.isnan(local_low_20[i]) and
-                             close[i] <= local_low_20[i] * 1.05)
-            in_uptrend_macro = (not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and
-                               sma20[i] > sma50[i])
+            near_sma_support = (
+                not np.isnan(sma20[i])
+                and close[i] <= sma20[i] * 1.02
+                and close[i] >= sma20[i] * 0.97
+            )
+            near_local_low = not np.isnan(local_low_20[i]) and close[i] <= local_low_20[i] * 1.05
+            in_uptrend_macro = (
+                not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and sma20[i] > sma50[i]
+            )
 
             if trend == "strong":
                 min_score = 1
-            elif (near_sma_support or near_local_low) and in_uptrend_macro:
-                min_score = 2
-            elif in_uptrend_macro and rs > 0:
+            elif (
+                (near_sma_support or near_local_low)
+                and in_uptrend_macro
+                or in_uptrend_macro
+                and rs > 0
+            ):
                 min_score = 2
             else:
                 min_score = 3
@@ -7259,7 +8456,13 @@ def backtest_v19_2(y_pred, returns, df_test, feature_cols,
                 entry_alpha_ok = False
             if wp > 0.9 and rs <= 0 and bs < 2 and trend != "strong" and not breakout_entry:
                 entry_alpha_ok = False
-            if bb > 0.85 and bs < 2 and entry_score < 4 and trend != "strong" and not breakout_entry:
+            if (
+                bb > 0.85
+                and bs < 2
+                and entry_score < 4
+                and trend != "strong"
+                and not breakout_entry
+            ):
                 entry_alpha_ok = False
             if entry_alpha_ok:
                 if wp > 0.78 and bb < 0.35 and trend == "weak" and not breakout_entry:
@@ -7289,9 +8492,10 @@ def backtest_v19_2(y_pred, returns, df_test, feature_cols,
         # ═══ MODULE G: BEAR REGIME DEFENSE ═══
         # Block all non-V-shape entries when in bear regime
         if mod_g and new_position == 1 and position == 0 and not vshape_entry and entry_alpha_ok:
-            sma20_below_50 = (not np.isnan(sma20[i]) and not np.isnan(sma50[i])
-                              and sma20[i] < sma50[i])
-            close_below_50 = (not np.isnan(sma50[i]) and close[i] < sma50[i])
+            sma20_below_50 = (
+                not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and sma20[i] < sma50[i]
+            )
+            close_below_50 = not np.isnan(sma50[i]) and close[i] < sma50[i]
             deep_60d_loss = ret_60d[i] < -0.10
             if sma20_below_50 and close_below_50 and deep_60d_loss:
                 entry_alpha_ok = False
@@ -7299,9 +8503,19 @@ def backtest_v19_2(y_pred, returns, df_test, feature_cols,
 
         # ═══ MODULE J: ANTI-CHOP ENTRY FILTER ═══
         # Block weak non-breakout entries in sideways/chop regimes.
-        if mod_j and new_position == 1 and position == 0 and not vshape_entry and not breakout_entry and entry_alpha_ok:
-            ma_flat = (not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and
-                       abs(sma20[i] / sma50[i] - 1) < 0.02)
+        if (
+            mod_j
+            and new_position == 1
+            and position == 0
+            and not vshape_entry
+            and not breakout_entry
+            and entry_alpha_ok
+        ):
+            ma_flat = (
+                not np.isnan(sma20[i])
+                and not np.isnan(sma50[i])
+                and abs(sma20[i] / sma50[i] - 1) < 0.02
+            )
             weak_momo = abs(ret_20d[i]) < 0.06
             narrow_vol = bb < 0.45
             weak_trend = trend == "weak"
@@ -7352,7 +8566,9 @@ def backtest_v19_2(y_pred, returns, df_test, feature_cols,
             if close[i] > max_price_in_trade:
                 max_price_in_trade = close[i]
             cum_ret = (projected - entry_equity) / entry_equity if entry_equity > 0 else 0
-            max_profit = (max_equity_in_trade - entry_equity) / entry_equity if entry_equity > 0 else 0
+            max_profit = (
+                (max_equity_in_trade - entry_equity) / entry_equity if entry_equity > 0 else 0
+            )
             # Price-based max for Module B (independent of position_size scaling)
             price_max_profit = (max_price_in_trade / entry_close - 1) if entry_close > 0 else 0
             price_cur_ret = (close[i] / entry_close - 1) if entry_close > 0 else 0
@@ -7378,15 +8594,16 @@ def backtest_v19_2(y_pred, returns, df_test, feature_cols,
                 n_signal_hard_cap += 1
 
             # 0.6) V19.2: FAST EXIT when price drops > 5% and held > 3 days
-            elif price_cur_ret < -0.05 and hold_days > 3:
-                new_position = 0
-                exit_reason = "fast_exit_loss"
-                n_fast_exit_loss += 1
-
-            # 0.7) V19.2: FAST EXIT - moderate price loss with bearish confirmation
-            elif (price_cur_ret < -0.03 and hold_days > 2
-                  and macd_hist[i] < 0
-                  and (not np.isnan(ema8[i]) and close[i] < ema8[i])):
+            elif (
+                price_cur_ret < -0.05
+                and hold_days > 3
+                or (
+                    price_cur_ret < -0.03
+                    and hold_days > 2
+                    and macd_hist[i] < 0
+                    and (not np.isnan(ema8[i]) and close[i] < ema8[i])
+                )
+            ):
                 new_position = 0
                 exit_reason = "fast_exit_loss"
                 n_fast_exit_loss += 1
@@ -7398,8 +8615,13 @@ def backtest_v19_2(y_pred, returns, df_test, feature_cols,
 
             # ═══ MODULE C: FAST LOSS CUT ═══
             # In first 5 bars, exit immediately if losing with bearish confirmation
-            elif (mod_c and hold_days < 5 and cum_ret < -0.03
-                  and macd_hist[i] < 0 and close[i] < opn[i]):
+            elif (
+                mod_c
+                and hold_days < 5
+                and cum_ret < -0.03
+                and macd_hist[i] < 0
+                and close[i] < opn[i]
+            ):
                 new_position = 0
                 exit_reason = "fast_loss_cut"
                 n_fast_loss_cut += 1
@@ -7408,8 +8630,8 @@ def backtest_v19_2(y_pred, returns, df_test, feature_cols,
             # Independent layer — protects realized profit when peak reached
             elif mod_b and price_max_profit >= 0.20:
                 # Aggressive protect: close < SMA10 + heavy volume = distribution
-                price_below_sma10 = (not np.isnan(sma10[i]) and close[i] < sma10[i])
-                heavy_vol = (not np.isnan(avg_vol20[i]) and volume[i] > 1.5 * avg_vol20[i])
+                price_below_sma10 = not np.isnan(sma10[i]) and close[i] < sma10[i]
+                heavy_vol = not np.isnan(avg_vol20[i]) and volume[i] > 1.5 * avg_vol20[i]
                 bearish_candle = close[i] < opn[i]
                 if price_below_sma10 and heavy_vol and bearish_candle:
                     new_position = 0
@@ -7432,10 +8654,12 @@ def backtest_v19_2(y_pred, returns, df_test, feature_cols,
                 macd_bearish = macd_hist[i] < 0 and macd_hist[i - 1] >= 0 if i > 0 else False
                 price_below_ma20 = close[i] < sma20[i] if not np.isnan(sma20[i]) else False
 
-                if macd_bearish and price_below_ma20:
-                    new_position = 0
-                    exit_reason = "hybrid_exit"
-                elif price_below_ma20 and cum_ret < max_profit * 0.5:
+                if (
+                    macd_bearish
+                    and price_below_ma20
+                    or price_below_ma20
+                    and cum_ret < max_profit * 0.5
+                ):
                     new_position = 0
                     exit_reason = "hybrid_exit"
                 else:
@@ -7476,24 +8700,35 @@ def backtest_v19_2(y_pred, returns, df_test, feature_cols,
                     exit_reason = "zombie_exit"
 
             # Min hold (Module B/C exits override min hold)
-            if new_position == 0 and exit_reason not in (
-                    "stop_loss", "hard_stop", "hybrid_exit", "peak_protect_dist",
-                    "peak_protect_ema", "fast_loss_cut", "signal_hard_cap",
-                    "fast_exit_loss") and hold_days < MIN_HOLD:
+            if (
+                new_position == 0
+                and exit_reason
+                not in (
+                    "stop_loss",
+                    "hard_stop",
+                    "hybrid_exit",
+                    "peak_protect_dist",
+                    "peak_protect_ema",
+                    "fast_loss_cut",
+                    "signal_hard_cap",
+                    "fast_exit_loss",
+                )
+                and hold_days < MIN_HOLD
+            ):
                 if cum_ret > -atr_stop:
                     new_position = 1
 
             # Exit confirmation (Module D adaptive + Module H confirmed signal exit)
             if new_position == 0 and exit_reason == "signal":
                 if mod_h:
-                    below_ma20 = (not np.isnan(sma20[i]) and close[i] < sma20[i])
-                    below_ma50 = (not np.isnan(sma50[i]) and close[i] < sma50[i])
+                    below_ma20 = not np.isnan(sma20[i]) and close[i] < sma20[i]
+                    below_ma50 = not np.isnan(sma50[i]) and close[i] < sma50[i]
                     old_bearish_confirm = (below_ma20 and macd_hist[i] < 0) or below_ma50
-                    heavy_vol = (not np.isnan(avg_vol20[i]) and volume[i] > 1.4 * avg_vol20[i])
+                    heavy_vol = not np.isnan(avg_vol20[i]) and volume[i] > 1.4 * avg_vol20[i]
                     bearish_candle = close[i] < opn[i]
                     macd_falling = macd_hist[i] < macd_hist[i - 1] if i > 0 else False
-                    below_ema8 = (not np.isnan(ema8[i]) and close[i] < ema8[i] * 0.997)
-                    weak_rebound = (ret_5d[i] < 0.01 and rs <= 0)
+                    below_ema8 = not np.isnan(ema8[i]) and close[i] < ema8[i] * 0.997
+                    weak_rebound = ret_5d[i] < 0.01 and rs <= 0
 
                     bearish_score = 0.0
                     bearish_score += 2.0 if below_ma50 else 0.0
@@ -7531,9 +8766,7 @@ def backtest_v19_2(y_pred, returns, df_test, feature_cols,
                 if price_cur_ret < 0:
                     confirm_bars = 0
                 elif mod_d:
-                    if cum_ret < 0:
-                        confirm_bars = 1
-                    elif max_profit > 0 and cum_ret < max_profit * 0.6:
+                    if cum_ret < 0 or max_profit > 0 and cum_ret < max_profit * 0.6:
                         confirm_bars = 1
                     else:
                         confirm_bars = EXIT_CONFIRM
@@ -7558,9 +8791,15 @@ def backtest_v19_2(y_pred, returns, df_test, feature_cols,
             # ═══ MODULE I: TREND-CARRY OVERRIDE ═══
             # Keep profitable trades alive when trend health is still acceptable.
             if mod_i and new_position == 0 and exit_reason == "signal":
-                still_supported = (not np.isnan(sma20[i]) and close[i] >= sma20[i] * 0.99)
+                still_supported = not np.isnan(sma20[i]) and close[i] >= sma20[i] * 0.99
                 trend_ok = trend in ("strong", "moderate")
-                if cum_ret > 0.03 and max_profit > 0.06 and trend_ok and still_supported and macd_hist[i] > -0.02:
+                if (
+                    cum_ret > 0.03
+                    and max_profit > 0.06
+                    and trend_ok
+                    and still_supported
+                    and macd_hist[i] > -0.02
+                ):
                     new_position = 1
                     n_trend_carry_saved += 1
 
@@ -7583,9 +8822,14 @@ def backtest_v19_2(y_pred, returns, df_test, feature_cols,
                 entry_close = close[i]
                 max_price_in_trade = close[i]
                 entry_features = {
-                    "entry_wp": wp, "entry_dp": dp, "entry_rs": rs,
-                    "entry_vs": vs, "entry_bs": bs, "entry_hl": hl,
-                    "entry_od": od, "entry_bb": bb,
+                    "entry_wp": wp,
+                    "entry_dp": dp,
+                    "entry_rs": rs,
+                    "entry_vs": vs,
+                    "entry_bs": bs,
+                    "entry_hl": hl,
+                    "entry_od": od,
+                    "entry_bb": bb,
                     "entry_score": sum([wp < 0.75, dp > 0.02, rs > 0, vs > 1.1, hl >= 2]),
                     "entry_date": str(dates[i])[:10],
                     "entry_symbol": str(symbols[i]),
@@ -7614,16 +8858,23 @@ def backtest_v19_2(y_pred, returns, df_test, feature_cols,
 
                 if record_trades and entry_equity > 0:
                     pnl_pct = (close[i] / entry_close - 1) * 100 if entry_close > 0 else 0
-                    max_pnl_pct = (max_equity_in_trade - entry_equity) / entry_equity * 100 if entry_equity > 0 else 0
-                    trades.append({
-                        "entry_day": current_entry_day, "exit_day": i,
-                        "holding_days": i - current_entry_day,
-                        "pnl_pct": round(pnl_pct, 2),
-                        "max_profit_pct": round(max_pnl_pct, 2),
-                        "exit_reason": exit_reason,
-                        "exit_date": str(dates[i])[:10],
-                        **entry_features,
-                    })
+                    max_pnl_pct = (
+                        (max_equity_in_trade - entry_equity) / entry_equity * 100
+                        if entry_equity > 0
+                        else 0
+                    )
+                    trades.append(
+                        {
+                            "entry_day": current_entry_day,
+                            "exit_day": i,
+                            "holding_days": i - current_entry_day,
+                            "pnl_pct": round(pnl_pct, 2),
+                            "max_profit_pct": round(max_pnl_pct, 2),
+                            "exit_reason": exit_reason,
+                            "exit_date": str(dates[i])[:10],
+                            **entry_features,
+                        }
+                    )
                 entry_equity = 0
                 max_equity_in_trade = 0
                 max_price_in_trade = 0
@@ -7638,15 +8889,21 @@ def backtest_v19_2(y_pred, returns, df_test, feature_cols,
 
     if position == 1 and entry_equity > 0 and record_trades:
         pnl_pct = (close[-1] / entry_close - 1) * 100 if entry_close > 0 else 0
-        trades.append({
-            "entry_day": current_entry_day, "exit_day": n - 1,
-            "holding_days": n - 1 - current_entry_day,
-            "pnl_pct": round(pnl_pct, 2), "exit_reason": "end",
-            "exit_date": str(dates[-1])[:10], **entry_features,
-        })
+        trades.append(
+            {
+                "entry_day": current_entry_day,
+                "exit_day": n - 1,
+                "holding_days": n - 1 - current_entry_day,
+                "pnl_pct": round(pnl_pct, 2),
+                "exit_reason": "end",
+                "exit_date": str(dates[-1])[:10],
+                **entry_features,
+            }
+        )
 
     return {
-        "equity_curve": equity, "trades": trades,
+        "equity_curve": equity,
+        "trades": trades,
         "total_return_pct": round((equity[-1] / initial_capital - 1) * 100, 2),
         "final_equity": round(equity[-1]),
         "n_vshape_entries": n_vshape_entries,
@@ -7669,20 +8926,26 @@ def backtest_v19_2(y_pred, returns, df_test, feature_cols,
     }
 
 
-
-def backtest_v19_4(y_pred, returns, df_test, feature_cols,
-                 initial_capital=100_000_000, commission=0.0015, tax=0.001,
-                 record_trades=True,
-                 mod_a=True,    # V-shape entry
-                 mod_b=True,    # Profit-peak protection
-                 mod_c=False,   # Fast loss cut (disabled)
-                 mod_d=False,   # Adaptive exit confirm (disabled)
-                 mod_e=True,    # Secondary breakout
-                 mod_f=True,    # BO Quality Filter
-                 mod_g=True,    # Bear Regime Defense
-                 mod_h=True,    # Confirmed signal exit
-                 mod_i=True,    # Trend-carry override
-                 mod_j=True):   # Anti-chop entry filter
+def backtest_v19_4(
+    y_pred,
+    returns,
+    df_test,
+    feature_cols,
+    initial_capital=100_000_000,
+    commission=0.0015,
+    tax=0.001,
+    record_trades=True,
+    mod_a=True,  # V-shape entry
+    mod_b=True,  # Profit-peak protection
+    mod_c=False,  # Fast loss cut (disabled)
+    mod_d=False,  # Adaptive exit confirm (disabled)
+    mod_e=True,  # Secondary breakout
+    mod_f=True,  # BO Quality Filter
+    mod_g=True,  # Bear Regime Defense
+    mod_h=True,  # Confirmed signal exit
+    mod_i=True,  # Trend-carry override
+    mod_j=True,
+):  # Anti-chop entry filter
     """V19.4: V19.3 + symbol-specific fixes for VND/SSI/ACB/DGC/AAS."""
     n = len(y_pred)
     equity = np.zeros(n)
@@ -7717,12 +8980,26 @@ def backtest_v19_4(y_pred, returns, df_test, feature_cols,
     last_exit_bar = -999
     entry_close = 0
 
-    feat_names = ["rsi_slope_5d", "vol_surge_ratio", "range_position_20d",
-                  "dist_to_resistance", "breakout_setup_score", "bb_width_percentile",
-                  "higher_lows_count", "obv_price_divergence"]
-    defaults = {"rsi_slope_5d": 0, "vol_surge_ratio": 1.0, "range_position_20d": 0.5,
-                "dist_to_resistance": 0.05, "breakout_setup_score": 0, "bb_width_percentile": 0.5,
-                "higher_lows_count": 0, "obv_price_divergence": 0}
+    feat_names = [
+        "rsi_slope_5d",
+        "vol_surge_ratio",
+        "range_position_20d",
+        "dist_to_resistance",
+        "breakout_setup_score",
+        "bb_width_percentile",
+        "higher_lows_count",
+        "obv_price_divergence",
+    ]
+    defaults = {
+        "rsi_slope_5d": 0,
+        "vol_surge_ratio": 1.0,
+        "range_position_20d": 0.5,
+        "dist_to_resistance": 0.05,
+        "breakout_setup_score": 0,
+        "bb_width_percentile": 0.5,
+        "higher_lows_count": 0,
+        "obv_price_divergence": 0,
+    }
     feat_arrays = {}
     for fn in feat_names:
         if fn in df_test.columns:
@@ -7785,7 +9062,7 @@ def backtest_v19_4(y_pred, returns, df_test, feature_cols,
             start = i - bars + 1
             if start < 0:
                 continue
-            band = np.max(high[start:i + 1]) - np.min(low[start:i + 1])
+            band = np.max(high[start : i + 1]) - np.min(low[start : i + 1])
             ref = close[i] if close[i] > 0 else 1.0
             if band / ref < 0.05:
                 stabilized_sideways[i] = True
@@ -7793,8 +9070,8 @@ def backtest_v19_4(y_pred, returns, df_test, feature_cols,
 
     consolidation_breakout = np.zeros(n, dtype=bool)
     for i in range(10, n):
-        prev_high = np.max(high[i - 10:i])
-        prev_low = np.min(low[i - 10:i])
+        prev_high = np.max(high[i - 10 : i])
+        prev_low = np.min(low[i - 10 : i])
         ref = close[i - 1] if close[i - 1] > 0 else close[i]
         tight_range = ((prev_high - prev_low) / ref) < 0.08 if ref > 0 else False
         vol_ok = volume[i] > 1.2 * avg_vol20[i] if not np.isnan(avg_vol20[i]) else False
@@ -7805,18 +9082,21 @@ def backtest_v19_4(y_pred, returns, df_test, feature_cols,
     secondary_breakout = np.zeros(n, dtype=bool)
     if mod_e:
         for i in range(10, n):
-            prev_high = np.max(high[i - 10:i])
-            prev_low = np.min(low[i - 10:i])
+            prev_high = np.max(high[i - 10 : i])
+            prev_low = np.min(low[i - 10 : i])
             ref = close[i - 1] if close[i - 1] > 0 else close[i]
             # Looser: range up to 10%
             tight_range = ((prev_high - prev_low) / ref) < 0.10 if ref > 0 else False
-            uptrend_macro = (not np.isnan(sma20[i]) and not np.isnan(sma50[i])
-                             and sma20[i] > sma50[i])
+            uptrend_macro = (
+                not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and sma20[i] > sma50[i]
+            )
             # Lower volume bar if uptrend confirmed
             vol_threshold = 1.1 if uptrend_macro else 1.2
-            vol_ok = volume[i] > vol_threshold * avg_vol20[i] if not np.isnan(avg_vol20[i]) else False
+            vol_ok = (
+                volume[i] > vol_threshold * avg_vol20[i] if not np.isnan(avg_vol20[i]) else False
+            )
             # Use max_high_5d instead of prev_high (10d)
-            max_high_5d = np.max(high[max(0, i - 5):i])
+            max_high_5d = np.max(high[max(0, i - 5) : i])
             breakout_5d = close[i] > max_high_5d
             if tight_range and breakout_5d and vol_ok and uptrend_macro:
                 secondary_breakout[i] = True
@@ -7848,7 +9128,9 @@ def backtest_v19_4(y_pred, returns, df_test, feature_cols,
         if not bullish:
             continue
         # Oversold or deeper drop
-        oversold = (not np.isnan(rsi14[i - 1]) and rsi14[i - 1] < 35) or drop_from_peak_20[i] <= -0.18
+        oversold = (not np.isnan(rsi14[i - 1]) and rsi14[i - 1] < 35) or drop_from_peak_20[
+            i
+        ] <= -0.18
         if not oversold:
             continue
         # Volume confirmation
@@ -7868,7 +9150,11 @@ def backtest_v19_4(y_pred, returns, df_test, feature_cols,
     rolling_high_250 = pd.Series(close).rolling(250, min_periods=20).max().values
     dist_from_52w_high = np.where(rolling_high_250 > 0, (close / rolling_high_250), 1.0)
 
-    date_col = "date" if "date" in df_test.columns else ("timestamp" if "timestamp" in df_test.columns else None)
+    date_col = (
+        "date"
+        if "date" in df_test.columns
+        else ("timestamp" if "timestamp" in df_test.columns else None)
+    )
     dates = df_test[date_col].values if date_col else np.arange(n)
     symbols = df_test["symbol"].values if "symbol" in df_test.columns else ["?"] * n
 
@@ -7891,10 +9177,20 @@ def backtest_v19_4(y_pred, returns, df_test, feature_cols,
         return "weak"
 
     symbol_profiles = {
-        "ACB": "bank", "BID": "bank", "MBB": "bank", "TCB": "bank",
-        "AAV": "high_beta", "AAS": "high_beta", "SSI": "high_beta", "VND": "high_beta",
-        "DGC": "momentum", "HPG": "momentum", "VIC": "momentum",
-        "FPT": "defensive", "REE": "defensive", "VNM": "defensive",
+        "ACB": "bank",
+        "BID": "bank",
+        "MBB": "bank",
+        "TCB": "bank",
+        "AAV": "high_beta",
+        "AAS": "high_beta",
+        "SSI": "high_beta",
+        "VND": "high_beta",
+        "DGC": "momentum",
+        "HPG": "momentum",
+        "VIC": "momentum",
+        "FPT": "defensive",
+        "REE": "defensive",
+        "VNM": "defensive",
     }
 
     def get_regime_adapter(i, trend):
@@ -7904,7 +9200,9 @@ def backtest_v19_4(y_pred, returns, df_test, feature_cols,
         low_vol = bb_i < 0.35
         weak_move = abs(ret_20d[i]) < 0.05
         choppy_regime = low_vol and weak_move and trend == "weak"
-        atr_ratio = (atr14[i] / close[i]) if (i < n and close[i] > 0 and not np.isnan(atr14[i])) else 0.03
+        atr_ratio = (
+            (atr14[i] / close[i]) if (i < n and close[i] > 0 and not np.isnan(atr14[i])) else 0.03
+        )
 
         params = {
             "profile": profile,
@@ -7916,13 +9214,45 @@ def backtest_v19_4(y_pred, returns, df_test, feature_cols,
             "choppy_regime": choppy_regime,
         }
         if profile == "high_beta":
-            params.update({"dp_floor": 0.015, "ret5_hot": 0.090, "size_mult": 0.98, "base_confirm_bars": 2, "exit_score_threshold": 2.35})
+            params.update(
+                {
+                    "dp_floor": 0.015,
+                    "ret5_hot": 0.090,
+                    "size_mult": 0.98,
+                    "base_confirm_bars": 2,
+                    "exit_score_threshold": 2.35,
+                }
+            )
         elif profile == "bank":
-            params.update({"dp_floor": 0.020, "ret5_hot": 0.070, "size_mult": 0.92, "base_confirm_bars": 3, "exit_score_threshold": 2.2})
+            params.update(
+                {
+                    "dp_floor": 0.020,
+                    "ret5_hot": 0.070,
+                    "size_mult": 0.92,
+                    "base_confirm_bars": 3,
+                    "exit_score_threshold": 2.2,
+                }
+            )
         elif profile == "defensive":
-            params.update({"dp_floor": 0.025, "ret5_hot": 0.050, "size_mult": 0.85, "base_confirm_bars": 3, "exit_score_threshold": 1.8})
+            params.update(
+                {
+                    "dp_floor": 0.025,
+                    "ret5_hot": 0.050,
+                    "size_mult": 0.85,
+                    "base_confirm_bars": 3,
+                    "exit_score_threshold": 1.8,
+                }
+            )
         elif profile == "momentum":
-            params.update({"dp_floor": 0.018, "ret5_hot": 0.080, "size_mult": 0.92, "base_confirm_bars": 2, "exit_score_threshold": 2.2})
+            params.update(
+                {
+                    "dp_floor": 0.018,
+                    "ret5_hot": 0.080,
+                    "size_mult": 0.92,
+                    "base_confirm_bars": 2,
+                    "exit_score_threshold": 2.2,
+                }
+            )
 
         if choppy_regime:
             params["dp_floor"] += 0.004
@@ -8021,10 +9351,13 @@ def backtest_v19_4(y_pred, returns, df_test, feature_cols,
 
         if new_position == 0 and position == 0 and last_exit_reason == "trailing_stop":
             bars_since_exit = i - last_exit_bar
-            if (bars_since_exit <= QUICK_REENTRY_WINDOW and
-                trend in ("strong", "moderate") and
-                macd_line[i] > 0 and
-                not np.isnan(sma20[i]) and close[i] > sma20[i]):
+            if (
+                bars_since_exit <= QUICK_REENTRY_WINDOW
+                and trend in ("strong", "moderate")
+                and macd_line[i] > 0
+                and not np.isnan(sma20[i])
+                and close[i] > sma20[i]
+            ):
                 new_position = 1
                 quick_reentry = True
 
@@ -8034,7 +9367,7 @@ def backtest_v19_4(y_pred, returns, df_test, feature_cols,
         if mod_f:
             macd_pos = macd_hist[i] > 0
             bullish = close[i] > opn[i]
-            heavy_vol = (not np.isnan(avg_vol20[i]) and volume[i] > 1.5 * avg_vol20[i])
+            heavy_vol = not np.isnan(avg_vol20[i]) and volume[i] > 1.5 * avg_vol20[i]
             bo_quality_ok = macd_pos and bullish and heavy_vol
 
         if new_position == 0 and position == 0 and consolidation_breakout[i] and bo_quality_ok:
@@ -8042,7 +9375,13 @@ def backtest_v19_4(y_pred, returns, df_test, feature_cols,
             breakout_entry = True
 
         # ═══ MODULE E: Secondary breakout entry ═══
-        if mod_e and new_position == 0 and position == 0 and secondary_breakout[i] and bo_quality_ok:
+        if (
+            mod_e
+            and new_position == 0
+            and position == 0
+            and secondary_breakout[i]
+            and bo_quality_ok
+        ):
             new_position = 1
             breakout_entry = True
             n_secondary_breakout += 1
@@ -8066,11 +9405,15 @@ def backtest_v19_4(y_pred, returns, df_test, feature_cols,
                 if price_diff < 0.03:
                     new_position = 0
 
-        if new_position == 1 and position == 0 and not quick_reentry and not breakout_entry and not vshape_entry:
+        if (
+            new_position == 1
+            and position == 0
+            and not quick_reentry
+            and not breakout_entry
+            and not vshape_entry
+        ):
             prev_pred = int(y_pred[i - 2]) if i >= 2 else 0
-            if bs >= 4 and vs > 1.2:
-                pass
-            elif trend == "strong" and rs > 0:
+            if bs >= 4 and vs > 1.2 or trend == "strong" and rs > 0:
                 pass
             elif prev_pred != 1:
                 new_position = 0
@@ -8081,26 +9424,29 @@ def backtest_v19_4(y_pred, returns, df_test, feature_cols,
                     if bs < 3 and not breakout_entry:
                         new_position = 0
 
-        strong_breakout_context = (
-            trend == "strong" and (bs >= 3 or vs > 1.5 or breakout_entry)
-        )
+        strong_breakout_context = trend == "strong" and (bs >= 3 or vs > 1.5 or breakout_entry)
         entry_alpha_ok = True
 
         if new_position == 1 and position == 0 and not quick_reentry and not vshape_entry:
             entry_score = sum([wp < 0.75, dp > 0.02, rs > 0, vs > 1.1, hl >= 2])
-            near_sma_support = (not np.isnan(sma20[i]) and
-                               close[i] <= sma20[i] * 1.02 and
-                               close[i] >= sma20[i] * 0.97)
-            near_local_low = (not np.isnan(local_low_20[i]) and
-                             close[i] <= local_low_20[i] * 1.05)
-            in_uptrend_macro = (not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and
-                               sma20[i] > sma50[i])
+            near_sma_support = (
+                not np.isnan(sma20[i])
+                and close[i] <= sma20[i] * 1.02
+                and close[i] >= sma20[i] * 0.97
+            )
+            near_local_low = not np.isnan(local_low_20[i]) and close[i] <= local_low_20[i] * 1.05
+            in_uptrend_macro = (
+                not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and sma20[i] > sma50[i]
+            )
 
             if trend == "strong":
                 min_score = 1
-            elif (near_sma_support or near_local_low) and in_uptrend_macro:
-                min_score = 2
-            elif in_uptrend_macro and rs > 0:
+            elif (
+                (near_sma_support or near_local_low)
+                and in_uptrend_macro
+                or in_uptrend_macro
+                and rs > 0
+            ):
                 min_score = 2
             else:
                 min_score = 3
@@ -8113,7 +9459,13 @@ def backtest_v19_4(y_pred, returns, df_test, feature_cols,
                 entry_alpha_ok = False
             if wp > 0.9 and rs <= 0 and bs < 2 and trend != "strong" and not breakout_entry:
                 entry_alpha_ok = False
-            if bb > 0.85 and bs < 2 and entry_score < 4 and trend != "strong" and not breakout_entry:
+            if (
+                bb > 0.85
+                and bs < 2
+                and entry_score < 4
+                and trend != "strong"
+                and not breakout_entry
+            ):
                 entry_alpha_ok = False
             if entry_alpha_ok:
                 if wp > 0.78 and bb < 0.35 and trend == "weak" and not breakout_entry:
@@ -8143,9 +9495,10 @@ def backtest_v19_4(y_pred, returns, df_test, feature_cols,
         # ═══ MODULE G: BEAR REGIME DEFENSE ═══
         # Block all non-V-shape entries when in bear regime
         if mod_g and new_position == 1 and position == 0 and not vshape_entry and entry_alpha_ok:
-            sma20_below_50 = (not np.isnan(sma20[i]) and not np.isnan(sma50[i])
-                              and sma20[i] < sma50[i])
-            close_below_50 = (not np.isnan(sma50[i]) and close[i] < sma50[i])
+            sma20_below_50 = (
+                not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and sma20[i] < sma50[i]
+            )
+            close_below_50 = not np.isnan(sma50[i]) and close[i] < sma50[i]
             deep_60d_loss = ret_60d[i] < -0.10
             if sma20_below_50 and close_below_50 and deep_60d_loss:
                 entry_alpha_ok = False
@@ -8154,12 +9507,24 @@ def backtest_v19_4(y_pred, returns, df_test, feature_cols,
         # ═══ MODULE J: ANTI-CHOP ENTRY FILTER ═══
         # Block weak non-breakout entries in sideways/chop regimes.
         # V19.4: relax for DGC/AAS when SMA20 > SMA50 confirmed
-        if mod_j and new_position == 1 and position == 0 and not vshape_entry and not breakout_entry and entry_alpha_ok:
+        if (
+            mod_j
+            and new_position == 1
+            and position == 0
+            and not vshape_entry
+            and not breakout_entry
+            and entry_alpha_ok
+        ):
             relax_antichop = regime_cfg.get("relax_antichop", False)
-            in_uptrend_macro = (not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and sma20[i] > sma50[i])
+            in_uptrend_macro = (
+                not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and sma20[i] > sma50[i]
+            )
             if not (relax_antichop and in_uptrend_macro):
-                ma_flat = (not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and
-                           abs(sma20[i] / sma50[i] - 1) < 0.02)
+                ma_flat = (
+                    not np.isnan(sma20[i])
+                    and not np.isnan(sma50[i])
+                    and abs(sma20[i] / sma50[i] - 1) < 0.02
+                )
                 weak_momo = abs(ret_20d[i]) < 0.06
                 narrow_vol = bb < 0.45
                 weak_trend = trend == "weak"
@@ -8223,7 +9588,9 @@ def backtest_v19_4(y_pred, returns, df_test, feature_cols,
             if close[i] > max_price_in_trade:
                 max_price_in_trade = close[i]
             cum_ret = (projected - entry_equity) / entry_equity if entry_equity > 0 else 0
-            max_profit = (max_equity_in_trade - entry_equity) / entry_equity if entry_equity > 0 else 0
+            max_profit = (
+                (max_equity_in_trade - entry_equity) / entry_equity if entry_equity > 0 else 0
+            )
             # Price-based max for Module B (independent of position_size scaling)
             price_max_profit = (max_price_in_trade / entry_close - 1) if entry_close > 0 else 0
             price_cur_ret = (close[i] / entry_close - 1) if entry_close > 0 else 0
@@ -8250,15 +9617,16 @@ def backtest_v19_4(y_pred, returns, df_test, feature_cols,
                 n_signal_hard_cap += 1
 
             # 0.6) V19.2: FAST EXIT when losing - no waiting for confirmation
-            elif price_cur_ret < -0.05 and hold_days > 3:
-                new_position = 0
-                exit_reason = "fast_exit_loss"
-                n_fast_exit_loss += 1
-
-            # 0.7) V19.2: FAST EXIT - moderate loss with bearish confirmation
-            elif (price_cur_ret < -0.03 and hold_days > 2
-                  and macd_hist[i] < 0
-                  and (not np.isnan(ema8[i]) and close[i] < ema8[i])):
+            elif (
+                price_cur_ret < -0.05
+                and hold_days > 3
+                or (
+                    price_cur_ret < -0.03
+                    and hold_days > 2
+                    and macd_hist[i] < 0
+                    and (not np.isnan(ema8[i]) and close[i] < ema8[i])
+                )
+            ):
                 new_position = 0
                 exit_reason = "fast_exit_loss"
                 n_fast_exit_loss += 1
@@ -8270,8 +9638,13 @@ def backtest_v19_4(y_pred, returns, df_test, feature_cols,
 
             # ═══ MODULE C: FAST LOSS CUT ═══
             # In first 5 bars, exit immediately if losing with bearish confirmation
-            elif (mod_c and hold_days < 5 and cum_ret < -0.03
-                  and macd_hist[i] < 0 and close[i] < opn[i]):
+            elif (
+                mod_c
+                and hold_days < 5
+                and cum_ret < -0.03
+                and macd_hist[i] < 0
+                and close[i] < opn[i]
+            ):
                 new_position = 0
                 exit_reason = "fast_loss_cut"
                 n_fast_loss_cut += 1
@@ -8280,8 +9653,8 @@ def backtest_v19_4(y_pred, returns, df_test, feature_cols,
             # Independent layer — protects realized profit when peak reached
             elif mod_b and price_max_profit >= 0.20:
                 # Aggressive protect: close < SMA10 + heavy volume = distribution
-                price_below_sma10 = (not np.isnan(sma10[i]) and close[i] < sma10[i])
-                heavy_vol = (not np.isnan(avg_vol20[i]) and volume[i] > 1.5 * avg_vol20[i])
+                price_below_sma10 = not np.isnan(sma10[i]) and close[i] < sma10[i]
+                heavy_vol = not np.isnan(avg_vol20[i]) and volume[i] > 1.5 * avg_vol20[i]
                 bearish_candle = close[i] < opn[i]
                 if price_below_sma10 and heavy_vol and bearish_candle:
                     new_position = 0
@@ -8304,10 +9677,12 @@ def backtest_v19_4(y_pred, returns, df_test, feature_cols,
                 macd_bearish = macd_hist[i] < 0 and macd_hist[i - 1] >= 0 if i > 0 else False
                 price_below_ma20 = close[i] < sma20[i] if not np.isnan(sma20[i]) else False
 
-                if macd_bearish and price_below_ma20:
-                    new_position = 0
-                    exit_reason = "hybrid_exit"
-                elif price_below_ma20 and cum_ret < max_profit * 0.5:
+                if (
+                    macd_bearish
+                    and price_below_ma20
+                    or price_below_ma20
+                    and cum_ret < max_profit * 0.5
+                ):
                     new_position = 0
                     exit_reason = "hybrid_exit"
                 else:
@@ -8351,24 +9726,35 @@ def backtest_v19_4(y_pred, returns, df_test, feature_cols,
             # Min hold (Module B/C exits override min hold)
             # V19.4: symbol-specific MIN_HOLD
             effective_min_hold = regime_cfg.get("min_hold_override", MIN_HOLD)
-            if new_position == 0 and exit_reason not in (
-                    "stop_loss", "hard_stop", "hybrid_exit", "peak_protect_dist",
-                    "peak_protect_ema", "fast_loss_cut", "signal_hard_cap",
-                    "fast_exit_loss") and hold_days < effective_min_hold:
+            if (
+                new_position == 0
+                and exit_reason
+                not in (
+                    "stop_loss",
+                    "hard_stop",
+                    "hybrid_exit",
+                    "peak_protect_dist",
+                    "peak_protect_ema",
+                    "fast_loss_cut",
+                    "signal_hard_cap",
+                    "fast_exit_loss",
+                )
+                and hold_days < effective_min_hold
+            ):
                 if cum_ret > -atr_stop:
                     new_position = 1
 
             # Exit confirmation (Module D adaptive + Module H confirmed signal exit)
             if new_position == 0 and exit_reason == "signal":
                 if mod_h:
-                    below_ma20 = (not np.isnan(sma20[i]) and close[i] < sma20[i])
-                    below_ma50 = (not np.isnan(sma50[i]) and close[i] < sma50[i])
+                    below_ma20 = not np.isnan(sma20[i]) and close[i] < sma20[i]
+                    below_ma50 = not np.isnan(sma50[i]) and close[i] < sma50[i]
                     old_bearish_confirm = (below_ma20 and macd_hist[i] < 0) or below_ma50
-                    heavy_vol = (not np.isnan(avg_vol20[i]) and volume[i] > 1.4 * avg_vol20[i])
+                    heavy_vol = not np.isnan(avg_vol20[i]) and volume[i] > 1.4 * avg_vol20[i]
                     bearish_candle = close[i] < opn[i]
                     macd_falling = macd_hist[i] < macd_hist[i - 1] if i > 0 else False
-                    below_ema8 = (not np.isnan(ema8[i]) and close[i] < ema8[i] * 0.997)
-                    weak_rebound = (ret_5d[i] < 0.01 and rs <= 0)
+                    below_ema8 = not np.isnan(ema8[i]) and close[i] < ema8[i] * 0.997
+                    weak_rebound = ret_5d[i] < 0.01 and rs <= 0
 
                     bearish_score = 0.0
                     bearish_score += 2.0 if below_ma50 else 0.0
@@ -8406,9 +9792,7 @@ def backtest_v19_4(y_pred, returns, df_test, feature_cols,
                 if cum_ret < 0:
                     confirm_bars = 0
                 elif mod_d:
-                    if cum_ret < 0:
-                        confirm_bars = 1
-                    elif max_profit > 0 and cum_ret < max_profit * 0.6:
+                    if cum_ret < 0 or max_profit > 0 and cum_ret < max_profit * 0.6:
                         confirm_bars = 1
                     else:
                         confirm_bars = EXIT_CONFIRM
@@ -8433,9 +9817,15 @@ def backtest_v19_4(y_pred, returns, df_test, feature_cols,
             # ═══ MODULE I: TREND-CARRY OVERRIDE ═══
             # Keep profitable trades alive when trend health is still acceptable.
             if mod_i and new_position == 0 and exit_reason == "signal":
-                still_supported = (not np.isnan(sma20[i]) and close[i] >= sma20[i] * 0.99)
+                still_supported = not np.isnan(sma20[i]) and close[i] >= sma20[i] * 0.99
                 trend_ok = trend in ("strong", "moderate")
-                if cum_ret > 0.03 and max_profit > 0.06 and trend_ok and still_supported and macd_hist[i] > -0.02:
+                if (
+                    cum_ret > 0.03
+                    and max_profit > 0.06
+                    and trend_ok
+                    and still_supported
+                    and macd_hist[i] > -0.02
+                ):
                     new_position = 1
                     n_trend_carry_saved += 1
 
@@ -8458,9 +9848,14 @@ def backtest_v19_4(y_pred, returns, df_test, feature_cols,
                 entry_close = close[i]
                 max_price_in_trade = close[i]
                 entry_features = {
-                    "entry_wp": wp, "entry_dp": dp, "entry_rs": rs,
-                    "entry_vs": vs, "entry_bs": bs, "entry_hl": hl,
-                    "entry_od": od, "entry_bb": bb,
+                    "entry_wp": wp,
+                    "entry_dp": dp,
+                    "entry_rs": rs,
+                    "entry_vs": vs,
+                    "entry_bs": bs,
+                    "entry_hl": hl,
+                    "entry_od": od,
+                    "entry_bb": bb,
                     "entry_score": sum([wp < 0.75, dp > 0.02, rs > 0, vs > 1.1, hl >= 2]),
                     "entry_date": str(dates[i])[:10],
                     "entry_symbol": str(symbols[i]),
@@ -8489,16 +9884,23 @@ def backtest_v19_4(y_pred, returns, df_test, feature_cols,
 
                 if record_trades and entry_equity > 0:
                     pnl_pct = (close[i] / entry_close - 1) * 100 if entry_close > 0 else 0
-                    max_pnl_pct = (max_equity_in_trade - entry_equity) / entry_equity * 100 if entry_equity > 0 else 0
-                    trades.append({
-                        "entry_day": current_entry_day, "exit_day": i,
-                        "holding_days": i - current_entry_day,
-                        "pnl_pct": round(pnl_pct, 2),
-                        "max_profit_pct": round(max_pnl_pct, 2),
-                        "exit_reason": exit_reason,
-                        "exit_date": str(dates[i])[:10],
-                        **entry_features,
-                    })
+                    max_pnl_pct = (
+                        (max_equity_in_trade - entry_equity) / entry_equity * 100
+                        if entry_equity > 0
+                        else 0
+                    )
+                    trades.append(
+                        {
+                            "entry_day": current_entry_day,
+                            "exit_day": i,
+                            "holding_days": i - current_entry_day,
+                            "pnl_pct": round(pnl_pct, 2),
+                            "max_profit_pct": round(max_pnl_pct, 2),
+                            "exit_reason": exit_reason,
+                            "exit_date": str(dates[i])[:10],
+                            **entry_features,
+                        }
+                    )
                 entry_equity = 0
                 max_equity_in_trade = 0
                 max_price_in_trade = 0
@@ -8513,15 +9915,21 @@ def backtest_v19_4(y_pred, returns, df_test, feature_cols,
 
     if position == 1 and entry_equity > 0 and record_trades:
         pnl_pct = (close[-1] / entry_close - 1) * 100 if entry_close > 0 else 0
-        trades.append({
-            "entry_day": current_entry_day, "exit_day": n - 1,
-            "holding_days": n - 1 - current_entry_day,
-            "pnl_pct": round(pnl_pct, 2), "exit_reason": "end",
-            "exit_date": str(dates[-1])[:10], **entry_features,
-        })
+        trades.append(
+            {
+                "entry_day": current_entry_day,
+                "exit_day": n - 1,
+                "holding_days": n - 1 - current_entry_day,
+                "pnl_pct": round(pnl_pct, 2),
+                "exit_reason": "end",
+                "exit_date": str(dates[-1])[:10],
+                **entry_features,
+            }
+        )
 
     return {
-        "equity_curve": equity, "trades": trades,
+        "equity_curve": equity,
+        "trades": trades,
         "total_return_pct": round((equity[-1] / initial_capital - 1) * 100, 2),
         "final_equity": round(equity[-1]),
         "n_vshape_entries": n_vshape_entries,
@@ -8544,13 +9952,26 @@ def backtest_v19_4(y_pred, returns, df_test, feature_cols,
     }
 
 
-
-def backtest_v20(y_pred, returns, df_test, feature_cols,
-                 initial_capital=100_000_000, commission=0.0015, tax=0.001,
-                 record_trades=True,
-                 mod_a=True, mod_b=True, mod_c=False, mod_d=False,
-                 mod_e=True, mod_f=True, mod_g=True, mod_h=True,
-                 mod_i=True, mod_j=True):
+def backtest_v20(
+    y_pred,
+    returns,
+    df_test,
+    feature_cols,
+    initial_capital=100_000_000,
+    commission=0.0015,
+    tax=0.001,
+    record_trades=True,
+    mod_a=True,
+    mod_b=True,
+    mod_c=False,
+    mod_d=False,
+    mod_e=True,
+    mod_f=True,
+    mod_g=True,
+    mod_h=True,
+    mod_i=True,
+    mod_j=True,
+):
     """V20: V19.3 + reduced confirm_bars for strong/moderate trend."""
     n = len(y_pred)
     equity = np.zeros(n)
@@ -8584,12 +10005,26 @@ def backtest_v20(y_pred, returns, df_test, feature_cols,
     last_exit_bar = -999
     entry_close = 0
 
-    feat_names = ["rsi_slope_5d", "vol_surge_ratio", "range_position_20d",
-                  "dist_to_resistance", "breakout_setup_score", "bb_width_percentile",
-                  "higher_lows_count", "obv_price_divergence"]
-    defaults = {"rsi_slope_5d": 0, "vol_surge_ratio": 1.0, "range_position_20d": 0.5,
-                "dist_to_resistance": 0.05, "breakout_setup_score": 0, "bb_width_percentile": 0.5,
-                "higher_lows_count": 0, "obv_price_divergence": 0}
+    feat_names = [
+        "rsi_slope_5d",
+        "vol_surge_ratio",
+        "range_position_20d",
+        "dist_to_resistance",
+        "breakout_setup_score",
+        "bb_width_percentile",
+        "higher_lows_count",
+        "obv_price_divergence",
+    ]
+    defaults = {
+        "rsi_slope_5d": 0,
+        "vol_surge_ratio": 1.0,
+        "range_position_20d": 0.5,
+        "dist_to_resistance": 0.05,
+        "breakout_setup_score": 0,
+        "bb_width_percentile": 0.5,
+        "higher_lows_count": 0,
+        "obv_price_divergence": 0,
+    }
     feat_arrays = {}
     for fn in feat_names:
         if fn in df_test.columns:
@@ -8651,7 +10086,7 @@ def backtest_v20(y_pred, returns, df_test, feature_cols,
             start = i - bars + 1
             if start < 0:
                 continue
-            band = np.max(high[start:i + 1]) - np.min(low[start:i + 1])
+            band = np.max(high[start : i + 1]) - np.min(low[start : i + 1])
             ref = close[i] if close[i] > 0 else 1.0
             if band / ref < 0.05:
                 stabilized_sideways[i] = True
@@ -8659,8 +10094,8 @@ def backtest_v20(y_pred, returns, df_test, feature_cols,
 
     consolidation_breakout = np.zeros(n, dtype=bool)
     for i in range(10, n):
-        prev_high = np.max(high[i - 10:i])
-        prev_low = np.min(low[i - 10:i])
+        prev_high = np.max(high[i - 10 : i])
+        prev_low = np.min(low[i - 10 : i])
         ref = close[i - 1] if close[i - 1] > 0 else close[i]
         tight_range = ((prev_high - prev_low) / ref) < 0.08 if ref > 0 else False
         vol_ok = volume[i] > 1.2 * avg_vol20[i] if not np.isnan(avg_vol20[i]) else False
@@ -8670,14 +10105,18 @@ def backtest_v20(y_pred, returns, df_test, feature_cols,
     secondary_breakout = np.zeros(n, dtype=bool)
     if mod_e:
         for i in range(10, n):
-            prev_high = np.max(high[i - 10:i])
-            prev_low = np.min(low[i - 10:i])
+            prev_high = np.max(high[i - 10 : i])
+            prev_low = np.min(low[i - 10 : i])
             ref = close[i - 1] if close[i - 1] > 0 else close[i]
             tight_range = ((prev_high - prev_low) / ref) < 0.10 if ref > 0 else False
-            uptrend_macro = (not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and sma20[i] > sma50[i])
+            uptrend_macro = (
+                not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and sma20[i] > sma50[i]
+            )
             vol_threshold = 1.1 if uptrend_macro else 1.2
-            vol_ok = volume[i] > vol_threshold * avg_vol20[i] if not np.isnan(avg_vol20[i]) else False
-            max_high_5d = np.max(high[max(0, i - 5):i])
+            vol_ok = (
+                volume[i] > vol_threshold * avg_vol20[i] if not np.isnan(avg_vol20[i]) else False
+            )
+            max_high_5d = np.max(high[max(0, i - 5) : i])
             breakout_5d = close[i] > max_high_5d
             if tight_range and breakout_5d and vol_ok and uptrend_macro:
                 secondary_breakout[i] = True
@@ -8697,7 +10136,9 @@ def backtest_v20(y_pred, returns, df_test, feature_cols,
         bullish = close[i] > opn[i] + rng * 0.5 and close[i] > close[i - 1]
         if not bullish:
             continue
-        oversold = (not np.isnan(rsi14[i - 1]) and rsi14[i - 1] < 35) or drop_from_peak_20[i] <= -0.18
+        oversold = (not np.isnan(rsi14[i - 1]) and rsi14[i - 1] < 35) or drop_from_peak_20[
+            i
+        ] <= -0.18
         if not oversold:
             continue
         if np.isnan(avg_vol20[i]) or volume[i] < 1.3 * avg_vol20[i]:
@@ -8715,7 +10156,11 @@ def backtest_v20(y_pred, returns, df_test, feature_cols,
     rolling_high_250 = pd.Series(close).rolling(250, min_periods=20).max().values
     dist_from_52w_high = np.where(rolling_high_250 > 0, (close / rolling_high_250), 1.0)
 
-    date_col = "date" if "date" in df_test.columns else ("timestamp" if "timestamp" in df_test.columns else None)
+    date_col = (
+        "date"
+        if "date" in df_test.columns
+        else ("timestamp" if "timestamp" in df_test.columns else None)
+    )
     dates = df_test[date_col].values if date_col else np.arange(n)
     symbols = df_test["symbol"].values if "symbol" in df_test.columns else ["?"] * n
 
@@ -8738,10 +10183,20 @@ def backtest_v20(y_pred, returns, df_test, feature_cols,
         return "weak"
 
     symbol_profiles = {
-        "ACB": "bank", "BID": "bank", "MBB": "bank", "TCB": "bank",
-        "AAV": "high_beta", "AAS": "high_beta", "SSI": "high_beta", "VND": "high_beta",
-        "DGC": "momentum", "HPG": "momentum", "VIC": "momentum",
-        "FPT": "defensive", "REE": "defensive", "VNM": "defensive",
+        "ACB": "bank",
+        "BID": "bank",
+        "MBB": "bank",
+        "TCB": "bank",
+        "AAV": "high_beta",
+        "AAS": "high_beta",
+        "SSI": "high_beta",
+        "VND": "high_beta",
+        "DGC": "momentum",
+        "HPG": "momentum",
+        "VIC": "momentum",
+        "FPT": "defensive",
+        "REE": "defensive",
+        "VNM": "defensive",
     }
 
     def get_regime_adapter(i, trend):
@@ -8751,21 +10206,59 @@ def backtest_v20(y_pred, returns, df_test, feature_cols,
         low_vol = bb_i < 0.35
         weak_move = abs(ret_20d[i]) < 0.05
         choppy_regime = low_vol and weak_move and trend == "weak"
-        atr_ratio = (atr14[i] / close[i]) if (i < n and close[i] > 0 and not np.isnan(atr14[i])) else 0.03
+        atr_ratio = (
+            (atr14[i] / close[i]) if (i < n and close[i] > 0 and not np.isnan(atr14[i])) else 0.03
+        )
 
         params = {
-            "profile": profile, "dp_floor": 0.020, "ret5_hot": 0.060,
-            "size_mult": 1.0, "base_confirm_bars": 3, "exit_score_threshold": 2.0,
+            "profile": profile,
+            "dp_floor": 0.020,
+            "ret5_hot": 0.060,
+            "size_mult": 1.0,
+            "base_confirm_bars": 3,
+            "exit_score_threshold": 2.0,
             "choppy_regime": choppy_regime,
         }
         if profile == "high_beta":
-            params.update({"dp_floor": 0.015, "ret5_hot": 0.090, "size_mult": 0.98, "base_confirm_bars": 2, "exit_score_threshold": 2.35})
+            params.update(
+                {
+                    "dp_floor": 0.015,
+                    "ret5_hot": 0.090,
+                    "size_mult": 0.98,
+                    "base_confirm_bars": 2,
+                    "exit_score_threshold": 2.35,
+                }
+            )
         elif profile == "bank":
-            params.update({"dp_floor": 0.020, "ret5_hot": 0.070, "size_mult": 0.92, "base_confirm_bars": 3, "exit_score_threshold": 2.2})
+            params.update(
+                {
+                    "dp_floor": 0.020,
+                    "ret5_hot": 0.070,
+                    "size_mult": 0.92,
+                    "base_confirm_bars": 3,
+                    "exit_score_threshold": 2.2,
+                }
+            )
         elif profile == "defensive":
-            params.update({"dp_floor": 0.025, "ret5_hot": 0.050, "size_mult": 0.85, "base_confirm_bars": 3, "exit_score_threshold": 1.8})
+            params.update(
+                {
+                    "dp_floor": 0.025,
+                    "ret5_hot": 0.050,
+                    "size_mult": 0.85,
+                    "base_confirm_bars": 3,
+                    "exit_score_threshold": 1.8,
+                }
+            )
         elif profile == "momentum":
-            params.update({"dp_floor": 0.018, "ret5_hot": 0.080, "size_mult": 0.92, "base_confirm_bars": 2, "exit_score_threshold": 2.2})
+            params.update(
+                {
+                    "dp_floor": 0.018,
+                    "ret5_hot": 0.080,
+                    "size_mult": 0.92,
+                    "base_confirm_bars": 2,
+                    "exit_score_threshold": 2.2,
+                }
+            )
 
         if choppy_regime:
             params["dp_floor"] += 0.004
@@ -8848,8 +10341,13 @@ def backtest_v20(y_pred, returns, df_test, feature_cols,
 
         if new_position == 0 and position == 0 and last_exit_reason == "trailing_stop":
             bars_since_exit = i - last_exit_bar
-            if (bars_since_exit <= QUICK_REENTRY_WINDOW and trend in ("strong", "moderate")
-                    and macd_line[i] > 0 and not np.isnan(sma20[i]) and close[i] > sma20[i]):
+            if (
+                bars_since_exit <= QUICK_REENTRY_WINDOW
+                and trend in ("strong", "moderate")
+                and macd_line[i] > 0
+                and not np.isnan(sma20[i])
+                and close[i] > sma20[i]
+            ):
                 new_position = 1
                 quick_reentry = True
 
@@ -8857,14 +10355,20 @@ def backtest_v20(y_pred, returns, df_test, feature_cols,
         if mod_f:
             macd_pos = macd_hist[i] > 0
             bullish = close[i] > opn[i]
-            heavy_vol = (not np.isnan(avg_vol20[i]) and volume[i] > 1.5 * avg_vol20[i])
+            heavy_vol = not np.isnan(avg_vol20[i]) and volume[i] > 1.5 * avg_vol20[i]
             bo_quality_ok = macd_pos and bullish and heavy_vol
 
         if new_position == 0 and position == 0 and consolidation_breakout[i] and bo_quality_ok:
             new_position = 1
             breakout_entry = True
 
-        if mod_e and new_position == 0 and position == 0 and secondary_breakout[i] and bo_quality_ok:
+        if (
+            mod_e
+            and new_position == 0
+            and position == 0
+            and secondary_breakout[i]
+            and bo_quality_ok
+        ):
             new_position = 1
             breakout_entry = True
             n_secondary_breakout += 1
@@ -8885,11 +10389,15 @@ def backtest_v20(y_pred, returns, df_test, feature_cols,
                 if price_diff < 0.03:
                     new_position = 0
 
-        if new_position == 1 and position == 0 and not quick_reentry and not breakout_entry and not vshape_entry:
+        if (
+            new_position == 1
+            and position == 0
+            and not quick_reentry
+            and not breakout_entry
+            and not vshape_entry
+        ):
             prev_pred = int(y_pred[i - 2]) if i >= 2 else 0
-            if bs >= 4 and vs > 1.2:
-                pass
-            elif trend == "strong" and rs > 0:
+            if bs >= 4 and vs > 1.2 or trend == "strong" and rs > 0:
                 pass
             elif prev_pred != 1:
                 new_position = 0
@@ -8900,20 +10408,29 @@ def backtest_v20(y_pred, returns, df_test, feature_cols,
                     if bs < 3 and not breakout_entry:
                         new_position = 0
 
-        strong_breakout_context = (trend == "strong" and (bs >= 3 or vs > 1.5 or breakout_entry))
+        strong_breakout_context = trend == "strong" and (bs >= 3 or vs > 1.5 or breakout_entry)
         entry_alpha_ok = True
 
         if new_position == 1 and position == 0 and not quick_reentry and not vshape_entry:
             entry_score = sum([wp < 0.75, dp > 0.02, rs > 0, vs > 1.1, hl >= 2])
-            near_sma_support = (not np.isnan(sma20[i]) and close[i] <= sma20[i] * 1.02 and close[i] >= sma20[i] * 0.97)
-            near_local_low = (not np.isnan(local_low_20[i]) and close[i] <= local_low_20[i] * 1.05)
-            in_uptrend_macro = (not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and sma20[i] > sma50[i])
+            near_sma_support = (
+                not np.isnan(sma20[i])
+                and close[i] <= sma20[i] * 1.02
+                and close[i] >= sma20[i] * 0.97
+            )
+            near_local_low = not np.isnan(local_low_20[i]) and close[i] <= local_low_20[i] * 1.05
+            in_uptrend_macro = (
+                not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and sma20[i] > sma50[i]
+            )
 
             if trend == "strong":
                 min_score = 1
-            elif (near_sma_support or near_local_low) and in_uptrend_macro:
-                min_score = 2
-            elif in_uptrend_macro and rs > 0:
+            elif (
+                (near_sma_support or near_local_low)
+                and in_uptrend_macro
+                or in_uptrend_macro
+                and rs > 0
+            ):
                 min_score = 2
             else:
                 min_score = 3
@@ -8922,7 +10439,13 @@ def backtest_v20(y_pred, returns, df_test, feature_cols,
                 entry_alpha_ok = False
             if wp > 0.9 and rs <= 0 and bs < 2 and trend != "strong" and not breakout_entry:
                 entry_alpha_ok = False
-            if bb > 0.85 and bs < 2 and entry_score < 4 and trend != "strong" and not breakout_entry:
+            if (
+                bb > 0.85
+                and bs < 2
+                and entry_score < 4
+                and trend != "strong"
+                and not breakout_entry
+            ):
                 entry_alpha_ok = False
             if entry_alpha_ok:
                 if wp > 0.78 and bb < 0.35 and trend == "weak" and not breakout_entry:
@@ -8949,15 +10472,28 @@ def backtest_v20(y_pred, returns, df_test, feature_cols,
                 entry_alpha_ok = False
 
         if mod_g and new_position == 1 and position == 0 and not vshape_entry and entry_alpha_ok:
-            sma20_below_50 = (not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and sma20[i] < sma50[i])
-            close_below_50 = (not np.isnan(sma50[i]) and close[i] < sma50[i])
+            sma20_below_50 = (
+                not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and sma20[i] < sma50[i]
+            )
+            close_below_50 = not np.isnan(sma50[i]) and close[i] < sma50[i]
             deep_60d_loss = ret_60d[i] < -0.10
             if sma20_below_50 and close_below_50 and deep_60d_loss:
                 entry_alpha_ok = False
                 n_bear_blocked += 1
 
-        if mod_j and new_position == 1 and position == 0 and not vshape_entry and not breakout_entry and entry_alpha_ok:
-            ma_flat = (not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and abs(sma20[i] / sma50[i] - 1) < 0.02)
+        if (
+            mod_j
+            and new_position == 1
+            and position == 0
+            and not vshape_entry
+            and not breakout_entry
+            and entry_alpha_ok
+        ):
+            ma_flat = (
+                not np.isnan(sma20[i])
+                and not np.isnan(sma50[i])
+                and abs(sma20[i] / sma50[i] - 1) < 0.02
+            )
             weak_momo = abs(ret_20d[i]) < 0.06
             narrow_vol = bb < 0.45
             weak_trend = trend == "weak"
@@ -9014,7 +10550,9 @@ def backtest_v20(y_pred, returns, df_test, feature_cols,
             if close[i] > max_price_in_trade:
                 max_price_in_trade = close[i]
             cum_ret = (projected - entry_equity) / entry_equity if entry_equity > 0 else 0
-            max_profit = (max_equity_in_trade - entry_equity) / entry_equity if entry_equity > 0 else 0
+            max_profit = (
+                (max_equity_in_trade - entry_equity) / entry_equity if entry_equity > 0 else 0
+            )
             price_max_profit = (max_price_in_trade / entry_close - 1) if entry_close > 0 else 0
             price_cur_ret = (close[i] / entry_close - 1) if entry_close > 0 else 0
 
@@ -9034,26 +10572,35 @@ def backtest_v20(y_pred, returns, df_test, feature_cols,
                 new_position = 0
                 exit_reason = "signal_hard_cap"
                 n_signal_hard_cap += 1
-            elif price_cur_ret < -0.05 and hold_days > 3:
-                new_position = 0
-                exit_reason = "fast_exit_loss"
-                n_fast_exit_loss += 1
-            elif (price_cur_ret < -0.03 and hold_days > 2
-                  and macd_hist[i] < 0 and (not np.isnan(ema8[i]) and close[i] < ema8[i])):
+            elif (
+                price_cur_ret < -0.05
+                and hold_days > 3
+                or (
+                    price_cur_ret < -0.03
+                    and hold_days > 2
+                    and macd_hist[i] < 0
+                    and (not np.isnan(ema8[i]) and close[i] < ema8[i])
+                )
+            ):
                 new_position = 0
                 exit_reason = "fast_exit_loss"
                 n_fast_exit_loss += 1
             elif cum_ret <= -atr_stop:
                 new_position = 0
                 exit_reason = "stop_loss"
-            elif (mod_c and hold_days < 5 and cum_ret < -0.03
-                  and macd_hist[i] < 0 and close[i] < opn[i]):
+            elif (
+                mod_c
+                and hold_days < 5
+                and cum_ret < -0.03
+                and macd_hist[i] < 0
+                and close[i] < opn[i]
+            ):
                 new_position = 0
                 exit_reason = "fast_loss_cut"
                 n_fast_loss_cut += 1
             elif mod_b and price_max_profit >= 0.20:
-                price_below_sma10 = (not np.isnan(sma10[i]) and close[i] < sma10[i])
-                heavy_vol = (not np.isnan(avg_vol20[i]) and volume[i] > 1.5 * avg_vol20[i])
+                price_below_sma10 = not np.isnan(sma10[i]) and close[i] < sma10[i]
+                heavy_vol = not np.isnan(avg_vol20[i]) and volume[i] > 1.5 * avg_vol20[i]
                 bearish_candle = close[i] < opn[i]
                 if price_below_sma10 and heavy_vol and bearish_candle:
                     new_position = 0
@@ -9073,10 +10620,12 @@ def backtest_v20(y_pred, returns, df_test, feature_cols,
             if new_position == 1 and strong_uptrend and cum_ret > 0.05 and max_profit > 0.08:
                 macd_bearish = macd_hist[i] < 0 and macd_hist[i - 1] >= 0 if i > 0 else False
                 price_below_ma20 = close[i] < sma20[i] if not np.isnan(sma20[i]) else False
-                if macd_bearish and price_below_ma20:
-                    new_position = 0
-                    exit_reason = "hybrid_exit"
-                elif price_below_ma20 and cum_ret < max_profit * 0.5:
+                if (
+                    macd_bearish
+                    and price_below_ma20
+                    or price_below_ma20
+                    and cum_ret < max_profit * 0.5
+                ):
                     new_position = 0
                     exit_reason = "hybrid_exit"
                 else:
@@ -9110,23 +10659,34 @@ def backtest_v20(y_pred, returns, df_test, feature_cols,
                     new_position = 0
                     exit_reason = "zombie_exit"
 
-            if new_position == 0 and exit_reason not in (
-                    "stop_loss", "hard_stop", "hybrid_exit", "peak_protect_dist",
-                    "peak_protect_ema", "fast_loss_cut", "signal_hard_cap",
-                    "fast_exit_loss") and hold_days < MIN_HOLD:
+            if (
+                new_position == 0
+                and exit_reason
+                not in (
+                    "stop_loss",
+                    "hard_stop",
+                    "hybrid_exit",
+                    "peak_protect_dist",
+                    "peak_protect_ema",
+                    "fast_loss_cut",
+                    "signal_hard_cap",
+                    "fast_exit_loss",
+                )
+                and hold_days < MIN_HOLD
+            ):
                 if cum_ret > -atr_stop:
                     new_position = 1
 
             if new_position == 0 and exit_reason == "signal":
                 if mod_h:
-                    below_ma20 = (not np.isnan(sma20[i]) and close[i] < sma20[i])
-                    below_ma50 = (not np.isnan(sma50[i]) and close[i] < sma50[i])
+                    below_ma20 = not np.isnan(sma20[i]) and close[i] < sma20[i]
+                    below_ma50 = not np.isnan(sma50[i]) and close[i] < sma50[i]
                     old_bearish_confirm = (below_ma20 and macd_hist[i] < 0) or below_ma50
-                    heavy_vol = (not np.isnan(avg_vol20[i]) and volume[i] > 1.4 * avg_vol20[i])
+                    heavy_vol = not np.isnan(avg_vol20[i]) and volume[i] > 1.4 * avg_vol20[i]
                     bearish_candle = close[i] < opn[i]
                     macd_falling = macd_hist[i] < macd_hist[i - 1] if i > 0 else False
-                    below_ema8 = (not np.isnan(ema8[i]) and close[i] < ema8[i] * 0.997)
-                    weak_rebound = (ret_5d[i] < 0.01 and rs <= 0)
+                    below_ema8 = not np.isnan(ema8[i]) and close[i] < ema8[i] * 0.997
+                    weak_rebound = ret_5d[i] < 0.01 and rs <= 0
 
                     bearish_score = 0.0
                     bearish_score += 2.0 if below_ma50 else 0.0
@@ -9162,9 +10722,7 @@ def backtest_v20(y_pred, returns, df_test, feature_cols,
                 if cum_ret < 0:
                     confirm_bars = 0
                 elif mod_d:
-                    if cum_ret < 0:
-                        confirm_bars = 1
-                    elif max_profit > 0 and cum_ret < max_profit * 0.6:
+                    if cum_ret < 0 or max_profit > 0 and cum_ret < max_profit * 0.6:
                         confirm_bars = 1
                     else:
                         confirm_bars = EXIT_CONFIRM
@@ -9186,9 +10744,15 @@ def backtest_v20(y_pred, returns, df_test, feature_cols,
                     new_position = 1
 
             if mod_i and new_position == 0 and exit_reason == "signal":
-                still_supported = (not np.isnan(sma20[i]) and close[i] >= sma20[i] * 0.99)
+                still_supported = not np.isnan(sma20[i]) and close[i] >= sma20[i] * 0.99
                 trend_ok = trend in ("strong", "moderate")
-                if cum_ret > 0.03 and max_profit > 0.06 and trend_ok and still_supported and macd_hist[i] > -0.02:
+                if (
+                    cum_ret > 0.03
+                    and max_profit > 0.06
+                    and trend_ok
+                    and still_supported
+                    and macd_hist[i] > -0.02
+                ):
                     new_position = 1
                     n_trend_carry_saved += 1
 
@@ -9211,9 +10775,14 @@ def backtest_v20(y_pred, returns, df_test, feature_cols,
                 entry_close = close[i]
                 max_price_in_trade = close[i]
                 entry_features = {
-                    "entry_wp": wp, "entry_dp": dp, "entry_rs": rs,
-                    "entry_vs": vs, "entry_bs": bs, "entry_hl": hl,
-                    "entry_od": od, "entry_bb": bb,
+                    "entry_wp": wp,
+                    "entry_dp": dp,
+                    "entry_rs": rs,
+                    "entry_vs": vs,
+                    "entry_bs": bs,
+                    "entry_hl": hl,
+                    "entry_od": od,
+                    "entry_bb": bb,
                     "entry_score": sum([wp < 0.75, dp > 0.02, rs > 0, vs > 1.1, hl >= 2]),
                     "entry_date": str(dates[i])[:10],
                     "entry_symbol": str(symbols[i]),
@@ -9242,16 +10811,23 @@ def backtest_v20(y_pred, returns, df_test, feature_cols,
 
                 if record_trades and entry_equity > 0:
                     pnl_pct = (close[i] / entry_close - 1) * 100 if entry_close > 0 else 0
-                    max_pnl_pct = (max_equity_in_trade - entry_equity) / entry_equity * 100 if entry_equity > 0 else 0
-                    trades.append({
-                        "entry_day": current_entry_day, "exit_day": i,
-                        "holding_days": i - current_entry_day,
-                        "pnl_pct": round(pnl_pct, 2),
-                        "max_profit_pct": round(max_pnl_pct, 2),
-                        "exit_reason": exit_reason,
-                        "exit_date": str(dates[i])[:10],
-                        **entry_features,
-                    })
+                    max_pnl_pct = (
+                        (max_equity_in_trade - entry_equity) / entry_equity * 100
+                        if entry_equity > 0
+                        else 0
+                    )
+                    trades.append(
+                        {
+                            "entry_day": current_entry_day,
+                            "exit_day": i,
+                            "holding_days": i - current_entry_day,
+                            "pnl_pct": round(pnl_pct, 2),
+                            "max_profit_pct": round(max_pnl_pct, 2),
+                            "exit_reason": exit_reason,
+                            "exit_date": str(dates[i])[:10],
+                            **entry_features,
+                        }
+                    )
                 entry_equity = 0
                 max_equity_in_trade = 0
                 max_price_in_trade = 0
@@ -9266,15 +10842,21 @@ def backtest_v20(y_pred, returns, df_test, feature_cols,
 
     if position == 1 and entry_equity > 0 and record_trades:
         pnl_pct = (close[-1] / entry_close - 1) * 100 if entry_close > 0 else 0
-        trades.append({
-            "entry_day": current_entry_day, "exit_day": n - 1,
-            "holding_days": n - 1 - current_entry_day,
-            "pnl_pct": round(pnl_pct, 2), "exit_reason": "end",
-            "exit_date": str(dates[-1])[:10], **entry_features,
-        })
+        trades.append(
+            {
+                "entry_day": current_entry_day,
+                "exit_day": n - 1,
+                "holding_days": n - 1 - current_entry_day,
+                "pnl_pct": round(pnl_pct, 2),
+                "exit_reason": "end",
+                "exit_date": str(dates[-1])[:10],
+                **entry_features,
+            }
+        )
 
     return {
-        "equity_curve": equity, "trades": trades,
+        "equity_curve": equity,
+        "trades": trades,
         "total_return_pct": round((equity[-1] / initial_capital - 1) * 100, 2),
         "final_equity": round(equity[-1]),
         "n_vshape_entries": n_vshape_entries,
@@ -9297,20 +10879,32 @@ def backtest_v20(y_pred, returns, df_test, feature_cols,
     }
 
 
-
-def backtest_v21(y_pred, returns, df_test, feature_cols,
-                 initial_capital=100_000_000, commission=0.0015, tax=0.001,
-                 record_trades=True,
-                 mod_a=True, mod_b=True, mod_c=False, mod_d=False,
-                 mod_e=True, mod_f=True, mod_g=True, mod_h=True,
-                 mod_i=True, mod_j=True,
-                 # V21 experiment flags
-                 v21_atr_fast_exit=False,        # A: ATR-based fast_exit
-                 v21_adaptive_hard_cap=False,     # B: Adaptive signal_hard_cap
-                 v21_rollback_confirm=False,      # C: Rollback confirm_bars
-                 v21_volume_fast_exit=False,      # D: Volume-confirmed fast_exit
-                 v21_extended_grace=False,         # E: Extended grace period
-                 ):
+def backtest_v21(
+    y_pred,
+    returns,
+    df_test,
+    feature_cols,
+    initial_capital=100_000_000,
+    commission=0.0015,
+    tax=0.001,
+    record_trades=True,
+    mod_a=True,
+    mod_b=True,
+    mod_c=False,
+    mod_d=False,
+    mod_e=True,
+    mod_f=True,
+    mod_g=True,
+    mod_h=True,
+    mod_i=True,
+    mod_j=True,
+    # V21 experiment flags
+    v21_atr_fast_exit=False,  # A: ATR-based fast_exit
+    v21_adaptive_hard_cap=False,  # B: Adaptive signal_hard_cap
+    v21_rollback_confirm=False,  # C: Rollback confirm_bars
+    v21_volume_fast_exit=False,  # D: Volume-confirmed fast_exit
+    v21_extended_grace=False,  # E: Extended grace period
+):
     """V21 experiment: V20 + optional improvements."""
     n = len(y_pred)
     equity = np.zeros(n)
@@ -9344,12 +10938,26 @@ def backtest_v21(y_pred, returns, df_test, feature_cols,
     last_exit_bar = -999
     entry_close = 0
 
-    feat_names = ["rsi_slope_5d", "vol_surge_ratio", "range_position_20d",
-                  "dist_to_resistance", "breakout_setup_score", "bb_width_percentile",
-                  "higher_lows_count", "obv_price_divergence"]
-    defaults = {"rsi_slope_5d": 0, "vol_surge_ratio": 1.0, "range_position_20d": 0.5,
-                "dist_to_resistance": 0.05, "breakout_setup_score": 0, "bb_width_percentile": 0.5,
-                "higher_lows_count": 0, "obv_price_divergence": 0}
+    feat_names = [
+        "rsi_slope_5d",
+        "vol_surge_ratio",
+        "range_position_20d",
+        "dist_to_resistance",
+        "breakout_setup_score",
+        "bb_width_percentile",
+        "higher_lows_count",
+        "obv_price_divergence",
+    ]
+    defaults = {
+        "rsi_slope_5d": 0,
+        "vol_surge_ratio": 1.0,
+        "range_position_20d": 0.5,
+        "dist_to_resistance": 0.05,
+        "breakout_setup_score": 0,
+        "bb_width_percentile": 0.5,
+        "higher_lows_count": 0,
+        "obv_price_divergence": 0,
+    }
     feat_arrays = {}
     for fn in feat_names:
         if fn in df_test.columns:
@@ -9411,7 +11019,7 @@ def backtest_v21(y_pred, returns, df_test, feature_cols,
             start = i - bars + 1
             if start < 0:
                 continue
-            band = np.max(high[start:i + 1]) - np.min(low[start:i + 1])
+            band = np.max(high[start : i + 1]) - np.min(low[start : i + 1])
             ref = close[i] if close[i] > 0 else 1.0
             if band / ref < 0.05:
                 stabilized_sideways[i] = True
@@ -9419,8 +11027,8 @@ def backtest_v21(y_pred, returns, df_test, feature_cols,
 
     consolidation_breakout = np.zeros(n, dtype=bool)
     for i in range(10, n):
-        prev_high = np.max(high[i - 10:i])
-        prev_low = np.min(low[i - 10:i])
+        prev_high = np.max(high[i - 10 : i])
+        prev_low = np.min(low[i - 10 : i])
         ref = close[i - 1] if close[i - 1] > 0 else close[i]
         tight_range = ((prev_high - prev_low) / ref) < 0.08 if ref > 0 else False
         vol_ok = volume[i] > 1.2 * avg_vol20[i] if not np.isnan(avg_vol20[i]) else False
@@ -9430,14 +11038,18 @@ def backtest_v21(y_pred, returns, df_test, feature_cols,
     secondary_breakout = np.zeros(n, dtype=bool)
     if mod_e:
         for i in range(10, n):
-            prev_high = np.max(high[i - 10:i])
-            prev_low = np.min(low[i - 10:i])
+            prev_high = np.max(high[i - 10 : i])
+            prev_low = np.min(low[i - 10 : i])
             ref = close[i - 1] if close[i - 1] > 0 else close[i]
             tight_range = ((prev_high - prev_low) / ref) < 0.10 if ref > 0 else False
-            uptrend_macro = (not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and sma20[i] > sma50[i])
+            uptrend_macro = (
+                not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and sma20[i] > sma50[i]
+            )
             vol_threshold = 1.1 if uptrend_macro else 1.2
-            vol_ok = volume[i] > vol_threshold * avg_vol20[i] if not np.isnan(avg_vol20[i]) else False
-            max_high_5d = np.max(high[max(0, i - 5):i])
+            vol_ok = (
+                volume[i] > vol_threshold * avg_vol20[i] if not np.isnan(avg_vol20[i]) else False
+            )
+            max_high_5d = np.max(high[max(0, i - 5) : i])
             breakout_5d = close[i] > max_high_5d
             if tight_range and breakout_5d and vol_ok and uptrend_macro:
                 secondary_breakout[i] = True
@@ -9457,7 +11069,9 @@ def backtest_v21(y_pred, returns, df_test, feature_cols,
         bullish = close[i] > opn[i] + rng * 0.5 and close[i] > close[i - 1]
         if not bullish:
             continue
-        oversold = (not np.isnan(rsi14[i - 1]) and rsi14[i - 1] < 35) or drop_from_peak_20[i] <= -0.18
+        oversold = (not np.isnan(rsi14[i - 1]) and rsi14[i - 1] < 35) or drop_from_peak_20[
+            i
+        ] <= -0.18
         if not oversold:
             continue
         if np.isnan(avg_vol20[i]) or volume[i] < 1.3 * avg_vol20[i]:
@@ -9475,7 +11089,11 @@ def backtest_v21(y_pred, returns, df_test, feature_cols,
     rolling_high_250 = pd.Series(close).rolling(250, min_periods=20).max().values
     dist_from_52w_high = np.where(rolling_high_250 > 0, (close / rolling_high_250), 1.0)
 
-    date_col = "date" if "date" in df_test.columns else ("timestamp" if "timestamp" in df_test.columns else None)
+    date_col = (
+        "date"
+        if "date" in df_test.columns
+        else ("timestamp" if "timestamp" in df_test.columns else None)
+    )
     dates = df_test[date_col].values if date_col else np.arange(n)
     symbols = df_test["symbol"].values if "symbol" in df_test.columns else ["?"] * n
 
@@ -9498,10 +11116,20 @@ def backtest_v21(y_pred, returns, df_test, feature_cols,
         return "weak"
 
     symbol_profiles = {
-        "ACB": "bank", "BID": "bank", "MBB": "bank", "TCB": "bank",
-        "AAV": "high_beta", "AAS": "high_beta", "SSI": "high_beta", "VND": "high_beta",
-        "DGC": "momentum", "HPG": "momentum", "VIC": "momentum",
-        "FPT": "defensive", "REE": "defensive", "VNM": "defensive",
+        "ACB": "bank",
+        "BID": "bank",
+        "MBB": "bank",
+        "TCB": "bank",
+        "AAV": "high_beta",
+        "AAS": "high_beta",
+        "SSI": "high_beta",
+        "VND": "high_beta",
+        "DGC": "momentum",
+        "HPG": "momentum",
+        "VIC": "momentum",
+        "FPT": "defensive",
+        "REE": "defensive",
+        "VNM": "defensive",
     }
 
     def get_regime_adapter(i, trend):
@@ -9511,21 +11139,59 @@ def backtest_v21(y_pred, returns, df_test, feature_cols,
         low_vol = bb_i < 0.35
         weak_move = abs(ret_20d[i]) < 0.05
         choppy_regime = low_vol and weak_move and trend == "weak"
-        atr_ratio = (atr14[i] / close[i]) if (i < n and close[i] > 0 and not np.isnan(atr14[i])) else 0.03
+        atr_ratio = (
+            (atr14[i] / close[i]) if (i < n and close[i] > 0 and not np.isnan(atr14[i])) else 0.03
+        )
 
         params = {
-            "profile": profile, "dp_floor": 0.020, "ret5_hot": 0.060,
-            "size_mult": 1.0, "base_confirm_bars": 3, "exit_score_threshold": 2.0,
+            "profile": profile,
+            "dp_floor": 0.020,
+            "ret5_hot": 0.060,
+            "size_mult": 1.0,
+            "base_confirm_bars": 3,
+            "exit_score_threshold": 2.0,
             "choppy_regime": choppy_regime,
         }
         if profile == "high_beta":
-            params.update({"dp_floor": 0.015, "ret5_hot": 0.090, "size_mult": 0.98, "base_confirm_bars": 2, "exit_score_threshold": 2.35})
+            params.update(
+                {
+                    "dp_floor": 0.015,
+                    "ret5_hot": 0.090,
+                    "size_mult": 0.98,
+                    "base_confirm_bars": 2,
+                    "exit_score_threshold": 2.35,
+                }
+            )
         elif profile == "bank":
-            params.update({"dp_floor": 0.020, "ret5_hot": 0.070, "size_mult": 0.92, "base_confirm_bars": 3, "exit_score_threshold": 2.2})
+            params.update(
+                {
+                    "dp_floor": 0.020,
+                    "ret5_hot": 0.070,
+                    "size_mult": 0.92,
+                    "base_confirm_bars": 3,
+                    "exit_score_threshold": 2.2,
+                }
+            )
         elif profile == "defensive":
-            params.update({"dp_floor": 0.025, "ret5_hot": 0.050, "size_mult": 0.85, "base_confirm_bars": 3, "exit_score_threshold": 1.8})
+            params.update(
+                {
+                    "dp_floor": 0.025,
+                    "ret5_hot": 0.050,
+                    "size_mult": 0.85,
+                    "base_confirm_bars": 3,
+                    "exit_score_threshold": 1.8,
+                }
+            )
         elif profile == "momentum":
-            params.update({"dp_floor": 0.018, "ret5_hot": 0.080, "size_mult": 0.92, "base_confirm_bars": 2, "exit_score_threshold": 2.2})
+            params.update(
+                {
+                    "dp_floor": 0.018,
+                    "ret5_hot": 0.080,
+                    "size_mult": 0.92,
+                    "base_confirm_bars": 2,
+                    "exit_score_threshold": 2.2,
+                }
+            )
 
         if choppy_regime:
             params["dp_floor"] += 0.004
@@ -9604,8 +11270,13 @@ def backtest_v21(y_pred, returns, df_test, feature_cols,
 
         if new_position == 0 and position == 0 and last_exit_reason == "trailing_stop":
             bars_since_exit = i - last_exit_bar
-            if (bars_since_exit <= QUICK_REENTRY_WINDOW and trend in ("strong", "moderate")
-                    and macd_line[i] > 0 and not np.isnan(sma20[i]) and close[i] > sma20[i]):
+            if (
+                bars_since_exit <= QUICK_REENTRY_WINDOW
+                and trend in ("strong", "moderate")
+                and macd_line[i] > 0
+                and not np.isnan(sma20[i])
+                and close[i] > sma20[i]
+            ):
                 new_position = 1
                 quick_reentry = True
 
@@ -9613,14 +11284,20 @@ def backtest_v21(y_pred, returns, df_test, feature_cols,
         if mod_f:
             macd_pos = macd_hist[i] > 0
             bullish = close[i] > opn[i]
-            heavy_vol = (not np.isnan(avg_vol20[i]) and volume[i] > 1.5 * avg_vol20[i])
+            heavy_vol = not np.isnan(avg_vol20[i]) and volume[i] > 1.5 * avg_vol20[i]
             bo_quality_ok = macd_pos and bullish and heavy_vol
 
         if new_position == 0 and position == 0 and consolidation_breakout[i] and bo_quality_ok:
             new_position = 1
             breakout_entry = True
 
-        if mod_e and new_position == 0 and position == 0 and secondary_breakout[i] and bo_quality_ok:
+        if (
+            mod_e
+            and new_position == 0
+            and position == 0
+            and secondary_breakout[i]
+            and bo_quality_ok
+        ):
             new_position = 1
             breakout_entry = True
             n_secondary_breakout += 1
@@ -9641,11 +11318,15 @@ def backtest_v21(y_pred, returns, df_test, feature_cols,
                 if price_diff < 0.03:
                     new_position = 0
 
-        if new_position == 1 and position == 0 and not quick_reentry and not breakout_entry and not vshape_entry:
+        if (
+            new_position == 1
+            and position == 0
+            and not quick_reentry
+            and not breakout_entry
+            and not vshape_entry
+        ):
             prev_pred = int(y_pred[i - 2]) if i >= 2 else 0
-            if bs >= 4 and vs > 1.2:
-                pass
-            elif trend == "strong" and rs > 0:
+            if bs >= 4 and vs > 1.2 or trend == "strong" and rs > 0:
                 pass
             elif prev_pred != 1:
                 new_position = 0
@@ -9656,20 +11337,29 @@ def backtest_v21(y_pred, returns, df_test, feature_cols,
                     if bs < 3 and not breakout_entry:
                         new_position = 0
 
-        strong_breakout_context = (trend == "strong" and (bs >= 3 or vs > 1.5 or breakout_entry))
+        strong_breakout_context = trend == "strong" and (bs >= 3 or vs > 1.5 or breakout_entry)
         entry_alpha_ok = True
 
         if new_position == 1 and position == 0 and not quick_reentry and not vshape_entry:
             entry_score = sum([wp < 0.75, dp > 0.02, rs > 0, vs > 1.1, hl >= 2])
-            near_sma_support = (not np.isnan(sma20[i]) and close[i] <= sma20[i] * 1.02 and close[i] >= sma20[i] * 0.97)
-            near_local_low = (not np.isnan(local_low_20[i]) and close[i] <= local_low_20[i] * 1.05)
-            in_uptrend_macro = (not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and sma20[i] > sma50[i])
+            near_sma_support = (
+                not np.isnan(sma20[i])
+                and close[i] <= sma20[i] * 1.02
+                and close[i] >= sma20[i] * 0.97
+            )
+            near_local_low = not np.isnan(local_low_20[i]) and close[i] <= local_low_20[i] * 1.05
+            in_uptrend_macro = (
+                not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and sma20[i] > sma50[i]
+            )
 
             if trend == "strong":
                 min_score = 1
-            elif (near_sma_support or near_local_low) and in_uptrend_macro:
-                min_score = 2
-            elif in_uptrend_macro and rs > 0:
+            elif (
+                (near_sma_support or near_local_low)
+                and in_uptrend_macro
+                or in_uptrend_macro
+                and rs > 0
+            ):
                 min_score = 2
             else:
                 min_score = 3
@@ -9678,7 +11368,13 @@ def backtest_v21(y_pred, returns, df_test, feature_cols,
                 entry_alpha_ok = False
             if wp > 0.9 and rs <= 0 and bs < 2 and trend != "strong" and not breakout_entry:
                 entry_alpha_ok = False
-            if bb > 0.85 and bs < 2 and entry_score < 4 and trend != "strong" and not breakout_entry:
+            if (
+                bb > 0.85
+                and bs < 2
+                and entry_score < 4
+                and trend != "strong"
+                and not breakout_entry
+            ):
                 entry_alpha_ok = False
             if entry_alpha_ok:
                 if wp > 0.78 and bb < 0.35 and trend == "weak" and not breakout_entry:
@@ -9701,15 +11397,28 @@ def backtest_v21(y_pred, returns, df_test, feature_cols,
                 entry_alpha_ok = False
 
         if mod_g and new_position == 1 and position == 0 and not vshape_entry and entry_alpha_ok:
-            sma20_below_50 = (not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and sma20[i] < sma50[i])
-            close_below_50 = (not np.isnan(sma50[i]) and close[i] < sma50[i])
+            sma20_below_50 = (
+                not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and sma20[i] < sma50[i]
+            )
+            close_below_50 = not np.isnan(sma50[i]) and close[i] < sma50[i]
             deep_60d_loss = ret_60d[i] < -0.10
             if sma20_below_50 and close_below_50 and deep_60d_loss:
                 entry_alpha_ok = False
                 n_bear_blocked += 1
 
-        if mod_j and new_position == 1 and position == 0 and not vshape_entry and not breakout_entry and entry_alpha_ok:
-            ma_flat = (not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and abs(sma20[i] / sma50[i] - 1) < 0.02)
+        if (
+            mod_j
+            and new_position == 1
+            and position == 0
+            and not vshape_entry
+            and not breakout_entry
+            and entry_alpha_ok
+        ):
+            ma_flat = (
+                not np.isnan(sma20[i])
+                and not np.isnan(sma50[i])
+                and abs(sma20[i] / sma50[i] - 1) < 0.02
+            )
             weak_momo = abs(ret_20d[i]) < 0.06
             narrow_vol = bb < 0.45
             weak_trend = trend == "weak"
@@ -9766,7 +11475,9 @@ def backtest_v21(y_pred, returns, df_test, feature_cols,
             if close[i] > max_price_in_trade:
                 max_price_in_trade = close[i]
             cum_ret = (projected - entry_equity) / entry_equity if entry_equity > 0 else 0
-            max_profit = (max_equity_in_trade - entry_equity) / entry_equity if entry_equity > 0 else 0
+            max_profit = (
+                (max_equity_in_trade - entry_equity) / entry_equity if entry_equity > 0 else 0
+            )
             price_max_profit = (max_price_in_trade / entry_close - 1) if entry_close > 0 else 0
             price_cur_ret = (close[i] / entry_close - 1) if entry_close > 0 else 0
 
@@ -9810,55 +11521,81 @@ def backtest_v21(y_pred, returns, df_test, feature_cols,
 
                     if v21_volume_fast_exit:
                         # D: require selling volume
-                        has_sell_pressure = (not np.isnan(avg_vol20[i]) and volume[i] > 1.2 * avg_vol20[i] and close[i] < opn[i])
+                        has_sell_pressure = (
+                            not np.isnan(avg_vol20[i])
+                            and volume[i] > 1.2 * avg_vol20[i]
+                            and close[i] < opn[i]
+                        )
                     else:
                         has_sell_pressure = True
 
-                    if price_cur_ret < fast_threshold_1 and hold_days > grace_days_1 and has_sell_pressure:
-                        new_position = 0
-                        exit_reason = "fast_exit_loss"
-                        n_fast_exit_loss += 1
-                    elif (price_cur_ret < fast_threshold_2 and hold_days > grace_days_2
-                          and macd_hist[i] < 0 and (not np.isnan(ema8[i]) and close[i] < ema8[i])
-                          and has_sell_pressure):
+                    if (
+                        price_cur_ret < fast_threshold_1
+                        and hold_days > grace_days_1
+                        and has_sell_pressure
+                        or (
+                            price_cur_ret < fast_threshold_2
+                            and hold_days > grace_days_2
+                            and macd_hist[i] < 0
+                            and (not np.isnan(ema8[i]) and close[i] < ema8[i])
+                            and has_sell_pressure
+                        )
+                    ):
                         new_position = 0
                         exit_reason = "fast_exit_loss"
                         n_fast_exit_loss += 1
                 elif v21_volume_fast_exit:
                     # D only: same thresholds but require volume
-                    has_sell_pressure = (not np.isnan(avg_vol20[i]) and volume[i] > 1.2 * avg_vol20[i] and close[i] < opn[i])
+                    has_sell_pressure = (
+                        not np.isnan(avg_vol20[i])
+                        and volume[i] > 1.2 * avg_vol20[i]
+                        and close[i] < opn[i]
+                    )
                     grace_days_1 = 5 if v21_extended_grace else 3
                     grace_days_2 = 3 if v21_extended_grace else 2
 
-                    if price_cur_ret < -0.05 and hold_days > grace_days_1 and has_sell_pressure:
-                        new_position = 0
-                        exit_reason = "fast_exit_loss"
-                        n_fast_exit_loss += 1
-                    elif (price_cur_ret < -0.03 and hold_days > grace_days_2
-                          and macd_hist[i] < 0 and (not np.isnan(ema8[i]) and close[i] < ema8[i])
-                          and has_sell_pressure):
+                    if (
+                        price_cur_ret < -0.05
+                        and hold_days > grace_days_1
+                        and has_sell_pressure
+                        or (
+                            price_cur_ret < -0.03
+                            and hold_days > grace_days_2
+                            and macd_hist[i] < 0
+                            and (not np.isnan(ema8[i]) and close[i] < ema8[i])
+                            and has_sell_pressure
+                        )
+                    ):
                         new_position = 0
                         exit_reason = "fast_exit_loss"
                         n_fast_exit_loss += 1
                 elif v21_extended_grace:
                     # E only: same thresholds but longer grace period
-                    if price_cur_ret < -0.05 and hold_days > 5:
-                        new_position = 0
-                        exit_reason = "fast_exit_loss"
-                        n_fast_exit_loss += 1
-                    elif (price_cur_ret < -0.03 and hold_days > 3
-                          and macd_hist[i] < 0 and (not np.isnan(ema8[i]) and close[i] < ema8[i])):
+                    if (
+                        price_cur_ret < -0.05
+                        and hold_days > 5
+                        or (
+                            price_cur_ret < -0.03
+                            and hold_days > 3
+                            and macd_hist[i] < 0
+                            and (not np.isnan(ema8[i]) and close[i] < ema8[i])
+                        )
+                    ):
                         new_position = 0
                         exit_reason = "fast_exit_loss"
                         n_fast_exit_loss += 1
                 else:
                     # V20 original
-                    if price_cur_ret < -0.05 and hold_days > 3:
-                        new_position = 0
-                        exit_reason = "fast_exit_loss"
-                        n_fast_exit_loss += 1
-                    elif (price_cur_ret < -0.03 and hold_days > 2
-                          and macd_hist[i] < 0 and (not np.isnan(ema8[i]) and close[i] < ema8[i])):
+                    if (
+                        price_cur_ret < -0.05
+                        and hold_days > 3
+                        or (
+                            price_cur_ret < -0.03
+                            and hold_days > 2
+                            and macd_hist[i] < 0
+                            and (not np.isnan(ema8[i]) and close[i] < ema8[i])
+                        )
+                    ):
                         new_position = 0
                         exit_reason = "fast_exit_loss"
                         n_fast_exit_loss += 1
@@ -9869,16 +11606,21 @@ def backtest_v21(y_pred, returns, df_test, feature_cols,
                     exit_reason = "stop_loss"
 
             if new_position == 1:
-                if (mod_c and hold_days < 5 and cum_ret < -0.03
-                      and macd_hist[i] < 0 and close[i] < opn[i]):
+                if (
+                    mod_c
+                    and hold_days < 5
+                    and cum_ret < -0.03
+                    and macd_hist[i] < 0
+                    and close[i] < opn[i]
+                ):
                     new_position = 0
                     exit_reason = "fast_loss_cut"
                     n_fast_loss_cut += 1
 
             if new_position == 1:
                 if mod_b and price_max_profit >= 0.20:
-                    price_below_sma10 = (not np.isnan(sma10[i]) and close[i] < sma10[i])
-                    heavy_vol = (not np.isnan(avg_vol20[i]) and volume[i] > 1.5 * avg_vol20[i])
+                    price_below_sma10 = not np.isnan(sma10[i]) and close[i] < sma10[i]
+                    heavy_vol = not np.isnan(avg_vol20[i]) and volume[i] > 1.5 * avg_vol20[i]
                     bearish_candle = close[i] < opn[i]
                     if price_below_sma10 and heavy_vol and bearish_candle:
                         new_position = 0
@@ -9898,10 +11640,12 @@ def backtest_v21(y_pred, returns, df_test, feature_cols,
             if new_position == 1 and strong_uptrend and cum_ret > 0.05 and max_profit > 0.08:
                 macd_bearish = macd_hist[i] < 0 and macd_hist[i - 1] >= 0 if i > 0 else False
                 price_below_ma20 = close[i] < sma20[i] if not np.isnan(sma20[i]) else False
-                if macd_bearish and price_below_ma20:
-                    new_position = 0
-                    exit_reason = "hybrid_exit"
-                elif price_below_ma20 and cum_ret < max_profit * 0.5:
+                if (
+                    macd_bearish
+                    and price_below_ma20
+                    or price_below_ma20
+                    and cum_ret < max_profit * 0.5
+                ):
                     new_position = 0
                     exit_reason = "hybrid_exit"
                 else:
@@ -9935,23 +11679,34 @@ def backtest_v21(y_pred, returns, df_test, feature_cols,
                     new_position = 0
                     exit_reason = "zombie_exit"
 
-            if new_position == 0 and exit_reason not in (
-                    "stop_loss", "hard_stop", "hybrid_exit", "peak_protect_dist",
-                    "peak_protect_ema", "fast_loss_cut", "signal_hard_cap",
-                    "fast_exit_loss") and hold_days < MIN_HOLD:
+            if (
+                new_position == 0
+                and exit_reason
+                not in (
+                    "stop_loss",
+                    "hard_stop",
+                    "hybrid_exit",
+                    "peak_protect_dist",
+                    "peak_protect_ema",
+                    "fast_loss_cut",
+                    "signal_hard_cap",
+                    "fast_exit_loss",
+                )
+                and hold_days < MIN_HOLD
+            ):
                 if cum_ret > -atr_stop:
                     new_position = 1
 
             if new_position == 0 and exit_reason == "signal":
                 if mod_h:
-                    below_ma20 = (not np.isnan(sma20[i]) and close[i] < sma20[i])
-                    below_ma50 = (not np.isnan(sma50[i]) and close[i] < sma50[i])
+                    below_ma20 = not np.isnan(sma20[i]) and close[i] < sma20[i]
+                    below_ma50 = not np.isnan(sma50[i]) and close[i] < sma50[i]
                     old_bearish_confirm = (below_ma20 and macd_hist[i] < 0) or below_ma50
-                    heavy_vol = (not np.isnan(avg_vol20[i]) and volume[i] > 1.4 * avg_vol20[i])
+                    heavy_vol = not np.isnan(avg_vol20[i]) and volume[i] > 1.4 * avg_vol20[i]
                     bearish_candle = close[i] < opn[i]
                     macd_falling = macd_hist[i] < macd_hist[i - 1] if i > 0 else False
-                    below_ema8 = (not np.isnan(ema8[i]) and close[i] < ema8[i] * 0.997)
-                    weak_rebound = (ret_5d[i] < 0.01 and rs <= 0)
+                    below_ema8 = not np.isnan(ema8[i]) and close[i] < ema8[i] * 0.997
+                    weak_rebound = ret_5d[i] < 0.01 and rs <= 0
 
                     bearish_score = 0.0
                     bearish_score += 2.0 if below_ma50 else 0.0
@@ -10000,9 +11755,15 @@ def backtest_v21(y_pred, returns, df_test, feature_cols,
                     new_position = 1
 
             if mod_i and new_position == 0 and exit_reason == "signal":
-                still_supported = (not np.isnan(sma20[i]) and close[i] >= sma20[i] * 0.99)
+                still_supported = not np.isnan(sma20[i]) and close[i] >= sma20[i] * 0.99
                 trend_ok = trend in ("strong", "moderate")
-                if cum_ret > 0.03 and max_profit > 0.06 and trend_ok and still_supported and macd_hist[i] > -0.02:
+                if (
+                    cum_ret > 0.03
+                    and max_profit > 0.06
+                    and trend_ok
+                    and still_supported
+                    and macd_hist[i] > -0.02
+                ):
                     new_position = 1
                     n_trend_carry_saved += 1
 
@@ -10048,14 +11809,17 @@ def backtest_v21(y_pred, returns, df_test, feature_cols,
 
                 if record_trades and entry_equity > 0:
                     pnl_pct = (close[i] / entry_close - 1) * 100 if entry_close > 0 else 0
-                    trades.append({
-                        "entry_day": current_entry_day, "exit_day": i,
-                        "holding_days": i - current_entry_day,
-                        "pnl_pct": round(pnl_pct, 2),
-                        "exit_reason": exit_reason,
-                        "exit_date": str(dates[i])[:10],
-                        **entry_features,
-                    })
+                    trades.append(
+                        {
+                            "entry_day": current_entry_day,
+                            "exit_day": i,
+                            "holding_days": i - current_entry_day,
+                            "pnl_pct": round(pnl_pct, 2),
+                            "exit_reason": exit_reason,
+                            "exit_date": str(dates[i])[:10],
+                            **entry_features,
+                        }
+                    )
                 entry_equity = 0
                 max_equity_in_trade = 0
                 max_price_in_trade = 0
@@ -10070,15 +11834,21 @@ def backtest_v21(y_pred, returns, df_test, feature_cols,
 
     if position == 1 and entry_equity > 0 and record_trades:
         pnl_pct = (close[-1] / entry_close - 1) * 100 if entry_close > 0 else 0
-        trades.append({
-            "entry_day": current_entry_day, "exit_day": n - 1,
-            "holding_days": n - 1 - current_entry_day,
-            "pnl_pct": round(pnl_pct, 2), "exit_reason": "end",
-            "exit_date": str(dates[-1])[:10], **entry_features,
-        })
+        trades.append(
+            {
+                "entry_day": current_entry_day,
+                "exit_day": n - 1,
+                "holding_days": n - 1 - current_entry_day,
+                "pnl_pct": round(pnl_pct, 2),
+                "exit_reason": "end",
+                "exit_date": str(dates[-1])[:10],
+                **entry_features,
+            }
+        )
 
     return {
-        "equity_curve": equity, "trades": trades,
+        "equity_curve": equity,
+        "trades": trades,
         "total_return_pct": round((equity[-1] / initial_capital - 1) * 100, 2),
         "n_signal_hard_cap": n_signal_hard_cap,
         "n_fast_exit_loss": n_fast_exit_loss,
@@ -10098,13 +11868,31 @@ EXPERIMENTS = {
     "E_extended_grace": {"v21_extended_grace": True},
     "AD_atr+volume": {"v21_atr_fast_exit": True, "v21_volume_fast_exit": True},
     "AE_atr+grace": {"v21_atr_fast_exit": True, "v21_extended_grace": True},
-    "ADE_atr+vol+grace": {"v21_atr_fast_exit": True, "v21_volume_fast_exit": True, "v21_extended_grace": True},
+    "ADE_atr+vol+grace": {
+        "v21_atr_fast_exit": True,
+        "v21_volume_fast_exit": True,
+        "v21_extended_grace": True,
+    },
     "AB_atr+hardcap": {"v21_atr_fast_exit": True, "v21_adaptive_hard_cap": True},
-    "ABC_atr+hc+confirm": {"v21_atr_fast_exit": True, "v21_adaptive_hard_cap": True, "v21_rollback_confirm": True},
-    "ABDE_atr+hc+vol+grace": {"v21_atr_fast_exit": True, "v21_adaptive_hard_cap": True, "v21_volume_fast_exit": True, "v21_extended_grace": True},
-    "ABCDE_all": {"v21_atr_fast_exit": True, "v21_adaptive_hard_cap": True, "v21_rollback_confirm": True, "v21_volume_fast_exit": True, "v21_extended_grace": True},
+    "ABC_atr+hc+confirm": {
+        "v21_atr_fast_exit": True,
+        "v21_adaptive_hard_cap": True,
+        "v21_rollback_confirm": True,
+    },
+    "ABDE_atr+hc+vol+grace": {
+        "v21_atr_fast_exit": True,
+        "v21_adaptive_hard_cap": True,
+        "v21_volume_fast_exit": True,
+        "v21_extended_grace": True,
+    },
+    "ABCDE_all": {
+        "v21_atr_fast_exit": True,
+        "v21_adaptive_hard_cap": True,
+        "v21_rollback_confirm": True,
+        "v21_volume_fast_exit": True,
+        "v21_extended_grace": True,
+    },
 }
 
 
 MIN_ROWS = 2000
-

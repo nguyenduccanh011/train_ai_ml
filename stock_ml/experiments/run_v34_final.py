@@ -64,18 +64,23 @@ Exit reason breakdown V34:
 RPF engine patch không cần: leading_v4 model tự học tốt hơn để tránh fomo entries,
 RPF thêm vào không thay đổi kết quả (V32 engine = V33 engine cho V34).
 """
-import os, sys, time
+
+import os
+import sys
+import time
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import src.safe_io  # noqa: F401
-
 import pandas as pd
-from src.experiment_runner import run_test as run_test_base, run_rule_test
-from src.evaluation.scoring import calc_metrics, composite_score as comp_score
+import src.safe_io  # noqa: F401
 from src.config_loader import get_pipeline_symbols
-from experiments.run_v29 import V29_TARGET
-from experiments.run_v32_final import V32_DELTA, backtest_v32
-from experiments.run_v33_final import V33_DELTA, backtest_v33
+from src.evaluation.scoring import calc_metrics
+from src.evaluation.scoring import composite_score as comp_score
+from src.experiment_runner import run_rule_test
+from src.experiment_runner import run_test as run_test_base
 
+from experiments.run_v29 import V29_TARGET
+from experiments.run_v32_final import backtest_v32
+from experiments.run_v33_final import V33_DELTA, backtest_v33
 
 V34_FEATURE_SET = "leading_v4"
 
@@ -84,8 +89,8 @@ V34_TARGET = dict(
     forward_window=8,
     short_window=8,
     long_window=20,
-    gain_threshold=0.06,   # 6% (vs V29/V33: 5%) — signal quality cao hơn
-    loss_threshold=0.03,   # 3% (vs V29/V33: 4%) — không cắt lệnh tốt quá sớm
+    gain_threshold=0.06,  # 6% (vs V29/V33: 5%) — signal quality cao hơn
+    loss_threshold=0.03,  # 3% (vs V29/V33: 4%) — không cắt lệnh tốt quá sớm
     classes=3,
 )
 
@@ -139,6 +144,7 @@ def backtest_v36c(y_pred, returns, df_test, feature_cols, **kwargs):
 
 if __name__ == "__main__":
     import argparse
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--symbols", type=str, default="")
     args = parser.parse_args()
@@ -153,36 +159,74 @@ if __name__ == "__main__":
     print("=" * 130)
     print(f"  Feature set: {V34_FEATURE_SET}")
     print(f"  Target     : {V34_TARGET}")
-    print(f"  Engine     : V32 (hap_preempt + weak_oversold_exit)")
+    print("  Engine     : V32 (hap_preempt + weak_oversold_exit)")
     print()
 
-    t_rule = run_rule_test(SYMBOLS); m_rule = calc_metrics(t_rule)
+    t_rule = run_rule_test(SYMBOLS)
+    m_rule = calc_metrics(t_rule)
 
     t0 = time.time()
     # V33 baseline
-    t_v33 = run_test_base(SYMBOLS, True, True, False, False, True, True, True, True, True, True,
-                          backtest_fn=lambda *a, **kw: backtest_v33(*a, **{**V33_DELTA, **kw}),
-                          feature_set="leading_v3", target_override=V29_TARGET)
-    m_v33 = calc_metrics(t_v33); cs_v33 = comp_score(m_v33, t_v33)
+    t_v33 = run_test_base(
+        SYMBOLS,
+        True,
+        True,
+        False,
+        False,
+        True,
+        True,
+        True,
+        True,
+        True,
+        True,
+        backtest_fn=lambda *a, **kw: backtest_v33(*a, **{**V33_DELTA, **kw}),
+        feature_set="leading_v3",
+        target_override=V29_TARGET,
+    )
+    m_v33 = calc_metrics(t_v33)
+    cs_v33 = comp_score(m_v33, t_v33)
 
     # V34 final
-    t_v34 = run_test_base(SYMBOLS, True, True, False, False, True, True, True, True, True, True,
-                          backtest_fn=backtest_v34,
-                          feature_set=V34_FEATURE_SET, target_override=V34_TARGET)
+    t_v34 = run_test_base(
+        SYMBOLS,
+        True,
+        True,
+        False,
+        False,
+        True,
+        True,
+        True,
+        True,
+        True,
+        True,
+        backtest_fn=backtest_v34,
+        feature_set=V34_FEATURE_SET,
+        target_override=V34_TARGET,
+    )
     dt = time.time() - t0
-    m_v34 = calc_metrics(t_v34); cs_v34 = comp_score(m_v34, t_v34)
+    m_v34 = calc_metrics(t_v34)
+    cs_v34 = comp_score(m_v34, t_v34)
 
     HDR = f"  {'Config':<38} | {'#':>5} {'WR':>6} {'AvgPnL':>8} {'TotPnL':>10} {'PF':>6} {'MaxLoss':>8} {'AvgH':>6} | {'Comp':>7}"
     SEP = "  " + "-" * (len(HDR) - 2)
-    print(HDR); print(SEP)
-    print(f"  {'Rule baseline':<38} | {m_rule['trades']:>5} {m_rule['wr']:>5.1f}% {m_rule['avg_pnl']:>+7.2f}% {m_rule['total_pnl']:>+9.1f}% {m_rule['pf']:>5.2f} {m_rule['max_loss']:>+7.1f}% {m_rule['avg_hold']:>5.1f}d |")
-    print(f"  {'V33 (leading_v3+V33engine)':<38} | {m_v33['trades']:>5} {m_v33['wr']:>5.1f}% {m_v33['avg_pnl']:>+7.2f}% {m_v33['total_pnl']:>+9.1f}% {m_v33['pf']:>5.2f} {m_v33['max_loss']:>+7.1f}% {m_v33['avg_hold']:>5.1f}d | {cs_v33:>6.0f}")
-    print(f"  {'V34 (leading_v4+V32engine)':<38} | {m_v34['trades']:>5} {m_v34['wr']:>5.1f}% {m_v34['avg_pnl']:>+7.2f}% {m_v34['total_pnl']:>+9.1f}% {m_v34['pf']:>5.2f} {m_v34['max_loss']:>+7.1f}% {m_v34['avg_hold']:>5.1f}d | {cs_v34:>6.0f}")
+    print(HDR)
     print(SEP)
-    print(f"  Delta vs V33:  Comp={cs_v34-cs_v33:+.0f}  WR={m_v34['wr']-m_v33['wr']:+.2f}pp  "
-          f"AvgPnL={m_v34['avg_pnl']-m_v33['avg_pnl']:+.3f}pp  "
-          f"TotPnL={m_v34['total_pnl']-m_v33['total_pnl']:+.1f}%  "
-          f"PF={m_v34['pf']-m_v33['pf']:+.3f}")
+    print(
+        f"  {'Rule baseline':<38} | {m_rule['trades']:>5} {m_rule['wr']:>5.1f}% {m_rule['avg_pnl']:>+7.2f}% {m_rule['total_pnl']:>+9.1f}% {m_rule['pf']:>5.2f} {m_rule['max_loss']:>+7.1f}% {m_rule['avg_hold']:>5.1f}d |"
+    )
+    print(
+        f"  {'V33 (leading_v3+V33engine)':<38} | {m_v33['trades']:>5} {m_v33['wr']:>5.1f}% {m_v33['avg_pnl']:>+7.2f}% {m_v33['total_pnl']:>+9.1f}% {m_v33['pf']:>5.2f} {m_v33['max_loss']:>+7.1f}% {m_v33['avg_hold']:>5.1f}d | {cs_v33:>6.0f}"
+    )
+    print(
+        f"  {'V34 (leading_v4+V32engine)':<38} | {m_v34['trades']:>5} {m_v34['wr']:>5.1f}% {m_v34['avg_pnl']:>+7.2f}% {m_v34['total_pnl']:>+9.1f}% {m_v34['pf']:>5.2f} {m_v34['max_loss']:>+7.1f}% {m_v34['avg_hold']:>5.1f}d | {cs_v34:>6.0f}"
+    )
+    print(SEP)
+    print(
+        f"  Delta vs V33:  Comp={cs_v34 - cs_v33:+.0f}  WR={m_v34['wr'] - m_v33['wr']:+.2f}pp  "
+        f"AvgPnL={m_v34['avg_pnl'] - m_v33['avg_pnl']:+.3f}pp  "
+        f"TotPnL={m_v34['total_pnl'] - m_v33['total_pnl']:+.1f}%  "
+        f"PF={m_v34['pf'] - m_v33['pf']:+.3f}"
+    )
     print(f"  Time: {dt:.1f}s")
 
     # Save trades

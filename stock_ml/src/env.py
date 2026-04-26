@@ -4,6 +4,7 @@ Environment detection and path resolution for local/Colab hybrid workflow.
 All path constants and environment checks live here.
 Other modules import from this file instead of hardcoding paths.
 """
+
 import os
 
 DRIVE_BASE = "/content/drive/MyDrive/stock_ml_hub"
@@ -79,8 +80,13 @@ def get_env_info():
     if is_colab():
         try:
             import torch
+
             info["gpu"] = torch.cuda.get_device_name(0) if torch.cuda.is_available() else "None"
-            info["gpu_memory"] = f"{torch.cuda.get_device_properties(0).total_mem / 1e9:.1f} GB" if torch.cuda.is_available() else "N/A"
+            info["gpu_memory"] = (
+                f"{torch.cuda.get_device_properties(0).total_mem / 1e9:.1f} GB"
+                if torch.cuda.is_available()
+                else "N/A"
+            )
         except Exception:
             info["gpu"] = "unknown"
 
@@ -89,6 +95,7 @@ def get_env_info():
     else:
         try:
             import torch
+
             if torch.cuda.is_available():
                 info["gpu"] = torch.cuda.get_device_name(0)
         except Exception:

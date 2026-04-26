@@ -12,16 +12,28 @@ Top 12 ma V37a thua Rule nhieu nhat (diff < -25%):
   PVS(-142), AAS(-117), BSR(-110), PVD(-104), KBC(-90), AAV(-85),
   GAS(-79), FRT(-76), BCM(-75), PLX(-70), SBT(-67), BID(-47)
 """
-import os, sys
+
+import os
+import sys
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from experiments.run_v37a import backtest_v37a
 
-
 # Top 12 symbols V37a thua Rule nhieu nhat, uu tien rule-exit logic
 V39D_RULE_EXIT_SYMBOLS = {
-    "PVS", "AAS", "BSR", "PVD", "KBC", "AAV",
-    "GAS", "FRT", "BCM", "PLX", "SBT", "BID",
+    "PVS",
+    "AAS",
+    "BSR",
+    "PVD",
+    "KBC",
+    "AAV",
+    "GAS",
+    "FRT",
+    "BCM",
+    "PLX",
+    "SBT",
+    "BID",
 }
 
 V39D_FLAGS = dict(

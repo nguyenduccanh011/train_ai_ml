@@ -20,8 +20,10 @@ Excluded (with reason):
   - trade_count    → used as confidence weight, not score
   - expectancy     → mathematically equal to avg_pnl
 """
-import numpy as np
+
 from collections import defaultdict
+
+import numpy as np
 
 from src.config_loader import load_config
 
@@ -30,14 +32,15 @@ def _get_weights():
     cfg = load_config()
     w = cfg.get("scoring", {}).get("weights", {})
     return {
-        "total_pnl":      w.get("total_pnl",      0.45),
-        "profit_factor":  w.get("profit_factor",  0.25),
+        "total_pnl": w.get("total_pnl", 0.45),
+        "profit_factor": w.get("profit_factor", 0.25),
         "mdd_per_symbol": w.get("mdd_per_symbol", 0.20),
-        "sharpe":         w.get("sharpe",         0.10),
+        "sharpe": w.get("sharpe", 0.10),
     }
 
 
 # ─── Individual metric calculators ───────────────────────────────────────────
+
 
 def calc_sharpe(trades: list) -> float:
     """Per-trade Sharpe: avg_pnl / std(pnl).
@@ -153,6 +156,7 @@ def calc_max_drawdown(trades: list) -> float:
 
 # ─── Main scoring ─────────────────────────────────────────────────────────────
 
+
 def composite_score(metrics: dict, trades: list | None = None) -> float:
     """Canonical composite score (higher = better).
 
@@ -167,16 +171,16 @@ def composite_score(metrics: dict, trades: list | None = None) -> float:
 
     w = _get_weights()
 
-    avg_pnl   = metrics.get("avg_pnl", 0)
-    pf        = metrics.get("pf", 0)
+    avg_pnl = metrics.get("avg_pnl", 0)
+    pf = metrics.get("pf", 0)
     total_pnl = metrics.get("total_pnl", 0)
 
     if trades is not None:
-        sharpe  = calc_sharpe(trades)
+        sharpe = calc_sharpe(trades)
         mdd_sym = calc_mdd_per_symbol(trades)
     else:
         pnl_std = 1.0
-        sharpe  = avg_pnl / max(pnl_std, 0.01)
+        sharpe = avg_pnl / max(pnl_std, 0.01)
         mdd_sym = abs(metrics.get("max_loss", 0))
 
     # ── Normalise to [-1, 1] or [0, 1] ──────────────────────────────────────
@@ -193,10 +197,10 @@ def composite_score(metrics: dict, trades: list | None = None) -> float:
     norm_sharpe = np.clip(sharpe / 0.30, -1, 1)
 
     score = (
-          w["total_pnl"]      * norm_total
-        + w["profit_factor"]  * norm_pf
+        w["total_pnl"] * norm_total
+        + w["profit_factor"] * norm_pf
         - w["mdd_per_symbol"] * norm_mdd
-        + w["sharpe"]         * norm_sharpe
+        + w["sharpe"] * norm_sharpe
     ) * 1000
 
     return round(score, 1)
@@ -204,11 +208,19 @@ def composite_score(metrics: dict, trades: list | None = None) -> float:
 
 # ─── Metrics aggregator ───────────────────────────────────────────────────────
 
+
 def calc_metrics(trades):
     """Compute standard metrics from a trade list.  Shared by every caller."""
     if not trades:
-        return {"trades": 0, "wr": 0.0, "avg_pnl": 0.0, "total_pnl": 0.0,
-                "pf": 0.0, "max_loss": 0.0, "avg_hold": 0.0}
+        return {
+            "trades": 0,
+            "wr": 0.0,
+            "avg_pnl": 0.0,
+            "total_pnl": 0.0,
+            "pf": 0.0,
+            "max_loss": 0.0,
+            "avg_hold": 0.0,
+        }
     n = len(trades)
     pnls = [t["pnl_pct"] for t in trades]
     wins = sum(1 for p in pnls if p > 0)
@@ -220,6 +232,12 @@ def calc_metrics(trades):
     pf = gp / gl if gl > 0 else 99.0
     max_loss = min(pnls)
     avg_hold = float(np.mean([t.get("holding_days", 0) for t in trades]))
-    return {"trades": n, "wr": round(wr, 2), "avg_pnl": round(avg_pnl, 3),
-            "total_pnl": round(total_pnl, 2), "pf": round(pf, 3),
-            "max_loss": round(max_loss, 2), "avg_hold": round(avg_hold, 1)}
+    return {
+        "trades": n,
+        "wr": round(wr, 2),
+        "avg_pnl": round(avg_pnl, 3),
+        "total_pnl": round(total_pnl, 2),
+        "pf": round(pf, 3),
+        "max_loss": round(max_loss, 2),
+        "avg_hold": round(avg_hold, 1),
+    }

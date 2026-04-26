@@ -17,17 +17,22 @@ Sweep:
 Engine: V37a (per-profile dispatch, V35 relax flags cho bank/defensive/balanced)
 Feature: leading_v4 (HA features, giữ nguyên từ V34)
 """
-import os, sys, time
+
+import os
+import sys
+import time
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import src.safe_io  # noqa: F401
-
 import pandas as pd
-from src.experiment_runner import run_test as run_test_base, run_rule_test
-from src.evaluation.scoring import calc_metrics, composite_score as comp_score
+import src.safe_io  # noqa: F401
 from src.config_loader import get_pipeline_symbols
-from experiments.run_v34_final import V34_TARGET, V34_FEATURE_SET
-from experiments.run_v37a import backtest_v37a
+from src.evaluation.scoring import calc_metrics
+from src.evaluation.scoring import composite_score as comp_score
+from src.experiment_runner import run_rule_test
+from src.experiment_runner import run_test as run_test_base
 
+from experiments.run_v34_final import V34_FEATURE_SET, V34_TARGET
+from experiments.run_v37a import backtest_v37a
 
 V40_FEATURE_SET = V34_FEATURE_SET  # leading_v4
 
@@ -72,7 +77,17 @@ def backtest_v40(y_pred, returns, df_test, feature_cols, **kwargs):
 
 def _run(symbols, target, label):
     t = run_test_base(
-        symbols, True, True, False, False, True, True, True, True, True, True,
+        symbols,
+        True,
+        True,
+        False,
+        False,
+        True,
+        True,
+        True,
+        True,
+        True,
+        True,
         backtest_fn=backtest_v40,
         feature_set=V40_FEATURE_SET,
         target_override=target,
@@ -94,10 +109,15 @@ def _fmt_row(label, m, cs, base_cs=None):
 
 if __name__ == "__main__":
     import argparse
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--symbols", type=str, default="")
-    parser.add_argument("--variants", type=str, default="base,a,b,c",
-                        help="Comma-separated variants to run: base,a,b,c")
+    parser.add_argument(
+        "--variants",
+        type=str,
+        default="base,a,b,c",
+        help="Comma-separated variants to run: base,a,b,c",
+    )
     args = parser.parse_args()
 
     sys.stdout = open(sys.stdout.fileno(), mode="w", encoding="utf-8", buffering=1)
@@ -110,9 +130,9 @@ if __name__ == "__main__":
     print("=" * 140)
     print("V40 — V37a engine + retrain fw=15-20d (giải quyết root cause bias thoát sớm)")
     print("=" * 140)
-    print(f"  Engine  : V37a (per-profile V35 relax flags)")
+    print("  Engine  : V37a (per-profile V35 relax flags)")
     print(f"  Features: {V40_FEATURE_SET}")
-    print(f"  Variants: fw=8 (base/V37a), fw=15 (V40a), fw=17 (V40b), fw=20 (V40c)")
+    print("  Variants: fw=8 (base/V37a), fw=15 (V40a), fw=17 (V40b), fw=20 (V40c)")
     print()
 
     t_rule = run_rule_test(SYMBOLS)

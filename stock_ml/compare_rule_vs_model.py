@@ -3,14 +3,18 @@ Compare Rule-based strategy vs V9 ML Model
 Rule: BUY when MACD_hist > 0 AND Close > MA20 AND Close > Open
       SELL when MACD_hist < 0 AND Close < MA20 AND Close < Open
 """
-import sys, os, numpy as np, pandas as pd
-from collections import defaultdict
+
 import importlib
+import os
+import sys
+from collections import defaultdict
+
+import numpy as np
+import pandas as pd
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import src.safe_io  # noqa: F401 — fix UnicodeEncodeError on Windows console
-
 from src.data.loader import DataLoader
 from src.data.splitter import WalkForwardSplitter
 from src.data.target import TargetGenerator
@@ -74,15 +78,17 @@ def backtest_rule(df_sym, commission=0.0015, tax=0.001):
             pnl_pct = (exit_price / entry_price - 1) * 100
             # subtract commission+tax
             pnl_pct -= (commission + tax) * 2 * 100
-            trades.append({
-                "entry_date": str(dates[entry_idx])[:10],
-                "exit_date": str(dates[i])[:10],
-                "holding_days": i - entry_idx,
-                "pnl_pct": round(pnl_pct, 2),
-                "entry_price": round(entry_price, 2),
-                "exit_price": round(exit_price, 2),
-                "exit_reason": "rule_sell",
-            })
+            trades.append(
+                {
+                    "entry_date": str(dates[entry_idx])[:10],
+                    "exit_date": str(dates[i])[:10],
+                    "holding_days": i - entry_idx,
+                    "pnl_pct": round(pnl_pct, 2),
+                    "entry_price": round(entry_price, 2),
+                    "exit_price": round(exit_price, 2),
+                    "exit_reason": "rule_sell",
+                }
+            )
             position = 0
 
     return trades
@@ -102,12 +108,23 @@ def summarize_trades(trades, label=""):
     avg_loss = np.mean([t["pnl_pct"] for t in losses]) if losses else 0
     avg_hold = np.mean([t["holding_days"] for t in trades])
     max_loss = min(pnls)
-    pf = abs(sum(t["pnl_pct"] for t in wins)) / abs(sum(t["pnl_pct"] for t in losses)) if losses and sum(t["pnl_pct"] for t in losses) != 0 else 99
+    pf = (
+        abs(sum(t["pnl_pct"] for t in wins)) / abs(sum(t["pnl_pct"] for t in losses))
+        if losses and sum(t["pnl_pct"] for t in losses) != 0
+        else 99
+    )
 
     return {
-        "label": label, "trades": n, "wr": wr, "avg_pnl": avg,
-        "total_pnl": total, "avg_win": avg_win, "avg_loss": avg_loss,
-        "avg_hold": avg_hold, "max_loss": max_loss, "pf": pf,
+        "label": label,
+        "trades": n,
+        "wr": wr,
+        "avg_pnl": avg,
+        "total_pnl": total,
+        "avg_win": avg_win,
+        "avg_loss": avg_loss,
+        "avg_hold": avg_hold,
+        "max_loss": max_loss,
+        "pf": pf,
     }
 
 
@@ -118,20 +135,34 @@ def print_summary(s):
     print(f"  {s['label']}:")
     print(f"    Trades: {s['trades']}  WR: {s['wr']:.1f}%  PF: {s['pf']:.2f}")
     print(f"    Avg PnL: {s['avg_pnl']:+.2f}%  Total: {s['total_pnl']:+.1f}%")
-    print(f"    Avg Win: {s['avg_win']:+.2f}%  Avg Loss: {s['avg_loss']:+.2f}%  Max Loss: {s['max_loss']:+.2f}%")
+    print(
+        f"    Avg Win: {s['avg_win']:+.2f}%  Avg Loss: {s['avg_loss']:+.2f}%  Max Loss: {s['max_loss']:+.2f}%"
+    )
     print(f"    Avg Hold: {s['avg_hold']:.1f}d")
 
 
 def main():
     from src.env import resolve_data_dir
+
     data_dir = resolve_data_dir("../portable_data/vn_stock_ai_dataset_cleaned")
 
     config = {
         "data": {"data_dir": data_dir},
-        "split": {"method": "walk_forward", "train_years": 4, "test_years": 1,
-                  "gap_days": 0, "first_test_year": 2020, "last_test_year": 2025},
-        "target": {"type": "trend_regime", "trend_method": "dual_ma",
-                   "short_window": 5, "long_window": 20, "classes": 3},
+        "split": {
+            "method": "walk_forward",
+            "train_years": 4,
+            "test_years": 1,
+            "gap_days": 0,
+            "first_test_year": 2020,
+            "last_test_year": 2025,
+        },
+        "target": {
+            "type": "trend_regime",
+            "trend_method": "dual_ma",
+            "short_window": 5,
+            "long_window": 20,
+            "classes": 3,
+        },
     }
 
     loader = DataLoader(data_dir)
@@ -171,7 +202,11 @@ def main():
                 continue
             X_sym = np.nan_to_num(sym_test[feature_cols].values)
             y_pred = model.predict(X_sym)
-            rets = sym_test["return_1d"].values if "return_1d" in sym_test.columns else np.zeros(len(sym_test))
+            rets = (
+                sym_test["return_1d"].values
+                if "return_1d" in sym_test.columns
+                else np.zeros(len(sym_test))
+            )
             r9 = backtest_v9(y_pred, rets, sym_test, feature_cols)
             for t in r9["trades"]:
                 t["symbol"] = sym
@@ -201,8 +236,10 @@ def main():
 
     all_rule, all_v9 = [], []
 
-    print(f"{'Symbol':<8} │ {'Rule #':>6} {'Rule WR':>8} {'Rule Avg':>9} {'Rule Tot':>9} {'Rule MaxDD':>10} │ "
-          f"{'V9 #':>5} {'V9 WR':>7} {'V9 Avg':>8} {'V9 Tot':>8} {'V9 MaxDD':>9} │ {'Winner':>8}")
+    print(
+        f"{'Symbol':<8} │ {'Rule #':>6} {'Rule WR':>8} {'Rule Avg':>9} {'Rule Tot':>9} {'Rule MaxDD':>10} │ "
+        f"{'V9 #':>5} {'V9 WR':>7} {'V9 Avg':>8} {'V9 Tot':>8} {'V9 MaxDD':>9} │ {'Winner':>8}"
+    )
     print("─" * 130)
 
     for sym in symbols:
@@ -227,8 +264,10 @@ def main():
         vdd = vs["max_loss"] if vs else 0
 
         winner = "V9 ✅" if vavg > ravg else "Rule ✅"
-        print(f"{sym:<8} │ {rn:>6} {rwr:>7.1f}% {ravg:>+8.2f}% {rtot:>+8.1f}% {rdd:>+9.1f}% │ "
-              f"{vn:>5} {vwr:>6.1f}% {vavg:>+7.2f}% {vtot:>+7.1f}% {vdd:>+8.1f}% │ {winner:>8}")
+        print(
+            f"{sym:<8} │ {rn:>6} {rwr:>7.1f}% {ravg:>+8.2f}% {rtot:>+8.1f}% {rdd:>+9.1f}% │ "
+            f"{vn:>5} {vwr:>6.1f}% {vavg:>+7.2f}% {vtot:>+7.1f}% {vdd:>+8.1f}% │ {winner:>8}"
+        )
 
     # Aggregate
     print("\n" + "=" * 130)
@@ -243,34 +282,50 @@ def main():
 
     if rs and vs:
         print(f"\n{'═' * 80}")
-        print(f"📈 VERDICT:")
+        print("📈 VERDICT:")
         print(f"{'═' * 80}")
         print(f"  Trades:    Rule={rs['trades']:4d}  vs  V9={vs['trades']:4d}")
-        print(f"  WR:        Rule={rs['wr']:5.1f}%  vs  V9={vs['wr']:5.1f}%  {'V9 ✅' if vs['wr'] > rs['wr'] else 'Rule ✅'}")
-        print(f"  Avg PnL:   Rule={rs['avg_pnl']:+.2f}%  vs  V9={vs['avg_pnl']:+.2f}%  {'V9 ✅' if vs['avg_pnl'] > rs['avg_pnl'] else 'Rule ✅'}")
-        print(f"  Total PnL: Rule={rs['total_pnl']:+.1f}%  vs  V9={vs['total_pnl']:+.1f}%  {'V9 ✅' if vs['total_pnl'] > rs['total_pnl'] else 'Rule ✅'}")
-        print(f"  PF:        Rule={rs['pf']:.2f}  vs  V9={vs['pf']:.2f}  {'V9 ✅' if vs['pf'] > rs['pf'] else 'Rule ✅'}")
-        print(f"  Avg Loss:  Rule={rs['avg_loss']:+.2f}%  vs  V9={vs['avg_loss']:+.2f}%  {'V9 ✅' if vs['avg_loss'] > rs['avg_loss'] else 'Rule ✅'}")
-        print(f"  Max Loss:  Rule={rs['max_loss']:+.1f}%  vs  V9={vs['max_loss']:+.1f}%  {'V9 ✅' if vs['max_loss'] > rs['max_loss'] else 'Rule ✅'}")
+        print(
+            f"  WR:        Rule={rs['wr']:5.1f}%  vs  V9={vs['wr']:5.1f}%  {'V9 ✅' if vs['wr'] > rs['wr'] else 'Rule ✅'}"
+        )
+        print(
+            f"  Avg PnL:   Rule={rs['avg_pnl']:+.2f}%  vs  V9={vs['avg_pnl']:+.2f}%  {'V9 ✅' if vs['avg_pnl'] > rs['avg_pnl'] else 'Rule ✅'}"
+        )
+        print(
+            f"  Total PnL: Rule={rs['total_pnl']:+.1f}%  vs  V9={vs['total_pnl']:+.1f}%  {'V9 ✅' if vs['total_pnl'] > rs['total_pnl'] else 'Rule ✅'}"
+        )
+        print(
+            f"  PF:        Rule={rs['pf']:.2f}  vs  V9={vs['pf']:.2f}  {'V9 ✅' if vs['pf'] > rs['pf'] else 'Rule ✅'}"
+        )
+        print(
+            f"  Avg Loss:  Rule={rs['avg_loss']:+.2f}%  vs  V9={vs['avg_loss']:+.2f}%  {'V9 ✅' if vs['avg_loss'] > rs['avg_loss'] else 'Rule ✅'}"
+        )
+        print(
+            f"  Max Loss:  Rule={rs['max_loss']:+.1f}%  vs  V9={vs['max_loss']:+.1f}%  {'V9 ✅' if vs['max_loss'] > rs['max_loss'] else 'Rule ✅'}"
+        )
         print(f"  Avg Hold:  Rule={rs['avg_hold']:.1f}d  vs  V9={vs['avg_hold']:.1f}d")
 
     # Detailed trade-by-trade for VND (top performer)
     print(f"\n{'═' * 130}")
-    print(f"📋 DETAILED TRADE COMPARISON — VND (Top V9 performer)")
+    print("📋 DETAILED TRADE COMPARISON — VND (Top V9 performer)")
     print(f"{'═' * 130}")
     print("\n--- Rule-Based Trades ---")
     for i, t in enumerate(rule_by_sym.get("VND", [])[:15]):
         cls = "WIN" if t["pnl_pct"] > 0 else "LOSS"
-        print(f"  {i+1:2d}. [{cls:4s}] {t['entry_date']} → {t['exit_date']}  "
-              f"Hold:{t['holding_days']:3d}d  PnL:{t['pnl_pct']:+7.2f}%  "
-              f"Entry:{t['entry_price']:.2f} Exit:{t['exit_price']:.2f}")
+        print(
+            f"  {i + 1:2d}. [{cls:4s}] {t['entry_date']} → {t['exit_date']}  "
+            f"Hold:{t['holding_days']:3d}d  PnL:{t['pnl_pct']:+7.2f}%  "
+            f"Entry:{t['entry_price']:.2f} Exit:{t['exit_price']:.2f}"
+        )
 
     print("\n--- V9 ML Trades ---")
     for i, t in enumerate(v9_by_sym.get("VND", [])[:15]):
         cls = "WIN" if t["pnl_pct"] > 0 else "LOSS"
-        print(f"  {i+1:2d}. [{cls:4s}] {t.get('entry_date','')} → {t.get('exit_date','')}  "
-              f"Hold:{t['holding_days']:3d}d  PnL:{t['pnl_pct']:+7.2f}%  "
-              f"Reason:{t.get('exit_reason','')}")
+        print(
+            f"  {i + 1:2d}. [{cls:4s}] {t.get('entry_date', '')} → {t.get('exit_date', '')}  "
+            f"Hold:{t['holding_days']:3d}d  PnL:{t['pnl_pct']:+7.2f}%  "
+            f"Reason:{t.get('exit_reason', '')}"
+        )
 
 
 if __name__ == "__main__":

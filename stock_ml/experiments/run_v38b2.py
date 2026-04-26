@@ -4,11 +4,13 @@ Thay doi tu V38b:
   - HAP trigger 0.04 (vs 0.03), floor -0.03 (vs -0.02) — bot nhay 1 nac
   - Stall-exit: hold>=10 (vs 6), max_profit<0.015 (vs 0.02), pnl<-0.025 (vs -0.02)
 """
-import os, sys
+
+import os
+import sys
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from experiments.run_v32_final import backtest_v32
-
 
 V38B2_FLAGS = dict(
     v32_hap_pre_trigger=0.04,

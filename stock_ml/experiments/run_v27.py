@@ -8,13 +8,13 @@ Selected from ablation:
   - v27_dynamic_score5_penalty
   - v27_trend_persistence_hold
 """
+
 import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import src.safe_io  # noqa: F401 — fix UnicodeEncodeError on Windows console
-
 from src.backtest.engine import backtest_unified
 
 
@@ -49,10 +49,13 @@ def backtest_v27(y_pred, returns, df_test, feature_cols, **kwargs):
 if __name__ == "__main__":
     import argparse
     import time
-    import pandas as pd
 
-    from src.experiment_runner import run_test as run_test_base, run_rule_test
-    from src.evaluation.scoring import calc_metrics, composite_score as comp_score
+    import pandas as pd
+    from src.evaluation.scoring import calc_metrics
+    from src.evaluation.scoring import composite_score as comp_score
+    from src.experiment_runner import run_rule_test
+    from src.experiment_runner import run_test as run_test_base
+
     from experiments.run_v26 import backtest_v26
 
     parser = argparse.ArgumentParser()
@@ -78,25 +81,57 @@ if __name__ == "__main__":
     m_rule = calc_metrics(t_rule)
 
     t0 = time.time()
-    t_v26 = run_test_base(SYMBOLS, True, True, False, False, True, True, True, True, True, True,
-                          backtest_fn=backtest_v26)
+    t_v26 = run_test_base(
+        SYMBOLS,
+        True,
+        True,
+        False,
+        False,
+        True,
+        True,
+        True,
+        True,
+        True,
+        True,
+        backtest_fn=backtest_v26,
+    )
     m_v26 = calc_metrics(t_v26)
     cs26 = comp_score(m_v26)
 
-    t_v27 = run_test_base(SYMBOLS, True, True, False, False, True, True, True, True, True, True,
-                          backtest_fn=backtest_v27)
+    t_v27 = run_test_base(
+        SYMBOLS,
+        True,
+        True,
+        False,
+        False,
+        True,
+        True,
+        True,
+        True,
+        True,
+        True,
+        backtest_fn=backtest_v27,
+    )
     dt = time.time() - t0
     m_v27 = calc_metrics(t_v27)
     cs27 = comp_score(m_v27)
 
-    print(f"\n{'='*120}")
-    print(f"  {'Config':<22} | {'#':>5} {'WR':>6} {'AvgPnL':>8} {'TotPnL':>10} {'PF':>6} {'MaxLoss':>8} {'AvgH':>6} | {'Comp':>7}")
+    print(f"\n{'=' * 120}")
+    print(
+        f"  {'Config':<22} | {'#':>5} {'WR':>6} {'AvgPnL':>8} {'TotPnL':>10} {'PF':>6} {'MaxLoss':>8} {'AvgH':>6} | {'Comp':>7}"
+    )
     print("  " + "-" * 102)
-    print(f"  {'V26 baseline':<22} | {m_v26['trades']:>5} {m_v26['wr']:>5.1f}% {m_v26['avg_pnl']:>+7.2f}% {m_v26['total_pnl']:>+9.1f}% {m_v26['pf']:>5.2f} {m_v26['max_loss']:>+7.1f}% {m_v26['avg_hold']:>5.1f}d | {cs26:>6.0f}")
-    print(f"  {'V27 selected':<22} | {m_v27['trades']:>5} {m_v27['wr']:>5.1f}% {m_v27['avg_pnl']:>+7.2f}% {m_v27['total_pnl']:>+9.1f}% {m_v27['pf']:>5.2f} {m_v27['max_loss']:>+7.1f}% {m_v27['avg_hold']:>5.1f}d | {cs27:>6.0f}")
+    print(
+        f"  {'V26 baseline':<22} | {m_v26['trades']:>5} {m_v26['wr']:>5.1f}% {m_v26['avg_pnl']:>+7.2f}% {m_v26['total_pnl']:>+9.1f}% {m_v26['pf']:>5.2f} {m_v26['max_loss']:>+7.1f}% {m_v26['avg_hold']:>5.1f}d | {cs26:>6.0f}"
+    )
+    print(
+        f"  {'V27 selected':<22} | {m_v27['trades']:>5} {m_v27['wr']:>5.1f}% {m_v27['avg_pnl']:>+7.2f}% {m_v27['total_pnl']:>+9.1f}% {m_v27['pf']:>5.2f} {m_v27['max_loss']:>+7.1f}% {m_v27['avg_hold']:>5.1f}d | {cs27:>6.0f}"
+    )
     print("  " + "-" * 102)
-    print(f"  Delta vs V26:  TotPnL={m_v27['total_pnl']-m_v26['total_pnl']:+.1f}%, WR={m_v27['wr']-m_v26['wr']:+.2f}%, PF={m_v27['pf']-m_v26['pf']:+.3f}, Comp={cs27-cs26:+.0f}")
-    print(f"  Delta vs Rule: TotPnL={m_v27['total_pnl']-m_rule['total_pnl']:+.1f}%")
+    print(
+        f"  Delta vs V26:  TotPnL={m_v27['total_pnl'] - m_v26['total_pnl']:+.1f}%, WR={m_v27['wr'] - m_v26['wr']:+.2f}%, PF={m_v27['pf'] - m_v26['pf']:+.3f}, Comp={cs27 - cs26:+.0f}"
+    )
+    print(f"  Delta vs Rule: TotPnL={m_v27['total_pnl'] - m_rule['total_pnl']:+.1f}%")
     print(f"  Time: {dt:.1f}s")
 
     df_v27 = pd.DataFrame(t_v27)
@@ -104,6 +139,6 @@ if __name__ == "__main__":
         df_v27.to_csv(os.path.join(OUT, "trades_v27.csv"), index=False)
         print(f"\n  Saved {len(df_v27)} V27 trades to results/trades_v27.csv")
 
-    print(f"\n{'='*120}")
+    print(f"\n{'=' * 120}")
     print("  DONE")
-    print(f"{'='*120}")
+    print(f"{'=' * 120}")

@@ -2,12 +2,15 @@
 
 Balanced profile chiem 16/21 symbol thua.
 """
-import os, sys
+
+import os
+import sys
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from experiments.run_v32_final import backtest_v32
 from src.backtest.defaults import SYMBOL_PROFILES
 
+from experiments.run_v32_final import backtest_v32
 
 V38B3_BASE_FLAGS = dict(
     v32_hap_pre_trigger=0.04,

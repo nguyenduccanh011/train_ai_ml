@@ -26,18 +26,21 @@ V29 = V28 backtest engine + early_wave target + leading_v3 features.
 The model-layer change (target re-labeling) was the breakthrough that
 engine-layer patches in V29 ablation could not deliver.
 """
-import os, sys, time
+
+import os
+import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import src.safe_io  # noqa: F401
-
 import pandas as pd
-from src.experiment_runner import run_test as run_test_base, run_rule_test
-from src.evaluation.scoring import calc_metrics, composite_score as comp_score
+import src.safe_io  # noqa: F401
 from src.config_loader import get_pipeline_symbols
-from experiments.run_v28 import backtest_v28
+from src.evaluation.scoring import calc_metrics
+from src.evaluation.scoring import composite_score as comp_score
+from src.experiment_runner import run_rule_test
+from src.experiment_runner import run_test as run_test_base
 
+from experiments.run_v28 import backtest_v28
 
 V29_TARGET = dict(
     type="early_wave",
@@ -58,6 +61,7 @@ def backtest_v29(y_pred, returns, df_test, feature_cols, **kwargs):
 
 if __name__ == "__main__":
     import argparse
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--symbols", type=str, default="")
     args = parser.parse_args()
@@ -75,28 +79,65 @@ if __name__ == "__main__":
     print(f"  Features: {V29_FEATURE_SET}")
     print()
 
-    t_rule = run_rule_test(SYMBOLS); m_rule = calc_metrics(t_rule)
+    t_rule = run_rule_test(SYMBOLS)
+    m_rule = calc_metrics(t_rule)
 
-    t_v28 = run_test_base(SYMBOLS, True, True, False, False, True, True, True, True, True, True,
-                          backtest_fn=backtest_v28)
-    m_v28 = calc_metrics(t_v28); cs_v28 = comp_score(m_v28, t_v28)
+    t_v28 = run_test_base(
+        SYMBOLS,
+        True,
+        True,
+        False,
+        False,
+        True,
+        True,
+        True,
+        True,
+        True,
+        True,
+        backtest_fn=backtest_v28,
+    )
+    m_v28 = calc_metrics(t_v28)
+    cs_v28 = comp_score(m_v28, t_v28)
 
-    t_v29 = run_test_base(SYMBOLS, True, True, False, False, True, True, True, True, True, True,
-                          backtest_fn=backtest_v29,
-                          feature_set=V29_FEATURE_SET,
-                          target_override=V29_TARGET)
-    m_v29 = calc_metrics(t_v29); cs_v29 = comp_score(m_v29, t_v29)
+    t_v29 = run_test_base(
+        SYMBOLS,
+        True,
+        True,
+        False,
+        False,
+        True,
+        True,
+        True,
+        True,
+        True,
+        True,
+        backtest_fn=backtest_v29,
+        feature_set=V29_FEATURE_SET,
+        target_override=V29_TARGET,
+    )
+    m_v29 = calc_metrics(t_v29)
+    cs_v29 = comp_score(m_v29, t_v29)
 
-    print(f"\n  {'Config':<22} | {'#':>5} {'WR':>6} {'AvgPnL':>8} {'TotPnL':>10} {'PF':>6} {'MaxLoss':>8} {'AvgH':>6} | {'Comp':>7}")
+    print(
+        f"\n  {'Config':<22} | {'#':>5} {'WR':>6} {'AvgPnL':>8} {'TotPnL':>10} {'PF':>6} {'MaxLoss':>8} {'AvgH':>6} | {'Comp':>7}"
+    )
     print("  " + "-" * 102)
-    print(f"  {'Rule baseline':<22} | {m_rule['trades']:>5} {m_rule['wr']:>5.1f}% {m_rule['avg_pnl']:>+7.2f}% {m_rule['total_pnl']:>+9.1f}% {m_rule['pf']:>5.2f} {m_rule['max_loss']:>+7.1f}% {m_rule['avg_hold']:>5.1f}d |")
-    print(f"  {'V28 (engine peak)':<22} | {m_v28['trades']:>5} {m_v28['wr']:>5.1f}% {m_v28['avg_pnl']:>+7.2f}% {m_v28['total_pnl']:>+9.1f}% {m_v28['pf']:>5.2f} {m_v28['max_loss']:>+7.1f}% {m_v28['avg_hold']:>5.1f}d | {cs_v28:>6.0f}")
-    print(f"  {'V29 (retrain final)':<22} | {m_v29['trades']:>5} {m_v29['wr']:>5.1f}% {m_v29['avg_pnl']:>+7.2f}% {m_v29['total_pnl']:>+9.1f}% {m_v29['pf']:>5.2f} {m_v29['max_loss']:>+7.1f}% {m_v29['avg_hold']:>5.1f}d | {cs_v29:>6.0f}")
+    print(
+        f"  {'Rule baseline':<22} | {m_rule['trades']:>5} {m_rule['wr']:>5.1f}% {m_rule['avg_pnl']:>+7.2f}% {m_rule['total_pnl']:>+9.1f}% {m_rule['pf']:>5.2f} {m_rule['max_loss']:>+7.1f}% {m_rule['avg_hold']:>5.1f}d |"
+    )
+    print(
+        f"  {'V28 (engine peak)':<22} | {m_v28['trades']:>5} {m_v28['wr']:>5.1f}% {m_v28['avg_pnl']:>+7.2f}% {m_v28['total_pnl']:>+9.1f}% {m_v28['pf']:>5.2f} {m_v28['max_loss']:>+7.1f}% {m_v28['avg_hold']:>5.1f}d | {cs_v28:>6.0f}"
+    )
+    print(
+        f"  {'V29 (retrain final)':<22} | {m_v29['trades']:>5} {m_v29['wr']:>5.1f}% {m_v29['avg_pnl']:>+7.2f}% {m_v29['total_pnl']:>+9.1f}% {m_v29['pf']:>5.2f} {m_v29['max_loss']:>+7.1f}% {m_v29['avg_hold']:>5.1f}d | {cs_v29:>6.0f}"
+    )
     print("  " + "-" * 102)
     print(f"  Δ comp   vs V28: {cs_v29 - cs_v28:+.0f}")
     print(f"  Δ WR     vs V28: {m_v29['wr'] - m_v28['wr']:+.2f} pp")
     print(f"  Δ PF     vs V28: {m_v29['pf'] - m_v28['pf']:+.3f}")
-    print(f"  Δ MaxLoss vs V28: {m_v29['max_loss'] - m_v28['max_loss']:+.2f} pp (less negative = better)")
+    print(
+        f"  Δ MaxLoss vs V28: {m_v29['max_loss'] - m_v28['max_loss']:+.2f} pp (less negative = better)"
+    )
 
     df_v29 = pd.DataFrame(t_v29)
     if len(df_v29) > 0:

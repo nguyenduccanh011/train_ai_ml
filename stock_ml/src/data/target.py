@@ -2,9 +2,11 @@
 Target variable generation for stock prediction.
 Supports trend regime classification, return-based targets, etc.
 """
-import pandas as pd
+
+from typing import Any
+
 import numpy as np
-from typing import Dict, Any
+import pandas as pd
 
 
 class TargetGenerator:
@@ -54,8 +56,8 @@ class TargetGenerator:
         elif self.target_type == "early_wave_v2":
             df = self._early_wave_v2(df)
         elif self.target_type == "early_wave_dual":
-            df = self._early_wave(df)              # primary buy target
-            df = self._early_exit_signal(df)       # adds target_sell column
+            df = self._early_wave(df)  # primary buy target
+            df = self._early_exit_signal(df)  # adds target_sell column
         else:
             raise ValueError(f"Unknown target type: {self.target_type}")
 
@@ -74,13 +76,9 @@ class TargetGenerator:
             df["_sma_short"] = df["close"].rolling(self.short_window).mean()
             df["_sma_long"] = df["close"].rolling(self.long_window).mean()
 
-            conditions_up = (
-                (df["_sma_short"] > df["_sma_long"])
-                & (df["close"] > df["_sma_short"])
-            )
-            conditions_down = (
-                (df["_sma_short"] < df["_sma_long"])
-                & (df["close"] < df["_sma_short"])
+            conditions_up = (df["_sma_short"] > df["_sma_long"]) & (df["close"] > df["_sma_short"])
+            conditions_down = (df["_sma_short"] < df["_sma_long"]) & (
+                df["close"] < df["_sma_short"]
             )
 
             if self.n_classes == 3:
@@ -118,17 +116,17 @@ class TargetGenerator:
         df["_prev_roll_low"] = df["_roll_low"].shift(window)
 
         hh = df["_roll_high"] > df["_prev_roll_high"]  # higher high
-        hl = df["_roll_low"] > df["_prev_roll_low"]    # higher low
+        hl = df["_roll_low"] > df["_prev_roll_low"]  # higher low
         lh = df["_roll_high"] < df["_prev_roll_high"]  # lower high
-        ll = df["_roll_low"] < df["_prev_roll_low"]    # lower low
+        ll = df["_roll_low"] < df["_prev_roll_low"]  # lower low
 
         df["target"] = 0
-        df.loc[hh & hl, "target"] = 1   # UPTREND
+        df.loc[hh & hl, "target"] = 1  # UPTREND
         df.loc[lh & ll, "target"] = -1  # DOWNTREND
 
-        df.drop(columns=[
-            "_roll_high", "_roll_low", "_prev_roll_high", "_prev_roll_low"
-        ], inplace=True)
+        df.drop(
+            columns=["_roll_high", "_roll_low", "_prev_roll_high", "_prev_roll_low"], inplace=True
+        )
 
         return df
 
@@ -154,12 +152,12 @@ class TargetGenerator:
     def _forward_risk_reward(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         Forward-looking target: Is today a good BUY POINT?
-        
+
         Looks N days ahead and checks:
         - Max potential gain >= gain_threshold
         - Max potential loss > -loss_threshold (limited downside)
         - Risk/reward ratio >= rr_threshold
-        
+
         BUY=1 if all conditions met, else 0.
         """
         close = df["close"].values
@@ -168,24 +166,24 @@ class TargetGenerator:
         gain_thresh = self.gain_threshold
         loss_thresh = self.loss_threshold
         rr_thresh = self.rr_threshold
-        
+
         targets = np.full(n, 0.0)
-        
+
         for i in range(n - fw):
-            future = close[i+1 : i+1+fw]
+            future = close[i + 1 : i + 1 + fw]
             if len(future) == 0:
                 continue
-            
+
             max_gain = (np.max(future) - close[i]) / close[i]
             max_loss = (np.min(future) - close[i]) / close[i]
-            
+
             # Risk-reward ratio
             abs_loss = abs(max_loss) if max_loss < 0 else 0.001
             rr = max_gain / abs_loss
-            
+
             if max_gain >= gain_thresh and max_loss > -loss_thresh and rr >= rr_thresh:
                 targets[i] = 1
-        
+
         df["target"] = targets
         # Mark last fw rows as NaN (no future data)
         df.loc[df.index[-fw:], "target"] = np.nan
@@ -244,14 +242,20 @@ class TargetGenerator:
                 past_h = np.max(high[i - back : i + 1])
                 past_l = np.min(low[i - back : i + 1])
                 past_range = (past_h - past_l) / close[i] if close[i] > 0 else 1
-                past_ret = (close[i] - close[i - back]) / close[i - back] if close[i - back] > 0 else 0
+                past_ret = (
+                    (close[i] - close[i - back]) / close[i - back] if close[i - back] > 0 else 0
+                )
                 is_accumulating = (past_range < 0.12) and (abs(past_ret) < 0.08)
             else:
                 is_accumulating = False
 
             # === downtrend check ===
             if i >= down_win:
-                long_ret = (close[i] - close[i - down_win]) / close[i - down_win] if close[i - down_win] > 0 else 0
+                long_ret = (
+                    (close[i] - close[i - down_win]) / close[i - down_win]
+                    if close[i - down_win] > 0
+                    else 0
+                )
                 is_downtrend = long_ret < -0.10
             else:
                 is_downtrend = False
@@ -328,15 +332,24 @@ class TargetGenerator:
 
             # Downtrend
             if i >= down_win:
-                long_ret = (close[i] - close[i - down_win]) / close[i - down_win] if close[i - down_win] > 0 else 0
+                long_ret = (
+                    (close[i] - close[i - down_win]) / close[i - down_win]
+                    if close[i - down_win] > 0
+                    else 0
+                )
                 is_downtrend = long_ret < -0.10
             else:
                 is_downtrend = False
 
             # Label
-            if is_accumulating and max_gain >= gain_thresh and max_loss > -loss_thresh:
-                targets[i] = 1.0
-            elif rule_trigger and max_gain >= gain_thresh * 0.7 and max_loss > -loss_thresh * 1.3:
+            if (
+                is_accumulating
+                and max_gain >= gain_thresh
+                and max_loss > -loss_thresh
+                or rule_trigger
+                and max_gain >= gain_thresh * 0.7
+                and max_loss > -loss_thresh * 1.3
+            ):
                 targets[i] = 1.0
             elif self.n_classes == 3 and is_downtrend and max_gain < 0.03:
                 targets[i] = -1.0
@@ -409,7 +422,7 @@ class TargetGenerator:
         return result.dropna(subset=["target_sell"])
 
     @classmethod
-    def from_config(cls, config: Dict[str, Any]) -> "TargetGenerator":
+    def from_config(cls, config: dict[str, Any]) -> "TargetGenerator":
         """Create from config dict."""
         tgt_cfg = config.get("target", config)
         return cls(

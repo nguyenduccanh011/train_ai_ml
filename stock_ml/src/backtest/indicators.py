@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from .defaults import FEATURE_NAMES, FEATURE_DEFAULTS, SYMBOL_PROFILES
+from .defaults import FEATURE_DEFAULTS, FEATURE_NAMES, SYMBOL_PROFILES
 
 
 def extract_features(df_test, n):
@@ -60,7 +60,7 @@ def compute_indicators(df_test, mod_e=True):
     days_since_low_10 = np.zeros(n, dtype=int)
     for _i in range(1, n):
         lo10_start = max(0, _i - 10)
-        lo10_idx = lo10_start + int(np.argmin(close[lo10_start:_i + 1]))
+        lo10_idx = lo10_start + int(np.argmin(close[lo10_start : _i + 1]))
         days_since_low_10[_i] = _i - lo10_idx
 
     ret_20d = np.zeros(n)
@@ -89,7 +89,7 @@ def compute_indicators(df_test, mod_e=True):
             start = i - bars + 1
             if start < 0:
                 continue
-            band = np.max(high[start:i + 1]) - np.min(low[start:i + 1])
+            band = np.max(high[start : i + 1]) - np.min(low[start : i + 1])
             ref = close[i] if close[i] > 0 else 1.0
             if band / ref < 0.05:
                 stabilized_sideways[i] = True
@@ -97,8 +97,8 @@ def compute_indicators(df_test, mod_e=True):
 
     consolidation_breakout = np.zeros(n, dtype=bool)
     for i in range(10, n):
-        prev_high = np.max(high[i - 10:i])
-        prev_low = np.min(low[i - 10:i])
+        prev_high = np.max(high[i - 10 : i])
+        prev_low = np.min(low[i - 10 : i])
         ref = close[i - 1] if close[i - 1] > 0 else close[i]
         tight_range = ((prev_high - prev_low) / ref) < 0.08 if ref > 0 else False
         vol_ok = volume[i] > 1.2 * avg_vol20[i] if not np.isnan(avg_vol20[i]) else False
@@ -108,15 +108,18 @@ def compute_indicators(df_test, mod_e=True):
     secondary_breakout = np.zeros(n, dtype=bool)
     if mod_e:
         for i in range(10, n):
-            prev_high = np.max(high[i - 10:i])
-            prev_low = np.min(low[i - 10:i])
+            prev_high = np.max(high[i - 10 : i])
+            prev_low = np.min(low[i - 10 : i])
             ref = close[i - 1] if close[i - 1] > 0 else close[i]
             tight_range = ((prev_high - prev_low) / ref) < 0.10 if ref > 0 else False
-            uptrend_macro = (not np.isnan(sma20[i]) and not np.isnan(sma50[i])
-                             and sma20[i] > sma50[i])
+            uptrend_macro = (
+                not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and sma20[i] > sma50[i]
+            )
             vol_threshold = 1.1 if uptrend_macro else 1.2
-            vol_ok = volume[i] > vol_threshold * avg_vol20[i] if not np.isnan(avg_vol20[i]) else False
-            max_high_5d = np.max(high[max(0, i - 5):i])
+            vol_ok = (
+                volume[i] > vol_threshold * avg_vol20[i] if not np.isnan(avg_vol20[i]) else False
+            )
+            max_high_5d = np.max(high[max(0, i - 5) : i])
             breakout_5d = close[i] > max_high_5d
             if tight_range and breakout_5d and vol_ok and uptrend_macro:
                 secondary_breakout[i] = True
@@ -136,7 +139,9 @@ def compute_indicators(df_test, mod_e=True):
         bullish = close[i] > opn[i] + rng * 0.5 and close[i] > close[i - 1]
         if not bullish:
             continue
-        oversold = (not np.isnan(rsi14[i - 1]) and rsi14[i - 1] < 35) or drop_from_peak_20[i] <= -0.18
+        oversold = (not np.isnan(rsi14[i - 1]) and rsi14[i - 1] < 35) or drop_from_peak_20[
+            i
+        ] <= -0.18
         if not oversold:
             continue
         if np.isnan(avg_vol20[i]) or volume[i] < 1.3 * avg_vol20[i]:
@@ -161,10 +166,16 @@ def compute_indicators(df_test, mod_e=True):
 
     rule_signal = np.zeros(n, dtype=int)
     for i in range(20, n):
-        if (not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and
-            close[i] > sma20[i] and sma20[i] > sma50[i] and
-            rsi14[i] > 50 and rsi14[i] < 80 and
-            not np.isnan(avg_vol20[i]) and volume[i] > 0.8 * avg_vol20[i]):
+        if (
+            not np.isnan(sma20[i])
+            and not np.isnan(sma50[i])
+            and close[i] > sma20[i]
+            and sma20[i] > sma50[i]
+            and rsi14[i] > 50
+            and rsi14[i] < 80
+            and not np.isnan(avg_vol20[i])
+            and volume[i] > 0.8 * avg_vol20[i]
+        ):
             rule_signal[i] = 1
 
     rule_consecutive = np.zeros(n, dtype=int)
@@ -180,23 +191,44 @@ def compute_indicators(df_test, mod_e=True):
     atr_ratio_arr = np.where((close > 0) & (~np.isnan(atr14)), atr14 / close, 0.03)
     atr_pctile = pd.Series(atr_ratio_arr).rolling(60, min_periods=20).rank(pct=True).values
 
-    date_col = "date" if "date" in df_test.columns else ("timestamp" if "timestamp" in df_test.columns else None)
+    date_col = (
+        "date"
+        if "date" in df_test.columns
+        else ("timestamp" if "timestamp" in df_test.columns else None)
+    )
     dates = df_test[date_col].values if date_col else np.arange(n)
     symbols = df_test["symbol"].values if "symbol" in df_test.columns else ["?"] * n
 
     return {
         "n": n,
-        "close": close, "opn": opn, "high": high, "low": low, "volume": volume,
-        "sma10": sma10, "sma20": sma20, "sma50": sma50, "sma100": sma100,
-        "ema8": ema8, "ema12": ema12, "ema26": ema26,
-        "macd_line": macd_line, "macd_signal": macd_signal, "macd_hist": macd_hist,
+        "close": close,
+        "opn": opn,
+        "high": high,
+        "low": low,
+        "volume": volume,
+        "sma10": sma10,
+        "sma20": sma20,
+        "sma50": sma50,
+        "sma100": sma100,
+        "ema8": ema8,
+        "ema12": ema12,
+        "ema26": ema26,
+        "macd_line": macd_line,
+        "macd_signal": macd_signal,
+        "macd_hist": macd_hist,
         "atr14": atr14,
-        "local_low_20": local_low_20, "avg_vol20": avg_vol20,
-        "ret_2d": ret_2d, "ret_3d": ret_3d,
-        "ret_acceleration": ret_acceleration, "days_since_low_10": days_since_low_10,
-        "ret_5d": ret_5d, "ret_20d": ret_20d, "ret_60d": ret_60d,
+        "local_low_20": local_low_20,
+        "avg_vol20": avg_vol20,
+        "ret_2d": ret_2d,
+        "ret_3d": ret_3d,
+        "ret_acceleration": ret_acceleration,
+        "days_since_low_10": days_since_low_10,
+        "ret_5d": ret_5d,
+        "ret_20d": ret_20d,
+        "ret_60d": ret_60d,
         "dist_sma20": dist_sma20,
-        "roll_high_20": roll_high_20, "drop_from_peak_20": drop_from_peak_20,
+        "roll_high_20": roll_high_20,
+        "drop_from_peak_20": drop_from_peak_20,
         "rsi14": rsi14,
         "stabilized_sideways": stabilized_sideways,
         "consolidation_breakout": consolidation_breakout,
@@ -210,7 +242,8 @@ def compute_indicators(df_test, mod_e=True):
         "dist_from_52w_high": dist_from_52w_high,
         "atr_ratio_arr": atr_ratio_arr,
         "atr_pctile": atr_pctile,
-        "dates": dates, "symbols": symbols,
+        "dates": dates,
+        "symbols": symbols,
         "feat_arrays": feat_arrays,
     }
 
@@ -252,38 +285,78 @@ def get_regime_adapter(i, trend, ind, patch_symbol_tuning=False):
     low_vol = bb_i < 0.35
     weak_move = abs(ret_20d[i]) < 0.05
     choppy_regime = low_vol and weak_move and trend == "weak"
-    atr_ratio = (atr14[i] / close[i]) if (i < n and close[i] > 0 and not np.isnan(atr14[i])) else 0.03
+    atr_ratio = (
+        (atr14[i] / close[i]) if (i < n and close[i] > 0 and not np.isnan(atr14[i])) else 0.03
+    )
 
     params = {
-        "profile": profile, "dp_floor": 0.020, "ret5_hot": 0.060,
-        "size_mult": 1.0, "base_confirm_bars": 3, "exit_score_threshold": 2.0,
+        "profile": profile,
+        "dp_floor": 0.020,
+        "ret5_hot": 0.060,
+        "size_mult": 1.0,
+        "base_confirm_bars": 3,
+        "exit_score_threshold": 2.0,
         "choppy_regime": choppy_regime,
     }
     if profile == "high_beta":
-        params.update({"dp_floor": 0.015, "ret5_hot": 0.090, "size_mult": 0.98,
-                       "base_confirm_bars": 2, "exit_score_threshold": 2.35})
+        params.update(
+            {
+                "dp_floor": 0.015,
+                "ret5_hot": 0.090,
+                "size_mult": 0.98,
+                "base_confirm_bars": 2,
+                "exit_score_threshold": 2.35,
+            }
+        )
     elif profile == "bank":
-        params.update({"dp_floor": 0.020, "ret5_hot": 0.070, "size_mult": 0.92,
-                       "base_confirm_bars": 3, "exit_score_threshold": 2.2})
+        params.update(
+            {
+                "dp_floor": 0.020,
+                "ret5_hot": 0.070,
+                "size_mult": 0.92,
+                "base_confirm_bars": 3,
+                "exit_score_threshold": 2.2,
+            }
+        )
     elif profile == "defensive":
-        params.update({"dp_floor": 0.025, "ret5_hot": 0.050, "size_mult": 0.85,
-                       "base_confirm_bars": 3, "exit_score_threshold": 1.8})
+        params.update(
+            {
+                "dp_floor": 0.025,
+                "ret5_hot": 0.050,
+                "size_mult": 0.85,
+                "base_confirm_bars": 3,
+                "exit_score_threshold": 1.8,
+            }
+        )
     elif profile == "momentum":
-        params.update({"dp_floor": 0.018, "ret5_hot": 0.080, "size_mult": 0.92,
-                       "base_confirm_bars": 2, "exit_score_threshold": 2.2})
+        params.update(
+            {
+                "dp_floor": 0.018,
+                "ret5_hot": 0.080,
+                "size_mult": 0.92,
+                "base_confirm_bars": 2,
+                "exit_score_threshold": 2.2,
+            }
+        )
     if choppy_regime:
-        params["dp_floor"] += 0.004; params["size_mult"] *= 0.65
-        params["base_confirm_bars"] += 1; params["exit_score_threshold"] += 0.4
+        params["dp_floor"] += 0.004
+        params["size_mult"] *= 0.65
+        params["base_confirm_bars"] += 1
+        params["exit_score_threshold"] += 0.4
     if atr_ratio > 0.040:
-        params["size_mult"] *= 0.85; params["exit_score_threshold"] += 0.25
+        params["size_mult"] *= 0.85
+        params["exit_score_threshold"] += 0.25
     if atr_ratio > 0.055:
-        params["size_mult"] *= 0.90; params["base_confirm_bars"] += 1
+        params["size_mult"] *= 0.90
+        params["base_confirm_bars"] += 1
         params["exit_score_threshold"] += 0.20
     if trend == "strong":
         params["dp_floor"] = max(0.012, params["dp_floor"] - 0.003)
-        params["ret5_hot"] += 0.01; params["exit_score_threshold"] += 0.2
+        params["ret5_hot"] += 0.01
+        params["exit_score_threshold"] += 0.2
     if sym in ("HPG", "VND"):
-        params["size_mult"] *= 0.86; params["exit_score_threshold"] += 0.15
+        params["size_mult"] *= 0.86
+        params["exit_score_threshold"] += 0.15
         if atr_ratio > 0.045:
             params["base_confirm_bars"] += 1
     if patch_symbol_tuning:

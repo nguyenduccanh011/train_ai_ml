@@ -9,11 +9,13 @@ V38b changes (vs V34/V37a):
   - HAP trigger 0.05 -> 0.03, floor -0.05 -> -0.02 (nhay gap 1.5x)
   - Them stall_exit: hold>=6 ngay + max_profit<2% + cur_ret<-2% -> exit
 """
-import os, sys
+
+import os
+import sys
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from experiments.run_v32_final import backtest_v32
-
 
 V38B_FLAGS = dict(
     # HAP nhay hon

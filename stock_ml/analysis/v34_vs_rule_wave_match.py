@@ -3,16 +3,17 @@
 For each symbol, pair v34 trades with rule trades that overlap in time
 ([entry_date, exit_date] intersect). Compute entry/exit lag + price diff.
 """
+
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-import pandas as pd
 import numpy as np
-from src.env import resolve_data_dir
+import pandas as pd
 from src.data.loader import DataLoader
+from src.env import resolve_data_dir
 
 
 def load_v34() -> pd.DataFrame:
@@ -54,8 +55,16 @@ def attach_prices(df: pd.DataFrame, loader: DataLoader, label: str) -> pd.DataFr
             xdate = df.at[idx, "exit_date"]
             try:
                 # Find nearest available bar (forward-fill if exact missing)
-                ep = ohlcv.loc[ohlcv.index <= edate, "close"].iloc[-1] if (ohlcv.index <= edate).any() else np.nan
-                xp = ohlcv.loc[ohlcv.index <= xdate, "close"].iloc[-1] if (ohlcv.index <= xdate).any() else np.nan
+                ep = (
+                    ohlcv.loc[ohlcv.index <= edate, "close"].iloc[-1]
+                    if (ohlcv.index <= edate).any()
+                    else np.nan
+                )
+                xp = (
+                    ohlcv.loc[ohlcv.index <= xdate, "close"].iloc[-1]
+                    if (ohlcv.index <= xdate).any()
+                    else np.nan
+                )
                 out.at[idx, "entry_price"] = ep
                 out.at[idx, "exit_price"] = xp
             except Exception:
@@ -77,41 +86,57 @@ def match_same_wave(v34: pd.DataFrame, rule: pd.DataFrame) -> pd.DataFrame:
             for ri, rt in r_g.iterrows():
                 # Overlap check
                 if vt["entry_date"] <= rt["exit_date"] and rt["entry_date"] <= vt["exit_date"]:
-                    pairs.append({
-                        "symbol": sym,
-                        "v34_entry": vt["entry_date"],
-                        "v34_exit": vt["exit_date"],
-                        "v34_entry_price": vt.get("entry_price", np.nan),
-                        "v34_exit_price": vt.get("exit_price", np.nan),
-                        "v34_pnl": vt["pnl_pct"],
-                        "v34_exit_reason": vt["exit_reason"],
-                        "rule_entry": rt["entry_date"],
-                        "rule_exit": rt["exit_date"],
-                        "rule_entry_price": rt["entry_price"],
-                        "rule_exit_price": rt["exit_price"],
-                        "rule_pnl": rt["pnl_pct"],
-                        "entry_lag_days": (vt["entry_date"] - rt["entry_date"]).days,
-                        "exit_lag_days": (vt["exit_date"] - rt["exit_date"]).days,
-                        "entry_price_diff_pct": (vt.get("entry_price", np.nan) - rt["entry_price"]) / rt["entry_price"] * 100 if rt["entry_price"] > 0 else np.nan,
-                        "pnl_diff": vt["pnl_pct"] - rt["pnl_pct"],
-                    })
+                    pairs.append(
+                        {
+                            "symbol": sym,
+                            "v34_entry": vt["entry_date"],
+                            "v34_exit": vt["exit_date"],
+                            "v34_entry_price": vt.get("entry_price", np.nan),
+                            "v34_exit_price": vt.get("exit_price", np.nan),
+                            "v34_pnl": vt["pnl_pct"],
+                            "v34_exit_reason": vt["exit_reason"],
+                            "rule_entry": rt["entry_date"],
+                            "rule_exit": rt["exit_date"],
+                            "rule_entry_price": rt["entry_price"],
+                            "rule_exit_price": rt["exit_price"],
+                            "rule_pnl": rt["pnl_pct"],
+                            "entry_lag_days": (vt["entry_date"] - rt["entry_date"]).days,
+                            "exit_lag_days": (vt["exit_date"] - rt["exit_date"]).days,
+                            "entry_price_diff_pct": (
+                                vt.get("entry_price", np.nan) - rt["entry_price"]
+                            )
+                            / rt["entry_price"]
+                            * 100
+                            if rt["entry_price"] > 0
+                            else np.nan,
+                            "pnl_diff": vt["pnl_pct"] - rt["pnl_pct"],
+                        }
+                    )
                     matched_v.add(vi)
                     matched_r.add(ri)
         # Track missed (rule trades with no v34 overlap)
         for ri, rt in r_g.iterrows():
             if ri not in matched_r:
-                pairs.append({
-                    "symbol": sym,
-                    "v34_entry": pd.NaT, "v34_exit": pd.NaT,
-                    "v34_entry_price": np.nan, "v34_exit_price": np.nan,
-                    "v34_pnl": np.nan, "v34_exit_reason": "MISSED",
-                    "rule_entry": rt["entry_date"], "rule_exit": rt["exit_date"],
-                    "rule_entry_price": rt["entry_price"], "rule_exit_price": rt["exit_price"],
-                    "rule_pnl": rt["pnl_pct"],
-                    "entry_lag_days": np.nan, "exit_lag_days": np.nan,
-                    "entry_price_diff_pct": np.nan,
-                    "pnl_diff": -rt["pnl_pct"],
-                })
+                pairs.append(
+                    {
+                        "symbol": sym,
+                        "v34_entry": pd.NaT,
+                        "v34_exit": pd.NaT,
+                        "v34_entry_price": np.nan,
+                        "v34_exit_price": np.nan,
+                        "v34_pnl": np.nan,
+                        "v34_exit_reason": "MISSED",
+                        "rule_entry": rt["entry_date"],
+                        "rule_exit": rt["exit_date"],
+                        "rule_entry_price": rt["entry_price"],
+                        "rule_exit_price": rt["exit_price"],
+                        "rule_pnl": rt["pnl_pct"],
+                        "entry_lag_days": np.nan,
+                        "exit_lag_days": np.nan,
+                        "entry_price_diff_pct": np.nan,
+                        "pnl_diff": -rt["pnl_pct"],
+                    }
+                )
     return pd.DataFrame(pairs)
 
 
@@ -147,7 +172,12 @@ def main():
     loader = DataLoader(data_dir)
 
     # Restrict to the 12 worst symbols + DCM (per A1) to keep it fast
-    worst = pd.read_csv(out_dir / "v34_vs_rule_symbol.csv").sort_values("comp_diff").head(20)["symbol"].tolist()
+    worst = (
+        pd.read_csv(out_dir / "v34_vs_rule_symbol.csv")
+        .sort_values("comp_diff")
+        .head(20)["symbol"]
+        .tolist()
+    )
     focus_syms = sorted(set(worst + ["DCM", "PVS", "GAS", "PLX", "BCM", "PVD", "OCB", "EIB"]))
     print(f"Focus symbols ({len(focus_syms)}): {focus_syms}")
 
@@ -173,18 +203,38 @@ def main():
 
     # Examples per pattern
     for pattern in ["MISSED_WAVE", "LATE_ENTRY_WORSE_PRICE", "EARLY_EXIT_WORSE", "LATE_EXIT_WORSE"]:
-        sub = pairs[pairs["pattern"].str.contains(pattern, na=False)].sort_values("pnl_diff").head(15)
+        sub = (
+            pairs[pairs["pattern"].str.contains(pattern, na=False)].sort_values("pnl_diff").head(15)
+        )
         if len(sub):
             print(f"\n=== Top 15 {pattern} (by worst pnl_diff) ===")
-            cols = ["symbol", "rule_entry", "rule_pnl", "v34_entry", "v34_pnl",
-                    "entry_lag_days", "entry_price_diff_pct", "exit_lag_days", "pnl_diff"]
+            cols = [
+                "symbol",
+                "rule_entry",
+                "rule_pnl",
+                "v34_entry",
+                "v34_pnl",
+                "entry_lag_days",
+                "entry_price_diff_pct",
+                "exit_lag_days",
+                "pnl_diff",
+            ]
             print(sub[cols].to_string(index=False))
 
     # DCM specifically
     print("\n=== DCM all pairs ===")
     dcm = pairs[pairs["symbol"] == "DCM"].sort_values("rule_entry")
-    cols = ["rule_entry", "rule_entry_price", "rule_pnl", "v34_entry", "v34_entry_price", "v34_pnl",
-            "entry_lag_days", "entry_price_diff_pct", "pattern"]
+    cols = [
+        "rule_entry",
+        "rule_entry_price",
+        "rule_pnl",
+        "v34_entry",
+        "v34_entry_price",
+        "v34_pnl",
+        "entry_lag_days",
+        "entry_price_diff_pct",
+        "pattern",
+    ]
     print(dcm[cols].to_string(index=False))
 
 

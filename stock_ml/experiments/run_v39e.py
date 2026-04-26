@@ -6,11 +6,13 @@ Giai quyet dong thoi 2 van de lon nhat cua V37a:
 
 Ky vong: dot pha vi giai quyet ca entry hold qua ngan va HAP pre-empt dau song.
 """
-import os, sys
+
+import os
+import sys
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from experiments.run_v37a import backtest_v37a
-
 
 V39E_FLAGS = dict(
     v39a_signal_exit_min_hold=35,

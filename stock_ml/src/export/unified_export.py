@@ -9,6 +9,7 @@ Usage:
     python -m src.export.unified_export --versions v24,v23 # Export specific versions
     python -m src.export.unified_export --include-retired   # Include retired models
 """
+
 import json
 import os
 import sys
@@ -20,15 +21,12 @@ import pandas as pd
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 
 import src.safe_io  # noqa: F401 — fix UnicodeEncodeError on Windows console
-
 from src.config_loader import (
-    get_active_models,
     get_all_models,
     get_exit_abbreviations,
     get_model_config,
-    get_visualization_config,
 )
-from src.env import get_results_dir, get_experiment_dir
+from src.env import get_experiment_dir, get_results_dir
 
 
 def make_markers(trades, version_key, color, marker_shape="arrowUp"):
@@ -46,25 +44,29 @@ def make_markers(trades, version_key, color, marker_shape="arrowUp"):
         tag = abbrevs.get(reason, reason[:2].upper() if reason else "")
 
         if ed:
-            markers.append({
-                "time": ed,
-                "position": "belowBar",
-                "color": color,
-                "shape": marker_shape,
-                "text": f"{label} Buy",
-                "size": 1,
-                "method": version_key,
-            })
+            markers.append(
+                {
+                    "time": ed,
+                    "position": "belowBar",
+                    "color": color,
+                    "shape": marker_shape,
+                    "text": f"{label} Buy",
+                    "size": 1,
+                    "method": version_key,
+                }
+            )
         if xd:
-            markers.append({
-                "time": xd,
-                "position": "aboveBar",
-                "color": win_color if pnl >= 0 else loss_color,
-                "shape": "arrowDown",
-                "text": f"{label} {pnl:+.1f}%{(' ' + tag) if tag else ''}",
-                "size": 1,
-                "method": version_key,
-            })
+            markers.append(
+                {
+                    "time": xd,
+                    "position": "aboveBar",
+                    "color": win_color if pnl >= 0 else loss_color,
+                    "shape": "arrowDown",
+                    "text": f"{label} {pnl:+.1f}%{(' ' + tag) if tag else ''}",
+                    "size": 1,
+                    "method": version_key,
+                }
+            )
     return markers
 
 
@@ -72,11 +74,22 @@ def compute_stats(trades, version_key):
     """Compute aggregate statistics for a list of trades."""
     if not trades:
         return {
-            "total_trades": 0, "wins": 0, "losses": 0, "win_rate": 0,
-            "total_pnl_pct": 0, "avg_pnl_pct": 0, "median_pnl_pct": 0,
-            "std_pnl_pct": 0, "avg_win_pct": 0, "avg_loss_pct": 0,
-            "payoff_ratio": 0, "max_win_pct": 0, "max_loss_pct": 0,
-            "avg_hold": 0, "pf": 0, "version": version_key,
+            "total_trades": 0,
+            "wins": 0,
+            "losses": 0,
+            "win_rate": 0,
+            "total_pnl_pct": 0,
+            "avg_pnl_pct": 0,
+            "median_pnl_pct": 0,
+            "std_pnl_pct": 0,
+            "avg_win_pct": 0,
+            "avg_loss_pct": 0,
+            "payoff_ratio": 0,
+            "max_win_pct": 0,
+            "max_loss_pct": 0,
+            "avg_hold": 0,
+            "pf": 0,
+            "version": version_key,
         }
 
     pnls = [float(t["pnl_pct"]) for t in trades]
@@ -110,9 +123,18 @@ def compute_stats(trades, version_key):
 
 # Fields to include in exported trade records
 TRADE_FIELDS = (
-    "entry_date", "exit_date", "pnl_pct", "holding_days", "exit_reason",
-    "entry_trend", "quick_reentry", "breakout_entry", "vshape_entry",
-    "entry_profile", "entry_choppy_regime", "position_size",
+    "entry_date",
+    "exit_date",
+    "pnl_pct",
+    "holding_days",
+    "exit_reason",
+    "entry_trend",
+    "quick_reentry",
+    "breakout_entry",
+    "vshape_entry",
+    "entry_profile",
+    "entry_choppy_regime",
+    "position_size",
     "secondary_breakout",
 )
 
@@ -185,25 +207,34 @@ def export_version(version_key, model_cfg, results_dir, viz_dir):
         with open(os.path.join(out_dir, f"{symbol}.json"), "w", encoding="utf-8") as f:
             json.dump(payload, f, ensure_ascii=False)
 
-        index_entries.append({
-            "symbol": symbol,
-            f"{version_key}_trades": stats["total_trades"],
-            f"{version_key}_pnl": stats["total_pnl_pct"],
-            f"{version_key}_wr": stats["win_rate"],
-        })
+        index_entries.append(
+            {
+                "symbol": symbol,
+                f"{version_key}_trades": stats["total_trades"],
+                f"{version_key}_pnl": stats["total_pnl_pct"],
+                f"{version_key}_wr": stats["win_rate"],
+            }
+        )
 
     index_entries.sort(key=lambda x: x.get(f"{version_key}_pnl", 0), reverse=True)
     with open(os.path.join(out_dir, "index.json"), "w", encoding="utf-8") as f:
-        json.dump({
-            "symbols": index_entries,
-            "version": version_key,
-            "generated_at": datetime.now().isoformat(),
-        }, f, indent=2, ensure_ascii=False)
+        json.dump(
+            {
+                "symbols": index_entries,
+                "version": version_key,
+                "generated_at": datetime.now().isoformat(),
+            },
+            f,
+            indent=2,
+            ensure_ascii=False,
+        )
 
     total_pnl = sum(row.get(f"{version_key}_pnl", 0) for row in index_entries)
     with_trades = sum(1 for row in index_entries if row.get(f"{version_key}_trades", 0) > 0)
-    print(f"  ✓ {version_key}: {len(index_entries)} symbols, "
-          f"{with_trades} with trades, PnL={total_pnl:+.1f}%")
+    print(
+        f"  ✓ {version_key}: {len(index_entries)} symbols, "
+        f"{with_trades} with trades, PnL={total_pnl:+.1f}%"
+    )
 
     return {
         "version_key": version_key,
@@ -231,9 +262,11 @@ def generate_manifest(exported_versions, viz_dir, base_data_dir="data"):
     base_index_path = os.path.join(viz_dir, base_data_dir, "index.json")
     base_symbols = []
     if os.path.exists(base_index_path):
-        with open(base_index_path, "r", encoding="utf-8") as f:
+        with open(base_index_path, encoding="utf-8") as f:
             base_index = json.load(f)
-        base_symbols = [row.get("symbol") for row in base_index.get("symbols", []) if row.get("symbol")]
+        base_symbols = [
+            row.get("symbol") for row in base_index.get("symbols", []) if row.get("symbol")
+        ]
 
     manifest_path = os.path.join(viz_dir, "manifest.json")
     exported_keys = {m["version_key"] for m in exported_versions}
@@ -243,7 +276,7 @@ def generate_manifest(exported_versions, viz_dir, base_data_dir="data"):
 
     if os.path.exists(manifest_path):
         try:
-            with open(manifest_path, "r", encoding="utf-8") as f:
+            with open(manifest_path, encoding="utf-8") as f:
                 old_manifest = json.load(f)
             for old_model in old_manifest.get("models", []):
                 vk = old_model.get("version_key")
@@ -261,7 +294,9 @@ def generate_manifest(exported_versions, viz_dir, base_data_dir="data"):
     if preserved_keys:
         print(f"  Preserved {len(preserved_keys)} existing model(s): {', '.join(preserved_keys)}")
     if dropped_keys:
-        print(f"  Dropped {len(dropped_keys)} stale model(s) (data dir missing): {', '.join(dropped_keys)}")
+        print(
+            f"  Dropped {len(dropped_keys)} stale model(s) (data dir missing): {', '.join(dropped_keys)}"
+        )
 
     manifest = {
         "generated_at": datetime.now().isoformat(),
@@ -281,15 +316,29 @@ def generate_manifest(exported_versions, viz_dir, base_data_dir="data"):
 
 def main():
     import argparse
+
     parser = argparse.ArgumentParser(description="Unified export for all model versions")
-    parser.add_argument("--versions", type=str, default="",
-                        help="Comma-separated version keys to export. Empty = all active.")
-    parser.add_argument("--include-retired", action="store_true",
-                        help="Include retired models in export")
-    parser.add_argument("--base-data-dir", type=str, default="data",
-                        help="Directory name for base OHLCV data (default: data)")
-    parser.add_argument("--experiment", type=str, default="",
-                        help="Read CSV from experiment subfolder (e.g., leading_v2__lightgbm)")
+    parser.add_argument(
+        "--versions",
+        type=str,
+        default="",
+        help="Comma-separated version keys to export. Empty = all active.",
+    )
+    parser.add_argument(
+        "--include-retired", action="store_true", help="Include retired models in export"
+    )
+    parser.add_argument(
+        "--base-data-dir",
+        type=str,
+        default="data",
+        help="Directory name for base OHLCV data (default: data)",
+    )
+    parser.add_argument(
+        "--experiment",
+        type=str,
+        default="",
+        help="Read CSV from experiment subfolder (e.g., leading_v2__lightgbm)",
+    )
     args = parser.parse_args()
 
     base_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..")

@@ -25,16 +25,16 @@
       "v24_wr": 40.5
     },
     {
+      "symbol": "NKG",
+      "v24_trades": 36,
+      "v24_pnl": 272.6,
+      "v24_wr": 50.0
+    },
+    {
       "symbol": "AAV",
       "v24_trades": 28,
       "v24_pnl": 272.1,
       "v24_wr": 46.4
-    },
-    {
-      "symbol": "NKG",
-      "v24_trades": 36,
-      "v24_pnl": 272.1,
-      "v24_wr": 50.0
     },
     {
       "symbol": "VIC",
@@ -45,7 +45,7 @@
     {
       "symbol": "DCM",
       "v24_trades": 33,
-      "v24_pnl": 258.4,
+      "v24_pnl": 258.8,
       "v24_wr": 54.5
     },
     {
@@ -146,9 +146,9 @@
     },
     {
       "symbol": "VPB",
-      "v24_trades": 32,
-      "v24_pnl": 125.6,
-      "v24_wr": 31.2
+      "v24_trades": 33,
+      "v24_pnl": 124.8,
+      "v24_wr": 30.3
     },
     {
       "symbol": "FPT",
@@ -169,6 +169,12 @@
       "v24_wr": 54.2
     },
     {
+      "symbol": "ACV",
+      "v24_trades": 23,
+      "v24_pnl": 110.4,
+      "v24_wr": 43.5
+    },
+    {
       "symbol": "CTG",
       "v24_trades": 36,
       "v24_pnl": 110.4,
@@ -179,12 +185,6 @@
       "v24_trades": 39,
       "v24_pnl": 109.8,
       "v24_wr": 43.6
-    },
-    {
-      "symbol": "ACV",
-      "v24_trades": 23,
-      "v24_pnl": 109.3,
-      "v24_wr": 43.5
     },
     {
       "symbol": "MBB",
@@ -241,12 +241,6 @@
       "v24_wr": 44.1
     },
     {
-      "symbol": "MSN",
-      "v24_trades": 36,
-      "v24_pnl": 56.5,
-      "v24_wr": 50.0
-    },
-    {
       "symbol": "TCB",
       "v24_trades": 39,
       "v24_pnl": 53.2,
@@ -257,6 +251,12 @@
       "v24_trades": 38,
       "v24_pnl": 48.6,
       "v24_wr": 55.3
+    },
+    {
+      "symbol": "MSN",
+      "v24_trades": 36,
+      "v24_pnl": 46.1,
+      "v24_wr": 50.0
     },
     {
       "symbol": "ACB",
@@ -271,16 +271,16 @@
       "v24_wr": 44.7
     },
     {
-      "symbol": "BVH",
-      "v24_trades": 34,
-      "v24_pnl": 40.6,
-      "v24_wr": 47.1
-    },
-    {
       "symbol": "REE",
       "v24_trades": 32,
       "v24_pnl": 40.3,
       "v24_wr": 43.8
+    },
+    {
+      "symbol": "BVH",
+      "v24_trades": 34,
+      "v24_pnl": 38.6,
+      "v24_wr": 47.1
     },
     {
       "symbol": "SBT",
@@ -355,18 +355,18 @@
       "v24_wr": 40.6
     },
     {
+      "symbol": "SAB",
+      "v24_trades": 30,
+      "v24_pnl": -23.6,
+      "v24_wr": 33.3
+    },
+    {
       "symbol": "GAS",
       "v24_trades": 32,
       "v24_pnl": -25.1,
       "v24_wr": 37.5
-    },
-    {
-      "symbol": "SAB",
-      "v24_trades": 30,
-      "v24_pnl": -32.0,
-      "v24_wr": 33.3
     }
   ],
   "version": "v24",
-  "generated_at": "2026-04-24T16:21:35.640409"
+  "generated_at": "2026-04-26T11:11:21.303584"
 }

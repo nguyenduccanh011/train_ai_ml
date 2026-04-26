@@ -1,0 +1,105 @@
+====================================================================================================
+UNIFIED PIPELINE RUNNER
+====================================================================================================
+  Mode: Run v22, v19_3, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v35a, v35c, v37b, v37c, v37d, v38b, v38c, v38d, v38bc, v38bd, v38cd, v38bcd, v38c2, v38d2, v38b3, v38e
+
+  Symbols: 61 (shared across all models)
+  Min rows: 2000
+  Target: trend_regime (cache fingerprint enabled)
+
+  WILL RUN backtest for: v22, v19_3, v23, v24, v25, v26, v27, v28, v29, v30, v31, v32, v33, v35a, v35c, v37b, v37c, v37d, v38b, v38c, v38d, v38bc, v38bd, v38cd, v38bcd, v38c2, v38d2, v38b3, v38e
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+  ML TRAINING: feature_set='leading_v2' target='trend_regime' model='pipeline-default' +exit_model(fw=15) (shared by: v22, v23, v24, v25, v26, v27, v28)
+────────────────────────────────────────────────────────────────────────────────────────────────────
+    Training device: GPU
+    Feature cache: HIT (leading_v2) key=efc0e285
+  Training done in 49.0s — 363 (symbol x fold) prediction blocks cached
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+  ML TRAINING: feature_set='leading' target='trend_regime' model='pipeline-default' +exit_model(fw=15) (shared by: v19_3)
+────────────────────────────────────────────────────────────────────────────────────────────────────
+    Training device: GPU
+    Feature cache: MISS (leading) key=2453667d
+Loading symbols:   0%|          | 0/61 [00:00<?, ?it/s]Loading symbols:   5%|▍         | 3/61 [00:00<00:02, 28.94it/s]Loading symbols:  11%|█▏        | 7/61 [00:00<00:01, 30.91it/s]Loading symbols:  20%|█▉        | 12/61 [00:00<00:01, 37.12it/s]Loading symbols:  26%|██▌       | 16/61 [00:00<00:01, 37.01it/s]Loading symbols:  34%|███▍      | 21/61 [00:00<00:01, 39.39it/s]Loading symbols:  43%|████▎     | 26/61 [00:00<00:00, 37.46it/s]Loading symbols:  49%|████▉     | 30/61 [00:00<00:00, 36.38it/s]Loading symbols:  57%|█████▋    | 35/61 [00:00<00:00, 38.60it/s]Loading symbols:  66%|██████▌   | 40/61 [00:01<00:00, 40.93it/s]Loading symbols:  74%|███████▍  | 45/61 [00:01<00:00, 42.13it/s]Loading symbols:  82%|████████▏ | 50/61 [00:01<00:00, 42.84it/s]Loading symbols:  90%|█████████ | 55/61 [00:01<00:00, 43.65it/s]Loading symbols:  98%|█████████▊| 60/61 [00:01<00:00, 44.25it/s]Loading symbols: 100%|██████████| 61/61 [00:01<00:00, 40.45it/s]
+    Feature cache: STORED (leading) key=2453667d format=parquet
+  Training done in 42.2s — 365 (symbol x fold) prediction blocks cached
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+  ML TRAINING: feature_set='leading_v3' target='early_wave' model='pipeline-default' +exit_model(fw=15) (shared by: v29, v30, v31, v32, v33)
+────────────────────────────────────────────────────────────────────────────────────────────────────
+    Training device: GPU
+    Feature cache: HIT (leading_v3) key=d5e8b787
+  Training done in 37.5s — 363 (symbol x fold) prediction blocks cached
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+  ML TRAINING: feature_set='leading_v4' target='early_wave_v2' model='pipeline-default' +exit_model(fw=15) (shared by: v35a)
+────────────────────────────────────────────────────────────────────────────────────────────────────
+    Training device: GPU
+    Feature cache: MISS (leading_v4) key=6d7e48a3
+Loading symbols:   0%|          | 0/61 [00:00<?, ?it/s]Loading symbols:  10%|▉         | 6/61 [00:00<00:00, 58.07it/s]Loading symbols:  21%|██▏       | 13/61 [00:00<00:00, 60.25it/s]Loading symbols:  33%|███▎      | 20/61 [00:00<00:00, 62.22it/s]Loading symbols:  44%|████▍     | 27/61 [00:00<00:00, 62.47it/s]Loading symbols:  56%|█████▌    | 34/61 [00:00<00:00, 62.58it/s]Loading symbols:  69%|██████▉   | 42/61 [00:00<00:00, 65.99it/s]Loading symbols:  80%|████████  | 49/61 [00:00<00:00, 64.40it/s]Loading symbols:  92%|█████████▏| 56/61 [00:00<00:00, 65.73it/s]Loading symbols: 100%|██████████| 61/61 [00:00<00:00, 64.55it/s]
+    Feature cache: STORED (leading_v4) key=6d7e48a3 format=parquet
+  Training done in 48.9s — 363 (symbol x fold) prediction blocks cached
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+  ML TRAINING: feature_set='leading_v4' target='early_wave' model='pipeline-default' +exit_model(fw=15) (shared by: v35c, v37c, v38b, v38c, v38d, v38bc, v38bd, v38cd, v38bcd, v38c2, v38d2, v38b3, v38e)
+────────────────────────────────────────────────────────────────────────────────────────────────────
+    Training device: GPU
+    Feature cache: HIT (leading_v4) key=2c43a108
+  Training done in 37.0s — 363 (symbol x fold) prediction blocks cached
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+  ML TRAINING: feature_set='leading_v4' target='early_wave_dual' model='pipeline-default' +exit_model(fw=15) (shared by: v37b)
+────────────────────────────────────────────────────────────────────────────────────────────────────
+    Training device: GPU
+    Feature cache: MISS (leading_v4) key=25bde25b
+Loading symbols:   0%|          | 0/61 [00:00<?, ?it/s]Loading symbols:  10%|▉         | 6/61 [00:00<00:01, 53.06it/s]Loading symbols:  20%|█▉        | 12/61 [00:00<00:00, 55.44it/s]Loading symbols:  31%|███       | 19/61 [00:00<00:00, 59.07it/s]Loading symbols:  41%|████      | 25/61 [00:00<00:00, 59.40it/s]Loading symbols:  52%|█████▏    | 32/61 [00:00<00:00, 60.34it/s]Loading symbols:  64%|██████▍   | 39/61 [00:00<00:00, 61.83it/s]Loading symbols:  75%|███████▌  | 46/61 [00:00<00:00, 62.31it/s]Loading symbols:  87%|████████▋ | 53/61 [00:00<00:00, 64.07it/s]Loading symbols:  98%|█████████▊| 60/61 [00:00<00:00, 63.43it/s]Loading symbols: 100%|██████████| 61/61 [00:00<00:00, 61.80it/s]
+    Feature cache: STORED (leading_v4) key=25bde25b format=parquet
+  Training done in 47.0s — 363 (symbol x fold) prediction blocks cached
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+  ML TRAINING: feature_set='leading_v4' target='early_wave' model='gru' +exit_model(fw=15) (shared by: v37d)
+────────────────────────────────────────────────────────────────────────────────────────────────────
+    Training device: GPU
+    Feature cache: HIT (leading_v4) key=2c43a108
+  Training done in 74.1s — 363 (symbol x fold) prediction blocks cached
+
+  Backtest v22 (V22)...
+  Saved 2152 trades to C:\Users\DUC CANH PC\Desktop\train_ai_ml\stock_ml\results\trades_v22.csv (4.8s)
+    Trades=2152, WR=61.7%, TotalPnL=+11069.1%
+
+  Backtest v23 (V23)...
+  Saved 2151 trades to C:\Users\DUC CANH PC\Desktop\train_ai_ml\stock_ml\results\trades_v23.csv (4.6s)
+    Trades=2151, WR=61.7%, TotalPnL=+11032.7%
+
+  Backtest v24 (V24)...
+  Saved 3570 trades to C:\Users\DUC CANH PC\Desktop\train_ai_ml\stock_ml\results\trades_v24.csv (4.8s)
+    Trades=3570, WR=53.8%, TotalPnL=+11697.5%
+
+  Backtest v25 (V25)...
+  Saved 3581 trades to C:\Users\DUC CANH PC\Desktop\train_ai_ml\stock_ml\results\trades_v25.csv (4.7s)
+    Trades=3581, WR=53.9%, TotalPnL=+11662.2%
+
+  Backtest v26 (V26)...
+  Saved 3548 trades to C:\Users\DUC CANH PC\Desktop\train_ai_ml\stock_ml\results\trades_v26.csv (4.7s)
+    Trades=3548, WR=53.8%, TotalPnL=+11486.1%
+
+  Backtest v27 (V27)...
+  Saved 3545 trades to C:\Users\DUC CANH PC\Desktop\train_ai_ml\stock_ml\results\trades_v27.csv (4.8s)
+    Trades=3545, WR=53.9%, TotalPnL=+11502.3%
+
+  Backtest v28 (V28)...
+  Saved 3513 trades to C:\Users\DUC CANH PC\Desktop\train_ai_ml\stock_ml\results\trades_v28.csv (4.8s)
+    Trades=3513, WR=53.9%, TotalPnL=+11595.8%
+
+  Backtest v19_3 (V19.3)...
+Traceback (most recent call last):
+  File "C:\Users\DUC CANH PC\Desktop\train_ai_ml\stock_ml\run_pipeline.py", line 1025, in <module>
+    main()
+  File "C:\Users\DUC CANH PC\Desktop\train_ai_ml\stock_ml\run_pipeline.py", line 962, in main
+    trades = _run_backtest_from_cache(cache, vk, model_cfg)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\DUC CANH PC\Desktop\train_ai_ml\stock_ml\run_pipeline.py", line 363, in _run_backtest_from_cache
+    r = backtest_fn(
+        ^^^^^^^^^^^^
+TypeError: backtest_v19_3() got an unexpected keyword argument 'y_pred_exit'

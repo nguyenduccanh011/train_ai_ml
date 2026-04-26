@@ -1,0 +1,265 @@
+====================================================================================================
+UNIFIED PIPELINE RUNNER
+====================================================================================================
+  Mode: Run ALL active models (v37a_exit, v42_a, v42_base, v38b2, v39g, v39f, v39d, v39e, v39b, v39a2, v39a, v37a, v36c, v36b, v36a, v35b, v34, v32, v31, v30, v29, v28, v27, v26, v24, v22, rule)
+
+  Symbols: 61 (shared across all models)
+  Min rows: 2000
+  Target: trend_regime (cache fingerprint enabled)
+
+  WILL RUN backtest for: v37a_exit, v42_a, v42_base, v38b2, v39g, v39f, v39d, v39e, v39b, v39a2, v39a, v37a, v36c, v36b, v36a, v35b, v34, v32, v31, v30, v29, v28, v27, v26, v24, v22, rule
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+  ML TRAINING: feature_set='leading_v4' target='early_wave_dual' model='pipeline-default' (shared by: v37a_exit)
+────────────────────────────────────────────────────────────────────────────────────────────────────
+    Training device: GPU (auto-detected)
+    Feature cache: MISS (leading_v4) key=93b28d51
+Loading symbols:   0%|          | 0/61 [00:00<?, ?it/s]Loading symbols:  11%|█▏        | 7/61 [00:00<00:00, 67.34it/s]Loading symbols:  23%|██▎       | 14/61 [00:00<00:00, 47.94it/s]Loading symbols:  34%|███▍      | 21/61 [00:00<00:00, 54.32it/s]Loading symbols:  46%|████▌     | 28/61 [00:00<00:00, 57.99it/s]Loading symbols:  57%|█████▋    | 35/61 [00:00<00:00, 59.19it/s]Loading symbols:  70%|███████   | 43/61 [00:00<00:00, 62.61it/s]Loading symbols:  82%|████████▏ | 50/61 [00:00<00:00, 63.15it/s]Loading symbols:  93%|█████████▎| 57/61 [00:00<00:00, 64.50it/s]Loading symbols: 100%|██████████| 61/61 [00:00<00:00, 61.36it/s]
+    Feature cache: STORED (leading_v4) key=93b28d51 format=parquet
+  Training done in 53.9s — 363 (symbol x fold) prediction blocks cached
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+  ML TRAINING: feature_set='leading_v4' target='early_wave_dual' model='pipeline-default' (shared by: v42_a)
+────────────────────────────────────────────────────────────────────────────────────────────────────
+    Training device: GPU (auto-detected)
+    Feature cache: MISS (leading_v4) key=ce6ebec4
+Loading symbols:   0%|          | 0/61 [00:00<?, ?it/s]Loading symbols:  10%|▉         | 6/61 [00:00<00:01, 54.66it/s]Loading symbols:  20%|█▉        | 12/61 [00:00<00:00, 57.24it/s]Loading symbols:  30%|██▉       | 18/61 [00:00<00:00, 57.91it/s]Loading symbols:  39%|███▉      | 24/61 [00:00<00:00, 58.11it/s]Loading symbols:  49%|████▉     | 30/61 [00:00<00:00, 47.50it/s]Loading symbols:  61%|██████    | 37/61 [00:00<00:00, 52.93it/s]Loading symbols:  72%|███████▏  | 44/61 [00:00<00:00, 55.60it/s]Loading symbols:  84%|████████▎ | 51/61 [00:00<00:00, 58.98it/s]Loading symbols:  95%|█████████▌| 58/61 [00:01<00:00, 60.55it/s]Loading symbols: 100%|██████████| 61/61 [00:01<00:00, 57.63it/s]
+    Feature cache: STORED (leading_v4) key=ce6ebec4 format=parquet
+  Training done in 46.0s — 363 (symbol x fold) prediction blocks cached
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+  ML TRAINING: feature_set='leading_v4' target='early_wave' model='pipeline-default' (shared by: v42_base)
+────────────────────────────────────────────────────────────────────────────────────────────────────
+    Training device: GPU (auto-detected)
+    Feature cache: MISS (leading_v4) key=3c72cf27
+Loading symbols:   0%|          | 0/61 [00:00<?, ?it/s]Loading symbols:  10%|▉         | 6/61 [00:00<00:00, 56.50it/s]Loading symbols:  21%|██▏       | 13/61 [00:00<00:00, 59.98it/s]Loading symbols:  33%|███▎      | 20/61 [00:00<00:00, 61.12it/s]Loading symbols:  44%|████▍     | 27/61 [00:00<00:00, 62.25it/s]Loading symbols:  56%|█████▌    | 34/61 [00:00<00:00, 61.87it/s]Loading symbols:  69%|██████▉   | 42/61 [00:00<00:00, 65.40it/s]Loading symbols:  80%|████████  | 49/61 [00:00<00:00, 64.72it/s]Loading symbols:  92%|█████████▏| 56/61 [00:00<00:00, 66.25it/s]Loading symbols: 100%|██████████| 61/61 [00:00<00:00, 64.49it/s]
+    Feature cache: STORED (leading_v4) key=3c72cf27 format=parquet
+  Training done in 38.0s — 363 (symbol x fold) prediction blocks cached
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+  ML TRAINING: feature_set='leading_v4' target='early_wave' model='pipeline-default' +exit_model(fw=15) (shared by: v38b2, v39g, v39f, v39d, v39e, v39b, v39a2, v39a, v37a, v36c, v36b, v36a, v35b, v34)
+────────────────────────────────────────────────────────────────────────────────────────────────────
+    Training device: GPU (auto-detected)
+    Feature cache: MISS (leading_v4) key=2c43a108
+Loading symbols:   0%|          | 0/61 [00:00<?, ?it/s]Loading symbols:  10%|▉         | 6/61 [00:00<00:00, 58.35it/s]Loading symbols:  21%|██▏       | 13/61 [00:00<00:00, 61.59it/s]Loading symbols:  33%|███▎      | 20/61 [00:00<00:00, 48.30it/s]Loading symbols:  44%|████▍     | 27/61 [00:00<00:00, 53.28it/s]Loading symbols:  54%|█████▍    | 33/61 [00:00<00:00, 53.99it/s]Loading symbols:  66%|██████▌   | 40/61 [00:00<00:00, 56.72it/s]Loading symbols:  75%|███████▌  | 46/61 [00:00<00:00, 57.41it/s]Loading symbols:  87%|████████▋ | 53/61 [00:00<00:00, 59.17it/s]Loading symbols:  97%|█████████▋| 59/61 [00:01<00:00, 59.39it/s]Loading symbols: 100%|██████████| 61/61 [00:01<00:00, 57.44it/s]
+    Feature cache: STORED (leading_v4) key=2c43a108 format=parquet
+  Training done in 48.0s — 363 (symbol x fold) prediction blocks cached
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+  ML TRAINING: feature_set='leading_v3' target='early_wave' model='pipeline-default' (shared by: v32, v31, v30, v29)
+────────────────────────────────────────────────────────────────────────────────────────────────────
+    Training device: GPU (auto-detected)
+    Feature cache: MISS (leading_v3) key=d5e8b787
+Loading symbols:   0%|          | 0/61 [00:00<?, ?it/s]Loading symbols:  10%|▉         | 6/61 [00:00<00:00, 57.43it/s]Loading symbols:  21%|██▏       | 13/61 [00:00<00:00, 59.99it/s]Loading symbols:  31%|███       | 19/61 [00:00<00:00, 59.28it/s]Loading symbols:  43%|████▎     | 26/61 [00:00<00:00, 60.46it/s]Loading symbols:  54%|█████▍    | 33/61 [00:00<00:00, 60.37it/s]Loading symbols:  67%|██████▋   | 41/61 [00:00<00:00, 64.38it/s]Loading symbols:  79%|███████▊  | 48/61 [00:00<00:00, 63.47it/s]Loading symbols:  92%|█████████▏| 56/61 [00:00<00:00, 65.22it/s]Loading symbols: 100%|██████████| 61/61 [00:00<00:00, 63.59it/s]
+    Feature cache: STORED (leading_v3) key=d5e8b787 format=parquet
+  Training done in 39.7s — 363 (symbol x fold) prediction blocks cached
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+  ML TRAINING: feature_set='leading_v2' target='trend_regime' model='pipeline-default' (shared by: v28, v27, v26, v24, v22)
+────────────────────────────────────────────────────────────────────────────────────────────────────
+    Training device: GPU (auto-detected)
+    Feature cache: MISS (leading_v2) key=efc0e285
+Loading symbols:   0%|          | 0/61 [00:00<?, ?it/s]Loading symbols:  10%|▉         | 6/61 [00:00<00:01, 54.73it/s]Loading symbols:  21%|██▏       | 13/61 [00:00<00:00, 58.66it/s]Loading symbols:  33%|███▎      | 20/61 [00:00<00:00, 61.35it/s]Loading symbols:  44%|████▍     | 27/61 [00:00<00:00, 61.92it/s]Loading symbols:  56%|█████▌    | 34/61 [00:00<00:00, 61.40it/s]Loading symbols:  69%|██████▉   | 42/61 [00:00<00:00, 64.98it/s]Loading symbols:  80%|████████  | 49/61 [00:00<00:00, 62.06it/s]Loading symbols:  92%|█████████▏| 56/61 [00:00<00:00, 62.27it/s]Loading symbols: 100%|██████████| 61/61 [00:00<00:00, 62.27it/s]
+    Feature cache: STORED (leading_v2) key=efc0e285 format=parquet
+  Training done in 42.1s — 363 (symbol x fold) prediction blocks cached
+
+  Backtest v37a_exit (V37a +ExitModel)...
+  Saved 3694 trades to C:\Users\DUC CANH PC\Desktop\train_ai_ml\stock_ml\results\trades_v37a_exit.csv (5.1s)
+    Trades=3694, WR=57.4%, TotalPnL=+12385.8%
+
+  Backtest v42_a (V42a +ExitModel)...
+  Saved 4087 trades to C:\Users\DUC CANH PC\Desktop\train_ai_ml\stock_ml\results\trades_v42_a.csv (4.9s)
+    Trades=4087, WR=56.0%, TotalPnL=+11141.7%
+
+  Backtest v42_base (V42 base)...
+  Saved 1383 trades to C:\Users\DUC CANH PC\Desktop\train_ai_ml\stock_ml\results\trades_v42_base.csv (4.9s)
+    Trades=1383, WR=48.6%, TotalPnL=+8232.9%
+
+  Backtest v38b2 (V38b2)...
+  Saved 3211 trades to C:\Users\DUC CANH PC\Desktop\train_ai_ml\stock_ml\results\trades_v38b2.csv (4.9s)
+    Trades=3211, WR=53.9%, TotalPnL=+11505.3%
+
+  Backtest v39g (V39g)...
+  Saved 3227 trades to C:\Users\DUC CANH PC\Desktop\train_ai_ml\stock_ml\results\trades_v39g.csv (4.9s)
+    Trades=3227, WR=56.1%, TotalPnL=+12474.6%
+
+  Backtest v39f (V39f)...
+  Saved 3223 trades to C:\Users\DUC CANH PC\Desktop\train_ai_ml\stock_ml\results\trades_v39f.csv (4.8s)
+    Trades=3223, WR=56.2%, TotalPnL=+12490.6%
+
+  Backtest v39d (V39d)...
+  Saved 3201 trades to C:\Users\DUC CANH PC\Desktop\train_ai_ml\stock_ml\results\trades_v39d.csv (4.8s)
+    Trades=3201, WR=56.3%, TotalPnL=+12611.6%
+
+  Backtest v39e (V39e)...
+  Saved 3201 trades to C:\Users\DUC CANH PC\Desktop\train_ai_ml\stock_ml\results\trades_v39e.csv (4.9s)
+    Trades=3201, WR=56.3%, TotalPnL=+12611.6%
+
+  Backtest v39b (V39b)...
+  Saved 3227 trades to C:\Users\DUC CANH PC\Desktop\train_ai_ml\stock_ml\results\trades_v39b.csv (4.8s)
+    Trades=3227, WR=56.1%, TotalPnL=+12474.6%
+
+  Backtest v39a2 (V39a2)...
+  Saved 3223 trades to C:\Users\DUC CANH PC\Desktop\train_ai_ml\stock_ml\results\trades_v39a2.csv (4.9s)
+    Trades=3223, WR=56.2%, TotalPnL=+12490.6%
+
+  Backtest v39a (V39a)...
+  Saved 3201 trades to C:\Users\DUC CANH PC\Desktop\train_ai_ml\stock_ml\results\trades_v39a.csv (4.8s)
+    Trades=3201, WR=56.3%, TotalPnL=+12611.6%
+
+  Backtest v37a (V37a)...
+  Saved 3227 trades to C:\Users\DUC CANH PC\Desktop\train_ai_ml\stock_ml\results\trades_v37a.csv (4.8s)
+    Trades=3227, WR=56.1%, TotalPnL=+12474.6%
+
+  Backtest v36c (V36c)...
+  Saved 3231 trades to C:\Users\DUC CANH PC\Desktop\train_ai_ml\stock_ml\results\trades_v36c.csv (4.8s)
+    Trades=3231, WR=56.1%, TotalPnL=+12497.8%
+
+  Backtest v36b (V36b)...
+  Saved 3223 trades to C:\Users\DUC CANH PC\Desktop\train_ai_ml\stock_ml\results\trades_v36b.csv (4.8s)
+    Trades=3223, WR=56.2%, TotalPnL=+12504.0%
+
+  Backtest v36a (V36a)...
+  Saved 3156 trades to C:\Users\DUC CANH PC\Desktop\train_ai_ml\stock_ml\results\trades_v36a.csv (4.9s)
+    Trades=3156, WR=56.1%, TotalPnL=+12159.3%
+
+  Backtest v35b (V35b)...
+  Saved 3232 trades to C:\Users\DUC CANH PC\Desktop\train_ai_ml\stock_ml\results\trades_v35b.csv (4.9s)
+    Trades=3232, WR=56.1%, TotalPnL=+12524.5%
+
+  Backtest v34 (V34)...
+  Saved 3121 trades to C:\Users\DUC CANH PC\Desktop\train_ai_ml\stock_ml\results\trades_v34.csv (4.8s)
+    Trades=3121, WR=56.2%, TotalPnL=+12063.6%
+
+  Backtest v32 (V32)...
+  Saved 1329 trades to C:\Users\DUC CANH PC\Desktop\train_ai_ml\stock_ml\results\trades_v32.csv (4.8s)
+    Trades=1329, WR=49.5%, TotalPnL=+7707.3%
+
+  Backtest v31 (V31)...
+  Saved 1345 trades to C:\Users\DUC CANH PC\Desktop\train_ai_ml\stock_ml\results\trades_v31.csv (4.9s)
+    Trades=1345, WR=48.8%, TotalPnL=+7793.4%
+
+  Backtest v30 (V30)...
+  Saved 1462 trades to C:\Users\DUC CANH PC\Desktop\train_ai_ml\stock_ml\results\trades_v30.csv (4.8s)
+    Trades=1462, WR=46.5%, TotalPnL=+7815.7%
+
+  Backtest v29 (V29)...
+  Saved 1818 trades to C:\Users\DUC CANH PC\Desktop\train_ai_ml\stock_ml\results\trades_v29.csv (5.0s)
+    Trades=1818, WR=46.5%, TotalPnL=+7046.4%
+
+  Backtest v28 (V28)...
+  Saved 1985 trades to C:\Users\DUC CANH PC\Desktop\train_ai_ml\stock_ml\results\trades_v28.csv (5.0s)
+    Trades=1985, WR=46.2%, TotalPnL=+7250.4%
+
+  Backtest v27 (V27)...
+  Saved 2019 trades to C:\Users\DUC CANH PC\Desktop\train_ai_ml\stock_ml\results\trades_v27.csv (4.7s)
+    Trades=2019, WR=45.7%, TotalPnL=+7164.6%
+
+  Backtest v26 (V26)...
+  Saved 2025 trades to C:\Users\DUC CANH PC\Desktop\train_ai_ml\stock_ml\results\trades_v26.csv (4.7s)
+    Trades=2025, WR=45.5%, TotalPnL=+7136.3%
+
+  Backtest v24 (V24)...
+  Saved 2060 trades to C:\Users\DUC CANH PC\Desktop\train_ai_ml\stock_ml\results\trades_v24.csv (4.7s)
+    Trades=2060, WR=45.1%, TotalPnL=+7121.0%
+
+  Backtest v22 (V22)...
+  Saved 1812 trades to C:\Users\DUC CANH PC\Desktop\train_ai_ml\stock_ml\results\trades_v22.csv (4.8s)
+    Trades=1812, WR=45.4%, TotalPnL=+6593.3%
+
+  Backtest rule (Rule-based, walk-forward split)...
+Loading symbols:   0%|          | 0/61 [00:00<?, ?it/s]Loading symbols:  13%|█▎        | 8/61 [00:00<00:00, 72.74it/s]Loading symbols:  26%|██▌       | 16/61 [00:00<00:00, 65.65it/s]Loading symbols:  38%|███▊      | 23/61 [00:00<00:00, 66.44it/s]Loading symbols:  49%|████▉     | 30/61 [00:00<00:00, 61.58it/s]Loading symbols:  61%|██████    | 37/61 [00:00<00:00, 62.64it/s]Loading symbols:  72%|███████▏  | 44/61 [00:00<00:00, 62.55it/s]Loading symbols:  84%|████████▎ | 51/61 [00:00<00:00, 63.52it/s]Loading symbols:  95%|█████████▌| 58/61 [00:00<00:00, 63.43it/s]Loading symbols: 100%|██████████| 61/61 [00:00<00:00, 64.20it/s]
+  Saved 2585 trades to C:\Users\DUC CANH PC\Desktop\train_ai_ml\stock_ml\results\trades_rule.csv (1.4s)
+    Trades=2585, WR=41.7%, TotalPnL=+7621.7%
+
+====================================================================================================
+EXPORT PHASE
+====================================================================================================
+================================================================================
+UNIFIED EXPORT — Trades CSV → JSON for Dashboard
+================================================================================
+  Models to export: v37a_exit, v42_a, v42_base, v38b2, v39g, v39f, v39d, v39e, v39b, v39a2, v39a, v37a, v36c, v36b, v36a, v35b, v34, v32, v31, v30, v29, v28, v27, v26, v24, v22, rule
+
+  ✓ v37a_exit: 61 symbols, 61 with trades, PnL=+12385.6%
+  ✓ v42_a: 61 symbols, 61 with trades, PnL=+11141.7%
+  ✓ v42_base: 61 symbols, 61 with trades, PnL=+8232.8%
+  ✓ v38b2: 61 symbols, 61 with trades, PnL=+11505.4%
+  ✓ v39g: 61 symbols, 61 with trades, PnL=+12474.8%
+  ✓ v39f: 61 symbols, 61 with trades, PnL=+12490.9%
+  ✓ v39d: 61 symbols, 61 with trades, PnL=+12611.4%
+  ✓ v39e: 61 symbols, 61 with trades, PnL=+12611.4%
+  ✓ v39b: 61 symbols, 61 with trades, PnL=+12474.8%
+  ✓ v39a2: 61 symbols, 61 with trades, PnL=+12490.9%
+  ✓ v39a: 61 symbols, 61 with trades, PnL=+12611.4%
+  ✓ v37a: 61 symbols, 61 with trades, PnL=+12474.8%
+  ✓ v36c: 61 symbols, 61 with trades, PnL=+12497.8%
+  ✓ v36b: 61 symbols, 61 with trades, PnL=+12504.0%
+  ✓ v36a: 61 symbols, 61 with trades, PnL=+12159.4%
+  ✓ v35b: 61 symbols, 61 with trades, PnL=+12524.5%
+  ✓ v34: 61 symbols, 61 with trades, PnL=+12063.8%
+  ✓ v32: 61 symbols, 61 with trades, PnL=+7707.1%
+  ✓ v31: 61 symbols, 61 with trades, PnL=+7793.4%
+  ✓ v30: 61 symbols, 61 with trades, PnL=+7816.0%
+  ✓ v29: 61 symbols, 61 with trades, PnL=+7046.4%
+  ✓ v28: 61 symbols, 61 with trades, PnL=+7250.4%
+  ✓ v27: 61 symbols, 61 with trades, PnL=+7164.4%
+  ✓ v26: 61 symbols, 61 with trades, PnL=+7136.2%
+  ✓ v24: 61 symbols, 61 with trades, PnL=+7120.9%
+  ✓ v22: 61 symbols, 61 with trades, PnL=+6593.1%
+  ✓ rule: 61 symbols, 61 with trades, PnL=+7621.7%
+  Preserved 11 existing model(s): v38e, v38b3, v38d2, v38c2, v38bcd, v38cd, v38bd, v38bc, v38d, v38c, v38b
+
+✓ Manifest saved to C:\Users\DUC CANH PC\Desktop\train_ai_ml\stock_ml\src\export\..\..\visualization\manifest.json
+  Models: v37a_exit, v38e, v42_a, v38b3, v42_base, v38d2, v38c2, v38b2, v38bcd, v38cd, v38bd, v38bc, v38d, v39g, v38c, v39f, v38b, v39d, v39e, v39b, v39a2, v39a, v37a, v36c, v36b, v36a, v35b, v34, v32, v31, v30, v29, v28, v27, v26, v24, v22, rule
+
+================================================================================
+DONE
+================================================================================
+
+====================================================================================================
+COMPARISON
+====================================================================================================
+==================================================================================================================================
+MODEL COMPARISON — Selected: v37a_exit, v42_a, v42_base, v38b2, v39g, v39f, v39d, v39e, v39b, v39a2, v39a, v37a, v36c, v36b, v36a, v35b, v34, v32, v31, v30, v29, v28, v27, v26, v24, v22, rule
+==================================================================================================================================
+
+  Model                |    #   AvgPnL     TotPnL     PF  Sharpe  MDD/sym     CV   Score
+  ---------------------------------------------------------------------------------------------------------
+  V37a +ExitModel      | 3694   +3.35%  +12385.8%  3.18   0.344    20.2%  0.46  597.3
+  V42a +ExitModel      | 4087   +2.73%  +11141.7%  2.76   0.299    21.9%  0.50  550.1
+  V42 base             | 1383   +5.95%   +8232.9%  2.75   0.256    36.4%  0.90  401.6
+  V38b2                | 3211   +3.58%  +11505.3%  2.99   0.307    22.1%  0.51  568.6
+  V39g                 | 3227   +3.87%  +12474.6%  3.29   0.331    20.6%  0.49  603.4
+  V39f                 | 3223   +3.88%  +12490.6%  3.30   0.332    20.5%  0.49  605.0
+  V39d                 | 3201   +3.94%  +12611.6%  3.35   0.336    20.2%  0.48  611.7 ◀ BEST
+  V39e                 | 3201   +3.94%  +12611.6%  3.35   0.336    20.2%  0.48  611.7 ◀ BEST
+  V39b                 | 3227   +3.87%  +12474.6%  3.29   0.331    20.6%  0.49  603.4
+  V39a2                | 3223   +3.88%  +12490.6%  3.30   0.332    20.5%  0.49  605.0
+  V39a                 | 3201   +3.94%  +12611.6%  3.35   0.336    20.2%  0.48  611.7 ◀ BEST
+  V37a                 | 3227   +3.87%  +12474.6%  3.29   0.331    20.6%  0.49  603.4
+  V36c                 | 3231   +3.87%  +12497.8%  3.29   0.331    20.6%  0.49  603.4
+  V36b                 | 3223   +3.88%  +12504.0%  3.31   0.332    20.6%  0.49  604.8
+  V36a                 | 3156   +3.85%  +12159.3%  3.26   0.329    21.1%  0.49  597.8
+  V35b                 | 3232   +3.88%  +12524.5%  3.30   0.332    20.7%  0.48  603.7
+  V34                  | 3121   +3.87%  +12063.6%  3.27   0.329    21.1%  0.49  598.4
+  V32                  | 1329   +5.80%   +7707.3%  2.65   0.258    36.9%  0.94  370.8
+  V31                  | 1345   +5.79%   +7793.4%  2.68   0.261    34.9%  0.91  377.7
+  V30                  | 1462   +5.35%   +7815.7%  2.74   0.244    33.1%  0.86  377.7
+  V29                  | 1818   +3.88%   +7046.4%  2.48   0.236    31.1%  0.80  318.7
+  V28                  | 1985   +3.65%   +7250.4%  2.35   0.233    33.4%  0.81  316.9
+  V27                  | 2019   +3.55%   +7164.6%  2.31   0.228    33.2%  0.83  307.5
+  V26                  | 2025   +3.52%   +7136.3%  2.30   0.227    33.3%  0.84  304.9
+  V24                  | 2060   +3.46%   +7121.0%  2.26   0.223    33.3%  0.84  300.2
+  V22                  | 1812   +3.64%   +6593.3%  2.31   0.220    31.6%  0.83  279.2
+  Rule-Based           | 2585   +2.95%   +7621.7%  2.05   0.194    39.1%  1.17  295.2
+
+  Sharpe = avg_pnl/std(pnl)  |  MDD/sym = avg per-symbol drawdown  |  CV = std/mean of yearly PnL
+
+  RECOMMENDATION (by composite score):
+    Best:  v39d (V39d) — Score=611.7, Sharpe=0.336, MDD/sym=20.2%
+==================================================================================================================================
+
+====================================================================================================
+DONE — Total time: 403.8s
+  Open visualization/dashboard.html to view results
+====================================================================================================

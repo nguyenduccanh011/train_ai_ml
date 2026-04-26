@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-04-24T20:54:34.982524",
+  "generated_at": "2026-04-26T12:36:51.289303",
   "base_data_dir": "data",
   "base_symbols": [
     "AAA",
@@ -491,6 +491,18 @@
   ],
   "models": [
     {
+      "version_key": "v38e",
+      "name": "V38e",
+      "color": "#FF3D00",
+      "marker_shape": "arrowUp",
+      "data_dir": "data_v38e",
+      "total_symbols": 61,
+      "symbols_with_trades": 61,
+      "total_pnl": 7147.2,
+      "active": false,
+      "order": -51
+    },
+    {
       "version_key": "v37a_exit",
       "name": "V37a +ExitModel",
       "color": "#00E5FF",
@@ -503,16 +515,16 @@
       "order": -51
     },
     {
-      "version_key": "v38e",
-      "name": "V38e",
-      "color": "#FF3D00",
+      "version_key": "v38b3",
+      "name": "V38b3",
+      "color": "#FF5722",
       "marker_shape": "arrowUp",
-      "data_dir": "data_v38e",
+      "data_dir": "data_v38b3",
       "total_symbols": 61,
       "symbols_with_trades": 61,
-      "total_pnl": 7398.7,
+      "total_pnl": 7767.5,
       "active": false,
-      "order": -51
+      "order": -50
     },
     {
       "version_key": "v42_a",
@@ -527,16 +539,16 @@
       "order": -50
     },
     {
-      "version_key": "v38b3",
-      "name": "V38b3",
-      "color": "#FF5722",
+      "version_key": "v38d2",
+      "name": "V38d2",
+      "color": "#FFCA28",
       "marker_shape": "arrowUp",
-      "data_dir": "data_v38b3",
+      "data_dir": "data_v38d2",
       "total_symbols": 61,
       "symbols_with_trades": 61,
-      "total_pnl": 8106.7,
+      "total_pnl": 7240.7,
       "active": false,
-      "order": -50
+      "order": -49
     },
     {
       "version_key": "v42_base",
@@ -546,20 +558,8 @@
       "data_dir": "data_v42_base",
       "total_symbols": 61,
       "symbols_with_trades": 61,
-      "total_pnl": 8230.3,
+      "total_pnl": 8232.8,
       "active": true,
-      "order": -49
-    },
-    {
-      "version_key": "v38d2",
-      "name": "V38d2",
-      "color": "#FFCA28",
-      "marker_shape": "arrowUp",
-      "data_dir": "data_v38d2",
-      "total_symbols": 61,
-      "symbols_with_trades": 61,
-      "total_pnl": 7490.9,
-      "active": false,
       "order": -49
     },
     {
@@ -570,7 +570,7 @@
       "data_dir": "data_v38c2",
       "total_symbols": 61,
       "symbols_with_trades": 61,
-      "total_pnl": 7982.3,
+      "total_pnl": 7681.4,
       "active": false,
       "order": -48
     },
@@ -582,7 +582,7 @@
       "data_dir": "data_v38b2",
       "total_symbols": 61,
       "symbols_with_trades": 61,
-      "total_pnl": 8119.6,
+      "total_pnl": 11505.4,
       "active": true,
       "order": -47
     },
@@ -594,7 +594,7 @@
       "data_dir": "data_v38bcd",
       "total_symbols": 61,
       "symbols_with_trades": 61,
-      "total_pnl": 6683.4,
+      "total_pnl": 6516.5,
       "active": false,
       "order": -46
     },
@@ -606,7 +606,7 @@
       "data_dir": "data_v38cd",
       "total_symbols": 61,
       "symbols_with_trades": 61,
-      "total_pnl": 7021.1,
+      "total_pnl": 6768.7,
       "active": false,
       "order": -45
     },
@@ -618,7 +618,7 @@
       "data_dir": "data_v38bd",
       "total_symbols": 61,
       "symbols_with_trades": 61,
-      "total_pnl": 6985.0,
+      "total_pnl": 6771.8,
       "active": false,
       "order": -44
     },
@@ -630,7 +630,7 @@
       "data_dir": "data_v38bc",
       "total_symbols": 61,
       "symbols_with_trades": 61,
-      "total_pnl": 7775.8,
+      "total_pnl": 7572.6,
       "active": false,
       "order": -43
     },
@@ -642,21 +642,9 @@
       "data_dir": "data_v38d",
       "total_symbols": 61,
       "symbols_with_trades": 61,
-      "total_pnl": 7396.6,
+      "total_pnl": 7161.0,
       "active": false,
       "order": -42
-    },
-    {
-      "version_key": "v39g",
-      "name": "V39g",
-      "color": "#FFAB40",
-      "marker_shape": "arrowUp",
-      "data_dir": "data_v39g",
-      "total_symbols": 61,
-      "symbols_with_trades": 61,
-      "total_pnl": 8243.8,
-      "active": true,
-      "order": -41
     },
     {
       "version_key": "v38c",
@@ -666,21 +654,21 @@
       "data_dir": "data_v38c",
       "total_symbols": 61,
       "symbols_with_trades": 61,
-      "total_pnl": 7924.599999999999,
+      "total_pnl": 7631.6,
       "active": false,
       "order": -41
     },
     {
-      "version_key": "v39f",
-      "name": "V39f",
-      "color": "#FF4081",
+      "version_key": "v39g",
+      "name": "V39g",
+      "color": "#FFAB40",
       "marker_shape": "arrowUp",
-      "data_dir": "data_v39f",
+      "data_dir": "data_v39g",
       "total_symbols": 61,
       "symbols_with_trades": 61,
-      "total_pnl": 8110.9,
+      "total_pnl": 12474.8,
       "active": true,
-      "order": -40
+      "order": -41
     },
     {
       "version_key": "v38b",
@@ -690,8 +678,20 @@
       "data_dir": "data_v38b",
       "total_symbols": 61,
       "symbols_with_trades": 61,
-      "total_pnl": 7821.9,
+      "total_pnl": 7540.1,
       "active": false,
+      "order": -40
+    },
+    {
+      "version_key": "v39f",
+      "name": "V39f",
+      "color": "#FF4081",
+      "marker_shape": "arrowUp",
+      "data_dir": "data_v39f",
+      "total_symbols": 61,
+      "symbols_with_trades": 61,
+      "total_pnl": 12490.9,
+      "active": true,
       "order": -40
     },
     {
@@ -702,7 +702,7 @@
       "data_dir": "data_v39d",
       "total_symbols": 61,
       "symbols_with_trades": 61,
-      "total_pnl": 7628.6,
+      "total_pnl": 12611.4,
       "active": true,
       "order": -39
     },
@@ -714,7 +714,7 @@
       "data_dir": "data_v39e",
       "total_symbols": 61,
       "symbols_with_trades": 61,
-      "total_pnl": 7643.2,
+      "total_pnl": 12611.4,
       "active": true,
       "order": -38
     },
@@ -726,7 +726,7 @@
       "data_dir": "data_v39b",
       "total_symbols": 61,
       "symbols_with_trades": 61,
-      "total_pnl": 8254.8,
+      "total_pnl": 12474.8,
       "active": true,
       "order": -37
     },
@@ -738,7 +738,7 @@
       "data_dir": "data_v39a2",
       "total_symbols": 61,
       "symbols_with_trades": 61,
-      "total_pnl": 8224.4,
+      "total_pnl": 12490.9,
       "active": true,
       "order": -36
     },
@@ -750,9 +750,45 @@
       "data_dir": "data_v39a",
       "total_symbols": 61,
       "symbols_with_trades": 61,
-      "total_pnl": 7671.0,
+      "total_pnl": 12611.4,
       "active": true,
       "order": -35
+    },
+    {
+      "version_key": "v37d",
+      "name": "V37d",
+      "color": "#7C4DFF",
+      "marker_shape": "arrowUp",
+      "data_dir": "data_v37d",
+      "total_symbols": 61,
+      "symbols_with_trades": 61,
+      "total_pnl": 7067.1,
+      "active": false,
+      "order": -33
+    },
+    {
+      "version_key": "v37b",
+      "name": "V37b",
+      "color": "#00C853",
+      "marker_shape": "arrowUp",
+      "data_dir": "data_v37b",
+      "total_symbols": 61,
+      "symbols_with_trades": 61,
+      "total_pnl": 7974.6,
+      "active": false,
+      "order": -32
+    },
+    {
+      "version_key": "v37c",
+      "name": "V37c",
+      "color": "#FFD600",
+      "marker_shape": "arrowUp",
+      "data_dir": "data_v37c",
+      "total_symbols": 61,
+      "symbols_with_trades": 61,
+      "total_pnl": 7284.9,
+      "active": false,
+      "order": -31
     },
     {
       "version_key": "v37a",
@@ -762,7 +798,7 @@
       "data_dir": "data_v37a",
       "total_symbols": 61,
       "symbols_with_trades": 61,
-      "total_pnl": 8391.4,
+      "total_pnl": 12474.8,
       "active": true,
       "order": -30
     },
@@ -774,7 +810,7 @@
       "data_dir": "data_v36c",
       "total_symbols": 61,
       "symbols_with_trades": 61,
-      "total_pnl": 8412.9,
+      "total_pnl": 12497.8,
       "active": true,
       "order": -22
     },
@@ -786,7 +822,7 @@
       "data_dir": "data_v36b",
       "total_symbols": 61,
       "symbols_with_trades": 61,
-      "total_pnl": 8425.3,
+      "total_pnl": 12504.0,
       "active": true,
       "order": -21
     },
@@ -798,9 +834,21 @@
       "data_dir": "data_v36a",
       "total_symbols": 61,
       "symbols_with_trades": 61,
-      "total_pnl": 8315.1,
+      "total_pnl": 12159.4,
       "active": true,
       "order": -20
+    },
+    {
+      "version_key": "v35c",
+      "name": "V35c",
+      "color": "#03A9F4",
+      "marker_shape": "arrowUp",
+      "data_dir": "data_v35c",
+      "total_symbols": 61,
+      "symbols_with_trades": 61,
+      "total_pnl": 8037.6,
+      "active": false,
+      "order": -12
     },
     {
       "version_key": "v35b",
@@ -810,9 +858,21 @@
       "data_dir": "data_v35b",
       "total_symbols": 61,
       "symbols_with_trades": 61,
-      "total_pnl": 8456.6,
+      "total_pnl": 12524.5,
       "active": true,
       "order": -11
+    },
+    {
+      "version_key": "v35a",
+      "name": "V35a",
+      "color": "#FFEB3B",
+      "marker_shape": "arrowUp",
+      "data_dir": "data_v35a",
+      "total_symbols": 61,
+      "symbols_with_trades": 61,
+      "total_pnl": 7046.8,
+      "active": false,
+      "order": -10
     },
     {
       "version_key": "v34",
@@ -822,9 +882,21 @@
       "data_dir": "data_v34",
       "total_symbols": 61,
       "symbols_with_trades": 61,
-      "total_pnl": 8243.3,
+      "total_pnl": 12063.8,
       "active": true,
       "order": -6
+    },
+    {
+      "version_key": "v33",
+      "name": "V33",
+      "color": "#FF4081",
+      "marker_shape": "arrowUp",
+      "data_dir": "data_v33",
+      "total_symbols": 61,
+      "symbols_with_trades": 61,
+      "total_pnl": 7510.9,
+      "active": false,
+      "order": -5
     },
     {
       "version_key": "v32",
@@ -834,7 +906,7 @@
       "data_dir": "data_v32",
       "total_symbols": 61,
       "symbols_with_trades": 61,
-      "total_pnl": 7816.2,
+      "total_pnl": 7510.9,
       "active": true,
       "order": -4
     },
@@ -846,7 +918,7 @@
       "data_dir": "data_v31",
       "total_symbols": 61,
       "symbols_with_trades": 61,
-      "total_pnl": 7880.5,
+      "total_pnl": 7558.4,
       "active": true,
       "order": -3
     },
@@ -858,7 +930,7 @@
       "data_dir": "data_v30",
       "total_symbols": 61,
       "symbols_with_trades": 61,
-      "total_pnl": 7756.2,
+      "total_pnl": 7526.4,
       "active": true,
       "order": -2
     },
@@ -870,7 +942,7 @@
       "data_dir": "data_v29",
       "total_symbols": 61,
       "symbols_with_trades": 61,
-      "total_pnl": 7046.4,
+      "total_pnl": 7078.5,
       "active": true,
       "order": -1
     },
@@ -882,7 +954,7 @@
       "data_dir": "data_v28",
       "total_symbols": 61,
       "symbols_with_trades": 61,
-      "total_pnl": 7252.9,
+      "total_pnl": 7250.4,
       "active": true,
       "order": 0
     },
@@ -894,7 +966,7 @@
       "data_dir": "data_v27",
       "total_symbols": 61,
       "symbols_with_trades": 61,
-      "total_pnl": 7167.1,
+      "total_pnl": 7164.4,
       "active": true,
       "order": 0
     },
@@ -906,7 +978,7 @@
       "data_dir": "data_v26",
       "total_symbols": 61,
       "symbols_with_trades": 61,
-      "total_pnl": 7139.0,
+      "total_pnl": 7136.2,
       "active": true,
       "order": 1
     },
@@ -918,7 +990,7 @@
       "data_dir": "data_v24",
       "total_symbols": 61,
       "symbols_with_trades": 61,
-      "total_pnl": 7123.7,
+      "total_pnl": 7120.9,
       "active": true,
       "order": 3
     },
@@ -930,9 +1002,21 @@
       "data_dir": "data_v22",
       "total_symbols": 61,
       "symbols_with_trades": 61,
-      "total_pnl": 6581.0,
+      "total_pnl": 6593.1,
       "active": true,
       "order": 5
+    },
+    {
+      "version_key": "v19_3",
+      "name": "V19.3",
+      "color": "#EC407A",
+      "marker_shape": "arrowUp",
+      "data_dir": "data_v19_3",
+      "total_symbols": 61,
+      "symbols_with_trades": 61,
+      "total_pnl": 6775.1,
+      "active": false,
+      "order": 6
     },
     {
       "version_key": "rule",

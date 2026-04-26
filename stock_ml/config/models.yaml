@@ -568,6 +568,10 @@ models:
       v32_hap_pre_trigger: 0.04
       v32_hap_pre_floor: -0.07
     marker_shape: arrowUp
+    exit_model:
+      enabled: true
+      forward_window: 15
+      loss_threshold: 0.05
     order: -32
   v37d:
     name: V37d
@@ -627,6 +631,10 @@ models:
       v32_hap_pre_trigger: 0.04
       v32_hap_pre_floor: -0.07
     marker_shape: arrowUp
+    exit_model:
+      enabled: true
+      forward_window: 15
+      loss_threshold: 0.05
     order: -33
   v37a:
     name: V37a
@@ -755,6 +763,10 @@ models:
       v32_hap_pre_trigger: 0.04
       v32_hap_pre_floor: -0.07
     marker_shape: arrowUp
+    exit_model:
+      enabled: true
+      forward_window: 15
+      loss_threshold: 0.05
     order: -31
   v36a:
     name: V36a
@@ -1008,6 +1020,10 @@ models:
       v32_hap_pre_trigger: 0.04
       v32_hap_pre_floor: -0.07
     marker_shape: arrowUp
+    exit_model:
+      enabled: true
+      forward_window: 15
+      loss_threshold: 0.05
     order: -10
     retired_reason: Dominated by V35b on all metrics
   v35b:
@@ -1137,6 +1153,10 @@ models:
       v35_hybrid_entry: true
       v35_hybrid_size: 0.5
     marker_shape: arrowUp
+    exit_model:
+      enabled: true
+      forward_window: 15
+      loss_threshold: 0.05
     order: -12
     retired_reason: Dominated by V35b on all metrics
   v38b:
@@ -1150,6 +1170,10 @@ models:
     mods: { a: true, b: true, c: false, d: false, e: true, f: true, g: true, h: true, i: true, j: true }
     params: { patch_smart_hardcap: true, patch_pp_restore: true, patch_long_horizon: true, patch_symbol_tuning: true, patch_rule_ensemble: true, v26_relaxed_entry: true, v26_skip_choppy: true, v26_strong_rule_ensemble: true, v27_hardcap_two_step: true, v27_rule_priority: true, v27_dynamic_score5_penalty: true, v27_trend_persistence_hold: true, v28_early_wave_filter: true, v28_early_loss_cut: true, v28_early_loss_cut_threshold: -0.04, v28_early_loss_cut_days: 5, v30_signal_exit_defer: true, v30_sed_defer_bars: 3, v30_sed_min_cum_ret: 0.02, v31_short_hold_exit_filter: true, v31_shef_min_hold: 18, v31_shef_min_pnl: -0.03, v31_hardcap_after_profit: true, v31_hap_profit_trigger: 0.05, v31_hap_floor: -0.03, v32_hap_preempt: true }
     marker_shape: arrowUp
+    exit_model:
+      enabled: true
+      forward_window: 15
+      loss_threshold: 0.05
     order: -40
   v38c:
     name: V38c
@@ -1162,6 +1186,10 @@ models:
     mods: { a: true, b: true, c: false, d: false, e: true, f: true, g: true, h: true, i: true, j: true }
     params: { patch_smart_hardcap: true, patch_pp_restore: true, patch_long_horizon: true, patch_symbol_tuning: true, patch_rule_ensemble: true, v26_relaxed_entry: true, v26_skip_choppy: true, v26_strong_rule_ensemble: true, v27_hardcap_two_step: true, v27_rule_priority: true, v27_dynamic_score5_penalty: true, v27_trend_persistence_hold: true, v28_early_wave_filter: true, v28_early_loss_cut: true, v28_early_loss_cut_threshold: -0.04, v28_early_loss_cut_days: 5, v30_signal_exit_defer: true, v30_sed_defer_bars: 3, v30_sed_min_cum_ret: 0.02, v31_short_hold_exit_filter: true, v31_shef_min_hold: 18, v31_shef_min_pnl: -0.03, v31_hardcap_after_profit: true, v31_hap_profit_trigger: 0.05, v31_hap_floor: -0.03, v32_hap_preempt: true, v32_hap_pre_trigger: 0.04, v32_hap_pre_floor: -0.07 }
     marker_shape: arrowUp
+    exit_model:
+      enabled: true
+      forward_window: 15
+      loss_threshold: 0.05
     order: -41
   v38d:
     name: V38d
@@ -1174,6 +1202,10 @@ models:
     mods: { a: true, b: true, c: false, d: false, e: true, f: true, g: true, h: true, i: true, j: true }
     params: { patch_smart_hardcap: true, patch_pp_restore: true, patch_long_horizon: true, patch_symbol_tuning: true, patch_rule_ensemble: true, v26_relaxed_entry: true, v26_skip_choppy: true, v26_strong_rule_ensemble: true, v27_hardcap_two_step: true, v27_rule_priority: true, v27_dynamic_score5_penalty: true, v27_trend_persistence_hold: true, v28_early_wave_filter: true, v28_early_loss_cut: true, v28_early_loss_cut_threshold: -0.04, v28_early_loss_cut_days: 5, v30_signal_exit_defer: true, v30_sed_defer_bars: 3, v30_sed_min_cum_ret: 0.02, v31_short_hold_exit_filter: true, v31_shef_min_hold: 18, v31_shef_min_pnl: -0.03, v31_hardcap_after_profit: true, v31_hap_profit_trigger: 0.05, v31_hap_floor: -0.03, v32_hap_preempt: true, v32_hap_pre_trigger: 0.04, v32_hap_pre_floor: -0.07 }
     marker_shape: arrowUp
+    exit_model:
+      enabled: true
+      forward_window: 15
+      loss_threshold: 0.05
     order: -42
   v38bc:
     name: V38bc
@@ -1186,6 +1218,10 @@ models:
     mods: { a: true, b: true, c: false, d: false, e: true, f: true, g: true, h: true, i: true, j: true }
     params: { patch_smart_hardcap: true, patch_pp_restore: true, patch_long_horizon: true, patch_symbol_tuning: true, patch_rule_ensemble: true, v26_relaxed_entry: true, v26_skip_choppy: true, v26_strong_rule_ensemble: true, v27_hardcap_two_step: true, v27_rule_priority: true, v27_dynamic_score5_penalty: true, v27_trend_persistence_hold: true, v28_early_wave_filter: true, v28_early_loss_cut: true, v28_early_loss_cut_threshold: -0.04, v28_early_loss_cut_days: 5, v30_signal_exit_defer: true, v30_sed_defer_bars: 3, v30_sed_min_cum_ret: 0.02, v31_short_hold_exit_filter: true, v31_shef_min_hold: 18, v31_shef_min_pnl: -0.03, v31_hardcap_after_profit: true, v31_hap_profit_trigger: 0.05, v31_hap_floor: -0.03, v32_hap_preempt: true }
     marker_shape: arrowUp
+    exit_model:
+      enabled: true
+      forward_window: 15
+      loss_threshold: 0.05
     order: -43
   v38bd:
     name: V38bd
@@ -1198,6 +1234,10 @@ models:
     mods: { a: true, b: true, c: false, d: false, e: true, f: true, g: true, h: true, i: true, j: true }
     params: { patch_smart_hardcap: true, patch_pp_restore: true, patch_long_horizon: true, patch_symbol_tuning: true, patch_rule_ensemble: true, v26_relaxed_entry: true, v26_skip_choppy: true, v26_strong_rule_ensemble: true, v27_hardcap_two_step: true, v27_rule_priority: true, v27_dynamic_score5_penalty: true, v27_trend_persistence_hold: true, v28_early_wave_filter: true, v28_early_loss_cut: true, v28_early_loss_cut_threshold: -0.04, v28_early_loss_cut_days: 5, v30_signal_exit_defer: true, v30_sed_defer_bars: 3, v30_sed_min_cum_ret: 0.02, v31_short_hold_exit_filter: true, v31_shef_min_hold: 18, v31_shef_min_pnl: -0.03, v31_hardcap_after_profit: true, v31_hap_profit_trigger: 0.05, v31_hap_floor: -0.03, v32_hap_preempt: true }
     marker_shape: arrowUp
+    exit_model:
+      enabled: true
+      forward_window: 15
+      loss_threshold: 0.05
     order: -44
   v38cd:
     name: V38cd
@@ -1210,6 +1250,10 @@ models:
     mods: { a: true, b: true, c: false, d: false, e: true, f: true, g: true, h: true, i: true, j: true }
     params: { patch_smart_hardcap: true, patch_pp_restore: true, patch_long_horizon: true, patch_symbol_tuning: true, patch_rule_ensemble: true, v26_relaxed_entry: true, v26_skip_choppy: true, v26_strong_rule_ensemble: true, v27_hardcap_two_step: true, v27_rule_priority: true, v27_dynamic_score5_penalty: true, v27_trend_persistence_hold: true, v28_early_wave_filter: true, v28_early_loss_cut: true, v28_early_loss_cut_threshold: -0.04, v28_early_loss_cut_days: 5, v30_signal_exit_defer: true, v30_sed_defer_bars: 3, v30_sed_min_cum_ret: 0.02, v31_short_hold_exit_filter: true, v31_shef_min_hold: 18, v31_shef_min_pnl: -0.03, v31_hardcap_after_profit: true, v31_hap_profit_trigger: 0.05, v31_hap_floor: -0.03, v32_hap_preempt: true, v32_hap_pre_trigger: 0.04, v32_hap_pre_floor: -0.07 }
     marker_shape: arrowUp
+    exit_model:
+      enabled: true
+      forward_window: 15
+      loss_threshold: 0.05
     order: -45
   v38bcd:
     name: V38bcd
@@ -1222,6 +1266,10 @@ models:
     mods: { a: true, b: true, c: false, d: false, e: true, f: true, g: true, h: true, i: true, j: true }
     params: { patch_smart_hardcap: true, patch_pp_restore: true, patch_long_horizon: true, patch_symbol_tuning: true, patch_rule_ensemble: true, v26_relaxed_entry: true, v26_skip_choppy: true, v26_strong_rule_ensemble: true, v27_hardcap_two_step: true, v27_rule_priority: true, v27_dynamic_score5_penalty: true, v27_trend_persistence_hold: true, v28_early_wave_filter: true, v28_early_loss_cut: true, v28_early_loss_cut_threshold: -0.04, v28_early_loss_cut_days: 5, v30_signal_exit_defer: true, v30_sed_defer_bars: 3, v30_sed_min_cum_ret: 0.02, v31_short_hold_exit_filter: true, v31_shef_min_hold: 18, v31_shef_min_pnl: -0.03, v31_hardcap_after_profit: true, v31_hap_profit_trigger: 0.05, v31_hap_floor: -0.03, v32_hap_preempt: true }
     marker_shape: arrowUp
+    exit_model:
+      enabled: true
+      forward_window: 15
+      loss_threshold: 0.05
     order: -46
   v38b2:
     name: V38b2
@@ -1250,6 +1298,10 @@ models:
     mods: { a: true, b: true, c: false, d: false, e: true, f: true, g: true, h: true, i: true, j: true }
     params: { patch_smart_hardcap: true, patch_pp_restore: true, patch_long_horizon: true, patch_symbol_tuning: true, patch_rule_ensemble: true, v26_relaxed_entry: true, v26_skip_choppy: true, v26_strong_rule_ensemble: true, v27_hardcap_two_step: true, v27_rule_priority: true, v27_dynamic_score5_penalty: true, v27_trend_persistence_hold: true, v28_early_wave_filter: true, v28_early_loss_cut: true, v28_early_loss_cut_threshold: -0.04, v28_early_loss_cut_days: 5, v30_signal_exit_defer: true, v30_sed_defer_bars: 3, v30_sed_min_cum_ret: 0.02, v31_short_hold_exit_filter: true, v31_shef_min_hold: 18, v31_shef_min_pnl: -0.03, v31_hardcap_after_profit: true, v31_hap_profit_trigger: 0.05, v31_hap_floor: -0.03, v32_hap_preempt: true, v32_hap_pre_trigger: 0.04, v32_hap_pre_floor: -0.07 }
     marker_shape: arrowUp
+    exit_model:
+      enabled: true
+      forward_window: 15
+      loss_threshold: 0.05
     order: -48
   v38d2:
     name: V38d2
@@ -1262,6 +1314,10 @@ models:
     mods: { a: true, b: true, c: false, d: false, e: true, f: true, g: true, h: true, i: true, j: true }
     params: { patch_smart_hardcap: true, patch_pp_restore: true, patch_long_horizon: true, patch_symbol_tuning: true, patch_rule_ensemble: true, v26_relaxed_entry: true, v26_skip_choppy: true, v26_strong_rule_ensemble: true, v27_hardcap_two_step: true, v27_rule_priority: true, v27_dynamic_score5_penalty: true, v27_trend_persistence_hold: true, v28_early_wave_filter: true, v28_early_loss_cut: true, v28_early_loss_cut_threshold: -0.04, v28_early_loss_cut_days: 5, v30_signal_exit_defer: true, v30_sed_defer_bars: 3, v30_sed_min_cum_ret: 0.02, v31_short_hold_exit_filter: true, v31_shef_min_hold: 18, v31_shef_min_pnl: -0.03, v31_hardcap_after_profit: true, v31_hap_profit_trigger: 0.05, v31_hap_floor: -0.03, v32_hap_preempt: true, v32_hap_pre_trigger: 0.04, v32_hap_pre_floor: -0.07 }
     marker_shape: arrowUp
+    exit_model:
+      enabled: true
+      forward_window: 15
+      loss_threshold: 0.05
     order: -49
   v38b3:
     name: V38b3
@@ -1274,6 +1330,10 @@ models:
     mods: { a: true, b: true, c: false, d: false, e: true, f: true, g: true, h: true, i: true, j: true }
     params: { patch_smart_hardcap: true, patch_pp_restore: true, patch_long_horizon: true, patch_symbol_tuning: true, patch_rule_ensemble: true, v26_relaxed_entry: true, v26_skip_choppy: true, v26_strong_rule_ensemble: true, v27_hardcap_two_step: true, v27_rule_priority: true, v27_dynamic_score5_penalty: true, v27_trend_persistence_hold: true, v28_early_wave_filter: true, v28_early_loss_cut: true, v28_early_loss_cut_threshold: -0.04, v28_early_loss_cut_days: 5, v30_signal_exit_defer: true, v30_sed_defer_bars: 3, v30_sed_min_cum_ret: 0.02, v31_short_hold_exit_filter: true, v31_shef_min_hold: 18, v31_shef_min_pnl: -0.03, v31_hardcap_after_profit: true, v31_hap_profit_trigger: 0.05, v31_hap_floor: -0.03, v32_hap_preempt: true }
     marker_shape: arrowUp
+    exit_model:
+      enabled: true
+      forward_window: 15
+      loss_threshold: 0.05
     order: -50
   v38e:
     name: V38e
@@ -1286,6 +1346,10 @@ models:
     mods: { a: true, b: true, c: false, d: false, e: true, f: true, g: true, h: true, i: true, j: true }
     params: { patch_smart_hardcap: true, patch_pp_restore: true, patch_long_horizon: true, patch_symbol_tuning: true, patch_rule_ensemble: true, v26_relaxed_entry: true, v26_skip_choppy: true, v26_strong_rule_ensemble: true, v27_hardcap_two_step: true, v27_rule_priority: true, v27_dynamic_score5_penalty: true, v27_trend_persistence_hold: true, v28_early_wave_filter: true, v28_early_loss_cut: true, v28_early_loss_cut_threshold: -0.04, v28_early_loss_cut_days: 5, v30_signal_exit_defer: true, v30_sed_defer_bars: 3, v30_sed_min_cum_ret: 0.02, v31_short_hold_exit_filter: true, v31_shef_min_hold: 18, v31_shef_min_pnl: -0.03, v31_hardcap_after_profit: true, v31_hap_profit_trigger: 0.05, v31_hap_floor: -0.03, v32_hap_preempt: true }
     marker_shape: arrowUp
+    exit_model:
+      enabled: true
+      forward_window: 15
+      loss_threshold: 0.05
     order: -51
   v34:
     name: V34
@@ -1415,6 +1479,10 @@ models:
       v33_rpf_dist_sma20_thresh: 0.01
       v33_rpf_require_weak: true
     marker_shape: arrowUp
+    exit_model:
+      enabled: true
+      forward_window: 15
+      loss_threshold: 0.05
     order: -5
     retired_reason: Identical to V32 (recovery_peak_filter never triggers)
   v32:
@@ -1478,6 +1546,10 @@ models:
       v32_woe_min_profit: 0.0
       v32_woe_hold_min: 5
     marker_shape: arrowUp
+    exit_model:
+      enabled: true
+      forward_window: 15
+      loss_threshold: 0.05
     order: -4
   v31:
     name: V31
@@ -1533,6 +1605,10 @@ models:
       v31_hap_profit_trigger: 0.05
       v31_hap_floor: -0.03
     marker_shape: arrowUp
+    exit_model:
+      enabled: true
+      forward_window: 15
+      loss_threshold: 0.05
     order: -3
   v30:
     name: V30
@@ -1582,6 +1658,10 @@ models:
       v30_sed_defer_bars: 3
       v30_sed_min_cum_ret: 0.02
     marker_shape: arrowUp
+    exit_model:
+      enabled: true
+      forward_window: 15
+      loss_threshold: 0.05
     order: -2
   v29:
     name: V29
@@ -1627,6 +1707,10 @@ models:
       v28_early_loss_cut_threshold: -0.04
       v28_early_loss_cut_days: 5
     marker_shape: arrowUp
+    exit_model:
+      enabled: true
+      forward_window: 15
+      loss_threshold: 0.05
     order: -1
   v28:
     name: V28
@@ -1676,6 +1760,10 @@ models:
       v28_early_loss_cut_threshold: -0.04
       v28_early_loss_cut_days: 5
     marker_shape: arrowUp
+    exit_model:
+      enabled: true
+      forward_window: 15
+      loss_threshold: 0.05
     order: 0
   v27:
     name: V27
@@ -1720,6 +1808,10 @@ models:
       v27_dynamic_score5_penalty: true
       v27_trend_persistence_hold: true
     marker_shape: arrowUp
+    exit_model:
+      enabled: true
+      forward_window: 15
+      loss_threshold: 0.05
     order: 0
   v26:
     name: V26
@@ -1759,6 +1851,10 @@ models:
       v26_score5_penalty: false
       v26_hardcap_confirm_strong: false
     marker_shape: arrowUp
+    exit_model:
+      enabled: true
+      forward_window: 15
+      loss_threshold: 0.05
     order: 1
   v25:
     name: V25
@@ -1789,6 +1885,10 @@ models:
       patch_adaptive_hardcap: false
       patch_pp_2of3: false
     marker_shape: arrowUp
+    exit_model:
+      enabled: true
+      forward_window: 15
+      loss_threshold: 0.05
     order: 2
     retired_reason: Superseded by V26 (V26 better on TotPnL/PF/WR)
   v24:
@@ -1825,6 +1925,10 @@ models:
       time_decay_bars: 20
       time_decay_mult: 0.5
     marker_shape: arrowUp
+    exit_model:
+      enabled: true
+      forward_window: 15
+      loss_threshold: 0.05
     order: 3
   v23:
     name: V23
@@ -1847,6 +1951,10 @@ models:
     params:
       peak_protect_strong_threshold: 0.12
     marker_shape: arrowUp
+    exit_model:
+      enabled: true
+      forward_window: 15
+      loss_threshold: 0.05
     order: 4
     retired_reason: Superseded by V24 (lower TotPnL, weaker PF)
   v22:
@@ -1880,6 +1988,10 @@ models:
       v22_hard_cap_floor: 0.12
       v22_hard_cap_floor_hb: 0.15
     marker_shape: arrowUp
+    exit_model:
+      enabled: true
+      forward_window: 15
+      loss_threshold: 0.05
     order: 5
   v19_3:
     name: V19.3
@@ -1901,6 +2013,10 @@ models:
       j: true
     params: {}
     marker_shape: arrowUp
+    exit_model:
+      enabled: true
+      forward_window: 15
+      loss_threshold: 0.05
     order: 6
   v19_1:
     name: V19.1

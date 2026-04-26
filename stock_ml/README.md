@@ -819,43 +819,65 @@ V11 (baseline) -> V17 (modules A-J) -> V18 (adaptive) -> V19 (regime)
     -> V32 (HAP preempt fix, +11) -> V33 (recovery_peak_filter, +4)
     -> V34 (leading_v4 HA features, +32) -> V35/V36 (V35 flags)
     -> V37a (per-profile dispatch) -> V38/V39 (HA exit, HAP reform, rule_confirm)
-    -> V37a+ExitModel ★ CURRENT BEST (separate exit model B, score +187 vs V37a)
+    -> V37a+ExitModel (separate exit model B, score +187 vs V37a)
     -> V42 (fw=15 entry + exit model)
+    -> V39d / V39e / V39a ★ CURRENT BEST (signal_exit_min_hold=35 + HAP reform, score 611.7)
 ```
 
-### Ket qua so sanh hien tai (61 symbols, 2020-2025)
+### Ket qua so sanh hien tai (61 symbols, 2020-2025) — full re-run 2026-04-26
 
 | Version | Trades | WR | AvgPnL | TotPnL | PF | MaxLoss | AvgHold | Score |
 |---------|--------|----|--------|--------|-----|---------|---------|-------|
-| **V37a+ExitModel** ★ | 3694 | 57.4% | +3.35% | +12386% | 3.18 | -23.9% | 8.5d | **597** |
-| V42a+ExitModel | 4087 | 56.0% | +2.73% | +11142% | 2.76 | -23.9% | 7.2d | 550 |
-| V37a | 1355 | 49.0% | +6.19% | +8392% | 2.84 | -57.4% | 35.5d | ~410 |
-| V42_base | 1383 | 48.6% | +5.95% | +8230% | 2.75 | -57.4% | 34.4d | 401 |
-| V34 | 1299 | 50.2% | +6.35% | +8243% | 2.89 | — | — | 465 |
-| Rule | 2185 | 39.8% | +2.37% | +5178% | 1.84 | -27.2% | 18.1d | — |
+| **V39d / V39e / V39a** ★ | 3201 | 56.3% | +3.94% | +12612% | 3.35 | -23.9% | 10.7d | **611.7** |
+| V39f / V39a2 | 3223 | 56.2% | +3.88% | +12491% | 3.30 | -23.9% | 10.6d | 605.0 |
+| V36b | 3223 | 56.2% | +3.88% | +12504% | 3.31 | -23.9% | 10.6d | 604.8 |
+| V35b | 3232 | 56.1% | +3.88% | +12525% | 3.30 | -23.9% | 10.6d | 603.7 |
+| V39g / V39b / V37a / V36c | 3227 | 56.1% | +3.87% | +12475% | 3.29 | -23.9% | 10.6d | 603.4 |
+| V34 | 3121 | 56.2% | +3.87% | +12064% | 3.27 | -23.9% | 10.5d | 598.4 |
+| V36a | 3156 | 56.1% | +3.85% | +12159% | 3.26 | -23.9% | 10.5d | 597.8 |
+| V37a +ExitModel | 3694 | 57.4% | +3.35% | +12386% | 3.18 | -23.9% | 8.5d | 597.3 |
+| V38b2 | 3211 | 53.9% | +3.58% | +11505% | 2.99 | -23.9% | 9.8d | 568.6 |
+| V42a +ExitModel | 4087 | 56.0% | +2.73% | +11142% | 2.76 | -23.9% | 7.2d | 550.1 |
+| V42_base | 1383 | 48.6% | +5.95% | +8233% | 2.75 | -57.4% | 34.4d | 401.6 |
+| V31 | 1345 | 48.8% | +5.79% | +7793% | 2.68 | -28.6% | 33.5d | 377.7 |
+| V30 | 1462 | 46.5% | +5.35% | +7816% | 2.74 | -28.6% | 28.3d | 377.7 |
+| V32 | 1329 | 49.5% | +5.80% | +7707% | 2.65 | -57.4% | 34.6d | 370.8 |
+| V29 | 1818 | 46.5% | +3.88% | +7046% | 2.48 | -29.9% | 19.8d | 318.7 |
+| V28 | 1985 | 46.2% | +3.65% | +7250% | 2.35 | -35.8% | 19.4d | 316.9 |
+| V27 | 2019 | 45.7% | +3.55% | +7165% | 2.31 | -35.8% | 19.0d | 307.5 |
+| V26 | 2025 | 45.5% | +3.52% | +7136% | 2.30 | -35.8% | 18.9d | 304.9 |
+| V24 | 2060 | 45.1% | +3.46% | +7121% | 2.26 | -35.8% | 18.9d | 300.2 |
+| Rule | 2585 | 41.7% | +2.95% | +7622% | 2.05 | -27.6% | 18.9d | 295.2 |
+| V22 | 1812 | 45.4% | +3.64% | +6593% | 2.31 | -29.3% | 19.8d | 279.2 |
 
-**Key insight:** Exit model B (+ExitModel) tang WR +8pp, giam MaxLoss 58%, tang TotalPnL 47%
-bang cach thoat som o dinh song thay vi giu den trailing stop.
+**Key insights tu re-run 2026-04-26:**
+- **V39d/V39e/V39a tied o top (score 611.7)** — cung trades count va PnL, cho thay 3 variants nay produce identical execution.
+- **Exit model B van quan trong:** moi model leading_v4 + early_wave + exit_model deu vuot V42_base (1383→3201+ trades, MaxLoss -57%→-24%, TotPnL +49%).
+- **V37a+ExitModel rot xuong rank 8** sau khi train lai voi cache moi (truoc day la BEST). Cho thay variance giua cac fold/seed van con dang ke — can verification truoc khi promote model.
+- **leading_v4 family (V34→V39) thong tri top 12** — HA features + early_wave target la lever lon nhat.
+- **Rule baseline (score 295)** — moi ML model leading_v4 (top 12) deu doi diem so > 2x rule.
 
 ### Active Models (hien tai)
 
 | Version | Mo ta | Feature Set | Exit Model |
 |---------|-------|-------------|------------|
-| **V37a+ExitModel** ★ | V37a engine + Model B exit (fw=15, loss=5%) | leading_v4 | enabled |
-| **V42a** | V37a engine, fw=15 entry + Model B exit | leading_v4 | enabled |
-| **V42_base** | V37a engine, fw=15 (khong exit model, baseline) | leading_v4 | — |
-| **V39g** | V37a + HAP reform (8%/15d) + selective rule_confirm | leading_v4 | enabled |
+| **V39d** ★ | V39e + per-symbol rule-exit hybrid | leading_v4 | enabled |
+| **V39e** ★ | V37a + signal_exit_min_hold=35 + HAP reform | leading_v4 | enabled |
+| **V39a** ★ | V37a + signal_exit_min_hold=35 | leading_v4 | enabled |
 | **V39f** | V37a + HAP (8%/15d) + rule_confirm | leading_v4 | enabled |
-| **V39d** | V39e + per-symbol rule-exit hybrid | leading_v4 | enabled |
-| **V39e** | V37a + signal_exit_min_hold=35 + HAP reform | leading_v4 | enabled |
-| **V39b** | V37a + HAP reform (trigger 8%, min_hold=15) | leading_v4 | enabled |
 | **V39a2** | V37a + rule_confirm_exit (selective) | leading_v4 | enabled |
-| **V39a** | V37a + signal_exit_min_hold=35 | leading_v4 | enabled |
+| **V39g** | V37a + HAP reform (8%/15d) + selective rule_confirm | leading_v4 | enabled |
+| **V39b** | V37a + HAP reform (trigger 8%, min_hold=15) | leading_v4 | enabled |
 | **V37a** | V34 engine + per-profile V35 flag dispatch | leading_v4 | enabled |
 | **V36a/b/c** | V35 flag variants | leading_v4 | enabled |
 | **V35b** | V34 + V35 flags (rule_override + skip_proximity) | leading_v4 | enabled |
 | **V34** | V32 engine + leading_v4 (18 HA features) + HAP(t4,f7) | leading_v4 | enabled |
+| **V37a +ExitModel** | V37a engine + Model B exit (fw=15, loss=5%) | leading_v4 | enabled |
+| **V38b2** | V34 + HAP nhe (4%/-3%) + stall-exit strict | leading_v4 | enabled |
+| **V42a** | V37a engine, fw=15 entry + Model B exit | leading_v4 | enabled |
+| **V42_base** | V37a engine, fw=15 (khong exit model, baseline) | leading_v4 | — |
 | **V32/V31/V30/V29** | HAP preempt / SHEF / signal_defer / early_wave | leading_v3 | — |
+| **V28/V27/V26/V24/V22** | Older trend_regime models (legacy) | leading_v2 | — |
 | **Rule** | MACD_hist > 0 AND Close > MA20 AND Close > Open (baseline) | N/A | — |
 
 ### Exit Model Config (models.yaml)
@@ -1012,5 +1034,7 @@ experiments/run_feature_ablation.py  ->  experiments/run_v27.py
 
 ---
 
-*Cap nhat lan cuoi: 2026-04-24 - Them Separate Exit Model (Model B): train doc lap tren exit signal, override engine khi predict EXIT. V37a+ExitModel la BEST hien tai (score 597, WR 57.4%, MaxLoss -23.9%). Architecture: `exit_model:` config trong models.yaml, `TargetGenerator.generate_exit_labels()`, `_build_predictions(exit_model_cfg)`, `backtest_unified(y_pred_exit)`. Fix critical bug y_pred_sell/y_pred_exit naming. 14 active models da duoc cap nhat exit_model config.*
+*Cap nhat lan cuoi: 2026-04-26 - Full re-run pipeline (`run_pipeline.py --all --force`) cho 27 active models tren 61 symbols (~404s tren GPU auto-detect). V39d/V39e/V39a tied o top voi score 611.7 (WR 56.3%, TotPnL +12612%, MaxLoss -23.9%). V37a+ExitModel rot xuong rank 8 (score 597.3) — moi training run co variance, can verify truoc khi promote BEST. 5 ML training groups shared (leading_v4+early_wave_dual / leading_v4+early_wave / leading_v4+early_wave+exit / leading_v3+early_wave / leading_v2+trend_regime). Manifest da update voi 38 models (27 moi + 11 preserved).*
+
+*Cap nhat 2026-04-24 - Them Separate Exit Model (Model B): train doc lap tren exit signal, override engine khi predict EXIT. Architecture: `exit_model:` config trong models.yaml, `TargetGenerator.generate_exit_labels()`, `_build_predictions(exit_model_cfg)`, `backtest_unified(y_pred_exit)`. Fix critical bug y_pred_sell/y_pred_exit naming. 14 active models da duoc cap nhat exit_model config.*
 

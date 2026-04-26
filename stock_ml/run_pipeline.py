@@ -358,7 +358,7 @@ def _run_backtest_from_cache(prediction_cache, version_key, model_cfg):
         )
         extra_kwargs = {}
         y_pred_exit = item.get("y_pred_exit")
-        if y_pred_exit is not None:
+        if y_pred_exit is not None and "y_pred_exit" in sig_params:
             extra_kwargs["y_pred_exit"] = y_pred_exit
         r = backtest_fn(
             y_pred_eff, item["returns"],

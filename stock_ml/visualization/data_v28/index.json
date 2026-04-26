@@ -27,7 +27,7 @@
     {
       "symbol": "NKG",
       "v28_trades": 33,
-      "v28_pnl": 273.6,
+      "v28_pnl": 274.2,
       "v28_wr": 48.5
     },
     {
@@ -51,7 +51,7 @@
     {
       "symbol": "DCM",
       "v28_trades": 32,
-      "v28_pnl": 251.9,
+      "v28_pnl": 252.4,
       "v28_wr": 53.1
     },
     {
@@ -134,9 +134,9 @@
     },
     {
       "symbol": "VPB",
-      "v28_trades": 31,
-      "v28_pnl": 134.9,
-      "v28_wr": 32.3
+      "v28_trades": 32,
+      "v28_pnl": 134.2,
+      "v28_wr": 31.2
     },
     {
       "symbol": "DPM",
@@ -165,7 +165,7 @@
     {
       "symbol": "ACV",
       "v28_trades": 23,
-      "v28_pnl": 112.9,
+      "v28_pnl": 114.0,
       "v28_wr": 43.5
     },
     {
@@ -235,12 +235,6 @@
       "v28_wr": 47.2
     },
     {
-      "symbol": "MSN",
-      "v28_trades": 36,
-      "v28_pnl": 68.8,
-      "v28_wr": 50.0
-    },
-    {
       "symbol": "GMD",
       "v28_trades": 34,
       "v28_pnl": 67.8,
@@ -249,20 +243,26 @@
     {
       "symbol": "NVL",
       "v28_trades": 30,
-      "v28_pnl": 67.5,
+      "v28_pnl": 67.4,
       "v28_wr": 40.0
-    },
-    {
-      "symbol": "BVH",
-      "v28_trades": 32,
-      "v28_pnl": 60.8,
-      "v28_wr": 53.1
     },
     {
       "symbol": "SBT",
       "v28_trades": 35,
       "v28_pnl": 59.3,
       "v28_wr": 37.1
+    },
+    {
+      "symbol": "BVH",
+      "v28_trades": 32,
+      "v28_pnl": 58.8,
+      "v28_wr": 53.1
+    },
+    {
+      "symbol": "MSN",
+      "v28_trades": 36,
+      "v28_pnl": 58.4,
+      "v28_wr": 50.0
     },
     {
       "symbol": "PVS",
@@ -355,18 +355,18 @@
       "v28_wr": 41.9
     },
     {
+      "symbol": "SAB",
+      "v28_trades": 31,
+      "v28_pnl": -8.2,
+      "v28_wr": 32.3
+    },
+    {
       "symbol": "GAS",
       "v28_trades": 32,
       "v28_pnl": -15.9,
       "v28_wr": 40.6
-    },
-    {
-      "symbol": "SAB",
-      "v28_trades": 31,
-      "v28_pnl": -16.6,
-      "v28_wr": 32.3
     }
   ],
   "version": "v28",
-  "generated_at": "2026-04-24T16:21:35.124384"
+  "generated_at": "2026-04-25T00:55:06.688622"
 }

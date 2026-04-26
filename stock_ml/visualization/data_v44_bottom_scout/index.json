@@ -1,0 +1,42 @@
+{
+  "symbols": [
+    {
+      "symbol": "VND",
+      "v44_bottom_scout_trades": 18,
+      "v44_bottom_scout_pnl": 437.6,
+      "v44_bottom_scout_wr": 66.7
+    },
+    {
+      "symbol": "SSI",
+      "v44_bottom_scout_trades": 23,
+      "v44_bottom_scout_pnl": 198.3,
+      "v44_bottom_scout_wr": 56.5
+    },
+    {
+      "symbol": "HPG",
+      "v44_bottom_scout_trades": 22,
+      "v44_bottom_scout_pnl": 147.3,
+      "v44_bottom_scout_wr": 40.9
+    },
+    {
+      "symbol": "FPT",
+      "v44_bottom_scout_trades": 19,
+      "v44_bottom_scout_pnl": 146.7,
+      "v44_bottom_scout_wr": 57.9
+    },
+    {
+      "symbol": "MBB",
+      "v44_bottom_scout_trades": 24,
+      "v44_bottom_scout_pnl": 88.1,
+      "v44_bottom_scout_wr": 41.7
+    },
+    {
+      "symbol": "ACB",
+      "v44_bottom_scout_trades": 21,
+      "v44_bottom_scout_pnl": 63.9,
+      "v44_bottom_scout_wr": 52.4
+    }
+  ],
+  "version": "v44_bottom_scout",
+  "generated_at": "2026-04-25T02:36:06.127616"
+}

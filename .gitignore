@@ -41,5 +41,15 @@ stock_ml/results/*.csv
 stock_ml/results/*.json
 stock_ml/results/*.png
 
+# Generic large data / cache files
+*.csv
+*.parquet
+*.feather
+*.arrow
+*.npz
+*.joblib
+stock_ml/results/cache/
+**/cache/
+
 # Claude
 .claude/

@@ -1,4 +1,865 @@
 models:
+  v47_tri_route:
+    name: V47 Tri Route
+    description: 'Simulated per-symbol router: V37a_exit baseline, V42 for DGC/KBC/VIC/VJC/VND, V44 for FRT/HSG/MSN/NVL/SAB'
+    color: '#D500F9'
+    active: false
+    strategy: tri_route_simulated
+    feature_set: mixed
+    marker_shape: arrowUp
+    order: -61
+  v46_bottom_hold20:
+    name: V46 Bottom Hold20
+    description: 'V44 bottom base + block early signal exits until 20d, delay HAP to let bottom waves develop'
+    color: '#AB47BC'
+    active: false
+    strategy: v42_base
+    feature_set: leading_v5
+    target:
+      type: early_bottom_v1
+      forward_window: 12
+      short_window: 10
+      long_window: 30
+      gain_threshold: 0.06
+      loss_threshold: 0.035
+      classes: 3
+    mods:
+      a: true
+      b: true
+      c: false
+      d: false
+      e: true
+      f: true
+      g: true
+      h: true
+      i: true
+      j: true
+    params:
+      v39a_signal_exit_min_hold: 20
+      v39b_hap_min_hold: 15
+      v39b_hap_trigger: 0.08
+    marker_shape: arrowUp
+    order: -60
+  v46_bottom_hold30:
+    name: V46 Bottom Hold30
+    description: 'V44 bottom base + stronger signal-exit min-hold for longer bottom waves'
+    color: '#8E24AA'
+    active: false
+    strategy: v42_base
+    feature_set: leading_v5
+    target:
+      type: early_bottom_v1
+      forward_window: 12
+      short_window: 10
+      long_window: 30
+      gain_threshold: 0.06
+      loss_threshold: 0.035
+      classes: 3
+    mods:
+      a: true
+      b: true
+      c: false
+      d: false
+      e: true
+      f: true
+      g: true
+      h: true
+      i: true
+      j: true
+    params:
+      v39a_signal_exit_min_hold: 30
+      v39b_hap_min_hold: 15
+      v39b_hap_trigger: 0.08
+    marker_shape: arrowUp
+    order: -59
+  v45_l5_wave_base:
+    name: V45 L5 Wave Base
+    description: 'Ablation: leading_v5 bottom features with original V42 early_wave target to isolate feature impact'
+    color: '#42A5F5'
+    active: false
+    strategy: v42_base
+    feature_set: leading_v5
+    target:
+      type: early_wave
+      forward_window: 15
+      short_window: 8
+      long_window: 20
+      gain_threshold: 0.06
+      loss_threshold: 0.03
+      classes: 3
+    mods:
+      a: true
+      b: true
+      c: false
+      d: false
+      e: true
+      f: true
+      g: true
+      h: true
+      i: true
+      j: true
+    marker_shape: arrowUp
+    order: -58
+  v45_l5_wave_exit:
+    name: V45 L5 Wave +ExitModel
+    description: 'Ablation: leading_v5 bottom features with V42 early_wave_dual target and exit model'
+    color: '#29B6F6'
+    active: false
+    strategy: v42_a
+    feature_set: leading_v5
+    target:
+      type: early_wave_dual
+      forward_window: 15
+      short_window: 8
+      long_window: 20
+      gain_threshold: 0.06
+      loss_threshold: 0.03
+      classes: 3
+    mods:
+      a: true
+      b: true
+      c: false
+      d: false
+      e: true
+      f: true
+      g: true
+      h: true
+      i: true
+      j: true
+    marker_shape: arrowUp
+    exit_mode: hybrid
+    exit_model:
+      enabled: true
+      forward_window: 15
+      loss_threshold: 0.05
+    order: -57
+  v44_bottom_tight:
+    name: V44 Bottom Tight
+    description: 'leading_v5 + early_bottom_v1 — tighter risk label for cleaner bottom-reversal entries'
+    color: '#7CB342'
+    active: false
+    strategy: v42_base
+    feature_set: leading_v5
+    target:
+      type: early_bottom_v1
+      forward_window: 12
+      short_window: 10
+      long_window: 30
+      gain_threshold: 0.07
+      loss_threshold: 0.03
+      classes: 3
+    mods:
+      a: true
+      b: true
+      c: false
+      d: false
+      e: true
+      f: true
+      g: true
+      h: true
+      i: true
+      j: true
+    marker_shape: arrowUp
+    order: -57
+  v44_bottom_base:
+    name: V44 Bottom Base
+    description: 'leading_v5 + early_bottom_v1 — cautious bottom-reversal target without v43 gate loosening'
+    color: '#9CCC65'
+    active: false
+    strategy: v42_base
+    feature_set: leading_v5
+    target:
+      type: early_bottom_v1
+      forward_window: 12
+      short_window: 10
+      long_window: 30
+      gain_threshold: 0.06
+      loss_threshold: 0.035
+      classes: 3
+    mods:
+      a: true
+      b: true
+      c: false
+      d: false
+      e: true
+      f: true
+      g: true
+      h: true
+      i: true
+      j: true
+    marker_shape: arrowUp
+    order: -56
+  v44_bottom_scout:
+    name: V44 Bottom Scout
+    description: 'leading_v5 + early_bottom_v1 — earlier scout entries with lower gain bar'
+    color: '#FFD54F'
+    active: false
+    strategy: v42_base
+    feature_set: leading_v5
+    target:
+      type: early_bottom_v1
+      forward_window: 10
+      short_window: 8
+      long_window: 30
+      gain_threshold: 0.05
+      loss_threshold: 0.035
+      classes: 3
+    mods:
+      a: true
+      b: true
+      c: false
+      d: false
+      e: true
+      f: true
+      g: true
+      h: true
+      i: true
+      j: true
+    marker_shape: arrowUp
+    order: -55
+  v44_bottom_exit:
+    name: V44 Bottom +ExitModel
+    description: 'leading_v5 + early_bottom_v1 + separate exit model — bottom entries with V42-style risk control'
+    color: '#26C6DA'
+    active: false
+    strategy: v42_a
+    feature_set: leading_v5
+    target:
+      type: early_bottom_v1
+      forward_window: 12
+      short_window: 10
+      long_window: 30
+      gain_threshold: 0.06
+      loss_threshold: 0.035
+      classes: 3
+    mods:
+      a: true
+      b: true
+      c: false
+      d: false
+      e: true
+      f: true
+      g: true
+      h: true
+      i: true
+      j: true
+    marker_shape: arrowUp
+    exit_mode: hybrid
+    exit_model:
+      enabled: true
+      forward_window: 12
+      loss_threshold: 0.03
+    order: -54
+  v43_early_scout:
+    name: V43 Early Scout
+    description: 'V42a + early bottom scout: relax cooldown/proximity/single-bar, hybrid rule entry 35%, wave acceleration, selective choppy'
+    color: '#00BFA5'
+    active: false
+    strategy: v42_a
+    feature_set: leading_v4
+    target:
+      type: early_wave_dual
+      forward_window: 15
+      short_window: 8
+      long_window: 20
+      gain_threshold: 0.06
+      loss_threshold: 0.03
+      classes: 3
+    mods:
+      a: true
+      b: true
+      c: false
+      d: false
+      e: true
+      f: true
+      g: true
+      h: true
+      i: true
+      j: true
+    params:
+      patch_smart_hardcap: true
+      patch_pp_restore: true
+      patch_long_horizon: true
+      patch_symbol_tuning: true
+      patch_rule_ensemble: true
+      v26_relaxed_entry: true
+      v26_skip_choppy: false
+      v26_strong_rule_ensemble: true
+      v27_hardcap_two_step: true
+      v27_rule_priority: true
+      v27_dynamic_score5_penalty: true
+      v27_trend_persistence_hold: true
+      v27_selective_choppy: true
+      v28_early_wave_filter: true
+      v28_wave_acceleration_entry: true
+      v28_early_loss_cut: true
+      v28_early_loss_cut_threshold: -0.04
+      v28_early_loss_cut_days: 5
+      v30_signal_exit_defer: true
+      v30_sed_defer_bars: 3
+      v30_sed_min_cum_ret: 0.02
+      v31_short_hold_exit_filter: true
+      v31_shef_min_hold: 18
+      v31_shef_min_pnl: -0.03
+      v31_hardcap_after_profit: true
+      v31_hap_profit_trigger: 0.05
+      v31_hap_floor: -0.03
+      v32_hap_preempt: true
+      v32_hap_pre_trigger: 0.04
+      v32_hap_pre_floor: -0.07
+      v35_rule_override: true
+      v35_rule_override_min_score: 1
+      v35_skip_price_proximity: true
+      v35_relax_cooldown: true
+      v35_cooldown_after_big_loss: 1
+      v35_cooldown_after_loss: 0
+      v35_single_bar_signal: true
+      v35_hybrid_entry: true
+      v35_hybrid_size: 0.35
+    marker_shape: arrowUp
+    exit_mode: hybrid
+    exit_model:
+      enabled: true
+      forward_window: 15
+      loss_threshold: 0.05
+    order: -53
+  v43_early_aggr:
+    name: V43 Early Aggressive
+    description: 'V43 early scout + disable bear/chop entry gates to probe maximum early-bottom capture; high-noise experiment'
+    color: '#FF1744'
+    active: false
+    strategy: v42_a
+    feature_set: leading_v4
+    target:
+      type: early_wave_dual
+      forward_window: 15
+      short_window: 8
+      long_window: 20
+      gain_threshold: 0.06
+      loss_threshold: 0.03
+      classes: 3
+    mods:
+      a: true
+      b: true
+      c: false
+      d: false
+      e: true
+      f: true
+      g: false
+      h: true
+      i: true
+      j: false
+    params:
+      patch_smart_hardcap: true
+      patch_pp_restore: true
+      patch_long_horizon: true
+      patch_symbol_tuning: true
+      patch_rule_ensemble: true
+      v26_relaxed_entry: true
+      v26_skip_choppy: false
+      v26_strong_rule_ensemble: true
+      v27_hardcap_two_step: true
+      v27_rule_priority: true
+      v27_dynamic_score5_penalty: true
+      v27_trend_persistence_hold: true
+      v27_selective_choppy: true
+      v28_early_wave_filter: true
+      v28_wave_acceleration_entry: true
+      v28_early_loss_cut: true
+      v28_early_loss_cut_threshold: -0.04
+      v28_early_loss_cut_days: 5
+      v30_signal_exit_defer: true
+      v30_sed_defer_bars: 3
+      v30_sed_min_cum_ret: 0.02
+      v31_short_hold_exit_filter: true
+      v31_shef_min_hold: 18
+      v31_shef_min_pnl: -0.03
+      v31_hardcap_after_profit: true
+      v31_hap_profit_trigger: 0.05
+      v31_hap_floor: -0.03
+      v32_hap_preempt: true
+      v32_hap_pre_trigger: 0.04
+      v32_hap_pre_floor: -0.07
+      v35_rule_override: true
+      v35_rule_override_min_score: 1
+      v35_skip_price_proximity: true
+      v35_relax_cooldown: true
+      v35_cooldown_after_big_loss: 1
+      v35_cooldown_after_loss: 0
+      v35_single_bar_signal: true
+      v35_hybrid_entry: true
+      v35_hybrid_size: 0.30
+    marker_shape: arrowUp
+    exit_mode: hybrid
+    exit_model:
+      enabled: true
+      forward_window: 15
+      loss_threshold: 0.05
+    order: -52
+  v49_base:
+    name: V49 Base
+    description: 'V37a_exit baseline + no new v49 knobs (control for ablation)'
+    color: '#00897B'
+    active: false
+    strategy: v37a_exit
+    feature_set: leading_v4
+    target:
+      type: early_wave_dual
+      forward_window: 8
+      short_window: 8
+      long_window: 20
+      gain_threshold: 0.06
+      loss_threshold: 0.03
+      classes: 3
+    mods:
+      a: true
+      b: true
+      c: false
+      d: false
+      e: true
+      f: true
+      g: true
+      h: true
+      i: true
+      j: true
+    marker_shape: arrowUp
+    exit_mode: model_b
+    exit_model:
+      enabled: true
+      forward_window: 8
+      loss_threshold: 0.05
+    order: -50.9
+  v49_e_nb:
+    name: V49 Entry Near BO
+    description: 'Ablation E: enable near-breakout early entry only'
+    color: '#00ACC1'
+    active: false
+    strategy: v37a_exit
+    feature_set: leading_v4
+    target:
+      type: early_wave_dual
+      forward_window: 8
+      short_window: 8
+      long_window: 20
+      gain_threshold: 0.06
+      loss_threshold: 0.03
+      classes: 3
+    mods:
+      a: true
+      b: true
+      c: false
+      d: false
+      e: true
+      f: true
+      g: true
+      h: true
+      i: true
+      j: true
+    params:
+      v49_near_breakout_entry: true
+      v49_nb_lookback: 10
+      v49_nb_close_ratio: 0.98
+      v49_nb_vol_mult: 1.6
+      v49_nb_ret5d_max: 0.12
+      v49_nb_position_size: 0.40
+    marker_shape: arrowUp
+    exit_mode: model_b
+    exit_model:
+      enabled: true
+      forward_window: 8
+      loss_threshold: 0.05
+    order: -50.8
+  v49_e_lwb:
+    name: V49 Entry LateWave Block
+    description: 'Ablation E: stronger late-wave blocker only'
+    color: '#26C6DA'
+    active: false
+    strategy: v37a_exit
+    feature_set: leading_v4
+    target:
+      type: early_wave_dual
+      forward_window: 8
+      short_window: 8
+      long_window: 20
+      gain_threshold: 0.06
+      loss_threshold: 0.03
+      classes: 3
+    mods:
+      a: true
+      b: true
+      c: false
+      d: false
+      e: true
+      f: true
+      g: true
+      h: true
+      i: true
+      j: true
+    params:
+      v49_late_wave_blocker: true
+      v49_lwb_days_since_low_max: 6
+      v49_lwb_ret5d_min: 0.07
+      v49_lwb_ret2d_max: 0.005
+      v49_lwb_ret20d_max: 0.15
+    marker_shape: arrowUp
+    exit_mode: model_b
+    exit_model:
+      enabled: true
+      forward_window: 8
+      loss_threshold: 0.05
+    order: -50.7
+  v49_x_sed:
+    name: V49 Exit Signal Guard
+    description: 'Ablation X: signal-exit guard only (reduce mid-wave false exits)'
+    color: '#5E35B1'
+    active: false
+    strategy: v37a_exit
+    feature_set: leading_v4
+    target:
+      type: early_wave_dual
+      forward_window: 8
+      short_window: 8
+      long_window: 20
+      gain_threshold: 0.06
+      loss_threshold: 0.03
+      classes: 3
+    mods:
+      a: true
+      b: true
+      c: false
+      d: false
+      e: true
+      f: true
+      g: true
+      h: true
+      i: true
+      j: true
+    params:
+      v49_signal_exit_guard: true
+      v49_seg_min_hold: 12
+      v49_seg_min_profit: 0.02
+      v49_seg_macd_min: -0.02
+    marker_shape: arrowUp
+    exit_mode: model_b
+    exit_model:
+      enabled: true
+      forward_window: 8
+      loss_threshold: 0.05
+    order: -50.6
+  v49_x_tc:
+    name: V49 Exit Trend Carry
+    description: 'Ablation X: trend-carry boost only'
+    color: '#7E57C2'
+    active: false
+    strategy: v37a_exit
+    feature_set: leading_v4
+    target:
+      type: early_wave_dual
+      forward_window: 8
+      short_window: 8
+      long_window: 20
+      gain_threshold: 0.06
+      loss_threshold: 0.03
+      classes: 3
+    mods:
+      a: true
+      b: true
+      c: false
+      d: false
+      e: true
+      f: true
+      g: true
+      h: true
+      i: true
+      j: true
+    params:
+      v49_trend_carry_boost: true
+      v49_tcb_min_profit_seen: 0.06
+      v49_tcb_min_hold: 8
+      v49_tcb_keep_ratio: 0.65
+    marker_shape: arrowUp
+    exit_mode: model_b
+    exit_model:
+      enabled: true
+      forward_window: 8
+      loss_threshold: 0.05
+    order: -50.5
+  v49_x_pp:
+    name: V49 Exit PeakProtect Buffer
+    description: 'Ablation X: peak-protect buffer only'
+    color: '#9575CD'
+    active: false
+    strategy: v37a_exit
+    feature_set: leading_v4
+    target:
+      type: early_wave_dual
+      forward_window: 8
+      short_window: 8
+      long_window: 20
+      gain_threshold: 0.06
+      loss_threshold: 0.03
+      classes: 3
+    mods:
+      a: true
+      b: true
+      c: false
+      d: false
+      e: true
+      f: true
+      g: true
+      h: true
+      i: true
+      j: true
+    params:
+      v49_peak_protect_buffer: true
+      v49_ppb_min_hold: 12
+      v49_ppb_min_cur_ret: 0.04
+      v49_ppb_macd_min: -0.01
+    marker_shape: arrowUp
+    exit_mode: model_b
+    exit_model:
+      enabled: true
+      forward_window: 8
+      loss_threshold: 0.05
+    order: -50.4
+  v49_x_em:
+    name: V49 ExitModel 15d
+    description: 'Ablation X: independent exit model horizon=15d (same logic as base)'
+    color: '#3949AB'
+    active: false
+    strategy: v37a_exit
+    feature_set: leading_v4
+    target:
+      type: early_wave_dual
+      forward_window: 8
+      short_window: 8
+      long_window: 20
+      gain_threshold: 0.06
+      loss_threshold: 0.03
+      classes: 3
+    mods:
+      a: true
+      b: true
+      c: false
+      d: false
+      e: true
+      f: true
+      g: true
+      h: true
+      i: true
+      j: true
+    marker_shape: arrowUp
+    exit_mode: model_b
+    exit_model:
+      enabled: true
+      forward_window: 15
+      loss_threshold: 0.05
+    order: -50.3
+  v49_c_entry:
+    name: V49 Combo Entry
+    description: 'Combo: near-breakout + late-wave blocker'
+    color: '#26A69A'
+    active: false
+    strategy: v37a_exit
+    feature_set: leading_v4
+    target:
+      type: early_wave_dual
+      forward_window: 8
+      short_window: 8
+      long_window: 20
+      gain_threshold: 0.06
+      loss_threshold: 0.03
+      classes: 3
+    mods:
+      a: true
+      b: true
+      c: false
+      d: false
+      e: true
+      f: true
+      g: true
+      h: true
+      i: true
+      j: true
+    params:
+      v49_near_breakout_entry: true
+      v49_nb_lookback: 10
+      v49_nb_close_ratio: 0.98
+      v49_nb_vol_mult: 1.6
+      v49_nb_ret5d_max: 0.12
+      v49_nb_position_size: 0.40
+      v49_late_wave_blocker: true
+      v49_lwb_days_since_low_max: 6
+      v49_lwb_ret5d_min: 0.07
+      v49_lwb_ret2d_max: 0.005
+      v49_lwb_ret20d_max: 0.15
+    marker_shape: arrowUp
+    exit_mode: model_b
+    exit_model:
+      enabled: true
+      forward_window: 8
+      loss_threshold: 0.05
+    order: -50.2
+  v49_c_exit:
+    name: V49 Combo Exit
+    description: 'Combo: signal-exit guard + trend-carry + peak-protect buffer'
+    color: '#5C6BC0'
+    active: false
+    strategy: v37a_exit
+    feature_set: leading_v4
+    target:
+      type: early_wave_dual
+      forward_window: 8
+      short_window: 8
+      long_window: 20
+      gain_threshold: 0.06
+      loss_threshold: 0.03
+      classes: 3
+    mods:
+      a: true
+      b: true
+      c: false
+      d: false
+      e: true
+      f: true
+      g: true
+      h: true
+      i: true
+      j: true
+    params:
+      v49_signal_exit_guard: true
+      v49_seg_min_hold: 12
+      v49_seg_min_profit: 0.02
+      v49_seg_macd_min: -0.02
+      v49_trend_carry_boost: true
+      v49_tcb_min_profit_seen: 0.06
+      v49_tcb_min_hold: 8
+      v49_tcb_keep_ratio: 0.65
+      v49_peak_protect_buffer: true
+      v49_ppb_min_hold: 12
+      v49_ppb_min_cur_ret: 0.04
+      v49_ppb_macd_min: -0.01
+    marker_shape: arrowUp
+    exit_mode: model_b
+    exit_model:
+      enabled: true
+      forward_window: 8
+      loss_threshold: 0.05
+    order: -50.1
+  v49:
+    name: V49 Final Candidate
+    description: 'Final candidate: best entry+exit combo from v49 ablation protocol'
+    color: '#00B8D4'
+    active: false
+    strategy: v37a_exit
+    feature_set: leading_v4
+    target:
+      type: early_wave_dual
+      forward_window: 8
+      short_window: 8
+      long_window: 20
+      gain_threshold: 0.06
+      loss_threshold: 0.03
+      classes: 3
+    mods:
+      a: true
+      b: true
+      c: false
+      d: false
+      e: true
+      f: true
+      g: true
+      h: true
+      i: true
+      j: true
+    params:
+      v49_near_breakout_entry: true
+      v49_nb_lookback: 10
+      v49_nb_close_ratio: 0.98
+      v49_nb_vol_mult: 1.6
+      v49_nb_ret5d_max: 0.12
+      v49_nb_position_size: 0.40
+      v49_late_wave_blocker: true
+      v49_lwb_days_since_low_max: 6
+      v49_lwb_ret5d_min: 0.07
+      v49_lwb_ret2d_max: 0.005
+      v49_lwb_ret20d_max: 0.15
+      v49_signal_exit_guard: true
+      v49_seg_min_hold: 12
+      v49_seg_min_profit: 0.02
+      v49_seg_macd_min: -0.02
+      v49_trend_carry_boost: true
+      v49_tcb_min_profit_seen: 0.06
+      v49_tcb_min_hold: 8
+      v49_tcb_keep_ratio: 0.65
+      v49_peak_protect_buffer: true
+      v49_ppb_min_hold: 12
+      v49_ppb_min_cur_ret: 0.04
+      v49_ppb_macd_min: -0.01
+    marker_shape: arrowUp
+    exit_mode: model_b
+    exit_model:
+      enabled: true
+      forward_window: 8
+      loss_threshold: 0.05
+    order: -50.0
+  v49_em:
+    name: V49 Final + ExitModel15
+    description: 'Final candidate with longer-horizon exit model (fw=15)'
+    color: '#1E88E5'
+    active: false
+    strategy: v37a_exit
+    feature_set: leading_v4
+    target:
+      type: early_wave_dual
+      forward_window: 8
+      short_window: 8
+      long_window: 20
+      gain_threshold: 0.06
+      loss_threshold: 0.03
+      classes: 3
+    mods:
+      a: true
+      b: true
+      c: false
+      d: false
+      e: true
+      f: true
+      g: true
+      h: true
+      i: true
+      j: true
+    params:
+      v49_near_breakout_entry: true
+      v49_nb_lookback: 10
+      v49_nb_close_ratio: 0.98
+      v49_nb_vol_mult: 1.6
+      v49_nb_ret5d_max: 0.12
+      v49_nb_position_size: 0.40
+      v49_late_wave_blocker: true
+      v49_lwb_days_since_low_max: 6
+      v49_lwb_ret5d_min: 0.07
+      v49_lwb_ret2d_max: 0.005
+      v49_lwb_ret20d_max: 0.15
+      v49_signal_exit_guard: true
+      v49_seg_min_hold: 12
+      v49_seg_min_profit: 0.02
+      v49_seg_macd_min: -0.02
+      v49_trend_carry_boost: true
+      v49_tcb_min_profit_seen: 0.06
+      v49_tcb_min_hold: 8
+      v49_tcb_keep_ratio: 0.65
+      v49_peak_protect_buffer: true
+      v49_ppb_min_hold: 12
+      v49_ppb_min_cur_ret: 0.04
+      v49_ppb_macd_min: -0.01
+    marker_shape: arrowUp
+    exit_mode: model_b
+    exit_model:
+      enabled: true
+      forward_window: 15
+      loss_threshold: 0.05
+    order: -49.9
   v37a_exit:
     name: V37a +ExitModel
     description: 'V37a engine + separate exit model B (fw=8,g6%,l3%) — same target as V37a goc, them model B predict EXIT'
@@ -25,13 +886,26 @@ models:
       h: true
       i: true
       j: true
+    params:
+      model_b_min_hold: 5
+      model_b_require_trend_break: true
+      model_b_trend_break_use_sma20: true
+      model_b_trend_break_use_ema8: true
+      model_b_trend_break_use_macd: false
+      model_b_trend_break_use_red_candle: false
+      model_b_min_negative_signals: 2
     marker_shape: arrowUp
+    exit_mode: model_b
+    exit_model:
+      enabled: true
+      forward_window: 8
+      loss_threshold: 0.05
     order: -51
   v42_a:
     name: V42a +ExitModel
     description: 'V37a engine + separate exit model B (fw=15,g6%,l3%) — model B predict diem EXIT doc lap, override engine khi hold>=3d'
     color: '#70c17a'
-    active: true
+    active: false
     strategy: v42_a
     feature_set: leading_v4
     target:
@@ -54,12 +928,18 @@ models:
       i: true
       j: true
     marker_shape: arrowUp
+    exit_mode: hybrid
+    exit_model:
+      enabled: true
+      forward_window: 15
+      loss_threshold: 0.05
     order: -50
+    retired_reason: Retired after model_b finalist sweep; keep only top 5 active models
   v42_base:
     name: V42 base
     description: 'V37a engine, fw=15,g6%,l3% — baseline cho V42 (khong co exit model)'
     color: '#5b9bd5'
-    active: true
+    active: false
     strategy: v42_base
     feature_set: leading_v4
     target:
@@ -83,11 +963,12 @@ models:
       j: true
     marker_shape: arrowUp
     order: -49
+    retired_reason: Retired after model_b finalist sweep; keep only top 5 active models
   v39g:
     name: V39g
     description: 'V37a + HAP reform (8%/15d) + selective rule_confirm (chi defer khi max_profit>=150%) — fix false exits cho big-upside trades'
     color: '#FFAB40'
-    active: true
+    active: false
     strategy: v39g
     feature_set: leading_v4
     target:
@@ -139,16 +1020,18 @@ models:
       v32_hap_pre_trigger: 0.04
       v32_hap_pre_floor: -0.07
     marker_shape: arrowUp
+    exit_mode: hybrid
     exit_model:
       enabled: true
       forward_window: 15
       loss_threshold: 0.05
     order: -41
+    retired_reason: Retired after model_b finalist sweep; keep only top 5 active models
   v39f:
     name: V39f
     description: 'V37a + HAP reform (trigger 8%, min_hold=15) + signal_exit_rule_confirm — combo V39b+V39a2'
     color: '#FF4081'
-    active: true
+    active: false
     strategy: v39f
     feature_set: leading_v4
     target:
@@ -200,11 +1083,13 @@ models:
       v32_hap_pre_trigger: 0.04
       v32_hap_pre_floor: -0.07
     marker_shape: arrowUp
+    exit_mode: hybrid
     exit_model:
       enabled: true
       forward_window: 15
       loss_threshold: 0.05
     order: -40
+    retired_reason: Retired after model_b finalist sweep; keep only top 5 active models
   v39d:
     name: V39d
     description: 'V39e + per-symbol rule-exit hybrid (12 ma stable-trend thua Rule: PVS/AAS/BSR/PVD/KBC/AAV/GAS/FRT/BCM/PLX/SBT/BID)'
@@ -261,6 +1146,7 @@ models:
       v32_hap_pre_trigger: 0.04
       v32_hap_pre_floor: -0.07
     marker_shape: arrowUp
+    exit_mode: model_b
     exit_model:
       enabled: true
       forward_window: 15
@@ -270,7 +1156,7 @@ models:
     name: V39e
     description: 'V37a + signal_exit_min_hold=35 + HAP reform (trigger 8%, min_hold=15) — dual fix: bucket 21-30d WR=12% + HAP cut wave early'
     color: '#E040FB'
-    active: true
+    active: false
     strategy: v39e
     feature_set: leading_v4
     target:
@@ -322,16 +1208,18 @@ models:
       v32_hap_pre_trigger: 0.04
       v32_hap_pre_floor: -0.07
     marker_shape: arrowUp
+    exit_mode: hybrid
     exit_model:
       enabled: true
       forward_window: 15
       loss_threshold: 0.05
     order: -38
+    retired_reason: Retired after model_b finalist sweep; keep only top 5 active models
   v39b:
     name: V39b
     description: 'V37a + HAP reform: trigger 8% (vs 4%) + min_hold=15 — fix 87 trades HAP 100% loss do cat dau song'
     color: '#40C4FF'
-    active: true
+    active: false
     strategy: v39b
     feature_set: leading_v4
     target:
@@ -383,16 +1271,18 @@ models:
       v32_hap_pre_trigger: 0.04
       v32_hap_pre_floor: -0.07
     marker_shape: arrowUp
+    exit_mode: hybrid
     exit_model:
       enabled: true
       forward_window: 15
       loss_threshold: 0.05
     order: -37
+    retired_reason: Retired after model_b finalist sweep; keep only top 5 active models
   v39a2:
     name: V39a2
     description: 'V37a + signal_exit_rule_confirm (MACD<0 AND Close<MA20) — signal exit chi khi rule dong thuan bearish'
     color: '#69F0AE'
-    active: true
+    active: false
     strategy: v39a2
     feature_set: leading_v4
     target:
@@ -444,16 +1334,18 @@ models:
       v32_hap_pre_trigger: 0.04
       v32_hap_pre_floor: -0.07
     marker_shape: arrowUp
+    exit_mode: hybrid
     exit_model:
       enabled: true
       forward_window: 15
       loss_threshold: 0.05
     order: -36
+    retired_reason: Retired after model_b finalist sweep; keep only top 5 active models
   v39a:
     name: V39a
     description: 'V37a + signal_exit_min_hold=35 — block signal exit truoc 35 ngay (bucket 21-30d WR=12% -> de "end" carry WR=76-99%)'
     color: '#FFD740'
-    active: true
+    active: false
     strategy: v39a
     feature_set: leading_v4
     target:
@@ -505,18 +1397,20 @@ models:
       v32_hap_pre_trigger: 0.04
       v32_hap_pre_floor: -0.07
     marker_shape: arrowUp
+    exit_mode: hybrid
     exit_model:
       enabled: true
       forward_window: 15
       loss_threshold: 0.05
     order: -35
+    retired_reason: Retired after model_b finalist sweep; keep only top 5 active models
   v37b:
     name: V37b
     description: V34 engine + dual-head ML (buy head + sell head, sell forces exit
       signal)
     color: '#00C853'
     active: false
-    retired_reason: Dual-head ML no edge over V35b/V36b
+    retired_reason: Retired after model_b finalist sweep; keep only top 5 active models
     strategy: v37b
     feature_set: leading_v4
     target:
@@ -574,7 +1468,7 @@ models:
     description: V34 engine + GRU sequence model (window=30, hidden=64) thay LightGBM
     color: '#7C4DFF'
     active: false
-    retired_reason: 'V37 sweep: -76 comp vs V34 (GRU 8ep/w20 chưa đủ học HA dynamics)'
+    retired_reason: Retired after model_b finalist sweep; keep only top 5 active models
     strategy: v37d
     feature_set: leading_v4
     model_type: gru
@@ -634,7 +1528,7 @@ models:
       bật V35b flags (rule_override + relax_cooldown + skip_price_proximity), momentum/high_beta
       giữ V34 strict. Comp 420.7 (+1.3 vs V34), TotPnL +8391% (+148pp).'
     color: '#00E676'
-    active: true
+    active: false
     strategy: v37a
     feature_set: leading_v4
     target:
@@ -686,18 +1580,20 @@ models:
       v32_hap_pre_trigger: 0.04
       v32_hap_pre_floor: -0.07
     marker_shape: arrowUp
+    exit_mode: hybrid
     exit_model:
       enabled: true
       forward_window: 15
       loss_threshold: 0.05
     order: -30
+    retired_reason: Retired after model_b finalist sweep; keep only top 5 active models
   v37c:
     name: V37c
     description: V34 engine + per-profile proba threshold (bank/defensive 0.30, balanced
       0.34, momentum/high_beta 0.42)
     color: '#FFD600'
     active: false
-    retired_reason: 'V37 sweep: -21 comp vs V34 (default thresholds chưa tune)'
+    retired_reason: Retired after model_b finalist sweep; keep only top 5 active models
     strategy: v37c
     feature_set: leading_v4
     target:
@@ -761,7 +1657,7 @@ models:
     description: V34 + rule_override only (relax ret5_hot/choppy/early_wave_filter
       when rule fires)
     color: '#E91E63'
-    active: true
+    active: false
     strategy: v36a
     feature_set: leading_v4
     target:
@@ -815,16 +1711,18 @@ models:
       v35_rule_override: true
       v35_rule_override_min_score: 1
     marker_shape: arrowUp
+    exit_mode: hybrid
     exit_model:
       enabled: true
       forward_window: 15
       loss_threshold: 0.05
     order: -20
+    retired_reason: Retired after model_b finalist sweep; keep only top 5 active models
   v36b:
     name: V36b
     description: V36a + skip_price_proximity (re-entry near old price if rule fires)
     color: '#9C27B0'
-    active: true
+    active: false
     strategy: v36b
     feature_set: leading_v4
     target:
@@ -879,16 +1777,18 @@ models:
       v35_rule_override_min_score: 1
       v35_skip_price_proximity: true
     marker_shape: arrowUp
+    exit_mode: hybrid
     exit_model:
       enabled: true
       forward_window: 15
       loss_threshold: 0.05
     order: -21
+    retired_reason: Retired after model_b finalist sweep; keep only top 5 active models
   v36c:
     name: V36c
     description: V36b + relax_cooldown(big_loss=2,loss=1) — moderate cooldown relax
     color: '#673AB7'
-    active: true
+    active: false
     strategy: v36c
     feature_set: leading_v4
     target:
@@ -946,11 +1846,13 @@ models:
       v35_cooldown_after_big_loss: 2
       v35_cooldown_after_loss: 1
     marker_shape: arrowUp
+    exit_mode: hybrid
     exit_model:
       enabled: true
       forward_window: 15
       loss_threshold: 0.05
     order: -22
+    retired_reason: Retired after model_b finalist sweep; keep only top 5 active models
   v35a:
     name: V35a
     description: V34 base + early_wave_v2 target (relax accumulation, add rule-trigger
@@ -1009,7 +1911,7 @@ models:
       v32_hap_pre_floor: -0.07
     marker_shape: arrowUp
     order: -10
-    retired_reason: Dominated by V35b on all metrics
+    retired_reason: Retired after model_b finalist sweep; keep only top 5 active models
   v35b:
     name: V35b
     description: V34 + engine reform (relax cooldown=1, single-bar signal, rule_override
@@ -1074,6 +1976,7 @@ models:
       v35_rule_override: true
       v35_rule_override_min_score: 1
     marker_shape: arrowUp
+    exit_mode: model_b
     exit_model:
       enabled: true
       forward_window: 15
@@ -1138,7 +2041,7 @@ models:
       v35_hybrid_size: 0.5
     marker_shape: arrowUp
     order: -12
-    retired_reason: Dominated by V35b on all metrics
+    retired_reason: Retired after model_b finalist sweep; keep only top 5 active models
   v38b:
     name: V38b
     description: 'V34 + HAP nhay hon (trigger 3%/floor -2%) + stall-exit'
@@ -1151,6 +2054,7 @@ models:
     params: { patch_smart_hardcap: true, patch_pp_restore: true, patch_long_horizon: true, patch_symbol_tuning: true, patch_rule_ensemble: true, v26_relaxed_entry: true, v26_skip_choppy: true, v26_strong_rule_ensemble: true, v27_hardcap_two_step: true, v27_rule_priority: true, v27_dynamic_score5_penalty: true, v27_trend_persistence_hold: true, v28_early_wave_filter: true, v28_early_loss_cut: true, v28_early_loss_cut_threshold: -0.04, v28_early_loss_cut_days: 5, v30_signal_exit_defer: true, v30_sed_defer_bars: 3, v30_sed_min_cum_ret: 0.02, v31_short_hold_exit_filter: true, v31_shef_min_hold: 18, v31_shef_min_pnl: -0.03, v31_hardcap_after_profit: true, v31_hap_profit_trigger: 0.05, v31_hap_floor: -0.03, v32_hap_preempt: true }
     marker_shape: arrowUp
     order: -40
+    retired_reason: Retired after model_b finalist sweep; keep only top 5 active models
   v38c:
     name: V38c
     description: 'V34 + HA-driven exit'
@@ -1163,6 +2067,7 @@ models:
     params: { patch_smart_hardcap: true, patch_pp_restore: true, patch_long_horizon: true, patch_symbol_tuning: true, patch_rule_ensemble: true, v26_relaxed_entry: true, v26_skip_choppy: true, v26_strong_rule_ensemble: true, v27_hardcap_two_step: true, v27_rule_priority: true, v27_dynamic_score5_penalty: true, v27_trend_persistence_hold: true, v28_early_wave_filter: true, v28_early_loss_cut: true, v28_early_loss_cut_threshold: -0.04, v28_early_loss_cut_days: 5, v30_signal_exit_defer: true, v30_sed_defer_bars: 3, v30_sed_min_cum_ret: 0.02, v31_short_hold_exit_filter: true, v31_shef_min_hold: 18, v31_shef_min_pnl: -0.03, v31_hardcap_after_profit: true, v31_hap_profit_trigger: 0.05, v31_hap_floor: -0.03, v32_hap_preempt: true, v32_hap_pre_trigger: 0.04, v32_hap_pre_floor: -0.07 }
     marker_shape: arrowUp
     order: -41
+    retired_reason: Retired after model_b finalist sweep; keep only top 5 active models
   v38d:
     name: V38d
     description: 'V34 + anti-fomo entry filter + rule co-pilot exit'
@@ -1175,6 +2080,7 @@ models:
     params: { patch_smart_hardcap: true, patch_pp_restore: true, patch_long_horizon: true, patch_symbol_tuning: true, patch_rule_ensemble: true, v26_relaxed_entry: true, v26_skip_choppy: true, v26_strong_rule_ensemble: true, v27_hardcap_two_step: true, v27_rule_priority: true, v27_dynamic_score5_penalty: true, v27_trend_persistence_hold: true, v28_early_wave_filter: true, v28_early_loss_cut: true, v28_early_loss_cut_threshold: -0.04, v28_early_loss_cut_days: 5, v30_signal_exit_defer: true, v30_sed_defer_bars: 3, v30_sed_min_cum_ret: 0.02, v31_short_hold_exit_filter: true, v31_shef_min_hold: 18, v31_shef_min_pnl: -0.03, v31_hardcap_after_profit: true, v31_hap_profit_trigger: 0.05, v31_hap_floor: -0.03, v32_hap_preempt: true, v32_hap_pre_trigger: 0.04, v32_hap_pre_floor: -0.07 }
     marker_shape: arrowUp
     order: -42
+    retired_reason: Retired after model_b finalist sweep; keep only top 5 active models
   v38bc:
     name: V38bc
     description: 'V38b + V38c'
@@ -1187,6 +2093,7 @@ models:
     params: { patch_smart_hardcap: true, patch_pp_restore: true, patch_long_horizon: true, patch_symbol_tuning: true, patch_rule_ensemble: true, v26_relaxed_entry: true, v26_skip_choppy: true, v26_strong_rule_ensemble: true, v27_hardcap_two_step: true, v27_rule_priority: true, v27_dynamic_score5_penalty: true, v27_trend_persistence_hold: true, v28_early_wave_filter: true, v28_early_loss_cut: true, v28_early_loss_cut_threshold: -0.04, v28_early_loss_cut_days: 5, v30_signal_exit_defer: true, v30_sed_defer_bars: 3, v30_sed_min_cum_ret: 0.02, v31_short_hold_exit_filter: true, v31_shef_min_hold: 18, v31_shef_min_pnl: -0.03, v31_hardcap_after_profit: true, v31_hap_profit_trigger: 0.05, v31_hap_floor: -0.03, v32_hap_preempt: true }
     marker_shape: arrowUp
     order: -43
+    retired_reason: Retired after model_b finalist sweep; keep only top 5 active models
   v38bd:
     name: V38bd
     description: 'V38b + V38d'
@@ -1199,6 +2106,7 @@ models:
     params: { patch_smart_hardcap: true, patch_pp_restore: true, patch_long_horizon: true, patch_symbol_tuning: true, patch_rule_ensemble: true, v26_relaxed_entry: true, v26_skip_choppy: true, v26_strong_rule_ensemble: true, v27_hardcap_two_step: true, v27_rule_priority: true, v27_dynamic_score5_penalty: true, v27_trend_persistence_hold: true, v28_early_wave_filter: true, v28_early_loss_cut: true, v28_early_loss_cut_threshold: -0.04, v28_early_loss_cut_days: 5, v30_signal_exit_defer: true, v30_sed_defer_bars: 3, v30_sed_min_cum_ret: 0.02, v31_short_hold_exit_filter: true, v31_shef_min_hold: 18, v31_shef_min_pnl: -0.03, v31_hardcap_after_profit: true, v31_hap_profit_trigger: 0.05, v31_hap_floor: -0.03, v32_hap_preempt: true }
     marker_shape: arrowUp
     order: -44
+    retired_reason: Retired after model_b finalist sweep; keep only top 5 active models
   v38cd:
     name: V38cd
     description: 'V38c + V38d'
@@ -1211,6 +2119,7 @@ models:
     params: { patch_smart_hardcap: true, patch_pp_restore: true, patch_long_horizon: true, patch_symbol_tuning: true, patch_rule_ensemble: true, v26_relaxed_entry: true, v26_skip_choppy: true, v26_strong_rule_ensemble: true, v27_hardcap_two_step: true, v27_rule_priority: true, v27_dynamic_score5_penalty: true, v27_trend_persistence_hold: true, v28_early_wave_filter: true, v28_early_loss_cut: true, v28_early_loss_cut_threshold: -0.04, v28_early_loss_cut_days: 5, v30_signal_exit_defer: true, v30_sed_defer_bars: 3, v30_sed_min_cum_ret: 0.02, v31_short_hold_exit_filter: true, v31_shef_min_hold: 18, v31_shef_min_pnl: -0.03, v31_hardcap_after_profit: true, v31_hap_profit_trigger: 0.05, v31_hap_floor: -0.03, v32_hap_preempt: true, v32_hap_pre_trigger: 0.04, v32_hap_pre_floor: -0.07 }
     marker_shape: arrowUp
     order: -45
+    retired_reason: Retired after model_b finalist sweep; keep only top 5 active models
   v38bcd:
     name: V38bcd
     description: 'V38b + V38c + V38d combined'
@@ -1223,22 +2132,25 @@ models:
     params: { patch_smart_hardcap: true, patch_pp_restore: true, patch_long_horizon: true, patch_symbol_tuning: true, patch_rule_ensemble: true, v26_relaxed_entry: true, v26_skip_choppy: true, v26_strong_rule_ensemble: true, v27_hardcap_two_step: true, v27_rule_priority: true, v27_dynamic_score5_penalty: true, v27_trend_persistence_hold: true, v28_early_wave_filter: true, v28_early_loss_cut: true, v28_early_loss_cut_threshold: -0.04, v28_early_loss_cut_days: 5, v30_signal_exit_defer: true, v30_sed_defer_bars: 3, v30_sed_min_cum_ret: 0.02, v31_short_hold_exit_filter: true, v31_shef_min_hold: 18, v31_shef_min_pnl: -0.03, v31_hardcap_after_profit: true, v31_hap_profit_trigger: 0.05, v31_hap_floor: -0.03, v32_hap_preempt: true }
     marker_shape: arrowUp
     order: -46
+    retired_reason: Retired after model_b finalist sweep; keep only top 5 active models
   v38b2:
     name: V38b2
     description: 'V34 + HAP nhe (4%/-3%) + stall-exit strict (hold>=10 + max<1.5%) — RISK-MGMT VARIANT: max_loss -33% (vs -57% V37a), big_loss>=8 giam 35%, total PnL -3.2%, comp 407 (vs 421 V37a)'
     color: '#FF7043'
-    active: true
+    active: false
     strategy: v38b2
     feature_set: leading_v4
     target: { type: early_wave, forward_window: 8, short_window: 8, long_window: 20, gain_threshold: 0.06, loss_threshold: 0.03, classes: 3 }
     mods: { a: true, b: true, c: false, d: false, e: true, f: true, g: true, h: true, i: true, j: true }
     params: { patch_smart_hardcap: true, patch_pp_restore: true, patch_long_horizon: true, patch_symbol_tuning: true, patch_rule_ensemble: true, v26_relaxed_entry: true, v26_skip_choppy: true, v26_strong_rule_ensemble: true, v27_hardcap_two_step: true, v27_rule_priority: true, v27_dynamic_score5_penalty: true, v27_trend_persistence_hold: true, v28_early_wave_filter: true, v28_early_loss_cut: true, v28_early_loss_cut_threshold: -0.04, v28_early_loss_cut_days: 5, v30_signal_exit_defer: true, v30_sed_defer_bars: 3, v30_sed_min_cum_ret: 0.02, v31_short_hold_exit_filter: true, v31_shef_min_hold: 18, v31_shef_min_pnl: -0.03, v31_hardcap_after_profit: true, v31_hap_profit_trigger: 0.05, v31_hap_floor: -0.03, v32_hap_preempt: true }
     marker_shape: arrowUp
+    exit_mode: hybrid
     exit_model:
       enabled: true
       forward_window: 15
       loss_threshold: 0.05
     order: -47
+    retired_reason: Retired after model_b finalist sweep; keep only top 5 active models
   v38c2:
     name: V38c2
     description: 'V34 + HA exit confirm (hold>=5, pnl<=-2%)'
@@ -1251,6 +2163,7 @@ models:
     params: { patch_smart_hardcap: true, patch_pp_restore: true, patch_long_horizon: true, patch_symbol_tuning: true, patch_rule_ensemble: true, v26_relaxed_entry: true, v26_skip_choppy: true, v26_strong_rule_ensemble: true, v27_hardcap_two_step: true, v27_rule_priority: true, v27_dynamic_score5_penalty: true, v27_trend_persistence_hold: true, v28_early_wave_filter: true, v28_early_loss_cut: true, v28_early_loss_cut_threshold: -0.04, v28_early_loss_cut_days: 5, v30_signal_exit_defer: true, v30_sed_defer_bars: 3, v30_sed_min_cum_ret: 0.02, v31_short_hold_exit_filter: true, v31_shef_min_hold: 18, v31_shef_min_pnl: -0.03, v31_hardcap_after_profit: true, v31_hap_profit_trigger: 0.05, v31_hap_floor: -0.03, v32_hap_preempt: true, v32_hap_pre_trigger: 0.04, v32_hap_pre_floor: -0.07 }
     marker_shape: arrowUp
     order: -48
+    retired_reason: Retired after model_b finalist sweep; keep only top 5 active models
   v38d2:
     name: V38d2
     description: 'V34 + anti-fomo nhe (8%) + co-pilot strict (hold>=6, profit>=5%)'
@@ -1263,6 +2176,7 @@ models:
     params: { patch_smart_hardcap: true, patch_pp_restore: true, patch_long_horizon: true, patch_symbol_tuning: true, patch_rule_ensemble: true, v26_relaxed_entry: true, v26_skip_choppy: true, v26_strong_rule_ensemble: true, v27_hardcap_two_step: true, v27_rule_priority: true, v27_dynamic_score5_penalty: true, v27_trend_persistence_hold: true, v28_early_wave_filter: true, v28_early_loss_cut: true, v28_early_loss_cut_threshold: -0.04, v28_early_loss_cut_days: 5, v30_signal_exit_defer: true, v30_sed_defer_bars: 3, v30_sed_min_cum_ret: 0.02, v31_short_hold_exit_filter: true, v31_shef_min_hold: 18, v31_shef_min_pnl: -0.03, v31_hardcap_after_profit: true, v31_hap_profit_trigger: 0.05, v31_hap_floor: -0.03, v32_hap_preempt: true, v32_hap_pre_trigger: 0.04, v32_hap_pre_floor: -0.07 }
     marker_shape: arrowUp
     order: -49
+    retired_reason: Retired after model_b finalist sweep; keep only top 5 active models
   v38b3:
     name: V38b3
     description: 'V34 + HAP nhe (4%/-3%) + stall-exit chi cho balanced profile'
@@ -1275,6 +2189,7 @@ models:
     params: { patch_smart_hardcap: true, patch_pp_restore: true, patch_long_horizon: true, patch_symbol_tuning: true, patch_rule_ensemble: true, v26_relaxed_entry: true, v26_skip_choppy: true, v26_strong_rule_ensemble: true, v27_hardcap_two_step: true, v27_rule_priority: true, v27_dynamic_score5_penalty: true, v27_trend_persistence_hold: true, v28_early_wave_filter: true, v28_early_loss_cut: true, v28_early_loss_cut_threshold: -0.04, v28_early_loss_cut_days: 5, v30_signal_exit_defer: true, v30_sed_defer_bars: 3, v30_sed_min_cum_ret: 0.02, v31_short_hold_exit_filter: true, v31_shef_min_hold: 18, v31_shef_min_pnl: -0.03, v31_hardcap_after_profit: true, v31_hap_profit_trigger: 0.05, v31_hap_floor: -0.03, v32_hap_preempt: true }
     marker_shape: arrowUp
     order: -50
+    retired_reason: Retired after model_b finalist sweep; keep only top 5 active models
   v38e:
     name: V38e
     description: 'V38b2 + co-pilot exit only (no fomo filter)'
@@ -1287,12 +2202,13 @@ models:
     params: { patch_smart_hardcap: true, patch_pp_restore: true, patch_long_horizon: true, patch_symbol_tuning: true, patch_rule_ensemble: true, v26_relaxed_entry: true, v26_skip_choppy: true, v26_strong_rule_ensemble: true, v27_hardcap_two_step: true, v27_rule_priority: true, v27_dynamic_score5_penalty: true, v27_trend_persistence_hold: true, v28_early_wave_filter: true, v28_early_loss_cut: true, v28_early_loss_cut_threshold: -0.04, v28_early_loss_cut_days: 5, v30_signal_exit_defer: true, v30_sed_defer_bars: 3, v30_sed_min_cum_ret: 0.02, v31_short_hold_exit_filter: true, v31_shef_min_hold: 18, v31_shef_min_pnl: -0.03, v31_hardcap_after_profit: true, v31_hap_profit_trigger: 0.05, v31_hap_floor: -0.03, v32_hap_preempt: true }
     marker_shape: arrowUp
     order: -51
+    retired_reason: Retired after model_b finalist sweep; keep only top 5 active models
   v34:
     name: V34
     description: V32 engine + leading_v4 (HA features) + target(gain=6%,loss=3%) +
       HAP(t4,f7) — superseded by V37a
     color: '#80CBC4'
-    active: true
+    active: false
     strategy: v34
     feature_set: leading_v4
     target:
@@ -1345,11 +2261,13 @@ models:
       v32_hap_pre_floor: -0.07
       v32_weak_oversold_exit: false
     marker_shape: arrowUp
+    exit_mode: hybrid
     exit_model:
       enabled: true
       forward_window: 15
       loss_threshold: 0.05
     order: -6
+    retired_reason: Retired after model_b finalist sweep; keep only top 5 active models
   v33:
     name: V33
     description: V32 + recovery_peak_filter(ret10=10%,dist=1%) — comp +4 vs V32, blocks
@@ -1416,13 +2334,13 @@ models:
       v33_rpf_require_weak: true
     marker_shape: arrowUp
     order: -5
-    retired_reason: Identical to V32 (recovery_peak_filter never triggers)
+    retired_reason: Retired after model_b finalist sweep; keep only top 5 active models
   v32:
     name: V32
     description: V31 + hap_preempt(5%,-5%) + weak_oversold_exit(dist=-9%) — fix HAP
       ordering bug, comp +11
     color: '#FF6F00'
-    active: true
+    active: false
     strategy: v32
     feature_set: leading_v3
     target:
@@ -1479,12 +2397,13 @@ models:
       v32_woe_hold_min: 5
     marker_shape: arrowUp
     order: -4
+    retired_reason: Retired after model_b finalist sweep; keep only top 5 active models
   v31:
     name: V31
     description: V30 + short_hold_exit_filter(18d,-3%) + hardcap_after_profit(5%,-3%)
       — comp +15
     color: '#00E5FF'
-    active: true
+    active: false
     strategy: v31
     feature_set: leading_v3
     target:
@@ -1534,12 +2453,13 @@ models:
       v31_hap_floor: -0.03
     marker_shape: arrowUp
     order: -3
+    retired_reason: Retired after model_b finalist sweep; keep only top 5 active models
   v30:
     name: V30
     description: V29 + signal_exit_defer(3 bars, >=2% profit) — breakthrough +24.4%
       comp
     color: '#76FF03'
-    active: true
+    active: false
     strategy: v30
     feature_set: leading_v3
     target:
@@ -1583,11 +2503,12 @@ models:
       v30_sed_min_cum_ret: 0.02
     marker_shape: arrowUp
     order: -2
+    retired_reason: Retired after model_b finalist sweep; keep only top 5 active models
   v29:
     name: V29
     description: V28 engine + early_wave target + leading_v3 features (retrain breakthrough)
     color: '#00BCD4'
-    active: true
+    active: false
     strategy: v29
     feature_set: leading_v3
     target:
@@ -1628,11 +2549,12 @@ models:
       v28_early_loss_cut_days: 5
     marker_shape: arrowUp
     order: -1
+    retired_reason: Retired after model_b finalist sweep; keep only top 5 active models
   v28:
     name: V28
     description: V27 + early_loss_cut -4%/5d (K4b) + early_wave_filter (K1)
     color: '#F44336'
-    active: true
+    active: false
     strategy: v28
     feature_set: leading_v2
     mods:
@@ -1677,12 +2599,13 @@ models:
       v28_early_loss_cut_days: 5
     marker_shape: arrowUp
     order: 0
+    retired_reason: Retired after model_b finalist sweep; keep only top 5 active models
   v27:
     name: V27
     description: V26 + hardcap_two_step + rule_priority + dynamic_score5_penalty +
       trend_persistence_hold
     color: '#9C27B0'
-    active: true
+    active: false
     strategy: v27
     feature_set: leading_v2
     mods:
@@ -1721,12 +2644,13 @@ models:
       v27_trend_persistence_hold: true
     marker_shape: arrowUp
     order: 0
+    retired_reason: Retired after model_b finalist sweep; keep only top 5 active models
   v26:
     name: V26
     description: V25 + skip choppy + relaxed strong-trend entry + stronger rule ensemble
       (B+C+E)
     color: '#FF5722'
-    active: true
+    active: false
     strategy: v26
     feature_set: leading_v2
     mods:
@@ -1760,6 +2684,7 @@ models:
       v26_hardcap_confirm_strong: false
     marker_shape: arrowUp
     order: 1
+    retired_reason: Retired after model_b finalist sweep; keep only top 5 active models
   v25:
     name: V25
     description: V24 all patches + pp_threshold=0.12 (ablation-validated best combination)
@@ -1790,13 +2715,13 @@ models:
       patch_pp_2of3: false
     marker_shape: arrowUp
     order: 2
-    retired_reason: Superseded by V26 (V26 better on TotPnL/PF/WR)
+    retired_reason: Retired after model_b finalist sweep; keep only top 5 active models
   v24:
     name: V24
     description: V23-best + 5 patches (smart hard_cap, peak_protect sensitivity, long-horizon
       carry, symbol-specific tuning, rule+ML ensemble)
     color: '#FFD54F'
-    active: true
+    active: false
     strategy: v24
     feature_set: leading_v2
     mods:
@@ -1826,6 +2751,7 @@ models:
       time_decay_mult: 0.5
     marker_shape: arrowUp
     order: 3
+    retired_reason: Retired after model_b finalist sweep; keep only top 5 active models
   v23:
     name: V23
     description: Graduated exits + restored peak_protect + trend-specific caps (pp_s=0.12)
@@ -1848,7 +2774,7 @@ models:
       peak_protect_strong_threshold: 0.12
     marker_shape: arrowUp
     order: 4
-    retired_reason: Superseded by V24 (lower TotPnL, weaker PF)
+    retired_reason: Retired after model_b finalist sweep; keep only top 5 active models
   v22:
     name: V22
     description: V19.1 + SMA200 filter + hybrid entry + fast_exit_loss + signal_hard_cap
@@ -1879,14 +2805,20 @@ models:
       v22_hard_cap_mult_std: 2.5
       v22_hard_cap_floor: 0.12
       v22_hard_cap_floor_hb: 0.15
+      use_model_b_exit: true
+      model_b_min_hold: 3
     marker_shape: arrowUp
+    exit_mode: hybrid
+    exit_model:
+      enabled: true
+      forward_window: 15
+      loss_threshold: 0.05
     order: 5
   v19_3:
     name: V19.3
     description: V19.1 + binary position sizing
     color: '#EC407A'
-    active: false
-    retired_reason: Superseded by V22/V23
+    active: true
     strategy: v19_3
     mods:
       a: true
@@ -1901,6 +2833,11 @@ models:
       j: true
     params: {}
     marker_shape: arrowUp
+    exit_mode: model_b
+    exit_model:
+      enabled: true
+      forward_window: 15
+      loss_threshold: 0.05
     order: 6
   v19_1:
     name: V19.1
@@ -1922,13 +2859,13 @@ models:
     params: {}
     marker_shape: arrowUp
     order: 7
-    retired_reason: Superseded by V22/V23/V24/V25
+    retired_reason: Retired after model_b finalist sweep; keep only top 5 active models
   v18:
     name: V18
     description: Adaptive entry + exit with regime awareness
     color: '#29B6F6'
     active: false
-    retired_reason: Superseded by V19.1
+    retired_reason: Retired after model_b finalist sweep; keep only top 5 active models
     strategy: v18
     mods:
       a: true
@@ -1949,7 +2886,7 @@ models:
     description: V20 + ATR fast_exit + adaptive hard_cap + volume confirm
     color: '#B0BEC5'
     active: false
-    retired_reason: Legacy — added for archaeological comparison
+    retired_reason: Retired after model_b finalist sweep; keep only top 5 active models
     strategy: v21
     mods:
       a: true
@@ -1970,7 +2907,7 @@ models:
     description: V19.3 + confirm_bars tuning + fast_exit refinement
     color: '#90A4AE'
     active: false
-    retired_reason: Legacy — added for archaeological comparison
+    retired_reason: Retired after model_b finalist sweep; keep only top 5 active models
     strategy: v20
     mods:
       a: true
@@ -1991,7 +2928,7 @@ models:
     description: V19.3 variant — position sizing tweak
     color: '#78909C'
     active: false
-    retired_reason: Legacy — added for archaeological comparison
+    retired_reason: Retired after model_b finalist sweep; keep only top 5 active models
     strategy: v19_4
     mods:
       a: true
@@ -2012,7 +2949,7 @@ models:
     description: V19.1 variant — exit tuning
     color: '#607D8B'
     active: false
-    retired_reason: Legacy — added for archaeological comparison
+    retired_reason: Retired after model_b finalist sweep; keep only top 5 active models
     strategy: v19_2
     mods:
       a: true
@@ -2033,7 +2970,7 @@ models:
     description: V18 + anti-chop + V-shape + breakout scanner base
     color: '#546E7A'
     active: false
-    retired_reason: Legacy — added for archaeological comparison
+    retired_reason: Retired after model_b finalist sweep; keep only top 5 active models
     strategy: v19
     mods:
       a: true
@@ -2054,7 +2991,7 @@ models:
     description: V16 + confirmed signal exit + trend carry + anti-chop entry
     color: '#3E2723'
     active: false
-    retired_reason: Legacy — added for archaeological comparison
+    retired_reason: Retired after model_b finalist sweep; keep only top 5 active models
     strategy: v17
     mods:
       a: true
@@ -2075,7 +3012,7 @@ models:
     description: V15 + BO quality filter + bear regime defense
     color: '#455A64'
     active: false
-    retired_reason: Legacy — added for archaeological comparison
+    retired_reason: Retired after model_b finalist sweep; keep only top 5 active models
     strategy: v16
     mods:
       a: true
@@ -2096,7 +3033,7 @@ models:
     description: V14 + secondary breakout + profit floor
     color: '#37474F'
     active: false
-    retired_reason: Legacy — added for archaeological comparison
+    retired_reason: Retired after model_b finalist sweep; keep only top 5 active models
     strategy: v15
     mods:
       a: true
@@ -2117,7 +3054,7 @@ models:
     description: V13 + profit lock + zombie exit
     color: '#263238'
     active: false
-    retired_reason: Legacy — added for archaeological comparison
+    retired_reason: Retired after model_b finalist sweep; keep only top 5 active models
     strategy: v14
     mods:
       a: true
@@ -2138,7 +3075,7 @@ models:
     description: V12 + bear regime + volume filter
     color: '#1A237E'
     active: false
-    retired_reason: Legacy — added for archaeological comparison
+    retired_reason: Retired after model_b finalist sweep; keep only top 5 active models
     strategy: v13
     mods:
       a: true
@@ -2159,7 +3096,7 @@ models:
     description: V11 + profit-peak protection improvements
     color: '#283593'
     active: false
-    retired_reason: Legacy — added for archaeological comparison
+    retired_reason: Retired after model_b finalist sweep; keep only top 5 active models
     strategy: v12
     mods:
       a: true
@@ -2180,7 +3117,7 @@ models:
     description: V10 + stricter entry quality + breakout scanner
     color: '#311B92'
     active: false
-    retired_reason: Legacy — added for archaeological comparison
+    retired_reason: Retired after model_b finalist sweep; keep only top 5 active models
     strategy: v11
     mods:
       a: true

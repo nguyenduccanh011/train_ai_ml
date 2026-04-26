@@ -76,6 +76,15 @@ class FeatureEngine:
             df = self._accumulation_features(df)
             df = self._heikin_ashi_features(df)
 
+        if self.feature_set == "leading_v5":
+            df = self._market_structure(df)
+            df = self._exhaustion_signals(df)
+            df = self._volatility_regime(df)
+            df = self._multi_timeframe(df)
+            df = self._accumulation_features(df)
+            df = self._heikin_ashi_features(df)
+            df = self._bottom_reversal_features(df)
+
         if "A" in self.extra_groups:
             df = self._market_structure(df)
         if "B" in self.extra_groups:
@@ -103,7 +112,7 @@ class FeatureEngine:
             result = self._relative_strength(result)
 
         # leading_v3 always includes relative strength (cross-sectional)
-        if self.feature_set == "leading_v3" and "E" not in self.extra_groups:
+        if self.feature_set in ("leading_v3", "leading_v5") and "E" not in self.extra_groups:
             result = self._relative_strength(result)
 
         return result
@@ -113,7 +122,7 @@ class FeatureEngine:
         exclude = {
             "timestamp", "symbol", "exchange", "asset_type",
             "data_provider", "timeframe", "open", "high", "low",
-            "close", "volume", "traded_value", "target",
+            "close", "volume", "traded_value", "target", "target_sell",
         }
         return [c for c in df.columns if c not in exclude]
 
@@ -922,6 +931,71 @@ class FeatureEngine:
             (df["ha_upper_shadow_ratio"] > 0.3) &
             (df["ha_body_shrinking"] == 1)
         ).astype(float)
+
+        return df
+
+    def _bottom_reversal_features(self, df: pd.DataFrame) -> pd.DataFrame:
+        c = df["close"].astype(float)
+        h = df["high"].astype(float)
+        l = df["low"].astype(float)
+        o = df["open"].astype(float)
+        v = df["volume"].replace(0, np.nan).astype(float)
+
+        df["return_2d"] = c.pct_change(2)
+        df["return_3d"] = c.pct_change(3)
+
+        for w in [20, 60]:
+            roll_low = l.rolling(w, min_periods=max(5, w // 4)).min()
+            roll_high = h.rolling(w, min_periods=max(5, w // 4)).max()
+            df[f"dist_to_low_{w}"] = c / roll_low.replace(0, np.nan) - 1
+            df[f"drawdown_from_high_{w}"] = c / roll_high.replace(0, np.nan) - 1
+
+            low_marker = (l <= roll_low).astype(float)
+            days_since = np.full(len(df), np.nan)
+            count = np.nan
+            for i, marker in enumerate(low_marker.fillna(0).values):
+                if marker == 1:
+                    count = 0
+                elif not np.isnan(count):
+                    count += 1
+                days_since[i] = count
+            df[f"days_since_low_{w}"] = days_since
+
+        for w in [5, 10, 20]:
+            sma = c.rolling(w).mean()
+            df[f"reclaim_sma{w}"] = ((c > sma) & (c.shift(1) <= sma.shift(1))).astype(float)
+
+        ema12 = c.ewm(span=12, adjust=False).mean()
+        ema26 = c.ewm(span=26, adjust=False).mean()
+        macd = ema12 - ema26
+        macd_signal = macd.ewm(span=9, adjust=False).mean()
+        hist = macd - macd_signal
+        df["macd_hist_turn_up"] = ((hist > hist.shift(1)) & (hist.shift(1) <= hist.shift(2))).astype(float)
+        df["macd_hist_rising_3d"] = ((hist > hist.shift(1)) & (hist.shift(1) > hist.shift(2))).astype(float)
+
+        vol20 = v.rolling(20, min_periods=5).mean()
+        ret1 = c.pct_change(1)
+        true_range = pd.concat([
+            h - l,
+            (h - c.shift(1)).abs(),
+            (l - c.shift(1)).abs(),
+        ], axis=1).max(axis=1)
+        range20 = true_range.rolling(20, min_periods=5).mean()
+
+        df["volume_thrust"] = ((c > o) & (v > 1.3 * vol20)).astype(float)
+        df["down_volume_climax"] = ((ret1 < -0.03) & (v > 1.5 * vol20) & (true_range > 1.2 * range20)).astype(float)
+        df["higher_low_3d"] = (l > l.rolling(3, min_periods=3).min().shift(1)).astype(float)
+
+        near_low = (df["dist_to_low_20"] <= 0.06).astype(float)
+        recent_low = (df["days_since_low_20"] <= 5).astype(float)
+        reclaim = df[["reclaim_sma5", "reclaim_sma10", "reclaim_sma20"]].max(axis=1)
+        momentum_turn = df[["macd_hist_turn_up", "macd_hist_rising_3d"]].max(axis=1)
+        volume_confirm = df[["volume_thrust", "down_volume_climax"]].max(axis=1)
+        ha_confirm = df["ha_bullish_reversal_signal"] if "ha_bullish_reversal_signal" in df.columns else 0.0
+
+        df["bottom_reversal_score"] = (
+            near_low + recent_low + reclaim + momentum_turn + volume_confirm + ha_confirm
+        )
 
         return df
 

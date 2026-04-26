@@ -1,0 +1,42 @@
+{
+  "symbols": [
+    {
+      "symbol": "VND",
+      "v45_l5_wave_base_trades": 20,
+      "v45_l5_wave_base_pnl": 435.6,
+      "v45_l5_wave_base_wr": 55.0
+    },
+    {
+      "symbol": "SSI",
+      "v45_l5_wave_base_trades": 23,
+      "v45_l5_wave_base_pnl": 220.5,
+      "v45_l5_wave_base_wr": 56.5
+    },
+    {
+      "symbol": "HPG",
+      "v45_l5_wave_base_trades": 23,
+      "v45_l5_wave_base_pnl": 172.5,
+      "v45_l5_wave_base_wr": 52.2
+    },
+    {
+      "symbol": "FPT",
+      "v45_l5_wave_base_trades": 20,
+      "v45_l5_wave_base_pnl": 133.9,
+      "v45_l5_wave_base_wr": 60.0
+    },
+    {
+      "symbol": "MBB",
+      "v45_l5_wave_base_trades": 25,
+      "v45_l5_wave_base_pnl": 82.2,
+      "v45_l5_wave_base_wr": 56.0
+    },
+    {
+      "symbol": "ACB",
+      "v45_l5_wave_base_trades": 24,
+      "v45_l5_wave_base_pnl": 58.7,
+      "v45_l5_wave_base_wr": 50.0
+    }
+  ],
+  "version": "v45_l5_wave_base",
+  "generated_at": "2026-04-25T03:00:11.601519"
+}

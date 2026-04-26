@@ -61,6 +61,7 @@ def run_test(
     feature_set="leading_v2",
     target_override=None,
     train_exit_model=False,
+    exit_mode="rule",
 ):
     if backtest_fn is None:
         raise ValueError("run_test requires backtest_fn")
@@ -183,6 +184,7 @@ def run_test(
                 mod_i=mod_i,
                 mod_j=mod_j,
                 y_pred_exit=y_pred_exit,
+                exit_mode=exit_mode,
             )
             for trade in result["trades"]:
                 trade["symbol"] = sym

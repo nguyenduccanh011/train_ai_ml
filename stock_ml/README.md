@@ -216,10 +216,41 @@ Backtest time (per bar):
   Engine logic:
     if not in_position and y_pred_entry[i] == 1: -> entry
     if in_position:
-      if hard_stop:           -> exit (highest priority)
-      elif y_pred_exit[i]==1  -> exit "model_b_exit"  [override engine rules]
-      elif trailing_stop:     -> exit
-      elif ...other rules...  -> exit
+      if hard_stop:                    -> exit (highest priority)
+      elif exit_mode=model_b + Model B -> exit "model_b_exit"
+      elif exit_mode=hybrid + Model B  -> exit "model_b_exit", else fallback rules
+      elif exit_mode=rule              -> legacy rule exits
+```
+
+### Exit Modes & Benchmark Variants
+
+`exit_mode` tach cach thoat lenh khoi entry model:
+
+| Mode | Hanh vi |
+|------|---------|
+| `rule` | Dung rule exit cu, khong train Model B |
+| `model_b` | Hard stop + Model B exit, bo qua rule exit cu |
+| `hybrid` | Model B uu tien; neu Model B chua thoat thi rule exit cu du phong |
+
+Co the benchmark cung mot entry model voi 3 exit mode ma khong can nhan ban config trong `models.yaml`:
+
+```bash
+python run_pipeline.py --versions v35b,v37a,v39g --exit-modes rule,model_b,hybrid --force
+```
+
+Output duoc luu theo `run_key`:
+
+```text
+results/trades_v35b__rule.csv
+results/trades_v35b__model_b.csv
+results/trades_v35b__hybrid.csv
+```
+
+So sanh benchmark variants:
+
+```bash
+python model_manager.py compare --versions v35b__rule,v35b__model_b,v35b__hybrid
+python model_manager.py compare --include-retired --include-benchmark
 ```
 
 ### Backtest Engine

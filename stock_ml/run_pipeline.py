@@ -281,6 +281,135 @@ def _build_predictions(symbols_list, feature_set, target_cfg, device, model_type
     return results
 
 
+def _build_full_history_predictions(symbols_list, feature_set, target_cfg, device, model_type=None,
+                                    exit_model_cfg=None):
+    """Train on all labeled history and predict every feature-valid row.
+
+    This is for signal visualization, not out-of-sample model comparison.
+    """
+    import numpy as np
+    from pathlib import Path
+    from src.data.loader import DataLoader
+    from src.data.target import TargetGenerator
+    from src.features.engine import FeatureEngine
+    from src.models.registry import build_model, detect_device
+    from src.config_loader import get_training_device
+    from src.cache.feature_cache import FeatureCacheManager
+    import src.features.engine as feature_engine_module
+    import src.data.target as target_module
+
+    pipeline_cfg = load_config().get("pipeline", {})
+    data_dir = pipeline_cfg.get("data_dir", "../portable_data/vn_stock_ai_dataset_cleaned")
+    abs_data_dir = resolve_data_dir(data_dir)
+    config = {
+        "target": target_cfg or pipeline_cfg.get("target", {
+            "type": "trend_regime", "trend_method": "dual_ma",
+            "short_window": 5, "long_window": 20, "classes": 3,
+        }),
+    }
+
+    if device is None:
+        device = get_training_device()
+    resolved_device = detect_device(device)
+    print(f"    Training device: {resolved_device.upper()}"
+          f"{' (auto-detected)' if device == 'auto' else ''}")
+
+    effective_model_type = model_type or pipeline_cfg.get("model_type", "lightgbm")
+    loader = DataLoader(abs_data_dir)
+    target_gen = TargetGenerator.from_config(config)
+    engine = FeatureEngine(feature_set=feature_set)
+
+    cache_root = Path(get_results_dir()) / "cache" / "features"
+    cache_mgr = FeatureCacheManager(str(cache_root))
+    code_paths = [feature_engine_module.__file__, target_module.__file__]
+    features_df, cache_key = cache_mgr.load(
+        data_dir=abs_data_dir,
+        symbols=symbols_list,
+        timeframe=loader.timeframe,
+        feature_set=feature_set,
+        target_config=config.get("target", {}),
+        code_paths=code_paths,
+    )
+    if features_df is None:
+        print(f"    Feature cache: MISS ({feature_set}) key={cache_key[:8]}")
+        raw_df = loader.load_all(symbols=symbols_list)
+        features_df = engine.compute_for_all_symbols(raw_df)
+        saved_key, saved_fmt = cache_mgr.save(
+            df=features_df,
+            data_dir=abs_data_dir,
+            symbols=symbols_list,
+            timeframe=loader.timeframe,
+            feature_set=feature_set,
+            target_config=config.get("target", {}),
+            code_paths=code_paths,
+        )
+        print(f"    Feature cache: STORED ({feature_set}) key={saved_key[:8]} format={saved_fmt}")
+    else:
+        print(f"    Feature cache: HIT ({feature_set}) key={cache_key[:8]}")
+
+    train_df = target_gen.generate_for_all_symbols(features_df.copy())
+    if exit_model_cfg:
+        from src.data.target import TargetGenerator as _TG
+        train_df = _TG.generate_exit_labels(
+            train_df,
+            forward_window=exit_model_cfg.get("forward_window", 15),
+            loss_threshold=exit_model_cfg.get("loss_threshold", 0.05),
+        )
+
+    feature_cols = engine.get_feature_columns(train_df)
+    train_drop_cols = feature_cols + ["target"]
+    has_exit = "target_sell" in train_df.columns
+    if has_exit:
+        train_drop_cols.append("target_sell")
+    train_df = train_df.dropna(subset=train_drop_cols)
+
+    predict_drop_cols = feature_cols + ["return_1d"]
+    predict_df = features_df.dropna(subset=predict_drop_cols)
+
+    print(f"    Full-history train rows: {len(train_df):,}; predict rows: {len(predict_df):,}")
+    model = build_model(effective_model_type, device=device)
+    X_train = np.nan_to_num(train_df[feature_cols].values)
+    y_train = train_df["target"].values.astype(int)
+    model.fit(X_train, y_train)
+
+    sell_model = None
+    if has_exit:
+        sell_model = build_model(effective_model_type, device=device)
+        sell_model.fit(X_train, train_df["target_sell"].values.astype(int))
+
+    results = []
+    for sym in predict_df["symbol"].unique():
+        if sym not in symbols_list:
+            continue
+        sym_test = predict_df[predict_df["symbol"] == sym].reset_index(drop=True)
+        if len(sym_test) < 10:
+            continue
+        X_sym = np.nan_to_num(sym_test[feature_cols].values)
+        y_pred_raw = model.predict(X_sym)
+        y_pred = canonicalize_predictions(y_pred_raw, config["target"])
+        y_proba = None
+        classes = None
+        try:
+            if hasattr(model, "predict_proba"):
+                y_proba = model.predict_proba(X_sym)
+                final_est = model.steps[-1][1] if hasattr(model, "steps") else model
+                classes = list(final_est.classes_)
+        except Exception:
+            y_proba = None
+        results.append({
+            "symbol": sym,
+            "y_pred": y_pred,
+            "y_pred_exit": (sell_model.predict(X_sym).astype(int) if sell_model is not None else None),
+            "y_proba": y_proba,
+            "classes": classes,
+            "returns": sym_test["return_1d"].values,
+            "sym_test_df": sym_test,
+            "feature_cols": feature_cols,
+        })
+
+    return results
+
+
 def _apply_proba_thresholds(item, proba_thresholds):
     """V37c: rebuild y_pred from y_proba using per-profile threshold.
 
@@ -327,7 +456,9 @@ def _run_backtest_from_cache(prediction_cache, version_key, model_cfg):
     strategy = model_cfg.get("strategy", version_key)
     backtest_fn = get_backtest_function(strategy)
     mods = model_cfg.get("mods", {})
-    params = model_cfg.get("params", {})
+    params = dict(model_cfg.get("params", {}))
+    if model_cfg.get("exit_mode"):
+        params["exit_mode"] = model_cfg["exit_mode"]
     proba_thresholds = model_cfg.get("proba_thresholds")  # V37c
 
     # Detect which mod_* kwargs this backtest function accepts
@@ -411,22 +542,46 @@ def _run_rule_backtest_fair(symbols_list):
 
 # ─── Phase 5: Metadata ──────────────────────────────────────────────
 
+def _parse_csv_arg(value):
+    return [v.strip() for v in (value or "").split(",") if v.strip()]
+
+
+def _variant_key(version_key, exit_mode=None):
+    return f"{version_key}__{exit_mode}" if exit_mode else version_key
+
+
+def _with_exit_override(model_cfg, exit_mode):
+    if not exit_mode:
+        return dict(model_cfg)
+    cfg = dict(model_cfg)
+    cfg["exit_mode"] = exit_mode
+    if exit_mode in ("model_b", "hybrid") and not (cfg.get("exit_model") or {}).get("enabled"):
+        cfg["exit_model"] = {"enabled": True, "forward_window": 15, "loss_threshold": 0.05}
+    elif exit_mode == "rule":
+        cfg.pop("exit_model", None)
+    return cfg
+
+
 def _save_trades_with_meta(
     trades, version_key, symbols_list, feature_set, min_rows,
     target_cfg=None, model_type="lightgbm", results_dir=None, exit_model_cfg=None,
+    run_key=None, exit_mode=None, extra_meta=None,
 ):
     """Save trades CSV and companion metadata JSON."""
     import pandas as pd
 
     out_dir = results_dir or get_results_dir()
     os.makedirs(out_dir, exist_ok=True)
-    csv_path = os.path.join(out_dir, f"trades_{version_key}.csv")
+    result_key = run_key or version_key
+    csv_path = os.path.join(out_dir, f"trades_{result_key}.csv")
 
     df = pd.DataFrame(trades)
     df.to_csv(csv_path, index=False)
 
     meta = {
         "version": version_key,
+        "run_key": result_key,
+        "exit_mode": exit_mode,
         "generated_at": datetime.now().isoformat(timespec="seconds"),
         "generator": "run_pipeline.py",
         "symbols": sorted(symbols_list),
@@ -440,7 +595,9 @@ def _save_trades_with_meta(
     }
     if exit_model_cfg:
         meta["exit_model_config"] = exit_model_cfg
-    meta_path = os.path.join(out_dir, f"trades_{version_key}.meta.json")
+    if extra_meta:
+        meta.update(extra_meta)
+    meta_path = os.path.join(out_dir, f"trades_{result_key}.meta.json")
     with open(meta_path, "w", encoding="utf-8") as f:
         json.dump(meta, f, indent=2, ensure_ascii=False)
 
@@ -448,9 +605,11 @@ def _save_trades_with_meta(
 
 
 def _validate_cache_meta(
-    version_key, symbols_list, min_rows,
+    run_key, symbols_list, min_rows,
     expected_feature_set=None,
     expected_target_fingerprint=None,
+    expected_exit_mode=None,
+    expected_version_key=None,
     strategy_key=None,
     results_dir=None,
 ):
@@ -459,7 +618,7 @@ def _validate_cache_meta(
     Returns (ok: bool, reason: str).
     """
     out_dir = results_dir or get_results_dir()
-    meta_path = os.path.join(out_dir, f"trades_{version_key}.meta.json")
+    meta_path = os.path.join(out_dir, f"trades_{run_key}.meta.json")
     if not os.path.exists(meta_path):
         return False, "no metadata"
 
@@ -474,6 +633,15 @@ def _validate_cache_meta(
 
     if meta.get("min_rows", 0) != min_rows:
         return False, f"min_rows differs (cached={meta.get('min_rows')}, current={min_rows})"
+
+    if expected_version_key is not None and meta.get("version") != expected_version_key:
+        return False, f"version differs (cached={meta.get('version')}, current={expected_version_key})"
+
+    if meta.get("run_key", meta.get("version")) != run_key:
+        return False, f"run_key differs (cached={meta.get('run_key')}, current={run_key})"
+
+    if expected_exit_mode is not None and meta.get("exit_mode") != expected_exit_mode:
+        return False, f"exit_mode differs (cached={meta.get('exit_mode')}, current={expected_exit_mode})"
 
     if expected_feature_set is not None:
         cached_feature_set = meta.get("feature_set")
@@ -552,6 +720,7 @@ def _run_matrix(versions_to_run, feature_sets, ml_models, symbols_list,
                     vk, symbols_list, args.min_rows,
                     expected_feature_set=feat,
                     expected_target_fingerprint=target_fp,
+                    expected_version_key=vk,
                     results_dir=exp_dir,
                 )
                 if meta_ok:
@@ -649,6 +818,62 @@ def _run_matrix(versions_to_run, feature_sets, ml_models, symbols_list,
 
 # ─── Export ──────────────────────────────────────────────────────────
 
+def _run_full_history(version_key, symbols_list, target_cfg, pipeline_cfg, args):
+    """Generate full-history/in-sample signals for one model version."""
+    if not version_key:
+        raise ValueError("--full-history requires --version")
+    model_cfg = get_model_config(version_key)
+    if model_cfg.get("strategy", version_key) == "rule":
+        raise ValueError("--full-history is intended for ML models, not rule baseline")
+
+    run_key = f"{version_key}_full"
+    feat_set = model_cfg.get("feature_set", pipeline_cfg.get("feature_set", "leading"))
+    version_target = model_cfg.get("target") or target_cfg
+    exit_cfg = model_cfg.get("exit_model") or {}
+    ver_exit_cfg = exit_cfg if exit_cfg.get("enabled") else None
+    model_type = model_cfg.get("model_type") or pipeline_cfg.get("model_type", "lightgbm")
+
+    print(f"\n{'─' * 100}")
+    print(f"  FULL-HISTORY SIGNALS: {version_key} -> {run_key}")
+    print("  Mode: train on full labeled history, predict all feature-valid rows")
+    print(f"  feature_set='{feat_set}' target='{version_target.get('type')}' model='{model_type}'")
+    print(f"{'─' * 100}")
+
+    prediction_cache = _build_full_history_predictions(
+        symbols_list, feat_set, version_target, args.device,
+        model_type=model_type, exit_model_cfg=ver_exit_cfg,
+    )
+    trades = _run_backtest_from_cache(prediction_cache, version_key, model_cfg)
+    csv_path = _save_trades_with_meta(
+        trades, version_key, symbols_list, feat_set, args.min_rows,
+        target_cfg=version_target,
+        model_type=model_type,
+        exit_model_cfg=ver_exit_cfg,
+        run_key=run_key,
+        exit_mode=model_cfg.get("exit_mode"),
+        extra_meta={
+            "mode": "full_history_in_sample",
+            "base_version": version_key,
+            "output_version": run_key,
+            "walk_forward": False,
+            "warning": "Model trained on full labeled history; use for signal visualization, not OOS backtest comparison.",
+        },
+    )
+    print(f"  Saved {len(trades)} full-history trades to {csv_path}")
+
+    from src.export.unified_export import export_version, generate_manifest
+    results_dir = get_results_dir()
+    viz_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "visualization")
+    virtual_cfg = dict(model_cfg)
+    virtual_cfg["name"] = f"{model_cfg.get('name', version_key)} Full History"
+    virtual_cfg["active"] = True
+    virtual_cfg["order"] = model_cfg.get("order", 99) + 0.01
+    exported = export_version(run_key, virtual_cfg, results_dir, viz_dir)
+    if exported:
+        generate_manifest([exported], viz_dir)
+    return run_key
+
+
 def run_export(versions=None, experiment=None):
     """Run unified export for specified versions."""
     from src.export.unified_export import main as export_main
@@ -675,6 +900,11 @@ def main():
                         help="Comma-separated version keys for matrix mode (e.g., v26,v27)")
     parser.add_argument("--compare", type=str, default="",
                         help="Comma-separated versions to compare against")
+    parser.add_argument("--exit-mode", type=str, default="",
+                        choices=["", "rule", "model_b", "hybrid"],
+                        help="Override exit mode for selected version(s)")
+    parser.add_argument("--exit-modes", type=str, default="",
+                        help="Comma-separated exit modes to benchmark (rule,model_b,hybrid)")
     parser.add_argument("--all", action="store_true",
                         help="Run all active models")
     parser.add_argument("--feature-sets", type=str, default="",
@@ -685,6 +915,8 @@ def main():
                         help="Skip training, just export existing CSVs")
     parser.add_argument("--export-all", action="store_true",
                         help="Export all models with existing CSVs")
+    parser.add_argument("--full-history", action="store_true",
+                        help="Train selected model on full labeled history and export full-history signals")
     parser.add_argument("--symbols", type=str, default="",
                         help="Comma-separated symbols (empty = auto from config)")
     parser.add_argument("--min-rows", type=int, default=2000,
@@ -732,7 +964,7 @@ def main():
     ml_models = [m.strip() for m in args.ml_models.split(",") if m.strip()]
     matrix_versions = [v.strip() for v in args.versions.split(",") if v.strip()]
 
-    if feature_sets or ml_models or matrix_versions:
+    if feature_sets or ml_models:
         # Matrix mode — resolve versions
         if not matrix_versions:
             if args.version:
@@ -787,6 +1019,32 @@ def main():
         print(f"{'=' * 100}")
         return
 
+    if args.full_history:
+        if not args.version or args.all or args.versions or args.compare:
+            print("  ERROR: --full-history requires exactly one --version and cannot be combined with --all/--versions/--compare")
+            return
+        cfg_all = load_config()
+        pipeline_cfg = cfg_all.get("pipeline", {})
+        target_cfg = pipeline_cfg.get("target", {
+            "type": "trend_regime", "trend_method": "dual_ma",
+            "short_window": 5, "long_window": 20, "classes": 3,
+        })
+        symbols_list = get_pipeline_symbols(
+            symbols_arg=args.symbols,
+            min_rows_override=args.min_rows,
+        )
+        if not symbols_list:
+            print("  ERROR: No symbols resolved. Check data directory and min_rows.")
+            return
+        print(f"  Mode: Full-history signals ({args.version})")
+        print(f"\n  Symbols: {len(symbols_list)}")
+        _run_full_history(args.version, symbols_list, target_cfg, pipeline_cfg, args)
+        elapsed = time.time() - start
+        print(f"\n{'=' * 100}")
+        print(f"DONE — Full-history export completed in {elapsed:.1f}s")
+        print(f"{'=' * 100}")
+        return
+
     # Determine which versions to process (backward compat — flat results/)
     primary_version = args.version
     compare_versions = []
@@ -796,16 +1054,41 @@ def main():
         versions_to_run = list(active.keys())
         compare_versions = versions_to_run
         primary_version = ""
-        print(f"  Mode: Run ALL active models ({', '.join(versions_to_run)})")
-    elif args.version:
-        versions_to_run = [args.version]
+    elif args.version or args.versions:
+        versions_to_run = _parse_csv_arg(args.versions) or [args.version]
         if args.compare:
-            compare_versions = [v.strip() for v in args.compare.split(",")]
+            compare_versions = _parse_csv_arg(args.compare)
             versions_to_run += compare_versions
-        print(f"  Mode: Run {', '.join(versions_to_run)}")
     else:
         parser.print_help()
         return
+
+    exit_modes = _parse_csv_arg(args.exit_modes)
+    if args.exit_mode:
+        exit_modes = [args.exit_mode]
+    invalid_modes = [m for m in exit_modes if m not in ("rule", "model_b", "hybrid")]
+    if invalid_modes:
+        print(f"  ERROR: invalid exit mode(s): {', '.join(invalid_modes)}")
+        return
+
+    run_plan = []
+    if exit_modes:
+        seen = set()
+        for vk in versions_to_run:
+            for mode in exit_modes:
+                rk = _variant_key(vk, mode)
+                if rk not in seen:
+                    run_plan.append({"run_key": rk, "version_key": vk, "exit_mode": mode})
+                    seen.add(rk)
+        print(f"  Mode: Run benchmark variants ({', '.join(item['run_key'] for item in run_plan)})")
+    else:
+        run_plan = [{"run_key": vk, "version_key": vk, "exit_mode": None} for vk in versions_to_run]
+        if args.all:
+            print(f"  Mode: Run ALL active models ({', '.join(versions_to_run)})")
+        else:
+            print(f"  Mode: Run {', '.join(versions_to_run)}")
+
+    run_keys_to_process = [item["run_key"] for item in run_plan]
 
     # ── Phase 1: Resolve symbols ONCE for all models ──
     cfg_all = load_config()
@@ -829,55 +1112,64 @@ def main():
     print(f"  Target: {target_cfg.get('type', 'trend_regime')} (cache fingerprint enabled)")
 
     # ── Smart Cache: determine which versions actually need backtest ──
-    all_versions = versions_to_run[:]
+    all_versions = run_keys_to_process[:]
     versions_to_actually_run = []
     skipped_versions = []
     invalidated_cache = []
 
     model_cfg_map = {}
-    for vk in versions_to_run:
-        try:
-            model_cfg_map[vk] = get_model_config(vk)
-        except KeyError:
-            model_cfg_map[vk] = {}
+    for item in run_plan:
+        vk = item["version_key"]
+        if vk not in model_cfg_map:
+            try:
+                model_cfg_map[vk] = get_model_config(vk)
+            except KeyError:
+                model_cfg_map[vk] = {}
 
-    def _resolve_target_for(vk):
-        cfg = model_cfg_map.get(vk, {})
+    def _model_cfg_for_run(item):
+        return _with_exit_override(model_cfg_map.get(item["version_key"], {}), item.get("exit_mode"))
+
+    def _resolve_target_for(item):
+        cfg = _model_cfg_for_run(item)
         return cfg.get("target") or target_cfg
 
-    for vk in versions_to_run:
-        csv_path = os.path.join(get_results_dir(), f"trades_{vk}.csv")
+    for item in run_plan:
+        rk = item["run_key"]
+        vk = item["version_key"]
+        csv_path = os.path.join(get_results_dir(), f"trades_{rk}.csv")
         csv_exists = os.path.exists(csv_path)
-        model_cfg = model_cfg_map.get(vk, {})
+        model_cfg = _model_cfg_for_run(item)
         strategy_key = model_cfg.get("strategy", vk)
         expected_feature_set = "rule" if strategy_key == "rule" else model_cfg.get("feature_set", "leading")
-        version_target = _resolve_target_for(vk)
+        version_target = _resolve_target_for(item)
         version_target_fp = target_fingerprint(version_target)
 
         if args.force:
-            versions_to_actually_run.append(vk)
+            versions_to_actually_run.append(item)
             continue
 
         if not csv_exists:
-            versions_to_actually_run.append(vk)
+            versions_to_actually_run.append(item)
             continue
 
-        should_consider_cache = args.skip_existing or (vk in compare_versions)
+        should_consider_cache = args.skip_existing or (vk in compare_versions) or (rk != vk)
         if not should_consider_cache:
-            versions_to_actually_run.append(vk)
+            versions_to_actually_run.append(item)
             continue
 
         meta_ok, reason = _validate_cache_meta(
-            vk, symbols_list, args.min_rows,
+            rk, symbols_list, args.min_rows,
             expected_feature_set=expected_feature_set,
             expected_target_fingerprint=version_target_fp,
+            expected_exit_mode=item.get("exit_mode") or model_cfg.get("exit_mode"),
+            expected_version_key=vk,
             strategy_key=strategy_key,
         )
         if meta_ok:
-            skipped_versions.append(vk)
+            skipped_versions.append(rk)
         else:
-            invalidated_cache.append((vk, reason))
-            versions_to_actually_run.append(vk)
+            invalidated_cache.append((rk, reason))
+            versions_to_actually_run.append(item)
 
     if skipped_versions:
         import pandas as pd
@@ -895,7 +1187,7 @@ def main():
         print(f"    These mismatched CSVs are NOT reused to keep comparison fair.")
 
     if versions_to_actually_run:
-        print(f"\n  WILL RUN backtest for: {', '.join(versions_to_actually_run)}")
+        print(f"\n  WILL RUN backtest for: {', '.join(item['run_key'] for item in versions_to_actually_run)}")
     else:
         print(f"\n  All versions have cached results. Nothing to run.")
         print(f"     Use --force to re-run all versions.")
@@ -906,15 +1198,16 @@ def main():
 
         groups = defaultdict(list)
         group_targets = {}
-        for vk in versions_to_actually_run:
-            try:
-                model_cfg = get_model_config(vk)
-            except KeyError as e:
-                print(f"  ERROR: {e}")
+        for item in versions_to_actually_run:
+            vk = item["version_key"]
+            rk = item["run_key"]
+            model_cfg = _model_cfg_for_run(item)
+            if not model_cfg:
+                print(f"  ERROR: unknown model version '{vk}'")
                 continue
             strategy = model_cfg.get("strategy", vk)
             if strategy == "rule":
-                groups["__rule__"].append((vk, model_cfg))
+                groups["__rule__"].append((rk, vk, model_cfg, item.get("exit_mode")))
             else:
                 feat_set = model_cfg.get("feature_set", "leading")
                 ver_tgt = model_cfg.get("target") or target_cfg
@@ -923,7 +1216,7 @@ def main():
                 exit_cfg = model_cfg.get("exit_model") or {}
                 exit_fp = json.dumps(exit_cfg, sort_keys=True) if exit_cfg.get("enabled") else ""
                 gkey = (feat_set, ver_fp, ver_ml, exit_fp)
-                groups[gkey].append((vk, model_cfg))
+                groups[gkey].append((rk, vk, model_cfg, item.get("exit_mode")))
                 group_targets[gkey] = ver_tgt
 
         # Train ML once per (feature_set, target, model_type, exit_model) group
@@ -934,7 +1227,7 @@ def main():
             feat_set, _fp, ver_ml, exit_fp = gkey
             ver_tgt = group_targets[gkey]
             ver_exit_cfg = json.loads(exit_fp) if exit_fp else None
-            version_names = [vk for vk, _ in models_in_group]
+            version_names = [rk for rk, _vk, _cfg, _mode in models_in_group]
             exit_label = f" +exit_model(fw={ver_exit_cfg['forward_window']})" if ver_exit_cfg else ""
             print(f"\n{'─' * 100}")
             print(f"  ML TRAINING: feature_set='{feat_set}' target='{ver_tgt.get('type')}' "
@@ -956,8 +1249,8 @@ def main():
                 continue
             cache = prediction_caches[gkey]
             ver_tgt = group_targets[gkey]
-            for vk, model_cfg in models_in_group:
-                print(f"\n  Backtest {vk} ({model_cfg.get('name', '')})...")
+            for rk, vk, model_cfg, exit_mode in models_in_group:
+                print(f"\n  Backtest {rk} ({model_cfg.get('name', '')})...")
                 t0 = time.time()
                 trades = _run_backtest_from_cache(cache, vk, model_cfg)
                 dt = time.time() - t0
@@ -969,6 +1262,8 @@ def main():
                     target_cfg=ver_tgt,
                     model_type=pipeline_cfg.get("model_type", "lightgbm"),
                     exit_model_cfg=ver_exit_cfg_save,
+                    run_key=rk,
+                    exit_mode=exit_mode or model_cfg.get("exit_mode"),
                 )
                 print(f"  Saved {len(trades)} trades to {csv_path} ({dt:.1f}s)")
 
@@ -980,8 +1275,8 @@ def main():
 
         # Run rule baseline through walk-forward split (Phase 4)
         if "__rule__" in groups:
-            for vk, model_cfg in groups["__rule__"]:
-                print(f"\n  Backtest {vk} (Rule-based, walk-forward split)...")
+            for rk, vk, model_cfg, exit_mode in groups["__rule__"]:
+                print(f"\n  Backtest {rk} (Rule-based, walk-forward split)...")
                 t0 = time.time()
                 trades = _run_rule_backtest_fair(symbols_list)
                 dt = time.time() - t0
@@ -990,6 +1285,8 @@ def main():
                     trades, vk, symbols_list, "rule", args.min_rows,
                     target_cfg=target_cfg,
                     model_type="rule",
+                    run_key=rk,
+                    exit_mode=exit_mode or model_cfg.get("exit_mode"),
                 )
                 print(f"  Saved {len(trades)} trades to {csv_path} ({dt:.1f}s)")
 
@@ -1012,7 +1309,12 @@ def main():
         print("COMPARISON")
         print("=" * 100)
         from model_manager import cmd_compare
-        cmd_compare(argparse.Namespace(versions=",".join(all_versions)))
+        cmd_compare(argparse.Namespace(
+            versions=",".join(all_versions),
+            experiment="",
+            include_retired=False,
+            include_benchmark=False,
+        ))
 
     elapsed = time.time() - start
     print(f"\n{'=' * 100}")

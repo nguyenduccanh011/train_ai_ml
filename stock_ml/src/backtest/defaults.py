@@ -52,7 +52,17 @@ DEFAULT_PARAMS = {
     "commission": 0.0015,
     "tax": 0.001,
     "record_trades": True,
+    "use_model_b_exit": False,
     "model_b_min_hold": 3,
+    "model_b_require_trend_break": False,
+    "model_b_trend_break_use_sma20": True,
+    "model_b_trend_break_use_ema8": True,
+    "model_b_trend_break_use_macd": False,
+    "model_b_trend_break_use_red_candle": False,
+    "model_b_min_negative_signals": 2,
+    "model_b_profit_only_if_losing_structure": False,
+    "model_b_profit_threshold": 0.0,
+    "exit_mode": "rule",
     # Mods
     "mod_a": True, "mod_b": True, "mod_c": False, "mod_d": False,
     "mod_e": True, "mod_f": True, "mod_g": True, "mod_h": True,
@@ -143,6 +153,13 @@ DEFAULT_PARAMS = {
     # P6: Relative-strength filter (skip weak-vs-self symbols in non-strong trend)
     "v29_relstrength_filter": False,
     "v29_rs_ret20_threshold": -0.05,
+    # V49-E1: Near-breakout entry — cho phep vao som truoc breakout xac nhan neu sat dinh + vol no
+    "v49_near_breakout_entry": False,
+    "v49_nb_lookback": 10,
+    "v49_nb_close_ratio": 0.98,
+    "v49_nb_vol_mult": 1.6,
+    "v49_nb_ret5d_max": 0.12,
+    "v49_nb_position_size": 0.40,
     # P7: Selective peak lock — apply P1 only to high_beta/momentum profiles
     "v29_peak_lock_high_beta_only": False,
     # P8: Profit safety net — once max_profit >= 25%, never let it close negative

@@ -13,6 +13,7 @@ Usage:
 import sys
 import os
 import argparse
+import glob
 
 import yaml
 import numpy as np
@@ -113,6 +114,122 @@ def cmd_activate(args):
     print(f"✓ Model '{args.version}' re-activated.")
 
 
+def _split_variant_key(run_key):
+    version_key, sep, exit_mode = run_key.partition("__")
+    return version_key, exit_mode if sep else None
+
+
+def _display_config_for_key(run_key, models):
+    if run_key in models:
+        return models[run_key]
+    base_key, exit_mode = _split_variant_key(run_key)
+    if base_key in models:
+        cfg = dict(models[base_key])
+        if exit_mode:
+            cfg["name"] = f"{cfg.get('name', base_key)} [{exit_mode}]"
+        return cfg
+    return {"name": run_key.upper(), "order": 99}
+
+
+
+
+def _calc_fragmentation_stats(df: pd.DataFrame):
+    if df is None or len(df) == 0:
+        return {
+            "bucket_counts": {},
+            "short_hold_pct": 0.0,
+            "mid_hold_pct": 0.0,
+            "exit_mix": {},
+            "broken5": 0,
+            "broken5_base": 0,
+            "broken8": 0,
+            "broken8_base": 0,
+            "churn5": 0,
+            "churn10": 0,
+            "churn_base": 0,
+        }
+
+    bucket_defs = [
+        ("1-5", 1, 5),
+        ("6-10", 6, 10),
+        ("11-20", 11, 20),
+        ("21-30", 21, 30),
+        ("31-45", 31, 45),
+        ("46+", 46, None),
+    ]
+    bucket_counts = {}
+    if "holding_days" in df.columns:
+        holds = pd.to_numeric(df["holding_days"], errors="coerce")
+        for name, lo, hi in bucket_defs:
+            if hi is None:
+                mask = holds >= lo
+            else:
+                mask = (holds >= lo) & (holds <= hi)
+            bucket_counts[name] = int(mask.sum())
+    else:
+        bucket_counts = {name: 0 for name, *_ in bucket_defs}
+
+    n = max(1, len(df))
+    short_hold_pct = bucket_counts.get("1-5", 0) * 100.0 / n
+    mid_hold_pct = (bucket_counts.get("21-30", 0) + bucket_counts.get("31-45", 0)) * 100.0 / n
+
+    if "exit_reason" in df.columns:
+        reasons = df["exit_reason"].astype(str)
+        exit_mix = {
+            "signal": float((reasons == "signal").mean() * 100),
+            "peak_protect": float(reasons.str.startswith("peak_protect").mean() * 100),
+            "trailing_stop": float((reasons == "trailing_stop").mean() * 100),
+            "signal_hard_cap": float((reasons == "signal_hard_cap").mean() * 100),
+            "fast_exit_loss": float((reasons == "fast_exit_loss").mean() * 100),
+            "model_b_exit": float((reasons == "model_b_exit").mean() * 100),
+            "end": float((reasons == "end").mean() * 100),
+        }
+    else:
+        exit_mix = {}
+
+    broken5 = broken5_base = broken8 = broken8_base = 0
+    if "max_profit_pct" in df.columns and "pnl_pct" in df.columns:
+        maxp = pd.to_numeric(df["max_profit_pct"], errors="coerce")
+        pnl = pd.to_numeric(df["pnl_pct"], errors="coerce")
+        m5 = maxp >= 5
+        m8 = maxp >= 8
+        broken5_base = int(m5.sum())
+        broken8_base = int(m8.sum())
+        broken5 = int((m5 & (pnl <= 0)).sum())
+        broken8 = int((m8 & (pnl <= 0)).sum())
+
+    churn5 = churn10 = churn_base = 0
+    if all(c in df.columns for c in ["symbol", "entry_day", "exit_day"]):
+        tdf = df[["symbol", "entry_day", "exit_day"]].copy()
+        tdf["entry_day"] = pd.to_numeric(tdf["entry_day"], errors="coerce")
+        tdf["exit_day"] = pd.to_numeric(tdf["exit_day"], errors="coerce")
+        tdf = tdf.dropna().sort_values(["symbol", "entry_day"])
+        for _sym, g in tdf.groupby("symbol"):
+            g = g.reset_index(drop=True)
+            if len(g) < 2:
+                continue
+            prev_exit = g["exit_day"].shift(1)
+            gap = g["entry_day"] - prev_exit
+            valid = gap >= 0
+            churn_base += int(valid.sum())
+            churn5 += int((valid & (gap <= 5)).sum())
+            churn10 += int((valid & (gap <= 10)).sum())
+
+    return {
+        "bucket_counts": bucket_counts,
+        "short_hold_pct": short_hold_pct,
+        "mid_hold_pct": mid_hold_pct,
+        "exit_mix": exit_mix,
+        "broken5": broken5,
+        "broken5_base": broken5_base,
+        "broken8": broken8,
+        "broken8_base": broken8_base,
+        "churn5": churn5,
+        "churn10": churn10,
+        "churn_base": churn_base,
+    }
+
+
 def cmd_compare(args):
     """Compare models using their trades CSV files.
 
@@ -134,21 +251,29 @@ def cmd_compare(args):
         version_keys = [v.strip() for v in specific_versions.split(",")]
         selected = []
         for vk in version_keys:
-            if vk in models:
-                selected.append((vk, models[vk]))
-            else:
-                # Version not in registry — try to load CSV anyway
-                selected.append((vk, {"name": vk.upper(), "order": 99}))
+            selected.append((vk, _display_config_for_key(vk, models)))
         sorted_models = sorted(selected, key=lambda x: x[1].get("order", 99))
         print("=" * 130)
         print(f"MODEL COMPARISON — Selected: {', '.join(version_keys)}")
         print("=" * 130)
     else:
-        # Default: compare all active models
-        active = {k: v for k, v in models.items() if v.get("active", True)}
-        sorted_models = sorted(active.items(), key=lambda x: x[1].get("order", 99))
+        include_retired = getattr(args, "include_retired", False)
+        include_benchmark = getattr(args, "include_benchmark", False)
+        base_models = models if include_retired else {k: v for k, v in models.items() if v.get("active", True)}
+        selected = list(base_models.items())
+        if include_benchmark:
+            existing = {k for k, _ in selected}
+            for path in glob.glob(os.path.join(results_dir, "trades_*__*.csv")):
+                key = os.path.basename(path).replace("trades_", "").replace(".csv", "")
+                if key not in existing:
+                    selected.append((key, _display_config_for_key(key, models)))
+                    existing.add(key)
+        sorted_models = sorted(selected, key=lambda x: x[1].get("order", 99))
+        label = "All Models" if include_retired else "Active Models"
+        if include_benchmark:
+            label += " + Benchmark Variants"
         print("=" * 130)
-        print("MODEL COMPARISON — Active Models")
+        print(f"MODEL COMPARISON — {label}")
         print("=" * 130)
 
     metrics = {}
@@ -175,6 +300,7 @@ def cmd_compare(args):
             "pf": gp / gl if gl > 0 else 99,
             "max_loss": np.min(pnls) if len(pnls) > 0 else 0,
             "avg_hold": df["holding_days"].mean() if "holding_days" in df.columns else 0,
+            "frag": _calc_fragmentation_stats(df),
         }
         trades_cache[key] = df.to_dict("records")
 
@@ -232,6 +358,16 @@ def cmd_compare(args):
     # Scoring legend
     print(f"\n  Sharpe = avg_pnl/std(pnl)  |  MDD/sym = avg per-symbol drawdown  |  CV = std/mean of yearly PnL")
 
+    print(f"\n  FRAGMENTATION SNAPSHOT:")
+    print(f"  {'Model':<20} | {'1-5d%':>6} {'21-45d%':>8} {'Sig%':>6} {'Broken8':>10} {'Churn5':>8}")
+    print("  " + "-" * 74)
+    for key, m in metrics.items():
+        frag = m.get("frag", {})
+        exit_mix = frag.get("exit_mix", {})
+        b8 = f"{frag.get('broken8', 0)}/{frag.get('broken8_base', 0)}"
+        c5 = f"{frag.get('churn5', 0)}/{frag.get('churn_base', 0)}"
+        print(f"  {m['name']:<20} | {frag.get('short_hold_pct', 0):>5.1f}% {frag.get('mid_hold_pct', 0):>7.1f}% "
+              f"{exit_mix.get('signal', 0):>5.1f}% {b8:>10} {c5:>8}")
     # Recommendation
     print(f"\n  RECOMMENDATION (by composite score):")
     best_key = max(metrics, key=lambda k: metrics[k]["score"])
@@ -361,6 +497,10 @@ def main():
                            help="Comma-separated versions to compare (e.g., v25,v24,v23,rule). Default: all active")
     p_compare.add_argument("--experiment", type=str, default="",
                            help="Read CSV files from experiment subfolder (e.g., leading_v2__lightgbm)")
+    p_compare.add_argument("--include-retired", action="store_true",
+                           help="Compare all registry models, including retired/inactive")
+    p_compare.add_argument("--include-benchmark", action="store_true",
+                           help="Also include trades_*__*.csv benchmark variants")
 
     # experiments
     sub.add_parser("experiments", help="List all experiment subfolders in results/")

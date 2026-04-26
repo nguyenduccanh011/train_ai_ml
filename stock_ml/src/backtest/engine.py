@@ -15,6 +15,8 @@ def backtest_unified(y_pred, returns, df_test, feature_cols, y_pred_exit=None, *
     commission = cfg["commission"]
     tax = cfg["tax"]
     record_trades = cfg["record_trades"]
+    use_model_b_exit = cfg.get("use_model_b_exit", False)
+    exit_mode = cfg.get("exit_mode", "rule") if use_model_b_exit else "rule"
     mod_a = cfg["mod_a"]; mod_b = cfg["mod_b"]; mod_c = cfg["mod_c"]; mod_d = cfg["mod_d"]
     mod_e = cfg["mod_e"]; mod_f = cfg["mod_f"]; mod_g = cfg["mod_g"]; mod_h = cfg["mod_h"]
     mod_i = cfg["mod_i"]; mod_j = cfg["mod_j"]
@@ -288,6 +290,14 @@ def backtest_unified(y_pred, returns, df_test, feature_cols, y_pred_exit=None, *
             ha_arrays[c] = np.zeros(n)
 
     MODEL_B_MIN_HOLD = cfg.get("model_b_min_hold", 3)
+    MODEL_B_REQUIRE_TREND_BREAK = cfg.get("model_b_require_trend_break", False)
+    MODEL_B_USE_SMA20 = cfg.get("model_b_trend_break_use_sma20", True)
+    MODEL_B_USE_EMA8 = cfg.get("model_b_trend_break_use_ema8", True)
+    MODEL_B_USE_MACD = cfg.get("model_b_trend_break_use_macd", False)
+    MODEL_B_USE_RED_CANDLE = cfg.get("model_b_trend_break_use_red_candle", False)
+    MODEL_B_MIN_NEG_SIGNALS = cfg.get("model_b_min_negative_signals", 2)
+    MODEL_B_PROFIT_ONLY_IF_LOSING_STRUCTURE = cfg.get("model_b_profit_only_if_losing_structure", False)
+    MODEL_B_PROFIT_THRESHOLD = cfg.get("model_b_profit_threshold", 0.0)
 
     # --- State ---
     equity = np.zeros(n)
@@ -733,11 +743,33 @@ def backtest_unified(y_pred, returns, df_test, feature_cols, y_pred_exit=None, *
             if cum_ret <= -HARD_STOP:
                 new_position = 0; exit_reason = "hard_stop"
 
-            # Model B exit — separate exit model override (runs after hard_stop only)
-            elif (y_pred_exit is not None and hold_days >= MODEL_B_MIN_HOLD
-                    and y_pred_exit[i - 1] == 1):
-                new_position = 0; exit_reason = "model_b_exit"
-                counters["model_b_exit"] += 1
+            # Model B exit — primary exit signal for model_b/hybrid modes
+            elif (use_model_b_exit and exit_mode in ("model_b", "hybrid") and y_pred_exit is not None
+                    and hold_days >= MODEL_B_MIN_HOLD and y_pred_exit[i - 1] == 1):
+                model_b_allow_exit = True
+                if MODEL_B_REQUIRE_TREND_BREAK:
+                    model_b_negative_signals = 0
+                    if MODEL_B_USE_SMA20 and not np.isnan(sma20[i]) and close[i] < sma20[i]:
+                        model_b_negative_signals += 1
+                    if MODEL_B_USE_EMA8 and not np.isnan(ema8[i]) and close[i] < ema8[i]:
+                        model_b_negative_signals += 1
+                    if MODEL_B_USE_MACD and not np.isnan(macd_hist[i]) and macd_hist[i] <= 0:
+                        model_b_negative_signals += 1
+                    if MODEL_B_USE_RED_CANDLE and close[i] < opn[i]:
+                        model_b_negative_signals += 1
+
+                    model_b_allow_exit = model_b_negative_signals >= MODEL_B_MIN_NEG_SIGNALS
+                    if (MODEL_B_PROFIT_ONLY_IF_LOSING_STRUCTURE
+                            and price_cur_ret >= MODEL_B_PROFIT_THRESHOLD
+                            and not model_b_allow_exit):
+                        model_b_allow_exit = False
+
+                if model_b_allow_exit:
+                    new_position = 0; exit_reason = "model_b_exit"
+                    counters["model_b_exit"] += 1
+
+            elif exit_mode == "model_b":
+                pass
 
             # V38b: Stall-exit — giu N ngay nhung max profit qua thap, dang lo nho -> chot
             elif v38b_stall_exit and hold_days >= v38b_stall_min_hold and \
@@ -904,301 +936,302 @@ def backtest_unified(y_pred, returns, df_test, feature_cols, y_pred_exit=None, *
                         new_position = 0; exit_reason = "signal_hard_cap"
                         counters["signal_hard_cap"] += 1
 
-            # Fast exit loss
-            if new_position == 1:
-                # V30-C3: regime-aware hard cap post-check (overrides standard cap if tighter needed)
-                if v30_regime_aware_hardcap:
-                    choppy_now = regime_cfg["choppy_regime"]
-                    rah_cap = v30_rah_choppy_cap if choppy_now else (
-                        v30_rah_trending_cap if trend == "strong" else -0.09)
-                    if price_cur_ret <= rah_cap:
-                        new_position = 0; exit_reason = "signal_hard_cap"
-                        counters["v30_rah_cap"] += 1
-                if v22_mode:
-                    # V22: smart fast exit with trend_healthy check
-                    do_fast_exit = False
-                    ft = cfg["v22_fast_exit_threshold_hb"] if profile == "high_beta" else cfg["v22_fast_exit_threshold_std"]
-                    mt = ft + 0.02
+            if exit_mode != "model_b":
+                # Fast exit loss
+                if new_position == 1:
+                    # V30-C3: regime-aware hard cap post-check (overrides standard cap if tighter needed)
+                    if v30_regime_aware_hardcap:
+                        choppy_now = regime_cfg["choppy_regime"]
+                        rah_cap = v30_rah_choppy_cap if choppy_now else (
+                            v30_rah_trending_cap if trend == "strong" else -0.09)
+                        if price_cur_ret <= rah_cap:
+                            new_position = 0; exit_reason = "signal_hard_cap"
+                            counters["v30_rah_cap"] += 1
+                    if v22_mode:
+                        # V22: smart fast exit with trend_healthy check
+                        do_fast_exit = False
+                        ft = cfg["v22_fast_exit_threshold_hb"] if profile == "high_beta" else cfg["v22_fast_exit_threshold_std"]
+                        mt = ft + 0.02
 
-                    trend_healthy = (cfg["v22_fast_exit_skip_strong"] and strong_uptrend and
-                                    macd_line[i] > 0 and
-                                    not np.isnan(sma20[i]) and close[i] > sma20[i] * 0.97)
+                        trend_healthy = (cfg["v22_fast_exit_skip_strong"] and strong_uptrend and
+                                        macd_line[i] > 0 and
+                                        not np.isnan(sma20[i]) and close[i] > sma20[i] * 0.97)
 
-                    vol_selling = (cfg["v22_fast_exit_vol_confirm"] and
-                                  not np.isnan(avg_vol20[i]) and volume[i] > 1.3 * avg_vol20[i] and
-                                  close[i] < opn[i])
+                        vol_selling = (cfg["v22_fast_exit_vol_confirm"] and
+                                      not np.isnan(avg_vol20[i]) and volume[i] > 1.3 * avg_vol20[i] and
+                                      close[i] < opn[i])
 
-                    if price_cur_ret < ft and hold_days > 3:
-                        if trend_healthy and not vol_selling:
-                            counters["fast_exit_saved"] += 1
-                        else:
-                            do_fast_exit = True
-                    elif (price_cur_ret < mt and hold_days > 2 and
-                          macd_hist[i] < 0 and not np.isnan(ema8[i]) and close[i] < ema8[i]):
-                        if trend_healthy and not vol_selling:
-                            counters["fast_exit_saved"] += 1
-                        else:
-                            do_fast_exit = True
+                        if price_cur_ret < ft and hold_days > 3:
+                            if trend_healthy and not vol_selling:
+                                counters["fast_exit_saved"] += 1
+                            else:
+                                do_fast_exit = True
+                        elif (price_cur_ret < mt and hold_days > 2 and
+                              macd_hist[i] < 0 and not np.isnan(ema8[i]) and close[i] < ema8[i]):
+                            if trend_healthy and not vol_selling:
+                                counters["fast_exit_saved"] += 1
+                            else:
+                                do_fast_exit = True
 
-                    if do_fast_exit:
-                        new_position = 0; exit_reason = "fast_exit_loss"
-                        counters["fast_exit_loss"] += 1
-                else:
-                    # V23+: graduated fast_exit_loss by trend
-                    hb_buf = fast_exit_hb_buffer if profile == "high_beta" else 0.0
-                    if trend == "strong":
-                        ft = fast_exit_strong - hb_buf
-                    elif trend == "moderate":
-                        ft = fast_exit_moderate - hb_buf
+                        if do_fast_exit:
+                            new_position = 0; exit_reason = "fast_exit_loss"
+                            counters["fast_exit_loss"] += 1
                     else:
-                        ft = fast_exit_weak - hb_buf
-                    mt = ft + 0.02
-
-                    do_fast_exit = False
-                    if price_cur_ret < ft and hold_days > 3:
-                        do_fast_exit = True
-                    elif (price_cur_ret < mt and hold_days > 2 and
-                          macd_hist[i] < 0 and not np.isnan(ema8[i]) and close[i] < ema8[i]):
-                        do_fast_exit = True
-
-                    if do_fast_exit:
-                        new_position = 0; exit_reason = "fast_exit_loss"
-                        counters["fast_exit_loss"] += 1
-
-            # ATR stop
-            if new_position == 1 and cum_ret <= -atr_stop:
-                new_position = 0; exit_reason = "stop_loss"
-
-            # V29-P1: Adaptive peak lock — once max_profit reaches trigger,
-            #     ratchet a stop floor = keep * max_profit. Prevents "ran +20% then closed -10%".
-            if new_position == 1 and v29_adaptive_peak_lock and price_max_profit >= v29_apl_trigger:
-                apply_lock = True
-                if v29_peak_lock_high_beta_only and profile not in ("high_beta", "momentum"):
-                    apply_lock = False
-                if apply_lock:
-                    floor_ret = price_max_profit * v29_apl_keep
-                    if price_cur_ret <= floor_ret:
-                        new_position = 0; exit_reason = "v29_peak_lock"
-                        counters["v29_peak_lock"] += 1
-
-            # V31-C: Hardcap-after-profit — once we've had >=5% profit, tighten exit floor to -3%
-            # Prevents "ran +5-15% then closed -13%" which is the main hard_cap loss pattern
-            if (new_position == 1 and v31_hardcap_after_profit and
-                price_max_profit >= v31_hap_profit_trigger and
-                price_cur_ret <= v31_hap_floor):
-                new_position = 0; exit_reason = "v31_hap_exit"
-                counters["v31_hap_exit"] += 1
-
-            # V32-B: Trend-weak oversold exit — khi trend=weak + giá quá xa SMA20 + còn có lãi → exit
-            # Logic: nếu trend đã yếu + giá dưới SMA20 quá 7% → thị trường đang sập, không nên giữ
-            if (new_position == 1 and v32_weak_oversold_exit and
-                trend == "weak" and hold_days >= v32_woe_hold_min and
-                not np.isnan(dist_sma20[i]) and dist_sma20[i] < v32_woe_dist_thresh and
-                price_cur_ret >= v32_woe_min_profit):
-                new_position = 0; exit_reason = "v32_weak_oversold"
-                counters["v32_weak_oversold"] += 1
-
-            # V32-C: Dynamic hard_cap tighten — khi dist_sma20 < -8% → exit ở -7% thay vì -12%
-            # Ghi chú: chạy khi new_position vẫn = 1 (hard_cap chưa bắt vì trade chưa đến ngưỡng cũ)
-            if (new_position == 1 and v32_dynamic_hc_dist and
-                not np.isnan(dist_sma20[i]) and dist_sma20[i] < v32_dhc_dist_thresh and
-                price_cur_ret <= v32_dhc_tight_cap):
-                new_position = 0; exit_reason = "v32_dynamic_hc"
-                counters["v32_dynamic_hc"] += 1
-
-            # V32-D: Profit ratchet exit — khi đã đạt >= trigger% profit rồi rớt về keep * max_profit
-            # Nhẹ hơn V29-P1 vì dùng price-based thay vì equity-based, và keep thấp hơn
-            if (new_position == 1 and v32_profit_ratchet and
-                price_max_profit >= v32_pr_trigger):
-                pr_floor = price_max_profit * v32_pr_keep
-                if price_cur_ret <= pr_floor:
-                    new_position = 0; exit_reason = "v32_profit_ratchet"
-                    counters["v32_profit_ratchet"] += 1
-
-            # V33-A: Multi-tier trailing ratchet — tighten floor progressively theo mức profit đạt được
-            # Mục đích: fix -2177% drag từ signal_hard_cap (401 lệnh max_profit>5% nhưng kết thúc lỗ>5%)
-            # Khác V32-D: multi-tier, sàn tăng dần theo profit lớn; tập trung vào big winners
-            if new_position == 1 and v33_trailing_ratchet:
-                if price_max_profit >= v33_tr_tier3_trigger:
-                    tr_floor = price_max_profit * v33_tr_tier3_keep
-                elif price_max_profit >= v33_tr_tier2_trigger:
-                    tr_floor = price_max_profit * v33_tr_tier2_keep
-                elif price_max_profit >= v33_tr_tier1_trigger:
-                    tr_floor = price_max_profit * v33_tr_tier1_keep
-                else:
-                    tr_floor = None
-                if tr_floor is not None and price_cur_ret <= tr_floor:
-                    new_position = 0; exit_reason = "v33_trailing_ratchet"
-                    counters["v33_trailing_ratchet"] += 1
-
-            # V33-B: Trend-reversal exit — bán ngay khi max_profit đạt ngưỡng + trend đảo chiều
-            # Mục đích: bắt "bán ở đỉnh phân phối" sớm hơn signal/hard_cap
-            # Logic: price_max_profit >= min_profit VÀ close < ema8 N ngày VÀ rsi < thresh
-            if new_position == 1 and v33_trend_rev_exit:
-                if not np.isnan(ema8[i]) and close[i] < ema8[i]:
-                    v33_consec_below_ema8 += 1
-                else:
-                    v33_consec_below_ema8 = 0
-                if (price_max_profit >= v33_tre_min_profit and
-                    hold_days >= v33_tre_hold_min and
-                    v33_consec_below_ema8 >= 2 and
-                    not np.isnan(rsi14[i]) and rsi14[i] < v33_tre_rsi_thresh):
-                    new_position = 0; exit_reason = "v33_trend_rev_exit"
-                    counters["v33_trend_rev_exit"] += 1
-            else:
-                # track ema8 below streak dù v33_trend_rev_exit off (cần cho v33_hap_consec_drop)
-                if not np.isnan(ema8[i]) and close[i] < ema8[i]:
-                    v33_consec_below_ema8 += 1
-                else:
-                    v33_consec_below_ema8 = 0
-
-            # V29-P8: Profit safety net — once max_profit >= trigger, never let it close negative
-            if (new_position == 1 and v29_profit_safety_net and
-                price_max_profit >= v29_profit_safety_trigger and price_cur_ret < 0):
-                new_position = 0; exit_reason = "v29_profit_safety"
-                counters["v29_profit_safety"] += 1
-
-            # V29-P9: Hardcap-after-peak — tighten hard cap once we've had a meaningful peak
-            if (new_position == 1 and v29_hardcap_after_peak and
-                price_max_profit >= v29_hardcap_after_peak_trigger and
-                price_cur_ret <= v29_hardcap_after_peak_floor):
-                new_position = 0; exit_reason = "v29_hardcap_after_peak"
-                counters["v29_hardcap_after_peak"] += 1
-
-            # V29-P4: Reversal after peak — exit fast when ret_2d collapses after big run-up
-            if (new_position == 1 and v29_reversal_after_peak and
-                price_max_profit >= v29_reversal_peak_trigger and
-                ret_2d[i] <= v29_reversal_ret2_threshold):
-                new_position = 0; exit_reason = "v29_reversal_after_peak"
-                counters["v29_reversal_after_peak"] += 1
-
-            # V29-P2: ATR velocity exit — exit on a fast 2-day decline > k*ATR after meaningful profit
-            if (new_position == 1 and v29_atr_velocity_exit and
-                price_max_profit >= v29_atr_velocity_min_profit and
-                not np.isnan(atr14[i]) and close[i] > 0 and i >= 2):
-                two_d_drop = close[i - 2] - close[i]
-                atr_threshold = v29_atr_velocity_k * atr14[i]
-                if two_d_drop >= atr_threshold:
-                    new_position = 0; exit_reason = "v29_atr_velocity"
-                    counters["v29_atr_velocity"] += 1
-
-            # V30-B3: Chandelier trailing — ATR×k trailing from max_high when in profit
-            if (new_position == 1 and v30_chandelier_trail and
-                price_max_profit >= v30_chand_profit_trigger and
-                not np.isnan(atr14[i]) and close[i] > 0):
-                chand_stop = max_price_in_trade - v30_chand_atr_mult * atr14[i]
-                if close[i] < chand_stop:
-                    new_position = 0; exit_reason = "v30_chandelier"
-                    counters["v30_chandelier"] += 1
-
-            # Peak protection
-            if new_position == 1 and mod_b:
-                if v22_mode:
-                    # V22: simple threshold + 3-in-1
-                    if price_max_profit >= 0.20:
-                        price_below_sma10 = (not np.isnan(sma10[i]) and close[i] < sma10[i])
-                        heavy_vol = (not np.isnan(avg_vol20[i]) and volume[i] > 1.5 * avg_vol20[i])
-                        bearish_candle = close[i] < opn[i]
-                        if price_below_sma10 and heavy_vol and bearish_candle:
-                            new_position = 0; exit_reason = "peak_protect_dist"
-                            counters["peak_protect"] += 1
-                elif patch_pp_restore:
-                    if price_max_profit >= 0.25:
-                        pp_threshold_active = 0.10
-                    elif strong_uptrend:
-                        pp_threshold_active = peak_protect_strong_threshold
-                    else:
-                        pp_threshold_active = peak_protect_normal_threshold
-
-                    pp_bonus = regime_cfg.get("pp_sensitivity_bonus", 0)
-                    pp_threshold_active = max(0.08, pp_threshold_active - pp_bonus)
-
-                    if price_max_profit >= pp_threshold_active:
-                        price_below_sma10 = (not np.isnan(sma10[i]) and close[i] < sma10[i])
-                        if price_below_sma10:
-                            pp_pending_bars += 1
-                            heavy_vol = (not np.isnan(avg_vol20[i]) and volume[i] > 1.3 * avg_vol20[i])
-                            if pp_pending_bars >= 2 or heavy_vol:
-                                new_position = 0; exit_reason = "peak_protect_dist"
-                                pp_pending_bars = 0
-                                counters["peak_protect"] += 1
+                        # V23+: graduated fast_exit_loss by trend
+                        hb_buf = fast_exit_hb_buffer if profile == "high_beta" else 0.0
+                        if trend == "strong":
+                            ft = fast_exit_strong - hb_buf
+                        elif trend == "moderate":
+                            ft = fast_exit_moderate - hb_buf
                         else:
-                            pp_pending_bars = 0
-                elif patch_pp_2of3:
-                    pp_threshold = peak_protect_strong_threshold if strong_uptrend else peak_protect_normal_threshold
-                    if price_max_profit >= pp_threshold:
-                        price_below_sma10 = (not np.isnan(sma10[i]) and close[i] < sma10[i])
-                        heavy_vol = (not np.isnan(avg_vol20[i]) and volume[i] > 1.5 * avg_vol20[i])
-                        bearish_candle = close[i] < opn[i]
-                        checks = sum([price_below_sma10, heavy_vol, bearish_candle])
-                        if checks >= 2:
-                            new_position = 0; exit_reason = "peak_protect_dist"
-                            counters["peak_protect"] += 1
-                else:
-                    pp_threshold = peak_protect_strong_threshold if strong_uptrend else peak_protect_normal_threshold
-                    if price_max_profit >= pp_threshold:
-                        price_below_sma10 = (not np.isnan(sma10[i]) and close[i] < sma10[i])
-                        heavy_vol = (not np.isnan(avg_vol20[i]) and volume[i] > 1.5 * avg_vol20[i])
-                        bearish_candle = close[i] < opn[i]
-                        if price_below_sma10 and heavy_vol and bearish_candle:
-                            new_position = 0; exit_reason = "peak_protect_dist"
-                            counters["peak_protect"] += 1
+                            ft = fast_exit_weak - hb_buf
+                        mt = ft + 0.02
 
-            # EMA8 peak protect
-            if mod_b and new_position == 1 and position == 1:
-                if price_max_profit >= 0.15:
+                        do_fast_exit = False
+                        if price_cur_ret < ft and hold_days > 3:
+                            do_fast_exit = True
+                        elif (price_cur_ret < mt and hold_days > 2 and
+                              macd_hist[i] < 0 and not np.isnan(ema8[i]) and close[i] < ema8[i]):
+                            do_fast_exit = True
+
+                        if do_fast_exit:
+                            new_position = 0; exit_reason = "fast_exit_loss"
+                            counters["fast_exit_loss"] += 1
+
+                # ATR stop
+                if new_position == 1 and cum_ret <= -atr_stop:
+                    new_position = 0; exit_reason = "stop_loss"
+
+                # V29-P1: Adaptive peak lock — once max_profit reaches trigger,
+                #     ratchet a stop floor = keep * max_profit. Prevents "ran +20% then closed -10%".
+                if new_position == 1 and v29_adaptive_peak_lock and price_max_profit >= v29_apl_trigger:
+                    apply_lock = True
+                    if v29_peak_lock_high_beta_only and profile not in ("high_beta", "momentum"):
+                        apply_lock = False
+                    if apply_lock:
+                        floor_ret = price_max_profit * v29_apl_keep
+                        if price_cur_ret <= floor_ret:
+                            new_position = 0; exit_reason = "v29_peak_lock"
+                            counters["v29_peak_lock"] += 1
+
+                # V31-C: Hardcap-after-profit — once we've had >=5% profit, tighten exit floor to -3%
+                # Prevents "ran +5-15% then closed -13%" which is the main hard_cap loss pattern
+                if (new_position == 1 and v31_hardcap_after_profit and
+                    price_max_profit >= v31_hap_profit_trigger and
+                    price_cur_ret <= v31_hap_floor):
+                    new_position = 0; exit_reason = "v31_hap_exit"
+                    counters["v31_hap_exit"] += 1
+
+                # V32-B: Trend-weak oversold exit — khi trend=weak + giá quá xa SMA20 + còn có lãi → exit
+                # Logic: nếu trend đã yếu + giá dưới SMA20 quá 7% → thị trường đang sập, không nên giữ
+                if (new_position == 1 and v32_weak_oversold_exit and
+                    trend == "weak" and hold_days >= v32_woe_hold_min and
+                    not np.isnan(dist_sma20[i]) and dist_sma20[i] < v32_woe_dist_thresh and
+                    price_cur_ret >= v32_woe_min_profit):
+                    new_position = 0; exit_reason = "v32_weak_oversold"
+                    counters["v32_weak_oversold"] += 1
+
+                # V32-C: Dynamic hard_cap tighten — khi dist_sma20 < -8% → exit ở -7% thay vì -12%
+                # Ghi chú: chạy khi new_position vẫn = 1 (hard_cap chưa bắt vì trade chưa đến ngưỡng cũ)
+                if (new_position == 1 and v32_dynamic_hc_dist and
+                    not np.isnan(dist_sma20[i]) and dist_sma20[i] < v32_dhc_dist_thresh and
+                    price_cur_ret <= v32_dhc_tight_cap):
+                    new_position = 0; exit_reason = "v32_dynamic_hc"
+                    counters["v32_dynamic_hc"] += 1
+
+                # V32-D: Profit ratchet exit — khi đã đạt >= trigger% profit rồi rớt về keep * max_profit
+                # Nhẹ hơn V29-P1 vì dùng price-based thay vì equity-based, và keep thấp hơn
+                if (new_position == 1 and v32_profit_ratchet and
+                    price_max_profit >= v32_pr_trigger):
+                    pr_floor = price_max_profit * v32_pr_keep
+                    if price_cur_ret <= pr_floor:
+                        new_position = 0; exit_reason = "v32_profit_ratchet"
+                        counters["v32_profit_ratchet"] += 1
+
+                # V33-A: Multi-tier trailing ratchet — tighten floor progressively theo mức profit đạt được
+                # Mục đích: fix -2177% drag từ signal_hard_cap (401 lệnh max_profit>5% nhưng kết thúc lỗ>5%)
+                # Khác V32-D: multi-tier, sàn tăng dần theo profit lớn; tập trung vào big winners
+                if new_position == 1 and v33_trailing_ratchet:
+                    if price_max_profit >= v33_tr_tier3_trigger:
+                        tr_floor = price_max_profit * v33_tr_tier3_keep
+                    elif price_max_profit >= v33_tr_tier2_trigger:
+                        tr_floor = price_max_profit * v33_tr_tier2_keep
+                    elif price_max_profit >= v33_tr_tier1_trigger:
+                        tr_floor = price_max_profit * v33_tr_tier1_keep
+                    else:
+                        tr_floor = None
+                    if tr_floor is not None and price_cur_ret <= tr_floor:
+                        new_position = 0; exit_reason = "v33_trailing_ratchet"
+                        counters["v33_trailing_ratchet"] += 1
+
+                # V33-B: Trend-reversal exit — bán ngay khi max_profit đạt ngưỡng + trend đảo chiều
+                # Mục đích: bắt "bán ở đỉnh phân phối" sớm hơn signal/hard_cap
+                # Logic: price_max_profit >= min_profit VÀ close < ema8 N ngày VÀ rsi < thresh
+                if new_position == 1 and v33_trend_rev_exit:
                     if not np.isnan(ema8[i]) and close[i] < ema8[i]:
-                        consecutive_below_ema8 += 1
+                        v33_consec_below_ema8 += 1
                     else:
-                        consecutive_below_ema8 = 0
-                    if consecutive_below_ema8 >= 2 and price_cur_ret < price_max_profit * 0.75:
-                        new_position = 0; exit_reason = "peak_protect_ema"
-                        counters["peak_protect"] += 1
-
-            # V28-K5: Cycle peak exit — if ret_3d turns negative after being up >8%, exit quickly
-            if v28_cycle_peak_exit and new_position == 1 and position == 1:
-                if price_max_profit >= 0.08 and ret_3d[i] < -0.02 and price_cur_ret < price_max_profit * 0.70:
-                    heavy_vol = (not np.isnan(avg_vol20[i]) and volume[i] > 1.2 * avg_vol20[i])
-                    if heavy_vol or ret_3d[i] < -0.04:
-                        new_position = 0; exit_reason = "v28_cycle_peak"
-                        counters["v28_cycle_peak"] += 1
-
-            # Hybrid exit
-            if new_position == 1 and strong_uptrend and cum_ret > 0.05 and max_profit > 0.08:
-                macd_bearish = macd_hist[i] < 0 and macd_hist[i - 1] >= 0 if i > 0 else False
-                price_below_ma20 = close[i] < sma20[i] if not np.isnan(sma20[i]) else False
-                if macd_bearish and price_below_ma20:
-                    new_position = 0; exit_reason = "hybrid_exit"
-                elif price_below_ma20 and cum_ret < max_profit * 0.5:
-                    new_position = 0; exit_reason = "hybrid_exit"
-
-            # Adaptive trailing
-            elif new_position == 1 and max_profit > 0.03:
-                if max_profit > 0.25: trail_pct = 0.18
-                elif max_profit > 0.15: trail_pct = 0.25
-                elif max_profit > 0.08: trail_pct = 0.40
-                else: trail_pct = 0.65
-                # V29-P3: tighten when max_profit is very high (lock more profit)
-                if v29_tighter_trail_high_profit and max_profit >= v29_high_profit_trigger:
-                    trail_pct = min(trail_pct, v29_high_profit_trail)
-                if strong_uptrend: trail_pct *= STRONG_TREND_TRAIL_MULT
-                elif trend == "moderate": trail_pct *= 0.7
-                giveback = 1 - (cum_ret / max_profit) if max_profit > 0 else 0
-                if giveback >= trail_pct:
-                    new_position = 0; exit_reason = "trailing_stop"
-
-            # Profit lock
-            if new_position == 1 and max_profit >= PROFIT_LOCK_THRESHOLD:
-                if cum_ret < PROFIT_LOCK_MIN and not strong_uptrend:
-                    if patch_symbol_tuning and regime_cfg.get("disable_profit_lock_in_strong") and trend == "strong":
-                        pass
+                        v33_consec_below_ema8 = 0
+                    if (price_max_profit >= v33_tre_min_profit and
+                        hold_days >= v33_tre_hold_min and
+                        v33_consec_below_ema8 >= 2 and
+                        not np.isnan(rsi14[i]) and rsi14[i] < v33_tre_rsi_thresh):
+                        new_position = 0; exit_reason = "v33_trend_rev_exit"
+                        counters["v33_trend_rev_exit"] += 1
+                else:
+                    # track ema8 below streak dù v33_trend_rev_exit off (cần cho v33_hap_consec_drop)
+                    if not np.isnan(ema8[i]) and close[i] < ema8[i]:
+                        v33_consec_below_ema8 += 1
                     else:
-                        new_position = 0; exit_reason = "profit_lock"
+                        v33_consec_below_ema8 = 0
 
-            # Zombie
-            if new_position == 1 and hold_days >= ZOMBIE_BARS and cum_ret < 0.01:
-                if not strong_uptrend:
-                    new_position = 0; exit_reason = "zombie_exit"
+                # V29-P8: Profit safety net — once max_profit >= trigger, never let it close negative
+                if (new_position == 1 and v29_profit_safety_net and
+                    price_max_profit >= v29_profit_safety_trigger and price_cur_ret < 0):
+                    new_position = 0; exit_reason = "v29_profit_safety"
+                    counters["v29_profit_safety"] += 1
+
+                # V29-P9: Hardcap-after-peak — tighten hard cap once we've had a meaningful peak
+                if (new_position == 1 and v29_hardcap_after_peak and
+                    price_max_profit >= v29_hardcap_after_peak_trigger and
+                    price_cur_ret <= v29_hardcap_after_peak_floor):
+                    new_position = 0; exit_reason = "v29_hardcap_after_peak"
+                    counters["v29_hardcap_after_peak"] += 1
+
+                # V29-P4: Reversal after peak — exit fast when ret_2d collapses after big run-up
+                if (new_position == 1 and v29_reversal_after_peak and
+                    price_max_profit >= v29_reversal_peak_trigger and
+                    ret_2d[i] <= v29_reversal_ret2_threshold):
+                    new_position = 0; exit_reason = "v29_reversal_after_peak"
+                    counters["v29_reversal_after_peak"] += 1
+
+                # V29-P2: ATR velocity exit — exit on a fast 2-day decline > k*ATR after meaningful profit
+                if (new_position == 1 and v29_atr_velocity_exit and
+                    price_max_profit >= v29_atr_velocity_min_profit and
+                    not np.isnan(atr14[i]) and close[i] > 0 and i >= 2):
+                    two_d_drop = close[i - 2] - close[i]
+                    atr_threshold = v29_atr_velocity_k * atr14[i]
+                    if two_d_drop >= atr_threshold:
+                        new_position = 0; exit_reason = "v29_atr_velocity"
+                        counters["v29_atr_velocity"] += 1
+
+                # V30-B3: Chandelier trailing — ATR×k trailing from max_high when in profit
+                if (new_position == 1 and v30_chandelier_trail and
+                    price_max_profit >= v30_chand_profit_trigger and
+                    not np.isnan(atr14[i]) and close[i] > 0):
+                    chand_stop = max_price_in_trade - v30_chand_atr_mult * atr14[i]
+                    if close[i] < chand_stop:
+                        new_position = 0; exit_reason = "v30_chandelier"
+                        counters["v30_chandelier"] += 1
+
+                # Peak protection
+                if new_position == 1 and mod_b:
+                    if v22_mode:
+                        # V22: simple threshold + 3-in-1
+                        if price_max_profit >= 0.20:
+                            price_below_sma10 = (not np.isnan(sma10[i]) and close[i] < sma10[i])
+                            heavy_vol = (not np.isnan(avg_vol20[i]) and volume[i] > 1.5 * avg_vol20[i])
+                            bearish_candle = close[i] < opn[i]
+                            if price_below_sma10 and heavy_vol and bearish_candle:
+                                new_position = 0; exit_reason = "peak_protect_dist"
+                                counters["peak_protect"] += 1
+                    elif patch_pp_restore:
+                        if price_max_profit >= 0.25:
+                            pp_threshold_active = 0.10
+                        elif strong_uptrend:
+                            pp_threshold_active = peak_protect_strong_threshold
+                        else:
+                            pp_threshold_active = peak_protect_normal_threshold
+
+                        pp_bonus = regime_cfg.get("pp_sensitivity_bonus", 0)
+                        pp_threshold_active = max(0.08, pp_threshold_active - pp_bonus)
+
+                        if price_max_profit >= pp_threshold_active:
+                            price_below_sma10 = (not np.isnan(sma10[i]) and close[i] < sma10[i])
+                            if price_below_sma10:
+                                pp_pending_bars += 1
+                                heavy_vol = (not np.isnan(avg_vol20[i]) and volume[i] > 1.3 * avg_vol20[i])
+                                if pp_pending_bars >= 2 or heavy_vol:
+                                    new_position = 0; exit_reason = "peak_protect_dist"
+                                    pp_pending_bars = 0
+                                    counters["peak_protect"] += 1
+                            else:
+                                pp_pending_bars = 0
+                    elif patch_pp_2of3:
+                        pp_threshold = peak_protect_strong_threshold if strong_uptrend else peak_protect_normal_threshold
+                        if price_max_profit >= pp_threshold:
+                            price_below_sma10 = (not np.isnan(sma10[i]) and close[i] < sma10[i])
+                            heavy_vol = (not np.isnan(avg_vol20[i]) and volume[i] > 1.5 * avg_vol20[i])
+                            bearish_candle = close[i] < opn[i]
+                            checks = sum([price_below_sma10, heavy_vol, bearish_candle])
+                            if checks >= 2:
+                                new_position = 0; exit_reason = "peak_protect_dist"
+                                counters["peak_protect"] += 1
+                    else:
+                        pp_threshold = peak_protect_strong_threshold if strong_uptrend else peak_protect_normal_threshold
+                        if price_max_profit >= pp_threshold:
+                            price_below_sma10 = (not np.isnan(sma10[i]) and close[i] < sma10[i])
+                            heavy_vol = (not np.isnan(avg_vol20[i]) and volume[i] > 1.5 * avg_vol20[i])
+                            bearish_candle = close[i] < opn[i]
+                            if price_below_sma10 and heavy_vol and bearish_candle:
+                                new_position = 0; exit_reason = "peak_protect_dist"
+                                counters["peak_protect"] += 1
+
+                # EMA8 peak protect
+                if mod_b and new_position == 1 and position == 1:
+                    if price_max_profit >= 0.15:
+                        if not np.isnan(ema8[i]) and close[i] < ema8[i]:
+                            consecutive_below_ema8 += 1
+                        else:
+                            consecutive_below_ema8 = 0
+                        if consecutive_below_ema8 >= 2 and price_cur_ret < price_max_profit * 0.75:
+                            new_position = 0; exit_reason = "peak_protect_ema"
+                            counters["peak_protect"] += 1
+
+                # V28-K5: Cycle peak exit — if ret_3d turns negative after being up >8%, exit quickly
+                if v28_cycle_peak_exit and new_position == 1 and position == 1:
+                    if price_max_profit >= 0.08 and ret_3d[i] < -0.02 and price_cur_ret < price_max_profit * 0.70:
+                        heavy_vol = (not np.isnan(avg_vol20[i]) and volume[i] > 1.2 * avg_vol20[i])
+                        if heavy_vol or ret_3d[i] < -0.04:
+                            new_position = 0; exit_reason = "v28_cycle_peak"
+                            counters["v28_cycle_peak"] += 1
+
+                # Hybrid exit
+                if exit_mode != "model_b" and new_position == 1 and strong_uptrend and cum_ret > 0.05 and max_profit > 0.08:
+                    macd_bearish = macd_hist[i] < 0 and macd_hist[i - 1] >= 0 if i > 0 else False
+                    price_below_ma20 = close[i] < sma20[i] if not np.isnan(sma20[i]) else False
+                    if macd_bearish and price_below_ma20:
+                        new_position = 0; exit_reason = "hybrid_exit"
+                    elif price_below_ma20 and cum_ret < max_profit * 0.5:
+                        new_position = 0; exit_reason = "hybrid_exit"
+
+                # Adaptive trailing
+                elif new_position == 1 and max_profit > 0.03:
+                    if max_profit > 0.25: trail_pct = 0.18
+                    elif max_profit > 0.15: trail_pct = 0.25
+                    elif max_profit > 0.08: trail_pct = 0.40
+                    else: trail_pct = 0.65
+                    # V29-P3: tighten when max_profit is very high (lock more profit)
+                    if v29_tighter_trail_high_profit and max_profit >= v29_high_profit_trigger:
+                        trail_pct = min(trail_pct, v29_high_profit_trail)
+                    if strong_uptrend: trail_pct *= STRONG_TREND_TRAIL_MULT
+                    elif trend == "moderate": trail_pct *= 0.7
+                    giveback = 1 - (cum_ret / max_profit) if max_profit > 0 else 0
+                    if giveback >= trail_pct:
+                        new_position = 0; exit_reason = "trailing_stop"
+
+                # Profit lock
+                if new_position == 1 and max_profit >= PROFIT_LOCK_THRESHOLD:
+                    if cum_ret < PROFIT_LOCK_MIN and not strong_uptrend:
+                        if patch_symbol_tuning and regime_cfg.get("disable_profit_lock_in_strong") and trend == "strong":
+                            pass
+                        else:
+                            new_position = 0; exit_reason = "profit_lock"
+
+                # Zombie
+                if new_position == 1 and hold_days >= ZOMBIE_BARS and cum_ret < 0.01:
+                    if not strong_uptrend:
+                        new_position = 0; exit_reason = "zombie_exit"
 
             # Extended hold / trend persistence
             extended_min_hold = MIN_HOLD

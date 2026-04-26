@@ -9,6 +9,8 @@ import numpy as np
 import pandas as pd
 from collections import defaultdict
 
+from src.backtest.engine import backtest_unified
+
 
 def backtest_v17(y_pred, returns, df_test, feature_cols,
                  initial_capital=100_000_000, commission=0.0015, tax=0.001,
@@ -10107,4 +10109,103 @@ EXPERIMENTS = {
 
 
 MIN_ROWS = 2000
+
+# ─── Unified wrappers for legacy versions ─────────────────────────────
+# Keep historical bodies above under _legacy_* aliases, then expose public
+# backtest_vXX functions through the unified engine so y_pred_exit/exit_mode work.
+_legacy_backtest_v11 = backtest_v11
+_legacy_backtest_v12 = backtest_v12
+_legacy_backtest_v13 = backtest_v13
+_legacy_backtest_v14 = backtest_v14
+_legacy_backtest_v15 = backtest_v15
+_legacy_backtest_v16 = backtest_v16
+_legacy_backtest_v17 = backtest_v17
+_legacy_backtest_v18 = backtest_v18
+_legacy_backtest_v19 = backtest_v19
+_legacy_backtest_v19_1 = backtest_v19_1
+_legacy_backtest_v19_2 = backtest_v19_2
+_legacy_backtest_v19_3 = backtest_v19_3
+_legacy_backtest_v19_4 = backtest_v19_4
+_legacy_backtest_v20 = backtest_v20
+_legacy_backtest_v21 = backtest_v21
+
+LEGACY_UNIFIED_PRESETS = {
+    "v11": {}, "v12": {}, "v13": {}, "v14": {}, "v15": {}, "v16": {},
+    "v17": {}, "v18": {}, "v19": {}, "v19_1": {}, "v19_2": {},
+    "v19_3": {}, "v19_4": {}, "v20": {}, "v21": {},
+}
+
+
+def _backtest_legacy_unified(version, y_pred, returns, df_test, feature_cols,
+                             y_pred_exit=None, **kwargs):
+    preset = LEGACY_UNIFIED_PRESETS.get(version, {})
+    config = {**preset, **kwargs}
+    return backtest_unified(
+        y_pred,
+        returns,
+        df_test,
+        feature_cols,
+        y_pred_exit=y_pred_exit,
+        **config,
+    )
+
+
+def backtest_v11(y_pred, returns, df_test, feature_cols, y_pred_exit=None, **kwargs):
+    return _backtest_legacy_unified("v11", y_pred, returns, df_test, feature_cols, y_pred_exit=y_pred_exit, **kwargs)
+
+
+def backtest_v12(y_pred, returns, df_test, feature_cols, y_pred_exit=None, **kwargs):
+    return _backtest_legacy_unified("v12", y_pred, returns, df_test, feature_cols, y_pred_exit=y_pred_exit, **kwargs)
+
+
+def backtest_v13(y_pred, returns, df_test, feature_cols, y_pred_exit=None, **kwargs):
+    return _backtest_legacy_unified("v13", y_pred, returns, df_test, feature_cols, y_pred_exit=y_pred_exit, **kwargs)
+
+
+def backtest_v14(y_pred, returns, df_test, feature_cols, y_pred_exit=None, **kwargs):
+    return _backtest_legacy_unified("v14", y_pred, returns, df_test, feature_cols, y_pred_exit=y_pred_exit, **kwargs)
+
+
+def backtest_v15(y_pred, returns, df_test, feature_cols, y_pred_exit=None, **kwargs):
+    return _backtest_legacy_unified("v15", y_pred, returns, df_test, feature_cols, y_pred_exit=y_pred_exit, **kwargs)
+
+
+def backtest_v16(y_pred, returns, df_test, feature_cols, y_pred_exit=None, **kwargs):
+    return _backtest_legacy_unified("v16", y_pred, returns, df_test, feature_cols, y_pred_exit=y_pred_exit, **kwargs)
+
+
+def backtest_v17(y_pred, returns, df_test, feature_cols, y_pred_exit=None, **kwargs):
+    return _backtest_legacy_unified("v17", y_pred, returns, df_test, feature_cols, y_pred_exit=y_pred_exit, **kwargs)
+
+
+def backtest_v18(y_pred, returns, df_test, feature_cols, y_pred_exit=None, **kwargs):
+    return _backtest_legacy_unified("v18", y_pred, returns, df_test, feature_cols, y_pred_exit=y_pred_exit, **kwargs)
+
+
+def backtest_v19(y_pred, returns, df_test, feature_cols, y_pred_exit=None, **kwargs):
+    return _backtest_legacy_unified("v19", y_pred, returns, df_test, feature_cols, y_pred_exit=y_pred_exit, **kwargs)
+
+
+def backtest_v19_1(y_pred, returns, df_test, feature_cols, y_pred_exit=None, **kwargs):
+    return _backtest_legacy_unified("v19_1", y_pred, returns, df_test, feature_cols, y_pred_exit=y_pred_exit, **kwargs)
+
+
+def backtest_v19_2(y_pred, returns, df_test, feature_cols, y_pred_exit=None, **kwargs):
+    return _backtest_legacy_unified("v19_2", y_pred, returns, df_test, feature_cols, y_pred_exit=y_pred_exit, **kwargs)
+
+
+def backtest_v19_3(y_pred, returns, df_test, feature_cols, y_pred_exit=None, **kwargs):
+    return _backtest_legacy_unified("v19_3", y_pred, returns, df_test, feature_cols, y_pred_exit=y_pred_exit, **kwargs)
+
+
+def backtest_v19_4(y_pred, returns, df_test, feature_cols, y_pred_exit=None, **kwargs):
+    return _backtest_legacy_unified("v19_4", y_pred, returns, df_test, feature_cols, y_pred_exit=y_pred_exit, **kwargs)
+
+
+def backtest_v20(y_pred, returns, df_test, feature_cols, y_pred_exit=None, **kwargs):
+    return _backtest_legacy_unified("v20", y_pred, returns, df_test, feature_cols, y_pred_exit=y_pred_exit, **kwargs)
+
+
+def backtest_v21(y_pred, returns, df_test, feature_cols, y_pred_exit=None, **kwargs):
+    return _backtest_legacy_unified("v21", y_pred, returns, df_test, feature_cols, y_pred_exit=y_pred_exit, **kwargs)
 

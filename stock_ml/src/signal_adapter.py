@@ -24,7 +24,7 @@ def canonicalize_predictions(y_pred, target_cfg: Dict[str, Any]):
     target_type = _target_type(cfg)
     arr = np.asarray(y_pred)
 
-    if target_type in ("trend_regime", "return_classification", "forward_risk_reward", "early_wave", "early_wave_v2", "early_wave_dual"):
+    if target_type in ("trend_regime", "return_classification", "forward_risk_reward", "early_wave", "early_wave_v2", "early_wave_dual", "early_bottom_v1"):
         buy_label = cfg.get("buy_label", 1)
         neutral_label = cfg.get("neutral_label", 0)
         sell_label = cfg.get("sell_label", -1)

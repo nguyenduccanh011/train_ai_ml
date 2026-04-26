@@ -289,16 +289,16 @@
       "v42_base_wr": 50.0
     },
     {
+      "symbol": "VCB",
+      "v42_base_trades": 21,
+      "v42_base_pnl": 46.9,
+      "v42_base_wr": 52.4
+    },
+    {
       "symbol": "TPB",
       "v42_base_trades": 29,
       "v42_base_pnl": 46.8,
       "v42_base_wr": 37.9
-    },
-    {
-      "symbol": "VCB",
-      "v42_base_trades": 21,
-      "v42_base_pnl": 46.8,
-      "v42_base_wr": 52.4
     },
     {
       "symbol": "PNJ",
@@ -368,5 +368,5 @@
     }
   ],
   "version": "v42_base",
-  "generated_at": "2026-04-24T20:44:33.716241"
+  "generated_at": "2026-04-26T08:58:05.537039"
 }

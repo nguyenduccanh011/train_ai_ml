@@ -1,0 +1,28 @@
+{
+  "version": "v37a_exit",
+  "run_key": "v37a_exit__no_model_b_exit",
+  "exit_mode": "rule",
+  "generated_at": "2026-04-25T18:52:17",
+  "generator": "run_pipeline.py",
+  "symbols": [
+    "CDO"
+  ],
+  "n_symbols": 1,
+  "min_rows": 2000,
+  "feature_set": "leading_v4",
+  "model_type": "lightgbm",
+  "target_config": {
+    "type": "early_wave_dual",
+    "forward_window": 8,
+    "short_window": 8,
+    "long_window": 20,
+    "gain_threshold": 0.06,
+    "loss_threshold": 0.03,
+    "classes": 3
+  },
+  "target_fingerprint": "{\"classes\":3,\"forward_window\":8,\"gain_threshold\":0.06,\"long_window\":20,\"loss_threshold\":0.03,\"short_window\":8,\"type\":\"early_wave_dual\"}",
+  "n_trades": 10,
+  "mode": "family_ablation",
+  "base_version": "v37a_exit",
+  "variant": "no_model_b_exit"
+}

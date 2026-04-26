@@ -53,6 +53,8 @@ class TargetGenerator:
             df = self._early_wave(df)
         elif self.target_type == "early_wave_v2":
             df = self._early_wave_v2(df)
+        elif self.target_type == "early_bottom_v1":
+            df = self._early_bottom_v1(df)
         elif self.target_type == "early_wave_dual":
             df = self._early_wave(df)              # primary buy target
             df = self._early_exit_signal(df)       # adds target_sell column
@@ -339,6 +341,103 @@ class TargetGenerator:
             elif rule_trigger and max_gain >= gain_thresh * 0.7 and max_loss > -loss_thresh * 1.3:
                 targets[i] = 1.0
             elif self.n_classes == 3 and is_downtrend and max_gain < 0.03:
+                targets[i] = -1.0
+            else:
+                targets[i] = 0.0
+
+        df["target"] = targets
+        return df
+
+    def _early_bottom_v1(self, df: pd.DataFrame) -> pd.DataFrame:
+        close = df["close"].values
+        high = df["high"].values if "high" in df.columns else close
+        low = df["low"].values if "low" in df.columns else close
+        n = len(close)
+        fw = self.forward_window
+        short_win = self.short_window
+        long_win = self.long_window
+        gain_thresh = self.gain_threshold
+        loss_thresh = self.loss_threshold
+
+        close_s = pd.Series(close)
+        low_s = pd.Series(low)
+        sma5 = close_s.rolling(5).mean().values
+        sma10 = close_s.rolling(10).mean().values
+        low20 = low_s.rolling(20, min_periods=5).min().values
+        low60 = low_s.rolling(60, min_periods=15).min().values
+
+        ema12 = close_s.ewm(span=12, adjust=False).mean()
+        ema26 = close_s.ewm(span=26, adjust=False).mean()
+        macd = ema12 - ema26
+        macd_signal = macd.ewm(span=9, adjust=False).mean()
+        macd_hist = (macd - macd_signal).values
+
+        delta = close_s.diff()
+        gain = delta.clip(lower=0).rolling(14).mean()
+        loss = (-delta.clip(upper=0)).rolling(14).mean()
+        rsi = (100 - (100 / (1 + gain / loss.replace(0, np.nan)))).values
+        rsi_low10 = pd.Series(rsi).rolling(10, min_periods=5).min().values
+
+        days_since_low20 = np.full(n, np.nan)
+        count = np.nan
+        for i in range(n):
+            if not np.isnan(low20[i]) and low[i] <= low20[i]:
+                count = 0
+            elif not np.isnan(count):
+                count += 1
+            days_since_low20[i] = count
+
+        targets = np.full(n, 0.0)
+
+        for i in range(n):
+            if i + fw >= n:
+                targets[i] = np.nan
+                continue
+            if close[i] <= 0:
+                continue
+
+            future = close[i + 1 : i + 1 + fw]
+            max_gain = (np.max(future) - close[i]) / close[i]
+            max_loss = (np.min(future) - close[i]) / close[i]
+
+            dist_low20 = close[i] / low20[i] - 1 if not np.isnan(low20[i]) and low20[i] > 0 else np.nan
+            dist_low60 = close[i] / low60[i] - 1 if not np.isnan(low60[i]) and low60[i] > 0 else np.nan
+            near_low = (
+                (not np.isnan(dist_low20) and dist_low20 <= 0.06) or
+                (not np.isnan(dist_low60) and dist_low60 <= 0.10)
+            )
+            recent_low = not np.isnan(days_since_low20[i]) and days_since_low20[i] <= 5
+
+            reclaim_ma = False
+            if i > 0:
+                reclaim_ma = (
+                    (not np.isnan(sma5[i]) and not np.isnan(sma5[i - 1]) and close[i] > sma5[i] and close[i - 1] <= sma5[i - 1]) or
+                    (not np.isnan(sma10[i]) and not np.isnan(sma10[i - 1]) and close[i] > sma10[i] and close[i - 1] <= sma10[i - 1])
+                )
+
+            macd_turn = i >= 2 and not np.isnan(macd_hist[i]) and macd_hist[i] > macd_hist[i - 1] and macd_hist[i - 1] <= macd_hist[i - 2]
+            rsi_turn = not np.isnan(rsi[i]) and not np.isnan(rsi_low10[i]) and rsi[i] >= rsi_low10[i] + 5
+            close_turn = i > 0 and close[i] > close[i - 1]
+            higher_low = i >= 3 and low[i] > np.min(low[i - 3:i])
+
+            bottom_context = near_low or recent_low
+            reversal_hint = reclaim_ma or macd_turn or rsi_turn or (close_turn and higher_low)
+
+            if i >= long_win:
+                long_ret = (close[i] - close[i - long_win]) / close[i - long_win] if close[i - long_win] > 0 else 0
+            else:
+                long_ret = 0
+            if i >= short_win:
+                short_ret = (close[i] - close[i - short_win]) / close[i - short_win] if close[i - short_win] > 0 else 0
+            else:
+                short_ret = 0
+
+            falling_knife = short_ret < -0.12 and not reversal_hint
+            downtrend_no_reward = long_ret < -0.12 and max_gain < 0.03
+
+            if bottom_context and reversal_hint and max_gain >= gain_thresh and max_loss > -loss_thresh:
+                targets[i] = 1.0
+            elif self.n_classes == 3 and (max_loss <= -loss_thresh * 1.5 or falling_knife or downtrend_no_reward):
                 targets[i] = -1.0
             else:
                 targets[i] = 0.0

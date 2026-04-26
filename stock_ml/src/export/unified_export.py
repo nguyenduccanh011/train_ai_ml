@@ -31,6 +31,23 @@ from src.config_loader import (
 from src.env import get_results_dir, get_experiment_dir
 
 
+def _split_variant_key(run_key):
+    version_key, sep, exit_mode = run_key.partition("__")
+    return version_key, exit_mode if sep else None
+
+
+def _model_config_for_export(run_key):
+    base_key, exit_mode = _split_variant_key(run_key)
+    try:
+        cfg = dict(get_model_config(base_key))
+    except KeyError:
+        return {"name": run_key.upper(), "order": 99}
+    if exit_mode:
+        cfg["name"] = f"{cfg.get('name', base_key)} [{exit_mode}]"
+        cfg["order"] = cfg.get("order", 99)
+    return cfg
+
+
 def make_markers(trades, version_key, color, marker_shape="arrowUp"):
     """Convert trade records into chart marker objects."""
     markers = []
@@ -241,6 +258,7 @@ def generate_manifest(exported_versions, viz_dir, base_data_dir="data"):
     preserved_keys = []
     dropped_keys = []
 
+    active_keys = set(get_active_models().keys())
     if os.path.exists(manifest_path):
         try:
             with open(manifest_path, "r", encoding="utf-8") as f:
@@ -250,7 +268,7 @@ def generate_manifest(exported_versions, viz_dir, base_data_dir="data"):
                 if not vk or vk in exported_keys:
                     continue
                 data_dir = old_model.get("data_dir", f"data_{vk}")
-                if os.path.isdir(os.path.join(viz_dir, data_dir)):
+                if vk in active_keys and os.path.isdir(os.path.join(viz_dir, data_dir)):
                     merged_models.append(old_model)
                     preserved_keys.append(vk)
                 else:
@@ -299,12 +317,7 @@ def main():
     # Determine which models to export
     if args.versions:
         version_keys = [v.strip() for v in args.versions.split(",") if v.strip()]
-        models_to_export = {}
-        for vk in version_keys:
-            try:
-                models_to_export[vk] = get_model_config(vk)
-            except KeyError as e:
-                print(f"  ⚠ {e}")
+        models_to_export = {vk: _model_config_for_export(vk) for vk in version_keys}
     else:
         models_to_export = get_all_models(include_retired=args.include_retired)
 

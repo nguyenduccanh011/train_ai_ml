@@ -1,0 +1,372 @@
+{
+  "symbols": [
+    {
+      "symbol": "VND",
+      "v47_tri_route_trades": 19,
+      "v47_tri_route_pnl": 447.8,
+      "v47_tri_route_wr": 63.2
+    },
+    {
+      "symbol": "VIC",
+      "v47_tri_route_trades": 17,
+      "v47_tri_route_pnl": 393.4,
+      "v47_tri_route_wr": 52.9
+    },
+    {
+      "symbol": "LPB",
+      "v47_tri_route_trades": 39,
+      "v47_tri_route_pnl": 364.0,
+      "v47_tri_route_wr": 76.9
+    },
+    {
+      "symbol": "DIG",
+      "v47_tri_route_trades": 49,
+      "v47_tri_route_pnl": 358.8,
+      "v47_tri_route_wr": 65.3
+    },
+    {
+      "symbol": "FRT",
+      "v47_tri_route_trades": 21,
+      "v47_tri_route_pnl": 358.4,
+      "v47_tri_route_wr": 52.4
+    },
+    {
+      "symbol": "DCM",
+      "v47_tri_route_trades": 36,
+      "v47_tri_route_pnl": 321.6,
+      "v47_tri_route_wr": 72.2
+    },
+    {
+      "symbol": "VCI",
+      "v47_tri_route_trades": 49,
+      "v47_tri_route_pnl": 313.2,
+      "v47_tri_route_wr": 61.2
+    },
+    {
+      "symbol": "VDS",
+      "v47_tri_route_trades": 43,
+      "v47_tri_route_pnl": 295.6,
+      "v47_tri_route_wr": 62.8
+    },
+    {
+      "symbol": "SSI",
+      "v47_tri_route_trades": 37,
+      "v47_tri_route_pnl": 293.8,
+      "v47_tri_route_wr": 70.3
+    },
+    {
+      "symbol": "GEX",
+      "v47_tri_route_trades": 56,
+      "v47_tri_route_pnl": 286.0,
+      "v47_tri_route_wr": 57.1
+    },
+    {
+      "symbol": "NKG",
+      "v47_tri_route_trades": 46,
+      "v47_tri_route_pnl": 281.3,
+      "v47_tri_route_wr": 65.2
+    },
+    {
+      "symbol": "PDR",
+      "v47_tri_route_trades": 47,
+      "v47_tri_route_pnl": 271.8,
+      "v47_tri_route_wr": 55.3
+    },
+    {
+      "symbol": "AAV",
+      "v47_tri_route_trades": 50,
+      "v47_tri_route_pnl": 261.6,
+      "v47_tri_route_wr": 58.0
+    },
+    {
+      "symbol": "DGC",
+      "v47_tri_route_trades": 25,
+      "v47_tri_route_pnl": 254.4,
+      "v47_tri_route_wr": 56.0
+    },
+    {
+      "symbol": "SHB",
+      "v47_tri_route_trades": 41,
+      "v47_tri_route_pnl": 239.0,
+      "v47_tri_route_wr": 53.7
+    },
+    {
+      "symbol": "HSG",
+      "v47_tri_route_trades": 21,
+      "v47_tri_route_pnl": 237.3,
+      "v47_tri_route_wr": 57.1
+    },
+    {
+      "symbol": "BCG",
+      "v47_tri_route_trades": 41,
+      "v47_tri_route_pnl": 235.5,
+      "v47_tri_route_wr": 56.1
+    },
+    {
+      "symbol": "VTP",
+      "v47_tri_route_trades": 36,
+      "v47_tri_route_pnl": 232.7,
+      "v47_tri_route_wr": 58.3
+    },
+    {
+      "symbol": "HCM",
+      "v47_tri_route_trades": 44,
+      "v47_tri_route_pnl": 230.6,
+      "v47_tri_route_wr": 54.5
+    },
+    {
+      "symbol": "DPM",
+      "v47_tri_route_trades": 38,
+      "v47_tri_route_pnl": 201.2,
+      "v47_tri_route_wr": 44.7
+    },
+    {
+      "symbol": "HPG",
+      "v47_tri_route_trades": 37,
+      "v47_tri_route_pnl": 190.3,
+      "v47_tri_route_wr": 51.4
+    },
+    {
+      "symbol": "PC1",
+      "v47_tri_route_trades": 51,
+      "v47_tri_route_pnl": 183.9,
+      "v47_tri_route_wr": 54.9
+    },
+    {
+      "symbol": "MWG",
+      "v47_tri_route_trades": 36,
+      "v47_tri_route_pnl": 182.8,
+      "v47_tri_route_wr": 72.2
+    },
+    {
+      "symbol": "GMD",
+      "v47_tri_route_trades": 36,
+      "v47_tri_route_pnl": 181.4,
+      "v47_tri_route_wr": 69.4
+    },
+    {
+      "symbol": "STB",
+      "v47_tri_route_trades": 45,
+      "v47_tri_route_pnl": 164.8,
+      "v47_tri_route_wr": 64.4
+    },
+    {
+      "symbol": "FPT",
+      "v47_tri_route_trades": 27,
+      "v47_tri_route_pnl": 161.8,
+      "v47_tri_route_wr": 59.3
+    },
+    {
+      "symbol": "KDH",
+      "v47_tri_route_trades": 40,
+      "v47_tri_route_pnl": 161.2,
+      "v47_tri_route_wr": 57.5
+    },
+    {
+      "symbol": "HDG",
+      "v47_tri_route_trades": 42,
+      "v47_tri_route_pnl": 143.5,
+      "v47_tri_route_wr": 52.4
+    },
+    {
+      "symbol": "BSR",
+      "v47_tri_route_trades": 41,
+      "v47_tri_route_pnl": 140.5,
+      "v47_tri_route_wr": 53.7
+    },
+    {
+      "symbol": "EIB",
+      "v47_tri_route_trades": 42,
+      "v47_tri_route_pnl": 139.4,
+      "v47_tri_route_wr": 57.1
+    },
+    {
+      "symbol": "VHM",
+      "v47_tri_route_trades": 45,
+      "v47_tri_route_pnl": 139.3,
+      "v47_tri_route_wr": 60.0
+    },
+    {
+      "symbol": "AAS",
+      "v47_tri_route_trades": 32,
+      "v47_tri_route_pnl": 139.0,
+      "v47_tri_route_wr": 53.1
+    },
+    {
+      "symbol": "KBC",
+      "v47_tri_route_trades": 21,
+      "v47_tri_route_pnl": 138.3,
+      "v47_tri_route_wr": 38.1
+    },
+    {
+      "symbol": "VPB",
+      "v47_tri_route_trades": 39,
+      "v47_tri_route_pnl": 138.3,
+      "v47_tri_route_wr": 48.7
+    },
+    {
+      "symbol": "NVL",
+      "v47_tri_route_trades": 16,
+      "v47_tri_route_pnl": 138.2,
+      "v47_tri_route_wr": 50.0
+    },
+    {
+      "symbol": "POW",
+      "v47_tri_route_trades": 34,
+      "v47_tri_route_pnl": 137.2,
+      "v47_tri_route_wr": 58.8
+    },
+    {
+      "symbol": "REE",
+      "v47_tri_route_trades": 31,
+      "v47_tri_route_pnl": 129.9,
+      "v47_tri_route_wr": 48.4
+    },
+    {
+      "symbol": "MBB",
+      "v47_tri_route_trades": 35,
+      "v47_tri_route_pnl": 126.6,
+      "v47_tri_route_wr": 48.6
+    },
+    {
+      "symbol": "MSN",
+      "v47_tri_route_trades": 20,
+      "v47_tri_route_pnl": 117.8,
+      "v47_tri_route_wr": 50.0
+    },
+    {
+      "symbol": "PVD",
+      "v47_tri_route_trades": 46,
+      "v47_tri_route_pnl": 112.5,
+      "v47_tri_route_wr": 58.7
+    },
+    {
+      "symbol": "TCB",
+      "v47_tri_route_trades": 36,
+      "v47_tri_route_pnl": 111.6,
+      "v47_tri_route_wr": 61.1
+    },
+    {
+      "symbol": "ACV",
+      "v47_tri_route_trades": 26,
+      "v47_tri_route_pnl": 111.2,
+      "v47_tri_route_wr": 46.2
+    },
+    {
+      "symbol": "HDB",
+      "v47_tri_route_trades": 39,
+      "v47_tri_route_pnl": 110.8,
+      "v47_tri_route_wr": 56.4
+    },
+    {
+      "symbol": "CTG",
+      "v47_tri_route_trades": 36,
+      "v47_tri_route_pnl": 106.1,
+      "v47_tri_route_wr": 50.0
+    },
+    {
+      "symbol": "BCM",
+      "v47_tri_route_trades": 37,
+      "v47_tri_route_pnl": 101.9,
+      "v47_tri_route_wr": 48.6
+    },
+    {
+      "symbol": "TPB",
+      "v47_tri_route_trades": 37,
+      "v47_tri_route_pnl": 99.7,
+      "v47_tri_route_wr": 54.1
+    },
+    {
+      "symbol": "VJC",
+      "v47_tri_route_trades": 21,
+      "v47_tri_route_pnl": 94.3,
+      "v47_tri_route_wr": 47.6
+    },
+    {
+      "symbol": "BVH",
+      "v47_tri_route_trades": 34,
+      "v47_tri_route_pnl": 90.1,
+      "v47_tri_route_wr": 58.8
+    },
+    {
+      "symbol": "GAS",
+      "v47_tri_route_trades": 22,
+      "v47_tri_route_pnl": 86.0,
+      "v47_tri_route_wr": 59.1
+    },
+    {
+      "symbol": "SBT",
+      "v47_tri_route_trades": 41,
+      "v47_tri_route_pnl": 76.1,
+      "v47_tri_route_wr": 53.7
+    },
+    {
+      "symbol": "NLG",
+      "v47_tri_route_trades": 42,
+      "v47_tri_route_pnl": 75.4,
+      "v47_tri_route_wr": 50.0
+    },
+    {
+      "symbol": "ACB",
+      "v47_tri_route_trades": 31,
+      "v47_tri_route_pnl": 66.6,
+      "v47_tri_route_wr": 48.4
+    },
+    {
+      "symbol": "VCB",
+      "v47_tri_route_trades": 26,
+      "v47_tri_route_pnl": 51.9,
+      "v47_tri_route_wr": 57.7
+    },
+    {
+      "symbol": "PVS",
+      "v47_tri_route_trades": 52,
+      "v47_tri_route_pnl": 46.9,
+      "v47_tri_route_wr": 50.0
+    },
+    {
+      "symbol": "PNJ",
+      "v47_tri_route_trades": 32,
+      "v47_tri_route_pnl": 44.9,
+      "v47_tri_route_wr": 56.2
+    },
+    {
+      "symbol": "NT2",
+      "v47_tri_route_trades": 36,
+      "v47_tri_route_pnl": 40.8,
+      "v47_tri_route_wr": 61.1
+    },
+    {
+      "symbol": "PLX",
+      "v47_tri_route_trades": 31,
+      "v47_tri_route_pnl": 31.5,
+      "v47_tri_route_wr": 58.1
+    },
+    {
+      "symbol": "VNM",
+      "v47_tri_route_trades": 22,
+      "v47_tri_route_pnl": 29.0,
+      "v47_tri_route_wr": 45.5
+    },
+    {
+      "symbol": "OCB",
+      "v47_tri_route_trades": 22,
+      "v47_tri_route_pnl": 21.2,
+      "v47_tri_route_wr": 40.9
+    },
+    {
+      "symbol": "BID",
+      "v47_tri_route_trades": 36,
+      "v47_tri_route_pnl": 12.5,
+      "v47_tri_route_wr": 47.2
+    },
+    {
+      "symbol": "SAB",
+      "v47_tri_route_trades": 24,
+      "v47_tri_route_pnl": -1.8,
+      "v47_tri_route_wr": 29.2
+    }
+  ],
+  "version": "v47_tri_route",
+  "generated_at": "2026-04-25T06:16:08.328694"
+}

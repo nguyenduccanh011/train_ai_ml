@@ -1,0 +1,372 @@
+{
+  "symbols": [
+    {
+      "symbol": "VND",
+      "v22__hybrid_trades": 46,
+      "v22__hybrid_pnl": 362.4,
+      "v22__hybrid_wr": 65.2
+    },
+    {
+      "symbol": "VCI",
+      "v22__hybrid_trades": 45,
+      "v22__hybrid_pnl": 341.1,
+      "v22__hybrid_wr": 66.7
+    },
+    {
+      "symbol": "PDR",
+      "v22__hybrid_trades": 32,
+      "v22__hybrid_pnl": 333.1,
+      "v22__hybrid_wr": 81.2
+    },
+    {
+      "symbol": "LPB",
+      "v22__hybrid_trades": 31,
+      "v22__hybrid_pnl": 325.8,
+      "v22__hybrid_wr": 71.0
+    },
+    {
+      "symbol": "SSI",
+      "v22__hybrid_trades": 37,
+      "v22__hybrid_pnl": 325.5,
+      "v22__hybrid_wr": 75.7
+    },
+    {
+      "symbol": "DIG",
+      "v22__hybrid_trades": 40,
+      "v22__hybrid_pnl": 306.4,
+      "v22__hybrid_wr": 65.0
+    },
+    {
+      "symbol": "DCM",
+      "v22__hybrid_trades": 40,
+      "v22__hybrid_pnl": 290.6,
+      "v22__hybrid_wr": 65.0
+    },
+    {
+      "symbol": "DPM",
+      "v22__hybrid_trades": 35,
+      "v22__hybrid_pnl": 277.2,
+      "v22__hybrid_wr": 68.6
+    },
+    {
+      "symbol": "AAV",
+      "v22__hybrid_trades": 41,
+      "v22__hybrid_pnl": 270.1,
+      "v22__hybrid_wr": 53.7
+    },
+    {
+      "symbol": "HPG",
+      "v22__hybrid_trades": 31,
+      "v22__hybrid_pnl": 267.1,
+      "v22__hybrid_wr": 67.7
+    },
+    {
+      "symbol": "GEX",
+      "v22__hybrid_trades": 40,
+      "v22__hybrid_pnl": 260.7,
+      "v22__hybrid_wr": 62.5
+    },
+    {
+      "symbol": "DGC",
+      "v22__hybrid_trades": 41,
+      "v22__hybrid_pnl": 254.0,
+      "v22__hybrid_wr": 58.5
+    },
+    {
+      "symbol": "VDS",
+      "v22__hybrid_trades": 34,
+      "v22__hybrid_pnl": 250.8,
+      "v22__hybrid_wr": 73.5
+    },
+    {
+      "symbol": "VPB",
+      "v22__hybrid_trades": 34,
+      "v22__hybrid_pnl": 249.2,
+      "v22__hybrid_wr": 52.9
+    },
+    {
+      "symbol": "FRT",
+      "v22__hybrid_trades": 40,
+      "v22__hybrid_pnl": 247.5,
+      "v22__hybrid_wr": 62.5
+    },
+    {
+      "symbol": "BSR",
+      "v22__hybrid_trades": 31,
+      "v22__hybrid_pnl": 240.1,
+      "v22__hybrid_wr": 67.7
+    },
+    {
+      "symbol": "HDG",
+      "v22__hybrid_trades": 41,
+      "v22__hybrid_pnl": 239.2,
+      "v22__hybrid_wr": 63.4
+    },
+    {
+      "symbol": "BCG",
+      "v22__hybrid_trades": 36,
+      "v22__hybrid_pnl": 237.3,
+      "v22__hybrid_wr": 63.9
+    },
+    {
+      "symbol": "AAS",
+      "v22__hybrid_trades": 31,
+      "v22__hybrid_pnl": 235.2,
+      "v22__hybrid_wr": 67.7
+    },
+    {
+      "symbol": "HSG",
+      "v22__hybrid_trades": 39,
+      "v22__hybrid_pnl": 227.8,
+      "v22__hybrid_wr": 74.4
+    },
+    {
+      "symbol": "SHB",
+      "v22__hybrid_trades": 41,
+      "v22__hybrid_pnl": 226.0,
+      "v22__hybrid_wr": 58.5
+    },
+    {
+      "symbol": "NKG",
+      "v22__hybrid_trades": 46,
+      "v22__hybrid_pnl": 225.5,
+      "v22__hybrid_wr": 63.0
+    },
+    {
+      "symbol": "VIC",
+      "v22__hybrid_trades": 34,
+      "v22__hybrid_pnl": 220.9,
+      "v22__hybrid_wr": 50.0
+    },
+    {
+      "symbol": "KBC",
+      "v22__hybrid_trades": 41,
+      "v22__hybrid_pnl": 216.3,
+      "v22__hybrid_wr": 53.7
+    },
+    {
+      "symbol": "STB",
+      "v22__hybrid_trades": 37,
+      "v22__hybrid_pnl": 206.3,
+      "v22__hybrid_wr": 75.7
+    },
+    {
+      "symbol": "VTP",
+      "v22__hybrid_trades": 34,
+      "v22__hybrid_pnl": 204.4,
+      "v22__hybrid_wr": 55.9
+    },
+    {
+      "symbol": "PVD",
+      "v22__hybrid_trades": 40,
+      "v22__hybrid_pnl": 195.1,
+      "v22__hybrid_wr": 60.0
+    },
+    {
+      "symbol": "PC1",
+      "v22__hybrid_trades": 43,
+      "v22__hybrid_pnl": 189.4,
+      "v22__hybrid_wr": 72.1
+    },
+    {
+      "symbol": "MBB",
+      "v22__hybrid_trades": 37,
+      "v22__hybrid_pnl": 176.8,
+      "v22__hybrid_wr": 64.9
+    },
+    {
+      "symbol": "PVS",
+      "v22__hybrid_trades": 40,
+      "v22__hybrid_pnl": 176.6,
+      "v22__hybrid_wr": 55.0
+    },
+    {
+      "symbol": "ACV",
+      "v22__hybrid_trades": 20,
+      "v22__hybrid_pnl": 175.2,
+      "v22__hybrid_wr": 65.0
+    },
+    {
+      "symbol": "MSN",
+      "v22__hybrid_trades": 35,
+      "v22__hybrid_pnl": 173.7,
+      "v22__hybrid_wr": 68.6
+    },
+    {
+      "symbol": "CTG",
+      "v22__hybrid_trades": 38,
+      "v22__hybrid_pnl": 168.3,
+      "v22__hybrid_wr": 52.6
+    },
+    {
+      "symbol": "MWG",
+      "v22__hybrid_trades": 35,
+      "v22__hybrid_pnl": 166.9,
+      "v22__hybrid_wr": 65.7
+    },
+    {
+      "symbol": "HCM",
+      "v22__hybrid_trades": 44,
+      "v22__hybrid_pnl": 166.3,
+      "v22__hybrid_wr": 61.4
+    },
+    {
+      "symbol": "NVL",
+      "v22__hybrid_trades": 32,
+      "v22__hybrid_pnl": 161.9,
+      "v22__hybrid_wr": 53.1
+    },
+    {
+      "symbol": "KDH",
+      "v22__hybrid_trades": 33,
+      "v22__hybrid_pnl": 156.8,
+      "v22__hybrid_wr": 63.6
+    },
+    {
+      "symbol": "ACB",
+      "v22__hybrid_trades": 30,
+      "v22__hybrid_pnl": 155.8,
+      "v22__hybrid_wr": 83.3
+    },
+    {
+      "symbol": "NLG",
+      "v22__hybrid_trades": 37,
+      "v22__hybrid_pnl": 155.0,
+      "v22__hybrid_wr": 59.5
+    },
+    {
+      "symbol": "FPT",
+      "v22__hybrid_trades": 27,
+      "v22__hybrid_pnl": 153.1,
+      "v22__hybrid_wr": 66.7
+    },
+    {
+      "symbol": "HDB",
+      "v22__hybrid_trades": 36,
+      "v22__hybrid_pnl": 152.3,
+      "v22__hybrid_wr": 75.0
+    },
+    {
+      "symbol": "POW",
+      "v22__hybrid_trades": 32,
+      "v22__hybrid_pnl": 145.9,
+      "v22__hybrid_wr": 46.9
+    },
+    {
+      "symbol": "SBT",
+      "v22__hybrid_trades": 39,
+      "v22__hybrid_pnl": 141.0,
+      "v22__hybrid_wr": 46.2
+    },
+    {
+      "symbol": "TCB",
+      "v22__hybrid_trades": 40,
+      "v22__hybrid_pnl": 140.1,
+      "v22__hybrid_wr": 55.0
+    },
+    {
+      "symbol": "BCM",
+      "v22__hybrid_trades": 25,
+      "v22__hybrid_pnl": 134.6,
+      "v22__hybrid_wr": 64.0
+    },
+    {
+      "symbol": "TPB",
+      "v22__hybrid_trades": 34,
+      "v22__hybrid_pnl": 118.4,
+      "v22__hybrid_wr": 61.8
+    },
+    {
+      "symbol": "BID",
+      "v22__hybrid_trades": 36,
+      "v22__hybrid_pnl": 118.3,
+      "v22__hybrid_wr": 61.1
+    },
+    {
+      "symbol": "EIB",
+      "v22__hybrid_trades": 41,
+      "v22__hybrid_pnl": 107.8,
+      "v22__hybrid_wr": 63.4
+    },
+    {
+      "symbol": "BVH",
+      "v22__hybrid_trades": 34,
+      "v22__hybrid_pnl": 107.1,
+      "v22__hybrid_wr": 50.0
+    },
+    {
+      "symbol": "REE",
+      "v22__hybrid_trades": 32,
+      "v22__hybrid_pnl": 86.1,
+      "v22__hybrid_wr": 71.9
+    },
+    {
+      "symbol": "PLX",
+      "v22__hybrid_trades": 31,
+      "v22__hybrid_pnl": 83.9,
+      "v22__hybrid_wr": 64.5
+    },
+    {
+      "symbol": "GMD",
+      "v22__hybrid_trades": 38,
+      "v22__hybrid_pnl": 79.0,
+      "v22__hybrid_wr": 50.0
+    },
+    {
+      "symbol": "VJC",
+      "v22__hybrid_trades": 27,
+      "v22__hybrid_pnl": 68.7,
+      "v22__hybrid_wr": 59.3
+    },
+    {
+      "symbol": "SAB",
+      "v22__hybrid_trades": 23,
+      "v22__hybrid_pnl": 64.2,
+      "v22__hybrid_wr": 56.5
+    },
+    {
+      "symbol": "GAS",
+      "v22__hybrid_trades": 32,
+      "v22__hybrid_pnl": 54.1,
+      "v22__hybrid_wr": 50.0
+    },
+    {
+      "symbol": "VHM",
+      "v22__hybrid_trades": 36,
+      "v22__hybrid_pnl": 53.7,
+      "v22__hybrid_wr": 50.0
+    },
+    {
+      "symbol": "VNM",
+      "v22__hybrid_trades": 22,
+      "v22__hybrid_pnl": 51.7,
+      "v22__hybrid_wr": 59.1
+    },
+    {
+      "symbol": "OCB",
+      "v22__hybrid_trades": 23,
+      "v22__hybrid_pnl": 51.3,
+      "v22__hybrid_wr": 69.6
+    },
+    {
+      "symbol": "VCB",
+      "v22__hybrid_trades": 31,
+      "v22__hybrid_pnl": 46.0,
+      "v22__hybrid_wr": 48.4
+    },
+    {
+      "symbol": "NT2",
+      "v22__hybrid_trades": 36,
+      "v22__hybrid_pnl": 35.4,
+      "v22__hybrid_wr": 47.2
+    },
+    {
+      "symbol": "PNJ",
+      "v22__hybrid_trades": 34,
+      "v22__hybrid_pnl": 23.1,
+      "v22__hybrid_wr": 41.2
+    }
+  ],
+  "version": "v22__hybrid",
+  "generated_at": "2026-04-25T01:03:28.857849"
+}

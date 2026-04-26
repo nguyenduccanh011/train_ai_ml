@@ -20,7 +20,7 @@
 - Setup tooling: ruff, mypy, pytest, pre-commit
 - Branch strategy đã rõ
 
-### Phase 0.1 — Lock random seeds (1 ngày)
+### Phase 0.1 — Lock random seeds (1 ngày) ✅ DONE 2026-04-26
 
 **Cần biết trước**:
 - File `src/models/registry.py` có hàm `build_model()` cho mỗi loại
@@ -50,6 +50,11 @@ diff results/trades_v22.csv results/trades_v22.csv.bak
 **Risk**:
 - GPU non-determinism với cuDNN → fallback CPU cho GRU regression test
 - Floating point khác giữa runs → tolerance 1e-9 cho metrics, exact match cho integer counts
+
+**Result (2026-04-26)**:
+- Edits: [src/models/sequence.py:84-92](../../src/models/sequence.py#L84-L92) (cudnn.deterministic + use_deterministic_algorithms warn_only), [run_pipeline.py:670-694](../../run_pipeline.py#L670-L694) (`_lock_global_seeds(42)` ở đầu main).
+- Verify: v22 GPU run 2 lần, hash sha256 trùng `cb7283ef...`, 1784 trades / WR 46.4% / PnL +6843.6%. Diff CSV empty.
+- Diary: [diary/2026-04-26.md](diary/2026-04-26.md).
 
 ### Phase 0.2 — Tạo golden baseline (1 ngày)
 

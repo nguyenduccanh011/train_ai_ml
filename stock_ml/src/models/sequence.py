@@ -84,6 +84,12 @@ class GRUClassifier(ClassifierMixin, BaseEstimator):
     def fit(self, X, y):
         torch.manual_seed(self.random_state)
         np.random.seed(self.random_state)
+        if torch.cuda.is_available():
+            torch.cuda.manual_seed_all(self.random_state)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+        # warn_only=True: log warning thay vì raise nếu gặp op chưa deterministic
+        torch.use_deterministic_algorithms(True, warn_only=True)
         X = np.asarray(X, dtype=np.float32)
         y = np.asarray(y).astype(np.int64)
         # Map y to 0..n_classes-1 (handle -1, 0, 1 -> 0, 1, 2)

@@ -667,7 +667,31 @@ def run_export(versions=None, experiment=None):
 
 # ─── Main ────────────────────────────────────────────────────────────
 
+def _lock_global_seeds(seed: int = 42):
+    """Phase 0.1 — lock seeds for reproducible runs.
+
+    Sets PYTHONHASHSEED, numpy global seed, and torch CUDA seed if available.
+    Per-model random_state=42 is set in src/models/registry.py.
+    """
+    os.environ.setdefault("PYTHONHASHSEED", str(seed))
+    import random
+    random.seed(seed)
+    try:
+        import numpy as _np
+        _np.random.seed(seed)
+    except ImportError:
+        pass
+    try:
+        import torch as _torch
+        _torch.manual_seed(seed)
+        if _torch.cuda.is_available():
+            _torch.cuda.manual_seed_all(seed)
+    except ImportError:
+        pass
+
+
 def main():
+    _lock_global_seeds(42)
     parser = argparse.ArgumentParser(description="Unified Pipeline Runner")
     parser.add_argument("--version", type=str, default="",
                         help="Version key to run (e.g., v24) — backward compat")

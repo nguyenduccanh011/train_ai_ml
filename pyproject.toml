@@ -1,0 +1,55 @@
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = [
+    "stock_ml/archive",
+    "stock_ml/legacy",
+    "stock_ml/visualization",
+    "stock_ml/results",
+    "portable_data",
+    # Root-level ad-hoc analysis scripts (sẽ move vào stock_ml/analysis/ khi cleanup)
+    "analyze_v31_trades.py",
+    "analyze_v32_trades.py",
+    "preprocess_stocks.py",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP", "B", "SIM"]
+ignore = [
+    "E501",   # line length — tạm bỏ qua, sẽ siết sau
+    "N803",   # argument name should be lowercase (X, X_train là convention ML)
+    "N806",   # variable in function should be lowercase
+    "B008",   # function call in default arg
+    "SIM108", # ternary
+]
+
+[tool.ruff.lint.per-file-ignores]
+"stock_ml/tests/**" = ["B011"]
+# Legacy code: chỉ check critical errors, bỏ qua style warnings.
+# Sẽ siết khi port qua src/components/ ở Phase 1+.
+"stock_ml/src/**" = ["SIM", "B007", "B905", "F841", "N816", "E741", "E702", "W293", "N814"]
+"stock_ml/experiments/**" = ["SIM", "B007", "B905", "F", "N", "E"]
+"stock_ml/analysis/**" = ["SIM", "B007", "B905", "F", "N", "E"]
+"stock_ml/run_pipeline.py" = ["SIM", "B007", "F841", "E741", "N814"]
+"stock_ml/colab_setup.py" = ["F841"]
+"stock_ml/compare_rule_vs_model.py" = ["B007"]
+"stock_ml/model_manager.py" = ["B007"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = false
+files = ["stock_ml/src/components"]
+# stock_ml/src/pipeline sẽ thêm khi Phase 3 build orchestrator.
+ignore_missing_imports = true
+follow_imports = "silent"
+warn_unused_ignores = true
+
+[tool.pytest.ini_options]
+testpaths = ["stock_ml/tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+markers = [
+    "regression: full regression test (slow, ~6 min for 11 champions)",
+    "quick: fast smoke test using cached predictions",
+]

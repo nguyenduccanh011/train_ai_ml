@@ -5,7 +5,7 @@
 1. **Diversity**: đại diện cho mỗi nhóm chiến lược (legacy / mid / modern)
 2. **Score relevance**: top performers hoặc benchmark được tham khảo nhiều
 3. **Architectural breadth**: cover tất cả feature_set + target combinations
-4. **Special cases**: có version đặc thù (GRU, dual-target, exit_model thật)
+4. **Special cases**: có version đặc thù (GRU, dual-target, bug exit-model wiring)
 
 ## Danh sách 11 champion
 
@@ -16,10 +16,10 @@
 | 3 | **v34** | 598.4 | leading_v4 | early_wave | LightGBM | none | Baseline cho `leading_v4` family (HA features), tiền đề cho v35-v39 |
 | 4 | **v35b** | 603.7 | leading_v4 | early_wave | LightGBM | yes | Engine reform (single-bar signal, rule_override) — đại diện đột phá engine |
 | 5 | **v37a** | 603.4 | leading_v4 | early_wave | LightGBM | yes | Per-profile dispatch (bank/momentum/etc) — đại diện symbol-profile pattern |
-| 6 | **v37a_exit** | TBD | leading_v4 | early_wave_dual | LightGBM | **yes (active)** | Exit model **thực sự hoạt động** — duy nhất có Model B impact thực |
+| 6 | **v37a_exit** | TBD | leading_v4 | early_wave_dual | LightGBM | trained-but-dropped | Dual-target + wiring case cho Phase 2 fix (`y_pred_exit` đang bị drop trước backtest) |
 | 7 | **v37d** | 315.6 | leading_v4 | early_wave | **GRU** | yes | Đại diện non-LightGBM path (PyTorch sequence model) |
 | 8 | **v39d** | 611.7 | leading_v4 | early_wave | LightGBM | yes | Top trong v39 family + per-symbol rule-exit hybrid (12 stable-trend symbols) |
-| 9 | **v42_a** | TBD | leading_v4 | early_wave_dual | LightGBM | **yes (active)** | Exit model mới nhất (fw=15), engine V37a + Model B override |
+| 9 | **v42_a** | TBD | leading_v4 | early_wave_dual | LightGBM | trained-but-dropped | Exit-model config mới nhất (fw=15) nhưng hiện chưa active do cùng wiring bug |
 | 10 | **v19_3** | 307.4 | leading | trend_regime | LightGBM | none | Legacy boundary case — đại diện `src/strategies/legacy.py` (binary position sizing) |
 | 11 | **rule** | — | — | — | — | — | Non-ML baseline (rule-based) — bắt buộc giữ để so sánh |
 

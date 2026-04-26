@@ -896,22 +896,27 @@ python -m stock_ml migrate-legacy v25  # tự động translate sang champion-st
 
 → Nếu sau này v25 trở nên quan trọng, port qua kiến trúc mới mất ~30 phút.
 
-## 15. Open questions cần thảo luận trước khi build
+## 15. Architecture decisions locked (2026-04-26 to 2026-04-28)
 
-1. **Symbol profile dispatch** (v37a có): nên xử lý ở fusion layer hay outer layer?
-   - Đề xuất: Outer layer (orchestrator merge profile_overrides vào fusion params trước khi run).
+1. **Symbol profile dispatch** (v37a pattern): xử lý ở **outer layer**.
+   - Quyết định: orchestrator merge `profile_overrides` vào fusion params trước khi chạy theo symbol/fold.
+   - Lý do: giữ fusion strategy thuần theo `BarContext`, không trộn concern "profile routing" vào từng strategy.
    
-2. **Per-symbol model** (chưa có nhưng có thể muốn sau): kiến trúc support không?
-   - Đề xuất: Có thể support qua `EntryModel` wrapping `dict[symbol, model]`. Defer implementation.
+2. **Per-symbol model** (future): **support by design, defer implementation**.
+   - Quyết định: base contract cho phép wrapper `EntryModel` kiểu `dict[symbol, model]`, chưa build ở Phase 1.
+   - Lý do: không chặn mở rộng sau này nhưng tránh tăng scope giai đoạn foundation.
    
-3. **Ensemble entry model**: cần native support hay làm sau?
-   - Đề xuất: Có `EnsembleEntryModel` skeleton từ đầu, implement basic voting.
+3. **Ensemble entry model**: **native skeleton từ đầu**.
+   - Quyết định: có `EnsembleEntryModel` skeleton trong `src/components/models/` với voting cơ bản.
+   - Lý do: nhiều experiment cần combine model; skeleton sớm giúp schema/registry ổn định.
    
-4. **Dashboard**: format manifest.json có giữ tương thích cũ không?
-   - Đề xuất: Giữ manifest format cũ ở phase 1. Đổi sau nếu cần (ít risk).
+4. **Dashboard compatibility**: **giữ manifest format cũ trong transition**.
+   - Quyết định: pipeline mới export JSON/manifest tương thích dashboard hiện tại ít nhất đến hết Phase 6.1.
+   - Lý do: giảm risk gãy workflow quan sát kết quả trong lúc refactor.
 
-5. **Real-time inference** (paper trading sau này): kiến trúc có chạy được single-bar không?
-   - Đề xuất: Có. Pipeline tách giữa "training mode" và "inference mode". Inference: load saved model + run fusion stack với single bar context.
+5. **Real-time inference** (paper trading future): **có hỗ trợ kiến trúc**.
+   - Quyết định: tách rõ training mode và inference mode; inference dùng model đã lưu + fusion stack với single-bar context.
+   - Lý do: tái sử dụng fusion/backtest contracts, tránh làm lại logic khi chuyển sang online inference.
 
 ## 16. Tổng kết
 

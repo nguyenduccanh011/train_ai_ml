@@ -105,7 +105,7 @@ git commit -m "Add golden baseline for 11 champion versions"
 - Files: [tests/regression/golden/](../../tests/regression/golden/) (11 csv + 11 meta.json + checksums.txt + README.md).
 - Diary: [diary/2026-04-27.md](diary/2026-04-27.md).
 
-### Phase 0.3 — Tooling setup (1 ngày)
+### Phase 0.3 — Tooling setup (1 ngày) ✅ DONE 2026-04-28
 
 **Cần biết trước**:
 - Project hiện không có `pyproject.toml`, có `requirements.txt`
@@ -172,6 +172,14 @@ def test_v22_score_unchanged():
 - `pytest tests/regression/test_quick.py` pass
 - `mypy src/components/` không error (chưa có file nên 0 errors)
 
+**Result (2026-04-28)**:
+- Files: [pyproject.toml](../../../pyproject.toml), [stock_ml/requirements-dev.txt](../../requirements-dev.txt), [.pre-commit-config.yaml](../../../.pre-commit-config.yaml), [tests/regression/test_champions.py](../../tests/regression/test_champions.py).
+- Per-file-ignores cho legacy code (legacy.py, engine.py, run_pipeline.py, experiments/, analysis/) — siết sau khi port qua `src/components/` ở Phase 1+.
+- Pre-commit 3 hooks: ruff (--fix), ruff-format, regression-champions (hash check 11 trades CSV vs golden, ~1s, KHÔNG full pipeline).
+- Ruff auto-fix 479 issues + format 90 files. Regen 11 champions CPU 336.3s → pytest 12/12 pass, hash match 100% — code logic không đổi.
+- Pre-commit install: phải `git config --unset-all core.hooksPath` (đang trỏ default path) trước.
+- Diary: [diary/2026-04-28.md](diary/2026-04-28.md).
+
 ### Phase 0.4 — Branch strategy (30 phút)
 
 **Steps**:
@@ -191,7 +199,7 @@ git merge --no-ff refactor/phase-0-baseline
 - KHÔNG để sub-branch sống quá 1 tuần
 - Mỗi sub-branch phải pass regression trước merge
 
-### Phase 0.5 — Lock ARCHITECTURE.md (30 phút)
+### Phase 0.5 — Lock ARCHITECTURE.md (30 phút) ✅ DONE 2026-04-28
 
 **Steps**:
 1. Đọc lại ARCHITECTURE.md
@@ -200,6 +208,10 @@ git merge --no-ff refactor/phase-0-baseline
 4. Commit + tag `arch-locked`
 
 **Verification**: file `ARCHITECTURE.md` được commit, không có TBD/TODO ở phần kiến trúc chính.
+
+**Result (2026-04-28)**:
+- Section 15 đổi từ open questions sang quyết định lock-in: profile dispatch ở outer orchestrator, per-symbol model defer but supported by design, có ensemble skeleton, giữ dashboard manifest cũ trong transition, tách training/inference cho single-bar mode.
+- `CHAMPION_VERSIONS.md` được đồng bộ với `EXIT_MODEL_BUG.md` (v37a_exit/v42_a hiện là `trained-but-dropped`, chưa active Model B).
 
 ---
 

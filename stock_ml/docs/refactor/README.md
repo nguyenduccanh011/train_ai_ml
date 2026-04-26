@@ -59,6 +59,10 @@ Bắt buộc làm trước Phase 1:
 - ✅ Set random seeds (Phase 0.1 — done 2026-04-26)
 - ⏳ Tooling setup (ruff, mypy, pytest, pre-commit) — Phase 0.3 next
 
+## Bugs phát hiện
+
+- **[EXIT_MODEL_BUG.md](EXIT_MODEL_BUG.md)** — Exit model trained nhưng pipeline drop output (2026-04-27). Fix ở Phase 2.
+
 ## Support docs sẽ tạo trong quá trình refactor
 
 (chưa tạo, sẽ viết khi cần)

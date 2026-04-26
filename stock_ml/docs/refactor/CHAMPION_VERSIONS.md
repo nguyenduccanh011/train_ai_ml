@@ -42,9 +42,13 @@
 - ⚠️ XGBoost / CatBoost / RandomForest: chưa champion, sẽ thêm khi research
 
 ### Exit model coverage
-- ✅ No exit model (v22, v32, v34, v19_3)
-- ✅ exit_model trained but unused (v35b, v37a, v37d, v39d) — tham khảo
-- ✅ exit_model **thực sự active** (v37a_exit, v42_a)
+> **⚠️ Bug discovered 2026-04-27**: tất cả 11 champion (kể cả v37a_exit và v42_a) đều có
+> `exit_reason='model_b_exit'` count = 0 trong golden. Exit model trained xong nhưng pipeline
+> drop output trước khi vào backtest. Chi tiết: [EXIT_MODEL_BUG.md](EXIT_MODEL_BUG.md). Fix ở
+> Phase 2 khi rebuild fusion stack.
+
+- exit_model trained NHƯNG output bị drop ở pipeline gate (v22, v32, v34, v35b, v37a, v37a_exit, v37d, v39d, v42_a, v19_3)
+- Không train exit_model: rule
 
 ### Fusion patterns covered
 - ✅ Simple ML-only (v22, v19_3)

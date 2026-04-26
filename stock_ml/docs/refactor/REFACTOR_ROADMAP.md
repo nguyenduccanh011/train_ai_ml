@@ -56,33 +56,34 @@ diff results/trades_v22.csv results/trades_v22.csv.bak
 - Verify: v22 GPU run 2 lần, hash sha256 trùng `cb7283ef...`, 1784 trades / WR 46.4% / PnL +6843.6%. Diff CSV empty.
 - Diary: [diary/2026-04-26.md](diary/2026-04-26.md).
 
-### Phase 0.2 — Tạo golden baseline (1 ngày)
+### Phase 0.2 — Tạo golden baseline (1 ngày) ✅ DONE 2026-04-27
 
 **Cần biết trước**:
 - 11 champion list đã chốt (xem `CHAMPION_VERSIONS.md`)
 - Disk space đủ: ~50MB cho 11 trades CSV
+- **CPU mode bắt buộc** (xem Result bên dưới)
 
 **Steps**:
-1. Run 11 champions với `--force`:
+1. Run 11 champions với `--force --device cpu`:
 ```bash
-python run_pipeline.py \
+PYTHONHASHSEED=42 python run_pipeline.py \
   --version v22 \
   --compare v32,v34,v35b,v37a,v37a_exit,v37d,v39d,v42_a,v19_3,rule \
-  --device gpu --force
+  --device cpu --force --no-export
 ```
 
 2. Backup vào `tests/regression/golden/`:
 ```bash
 mkdir -p tests/regression/golden
 cp results/trades_{v22,v32,v34,v35b,v37a,v37a_exit,v37d,v39d,v42_a,v19_3,rule}.csv tests/regression/golden/
-cp results/trades_{v22,v32,...}.meta.json tests/regression/golden/
+cp results/trades_{v22,...}.meta.json tests/regression/golden/
 ```
 
 3. Hash:
 ```bash
 cd tests/regression/golden
 sha256sum *.csv > checksums.txt
-git add -f *.csv *.json checksums.txt
+git add -f *.csv *.json checksums.txt README.md
 git commit -m "Add golden baseline for 11 champion versions"
 ```
 
@@ -94,6 +95,15 @@ git commit -m "Add golden baseline for 11 champion versions"
 **Risk**:
 - File quá lớn (>10MB) → dùng git-lfs
 - Dữ liệu thay đổi (ai modify portable_data) → invalidate. Lock data_dir hash trong meta.
+
+**Result (2026-04-27)**:
+- GPU Run 1 vs GPU Run 2: 9/11 match, **2 lệch** (v22: 1784→1785 trades, hash `cb7283ef`→`1cb508a4`; v42_a: 1442→1441 trades, hash `c45b2cc5`→`1f1b37b3`).
+- Investigation: PYTHONHASHSEED=42 set trước Python KHÔNG fix. Cache + logs identical. CPU Run A vs Run B → **11/11 hash exact match**.
+- Root cause: **LightGBM GPU (OpenCL) non-deterministic** giữa invocations Python ([microsoft/LightGBM#2479](https://github.com/microsoft/LightGBM/issues/2479)). Boundary samples ở v22, v42_a bị classify khác giữa 2 runs.
+- GRU (v37d) GPU lại reproducible nhờ `cudnn.deterministic=True` Phase 0.1.
+- **Decision**: Golden baseline dùng CPU mode. Production runtime GPU vẫn OK cho research, nhưng regression test bắt buộc CPU. Trade-off: training chậm hơn ~20-40%, chấp nhận được.
+- Files: [tests/regression/golden/](../../tests/regression/golden/) (11 csv + 11 meta.json + checksums.txt + README.md).
+- Diary: [diary/2026-04-27.md](diary/2026-04-27.md).
 
 ### Phase 0.3 — Tooling setup (1 ngày)
 

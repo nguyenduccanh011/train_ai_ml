@@ -54,10 +54,10 @@ Bắt buộc đọc:
 4. CLEANUP_PLAN.md (Step 1 — Backup)
 
 Bắt buộc làm trước Phase 1:
-- ✅ Golden baseline cho 11 champions
+- ✅ Golden baseline cho 11 champions (Phase 0.2 — done 2026-04-27, CPU mode)
 - ✅ Git tag `pre-cleanup-snapshot`
-- ✅ Set random seeds
-- ✅ Tooling setup (ruff, mypy, pytest, pre-commit)
+- ✅ Set random seeds (Phase 0.1 — done 2026-04-26)
+- ⏳ Tooling setup (ruff, mypy, pytest, pre-commit) — Phase 0.3 next
 
 ## Support docs sẽ tạo trong quá trình refactor
 

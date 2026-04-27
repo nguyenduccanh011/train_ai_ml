@@ -1,0 +1,10 @@
+name: leading
+description: V22 baseline features (price action + momentum + trend + volatility + leading signals)
+blocks:
+  - ohlcv_basic
+  - moving_averages
+  - momentum
+  - trend
+  - volatility
+  - volume_advanced
+  - leading_signals

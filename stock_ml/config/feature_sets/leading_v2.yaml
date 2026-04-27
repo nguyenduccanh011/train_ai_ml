@@ -1,0 +1,14 @@
+name: leading_v2
+description: leading + market structure, exhaustion signals, volatility regime, multi-timeframe context
+blocks:
+  - ohlcv_basic
+  - moving_averages
+  - momentum
+  - trend
+  - volatility
+  - volume_advanced
+  - leading_signals
+  - market_structure
+  - exhaustion
+  - volatility_regime
+  - multi_timeframe

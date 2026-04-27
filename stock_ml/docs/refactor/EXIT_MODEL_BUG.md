@@ -83,12 +83,11 @@ bao giờ trigger.
 
 ## Fix plan
 
-**Không fix ngay**. Quyết định: document bây giờ, fix ở **Phase 2** (fusion stack refactor).
+**Không fix trong parity-port hiện tại**. Quyết định: document bug, port champion trước với behavior `trained-but-dropped`, rồi tách Model B thành experiment/fix riêng sau khi 11 champion đã match golden.
 Lý do:
-- Golden baseline hiện tại phản ánh đúng behavior pre-refactor (kể cả bug). Refactor mục
-  tiêu là "không thay đổi behavior" → fix bug = thay đổi behavior → cần golden mới.
-- Phase 2 sẽ thiết kế lại fusion stack với `ml_exit_model` là 1 strategy explicit. Lúc đó
-  mới có infrastructure để test "Model B có giá trị không" trên đa dạng tổ hợp.
+- Golden baseline hiện tại phản ánh đúng behavior pre-refactor (kể cả bug). Refactor mục tiêu là "không thay đổi behavior" → fix bug = thay đổi behavior → cần golden mới.
+- Phase 2.4 còn lại phải preserve `y_pred_exit` bị drop cho v37a_exit/v42_a để regression exact với golden.
+- `ml_exit_model` nên là strategy explicit trong fusion stack khi có runner/orchestrator đủ rõ để đánh giá Model B có giá trị hay chỉ tốn compute.
 
 ## Fix sketch (cho Phase 2)
 
@@ -109,11 +108,15 @@ if y_pred_exit is not None and (
 Option B — Phase 2 architecture: bỏ qua gate này hoàn toàn. `BacktestStrategy` mới có
 explicit `y_pred_exit` parameter trong base class.
 
-## Tasks for Phase 2
+## Tasks after parity port
 
 - [ ] Implement `ml_exit_model` fusion strategy
 - [ ] Audit Model B `y_pred_exit` distribution: how often is `y_pred_exit == 1`? Class
       imbalance? Pure noise?
 - [ ] Decide: keep Model B training or drop it
 - [ ] If keep: regenerate golden post-fix, label as "v2 baseline"
-- [ ] Update CHAMPION_VERSIONS.md to remove "exit model active" claim
+- [x] Update CHAMPION_VERSIONS.md to remove "exit model active" claim; current status uses `trained-but-dropped` for v37a_exit/v42_a
+
+## Phase 2.4 constraint
+
+Remaining champion ports must preserve trained-but-dropped behavior for exit-model versions until a separate Model B experiment intentionally changes behavior and regenerates baseline.

@@ -1,0 +1,17 @@
+name: leading_v4
+description: leading_v3 + Heikin-Ashi wave-position features (V34 retrain)
+blocks:
+  - ohlcv_basic
+  - moving_averages
+  - momentum
+  - trend
+  - volatility
+  - volume_advanced
+  - leading_signals
+  - market_structure
+  - exhaustion
+  - volatility_regime
+  - multi_timeframe
+  - accumulation
+  - relative_strength
+  - heikin_ashi

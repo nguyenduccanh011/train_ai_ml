@@ -7,7 +7,14 @@ import numpy as np
 import pandas as pd
 
 ActionType = Literal["enter_long", "exit", "hold"]
-FusionActionType = Literal["pass", "skip_entry", "enter", "exit", "modify_hold"]
+FusionActionType = Literal[
+    "pass",
+    "skip_entry",
+    "enter",
+    "exit",
+    "modify_hold",
+    "keep_position",
+]
 
 
 @dataclass(slots=True)
@@ -18,7 +25,12 @@ class Position:
     entry_price: float
     size: float = 1.0
     holding_days: int = 0
+    entry_close: float = 0.0
+    entry_equity: float = 0.0
+    max_equity_in_trade: float = 0.0
+    max_price_in_trade: float = 0.0
     metadata: dict[str, Any] = field(default_factory=dict)
+    strategy_state: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(slots=True)

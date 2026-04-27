@@ -39,6 +39,12 @@ Bộ tài liệu refactor cho dự án Stock ML Trading System v2.0.
 - 60 strategy file rời rạc → composable components
 - Khó thử tổ hợp → grid-search Entry × Exit × Feature × Fusion qua YAML
 
+### Status hiện tại (2026-04-29)
+- Phase 0: seeds, CPU golden baseline, tooling, architecture lock và branch policy đã chốt.
+- Phase 1: base interfaces, feature blocks, targets và model wrappers đã port.
+- Phase 2.1-2.4a: fusion inventory/interface + parity runners cho `rule`, `v19_3`, `v22`, `v34` đã xong.
+- Next: Phase 2.4b+ port remaining champions (`v35b`, `v32`, `v37a`, `v39d`, `v37a_exit`, `v42_a`, `v37d`).
+
 ### Champion versions (11)
 v22, v32, v34, v35b, v37a, v37a_exit, v37d, v39d, v42_a, v19_3, rule
 
@@ -57,17 +63,18 @@ Bắt buộc làm trước Phase 1:
 - ✅ Golden baseline cho 11 champions (Phase 0.2 — done 2026-04-27, CPU mode)
 - ✅ Git tag `pre-cleanup-snapshot`
 - ✅ Set random seeds (Phase 0.1 — done 2026-04-26)
-- ⏳ Tooling setup (ruff, mypy, pytest, pre-commit) — Phase 0.3 next
+- ✅ Tooling setup (ruff, mypy, pytest, pre-commit) — Phase 0.3 done 2026-04-28
+- ✅ Architecture lock + branch policy documented — Phase 0.4/0.5 status updated 2026-04-29
 
 ## Bugs phát hiện
 
-- **[EXIT_MODEL_BUG.md](EXIT_MODEL_BUG.md)** — Exit model trained nhưng pipeline drop output (2026-04-27). Fix ở Phase 2.
+- **[EXIT_MODEL_BUG.md](EXIT_MODEL_BUG.md)** — Exit model trained nhưng pipeline drop output (2026-04-27). Phase 2.4 preserve behavior để match golden; Model B fix tách sau parity.
 
 ## Support docs sẽ tạo trong quá trình refactor
 
 (chưa tạo, sẽ viết khi cần)
 
-- `FUSION_STRATEGY_INVENTORY.md` — Mapping từ flag cũ → fusion strategy mới (Phase 2.1)
+- ✅ `FUSION_STRATEGY_INVENTORY.md` — Mapping từ flag cũ → fusion strategy mới (Phase 2.1)
 - `HOW_TO_ADD_FEATURE_BLOCK.md` — Guide thêm feature block (Phase 5.3)
 - `HOW_TO_ADD_FUSION_STRATEGY.md` — Guide thêm fusion strategy (Phase 5.3)
 - `HOW_TO_ADD_ENTRY_MODEL.md` — Guide thêm entry model (Phase 5.3)

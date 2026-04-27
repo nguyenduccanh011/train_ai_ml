@@ -42,8 +42,8 @@ Bộ tài liệu refactor cho dự án Stock ML Trading System v2.0.
 ### Status hiện tại (2026-04-29)
 - Phase 0: seeds, CPU golden baseline, tooling, architecture lock và branch policy đã chốt.
 - Phase 1: base interfaces, feature blocks, targets và model wrappers đã port.
-- Phase 2.1-2.4a: fusion inventory/interface + parity runners cho `rule`, `v19_3`, `v22`, `v34` đã xong.
-- Next: Phase 2.4b+ port remaining champions (`v35b`, `v32`, `v37a`, `v39d`, `v37a_exit`, `v42_a`, `v37d`).
+- Phase 2.1-2.4d: fusion inventory/interface + parity runners cho `rule`, `v19_3`, `v22`, `v34`, `v35b`, `v32`, `v37a`, `v39d` đã xong.
+- Next: Phase 2.4e+ port remaining champions (`v37a_exit`, `v42_a`, `v37d`).
 
 ### Champion versions (11)
 v22, v32, v34, v35b, v37a, v37a_exit, v37d, v39d, v42_a, v19_3, rule

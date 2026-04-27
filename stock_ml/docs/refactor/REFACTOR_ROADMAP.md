@@ -586,15 +586,15 @@ for f in sorted(all_flags):
 
 ### Phase 2.4 — Implement strategies cho remaining champions (4-5 ngày)
 
-`rule`, `v19_3`, `v22` đã xong ở Phase 2.3a-c; `v34` đã xong ở Phase 2.4a; `v35b` đã xong ở Phase 2.4b; `v32` đã xong ở Phase 2.4c. Phase 2.4 còn các champion chưa có parity runner/component mapping.
+`rule`, `v19_3`, `v22` đã xong ở Phase 2.3a-c; `v34` đã xong ở Phase 2.4a; `v35b` đã xong ở Phase 2.4b; `v32` đã xong ở Phase 2.4c; `v37a` và `v39d` đã có parity runner/component mapping. Phase 2.4 còn các champion exit-model/GRU chưa port.
 
 Theo thứ tự tăng dần độ khó:
 
 1. **v34** — ✅ DONE 2026-04-29: leading_v4 + early_wave + full v32-style stack, parity runner wrapper giữ exact legacy V32 behavior; golden 1323 trades.
 2. **v35b** — ✅ DONE 2026-04-29: V35 entry-layer flags (`relax_cooldown`, `single_bar_signal`, `rule_override`), parity wrapper reuse V34 lineage; golden 1381 trades.
 3. **v32** — ✅ DONE 2026-04-29: leading_v3 + early_wave + standalone V32 delta, parity wrapper reuse V34 lineage; golden 1347 trades.
-4. **v37a** — per-profile dispatch (1 ngày)
-5. **v39d** — per-symbol rule routing (1/2 ngày)
+4. **v37a** — ✅ DONE 2026-04-29: per-profile dispatch, parity wrapper reuse V34 lineage; golden parity locked.
+5. **v39d** — ✅ DONE 2026-04-29: per-symbol rule routing, parity wrapper reuse V34 lineage; golden 1181 trades.
 6. **v37a_exit, v42_a** — preserve trained-but-dropped exit-model behavior để match golden; Model B fix là phase riêng sau parity (1 ngày)
 7. **v37d** — GRU model path (1/2 ngày)
 

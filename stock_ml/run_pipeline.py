@@ -1,4 +1,13 @@
 """
+DEPRECATED: Use `python -m stock_ml run <experiment>` instead.
+    python -m stock_ml run champions/v22
+    python -m stock_ml run legacy/v25
+    python -m stock_ml run-matrix matrix/q3_2026
+    python -m stock_ml migrate-legacy --all
+
+This file is preserved for backward compatibility and production workflows that
+have not yet migrated. It will be removed in Phase 6.3 (tag v2.0).
+
 Unified Pipeline Runner — train, backtest, export, and visualize in one command.
 
 Usage:
@@ -32,8 +41,16 @@ import json
 import os
 import sys
 import time
+import warnings
 from collections import defaultdict
 from datetime import datetime
+
+warnings.warn(
+    "run_pipeline.py is deprecated. Use `python -m stock_ml run <experiment>` instead. "
+    "See `python -m stock_ml --help` for available commands.",
+    DeprecationWarning,
+    stacklevel=1,
+)
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 

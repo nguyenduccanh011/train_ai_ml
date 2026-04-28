@@ -4,8 +4,14 @@ from src.components.runners.v22_runner import run_v22, trades_to_v22_dataframe
 from src.components.runners.v32_runner import run_v32, trades_to_v32_dataframe
 from src.components.runners.v34_runner import run_v34, trades_to_v34_dataframe
 from src.components.runners.v35b_runner import run_v35b, trades_to_v35b_dataframe
+from src.components.runners.v37a_exit_runner import (
+    run_v37a_exit,
+    trades_to_v37a_exit_dataframe,
+)
 from src.components.runners.v37a_runner import run_v37a, trades_to_v37a_dataframe
+from src.components.runners.v37d_runner import run_v37d, trades_to_v37d_dataframe
 from src.components.runners.v39d_runner import run_v39d, trades_to_v39d_dataframe
+from src.components.runners.v42_a_runner import run_v42_a, trades_to_v42_a_dataframe
 
 __all__ = [
     "run_rule_baseline",
@@ -15,7 +21,10 @@ __all__ = [
     "run_v34",
     "run_v35b",
     "run_v37a",
+    "run_v37a_exit",
+    "run_v37d",
     "run_v39d",
+    "run_v42_a",
     "trades_to_dataframe",
     "trades_to_v19_3_dataframe",
     "trades_to_v22_dataframe",
@@ -23,5 +32,8 @@ __all__ = [
     "trades_to_v34_dataframe",
     "trades_to_v35b_dataframe",
     "trades_to_v37a_dataframe",
+    "trades_to_v37a_exit_dataframe",
+    "trades_to_v37d_dataframe",
     "trades_to_v39d_dataframe",
+    "trades_to_v42_a_dataframe",
 ]

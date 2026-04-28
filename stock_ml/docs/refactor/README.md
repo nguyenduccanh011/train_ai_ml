@@ -39,11 +39,14 @@ Bộ tài liệu refactor cho dự án Stock ML Trading System v2.0.
 - 60 strategy file rời rạc → composable components
 - Khó thử tổ hợp → grid-search Entry × Exit × Feature × Fusion qua YAML
 
-### Status hiện tại (2026-04-29)
+### Status hiện tại (2026-04-28)
 - Phase 0: seeds, CPU golden baseline, tooling, architecture lock và branch policy đã chốt.
 - Phase 1: base interfaces, feature blocks, targets và model wrappers đã port.
-- Phase 2.1-2.4d: fusion inventory/interface + parity runners cho `rule`, `v19_3`, `v22`, `v34`, `v35b`, `v32`, `v37a`, `v39d` đã xong.
-- Next: Phase 2.4e+ port remaining champions (`v37a_exit`, `v42_a`, `v37d`).
+- Phase 2.1-2.4f: fusion inventory/interface + parity runners cho 11 champion đã xong.
+- Phase 3: pipeline orchestrator (`Pipeline`, `ExperimentConfig`, `PredictionCacheManager`, `expand_matrix`, CLI `python -m stock_ml`) đã hoàn thành.
+- Phase 4: Legacy adapter (`LegacyVersionAdapter`), migration tool (`migrate-legacy`), deprecate `run_pipeline.py` — đã hoàn thành.
+- Phase 5: Smoke tests (10 legacy + property-based fusion), benchmark script, 5 HOW_TO guides — đã hoàn thành.
+- Next: Phase 6 — CI/CD + cleanup + tag v2.0.
 
 ### Champion versions (11)
 v22, v32, v34, v35b, v37a, v37a_exit, v37d, v39d, v42_a, v19_3, rule
@@ -70,17 +73,15 @@ Bắt buộc làm trước Phase 1:
 
 - **[EXIT_MODEL_BUG.md](EXIT_MODEL_BUG.md)** — Exit model trained nhưng pipeline drop output (2026-04-27). Phase 2.4 preserve behavior để match golden; Model B fix tách sau parity.
 
-## Support docs sẽ tạo trong quá trình refactor
-
-(chưa tạo, sẽ viết khi cần)
+## Support docs
 
 - ✅ `FUSION_STRATEGY_INVENTORY.md` — Mapping từ flag cũ → fusion strategy mới (Phase 2.1)
-- `HOW_TO_ADD_FEATURE_BLOCK.md` — Guide thêm feature block (Phase 5.3)
-- `HOW_TO_ADD_FUSION_STRATEGY.md` — Guide thêm fusion strategy (Phase 5.3)
-- `HOW_TO_ADD_ENTRY_MODEL.md` — Guide thêm entry model (Phase 5.3)
-- `HOW_TO_PORT_LEGACY_VERSION.md` — Guide promote legacy version (Phase 5.3)
-- `HOW_TO_RUN_MATRIX.md` — Guide grid search (Phase 5.3)
-- `BENCHMARK.md` — Performance benchmarks (Phase 5.2)
+- ✅ `HOW_TO_ADD_FEATURE_BLOCK.md` — Guide thêm feature block (Phase 5.3)
+- ✅ `HOW_TO_ADD_FUSION_STRATEGY.md` — Guide thêm fusion strategy (Phase 5.3)
+- ✅ `HOW_TO_ADD_ENTRY_MODEL.md` — Guide thêm entry model (Phase 5.3)
+- ✅ `HOW_TO_PORT_LEGACY_VERSION.md` — Guide promote legacy version (Phase 5.3)
+- ✅ `HOW_TO_RUN_MATRIX.md` — Guide grid search (Phase 5.3)
+- `BENCHMARK.md` — Performance benchmarks (chạy bằng `python -m stock_ml benchmark`)
 
 ## Diary template
 

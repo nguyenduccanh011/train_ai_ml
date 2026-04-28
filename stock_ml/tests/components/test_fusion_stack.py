@@ -291,6 +291,12 @@ def _clean_registry() -> None:
     clear_registry()
     yield
     clear_registry()
+    # Restore production strategies so subsequent test modules see a populated registry.
+    import importlib
+
+    import src.components.fusion.strategies as _strats
+
+    importlib.reload(_strats)
 
 
 def _make_pass(name: str, layer: str = "pre_entry"):

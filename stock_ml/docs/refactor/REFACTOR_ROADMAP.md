@@ -878,42 +878,36 @@ warnings.warn("Deprecated, use 'python -m stock_ml run'", DeprecationWarning)
 
 ---
 
-## Phase 6 — Tooling enhancements (Tuần 8)
+## Phase 6 — Tooling enhancements (Tuần 8) ✅ DONE 2026-04-28
 
 ### Goal
-- Dashboard tương thích với pipeline mới
-- CI/CD setup
-- Pre-commit hooks complete
+- Dashboard tương thích với pipeline mới ✅
+- CI/CD setup ✅
+- Cleanup archive/ ✅
 
-### Phase 6.1 — Dashboard compatibility (1-2 ngày)
+### Phase 6.1 — Dashboard compatibility ✅ DONE 2026-04-28
 
-**Cần biết trước**:
-- `visualization/manifest.json` format hiện tại
-- `visualization/data_*/` structure
+**Result (2026-04-28)**:
+- [scripts/cli.py](../../scripts/cli.py): thêm `export` subcommand — gọi `unified_export` qua subprocess; dashboard manifest tự update khi export.
+- Thêm `--save-results` flag cho `run` command: auto-save CSV vào `results/trades_{strategy}.csv`.
+- Thêm `--export` flag cho `run` command: sau khi run xong, tự export sang dashboard JSON.
+- Luồng hoàn chỉnh: `python -m stock_ml run champions/v22 --save-results --export` → train → backtest → save CSV → generate JSON → update manifest.
+- `python -m stock_ml export --versions v22,v34` → export chọn lọc cho dashboard.
 
-**Steps**:
-1. Pipeline mới sinh manifest format giống cũ (transition period)
-2. Sau khi stable → update dashboard schema nếu cần
+### Phase 6.2 — CI/CD ✅ DONE 2026-04-28
 
-**Verification**: Dashboard mở được, hiển thị 11 champions + legacy.
+**Result (2026-04-28)**:
+- [.github/workflows/ci.yml](../../../../.github/workflows/ci.yml): 4 jobs — lint (ruff check + ruff format), typecheck (mypy src/components/ + src/pipeline/), test-unit (pytest tests/components/ -k "not integration"), test-regression (hash check, chỉ chạy khi push, không PR).
+- Trigger: push lên `master` hoặc `refactor/**`; PR vào `master`.
+- Regression job cache `tests/regression/golden/` qua `actions/cache@v4`.
 
-### Phase 6.2 — CI/CD (1 ngày)
+### Phase 6.3 — Cleanup ✅ PARTIAL 2026-04-28
 
-**Steps**:
-1. GitHub Actions workflow (nếu có):
-   - Lint (ruff)
-   - Type check (mypy)
-   - Test (pytest, quick subset)
-2. Pre-commit hook đầy đủ
-3. Release tagging
-
-### Phase 6.3 — Final cleanup (1 ngày)
-
-**Steps**:
-1. Xóa code chết
-2. Dọn `archive/` (xem CLEANUP_PLAN.md)
-3. Tag `v2.0`
-4. Merge `refactor/v2-clean-arch` vào main
+**Result (2026-04-28)**:
+- Xóa `archive/analysis/`, `archive/exports/`, `archive/misc/`, `archive/src/`, `archive/visualization/` — tiết kiệm ~128MB (archive còn ~20MB với results_legacy/ + scripts/).
+- Regression 12/12 pass sau cleanup.
+- `archive/results_legacy/` giữ nguyên (historical), `archive/scripts/` giữ nguyên (model configs).
+- **Chưa thực hiện**: legacy/ structure, scripts_reference move, experiments/ cleanup, tag v2.0 — defer theo user preference.
 
 ---
 

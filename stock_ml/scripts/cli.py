@@ -58,6 +58,12 @@ def _print_result_summary(result_name: str, n_trades: int, trades_df: Any) -> No
         print(f"  Avg PnL:  {df['pnl_pct'].mean():.2f}%")
 
 
+def _save_result_csv(result_name: str, trades_df: Any, output_path: Path) -> None:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    trades_df.to_csv(output_path, index=False)
+    print(f"  Saved to: {output_path}")
+
+
 def cmd_run(args: argparse.Namespace) -> int:
     device = args.device or "cpu"
     symbols = _load_symbols()
@@ -70,9 +76,7 @@ def cmd_run(args: argparse.Namespace) -> int:
         result = adapter.run(symbols, device=device)
         _print_result_summary(result.name, result.n_trades, result.trades_df)
         if args.output:
-            out = Path(args.output)
-            result.trades_df.to_csv(out, index=False)
-            print(f"  Saved to: {out}")
+            _save_result_csv(result.name, result.trades_df, Path(args.output))
         return 0
 
     from src.pipeline import ExperimentConfig, Pipeline
@@ -89,9 +93,14 @@ def cmd_run(args: argparse.Namespace) -> int:
     _print_result_summary(result.name, result.n_trades, result.trades_df)
 
     if args.output:
-        out = Path(args.output)
-        result.trades_df.to_csv(out, index=False)
-        print(f"  Saved to: {out}")
+        _save_result_csv(result.name, result.trades_df, Path(args.output))
+    elif getattr(args, "save_results", False) and not result.trades_df.empty:
+        results_dir = REPO_ROOT / "results"
+        out = results_dir / f"trades_{cfg.strategy}.csv"
+        _save_result_csv(result.name, result.trades_df, out)
+
+    if getattr(args, "export", False) and not result.trades_df.empty:
+        _export_to_dashboard(cfg.strategy, result.trades_df)
 
     return 0
 
@@ -209,6 +218,50 @@ def cmd_migrate_legacy(args: argparse.Namespace) -> int:
     return 0
 
 
+def _export_to_dashboard(version_key: str, trades_df: Any) -> None:
+    """Export trades_df to visualization JSON for dashboard consumption."""
+    import pandas as pd
+    from src.config_loader import get_model_config
+    from src.export.unified_export import export_version, generate_manifest
+
+    base_dir = REPO_ROOT
+    results_dir = base_dir / "results"
+    viz_dir = base_dir / "visualization"
+
+    out_csv = results_dir / f"trades_{version_key}.csv"
+    results_dir.mkdir(exist_ok=True)
+    if isinstance(trades_df, pd.DataFrame) and not trades_df.empty:
+        trades_df.to_csv(out_csv, index=False)
+
+    try:
+        model_cfg = get_model_config(version_key)
+    except KeyError:
+        model_cfg = {"name": version_key, "color": "#888888", "order": 99}
+
+    print(f"\n  [Export] Exporting {version_key} → dashboard...")
+    result = export_version(version_key, model_cfg, str(results_dir), str(viz_dir))
+    if result:
+        generate_manifest([result], str(viz_dir))
+    else:
+        print(f"  [Export] ⚠ Export failed for {version_key}")
+
+
+def cmd_export(args: argparse.Namespace) -> int:
+    """Export champion trades CSV files to visualization JSON for dashboard."""
+    import subprocess
+
+    cmd = [sys.executable, "-m", "src.export.unified_export"]
+    if args.versions:
+        cmd += ["--versions", args.versions]
+    if args.include_retired:
+        cmd += ["--include-retired"]
+    if args.base_data_dir:
+        cmd += ["--base-data-dir", args.base_data_dir]
+
+    result = subprocess.run(cmd, cwd=str(REPO_ROOT))
+    return result.returncode
+
+
 def cmd_benchmark(args: argparse.Namespace) -> int:
     from scripts.benchmark import _print_table, run_benchmark
 
@@ -283,6 +336,17 @@ def build_parser() -> argparse.ArgumentParser:
     p_run.add_argument("experiment", help="Path to champion YAML (e.g. champions/v22)")
     p_run.add_argument("--device", default="cpu", help="cpu or gpu")
     p_run.add_argument("--output", help="Save trades CSV to this path")
+    p_run.add_argument(
+        "--save-results",
+        action="store_true",
+        dest="save_results",
+        help="Auto-save trades to results/trades_{strategy}.csv",
+    )
+    p_run.add_argument(
+        "--export",
+        action="store_true",
+        help="After run, export trades to dashboard visualization JSON",
+    )
     p_run.set_defaults(func=cmd_run)
 
     # run-matrix
@@ -336,6 +400,30 @@ def build_parser() -> argparse.ArgumentParser:
     p_cmp.add_argument("experiments", nargs="+", help="Experiment YAML paths")
     p_cmp.add_argument("--device", default="cpu")
     p_cmp.set_defaults(func=cmd_compare)
+
+    # export
+    p_exp = sub.add_parser(
+        "export",
+        help="Export trades CSVs to dashboard visualization JSON (runs unified_export)",
+    )
+    p_exp.add_argument(
+        "--versions",
+        default="",
+        help="Comma-separated version keys to export (default: all active)",
+    )
+    p_exp.add_argument(
+        "--include-retired",
+        action="store_true",
+        dest="include_retired",
+        help="Include retired models",
+    )
+    p_exp.add_argument(
+        "--base-data-dir",
+        default="data",
+        dest="base_data_dir",
+        help="Base OHLCV data directory name (default: data)",
+    )
+    p_exp.set_defaults(func=cmd_export)
 
     # benchmark
     p_bm = sub.add_parser("benchmark", help="Benchmark new pipeline vs legacy runtime")

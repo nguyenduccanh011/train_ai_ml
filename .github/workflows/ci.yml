@@ -1,0 +1,103 @@
+name: CI
+
+on:
+  push:
+    branches: [master, "refactor/**"]
+  pull_request:
+    branches: [master]
+
+defaults:
+  run:
+    working-directory: stock_ml
+
+jobs:
+  lint:
+    name: Lint (ruff)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install ruff
+        run: pip install ruff==0.15.12
+
+      - name: ruff check
+        run: ruff check src/ scripts/ tests/
+
+      - name: ruff format check
+        run: ruff format --check src/ scripts/ tests/
+
+  typecheck:
+    name: Type check (mypy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt -r requirements-dev.txt
+          # Skip heavy ML deps that don't affect type checking
+          pip install lightgbm xgboost --no-deps || true
+
+      - name: mypy src/components/
+        run: mypy src/components/ --ignore-missing-imports
+
+      - name: mypy src/pipeline/
+        run: mypy src/pipeline/ --ignore-missing-imports
+
+  test-unit:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Run unit tests (no regression, no integration)
+        run: |
+          pytest tests/components/ -q --tb=short \
+            -k "not integration" \
+            --ignore=tests/components/test_legacy_adapter.py
+
+  test-regression:
+    name: Regression (hash check)
+    runs-on: ubuntu-latest
+    # Only run on push to master or refactor branches, not every PR
+    if: github.event_name == 'push'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: false
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt -r requirements-dev.txt
+
+      - name: Cache golden baseline
+        uses: actions/cache@v4
+        with:
+          path: stock_ml/tests/regression/golden
+          key: golden-${{ hashFiles('stock_ml/tests/regression/golden/checksums.txt') }}
+
+      - name: Run champion hash regression
+        run: |
+          pytest tests/regression/test_champions.py -q --tb=short

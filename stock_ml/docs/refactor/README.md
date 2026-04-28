@@ -46,7 +46,8 @@ Bộ tài liệu refactor cho dự án Stock ML Trading System v2.0.
 - Phase 3: pipeline orchestrator (`Pipeline`, `ExperimentConfig`, `PredictionCacheManager`, `expand_matrix`, CLI `python -m stock_ml`) đã hoàn thành.
 - Phase 4: Legacy adapter (`LegacyVersionAdapter`), migration tool (`migrate-legacy`), deprecate `run_pipeline.py` — đã hoàn thành.
 - Phase 5: Smoke tests (10 legacy + property-based fusion), benchmark script, 5 HOW_TO guides — đã hoàn thành.
-- Next: Phase 6 — CI/CD + cleanup + tag v2.0.
+- Phase 6: Dashboard export CLI (`python -m stock_ml export`), GitHub Actions CI/CD (4 jobs: lint/typecheck/test-unit/regression), cleanup archive/ (~128MB freed) — đã hoàn thành.
+- Next: Tag `v2.0`, merge về main (khi có explicit instruction).
 
 ### Champion versions (11)
 v22, v32, v34, v35b, v37a, v37a_exit, v37d, v39d, v42_a, v19_3, rule

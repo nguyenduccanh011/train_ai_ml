@@ -43,15 +43,15 @@ LEGACY_STRATEGY_MAP: dict[str, tuple[str, str]] = {
     "v38cd": ("experiments.run_v38_combos", "backtest_v38cd"),
     "v38bcd": ("experiments.run_v38_combos", "backtest_v38bcd"),
     "v37a": ("experiments.run_v37a", "backtest_v37a"),
-    "v37b": ("experiments.run_v37b", "backtest_v37b"),
-    "v37c": ("experiments.run_v37c", "backtest_v37c"),
+    "v37b": ("experiments.run_v32_final", "backtest_v32"),
+    "v37c": ("experiments.run_v32_final", "backtest_v32"),
     "v37d": ("experiments.run_v37d", "backtest_v37d"),
-    "v36a": ("experiments.run_v34_final", "backtest_v36a"),
-    "v36b": ("experiments.run_v34_final", "backtest_v36b"),
-    "v36c": ("experiments.run_v34_final", "backtest_v36c"),
-    "v35a": ("experiments.run_v34_final", "backtest_v35a"),
+    "v36a": ("experiments.run_v32_final", "backtest_v32"),
+    "v36b": ("experiments.run_v32_final", "backtest_v32"),
+    "v36c": ("experiments.run_v32_final", "backtest_v32"),
+    "v35a": ("experiments.run_v32_final", "backtest_v32"),
     "v35b": ("experiments.run_v34_final", "backtest_v35b"),
-    "v35c": ("experiments.run_v34_final", "backtest_v35c"),
+    "v35c": ("experiments.run_v32_final", "backtest_v32"),
     "v34": ("experiments.run_v34_final", "backtest_v34"),
     "v33": ("experiments.run_v33_final", "backtest_v33"),
     "v32": ("experiments.run_v32_final", "backtest_v32"),
@@ -308,14 +308,14 @@ def _apply_proba_thresholds(item: dict[str, Any], proba_thresholds: dict[str, fl
         return item["y_pred"]
 
     y_proba = item["y_proba"]
-    classes = item.get("classes", [-1, 0, 1])
+    class_to_idx = {int(cls): idx for idx, cls in enumerate(item.get("classes", [-1, 0, 1]))}
     y_pred = item["y_pred"].copy()
 
     for cls_str, threshold in proba_thresholds.items():
         cls = int(cls_str)
-        if cls not in classes:
+        idx = class_to_idx.get(cls)
+        if idx is None:
             continue
-        idx = classes.index(cls)
         mask = y_proba[:, idx] >= threshold
         y_pred[mask] = cls
 

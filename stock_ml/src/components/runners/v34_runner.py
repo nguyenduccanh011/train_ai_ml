@@ -114,6 +114,7 @@ def run_v34(
     commission: float = 0.0015,
     tax: float = 0.001,
     record_trades: bool = True,
+    enable_model_b_exit: bool = False,
 ) -> list[Trade]:
     del data_dir, first_test_year, last_test_year, train_years
     model_cfg = get_model_config("v34")
@@ -138,6 +139,7 @@ def run_v34(
         mods=active_mods,
         params=active_params,
         entry_reason="v34",
+        enable_model_b_exit=enable_model_b_exit,
     )
 
 
@@ -161,6 +163,7 @@ def _run_v34_lineage_cache(
     mods: dict[str, bool],
     params: dict[str, Any],
     entry_reason: str,
+    enable_model_b_exit: bool = False,
 ) -> list[Trade]:
     symbol_set = set(symbols)
     all_trades: list[Trade] = []
@@ -174,6 +177,7 @@ def _run_v34_lineage_cache(
                 mods=mods,
                 params=params,
                 entry_reason=entry_reason,
+                enable_model_b_exit=enable_model_b_exit,
             )
         )
     return all_trades
@@ -186,7 +190,11 @@ def _run_cache_item(
     mods: dict[str, bool],
     params: dict[str, Any],
     entry_reason: str,
+    enable_model_b_exit: bool = False,
 ) -> list[Trade]:
+    extra: dict[str, Any] = {}
+    if enable_model_b_exit and item.get("y_pred_exit") is not None:
+        extra["y_pred_exit"] = item["y_pred_exit"]
     result = backtest_fn(
         item["y_pred"],
         item["returns"],
@@ -194,6 +202,7 @@ def _run_cache_item(
         item["feature_cols"],
         **_mod_kwargs(mods),
         **params,
+        **extra,
     )
 
     trades: list[Trade] = []

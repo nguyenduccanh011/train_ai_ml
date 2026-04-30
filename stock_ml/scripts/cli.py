@@ -138,18 +138,28 @@ def cmd_validate(args: argparse.Namespace) -> int:
         return 1
 
     try:
-        cfg = ExperimentConfig.from_yaml(yaml_path)
+        if args.experiment.startswith(("matrix/", "matrix\\")):
+            from src.pipeline.matrix_expander import expand_matrix
+
+            configs = expand_matrix(yaml_path)
+        else:
+            configs = [ExperimentConfig.from_yaml(yaml_path)]
     except Exception as e:
         print(f"Schema error: {e}", file=sys.stderr)
         return 1
 
-    errors = validate_config(cfg)
-    if errors:
-        for err in errors:
-            print(f"Validation error: {err}", file=sys.stderr)
-        return 1
+    for cfg in configs:
+        errors = validate_config(cfg)
+        if errors:
+            for err in errors:
+                print(f"Validation error [{cfg.name}]: {err}", file=sys.stderr)
+            return 1
 
-    print(f"OK: {cfg.name} (strategy={cfg.strategy}, features={cfg.feature_set()})")
+    if len(configs) == 1:
+        cfg = configs[0]
+        print(f"OK: {cfg.name} (strategy={cfg.strategy}, features={cfg.feature_set()})")
+    else:
+        print(f"OK: {yaml_path.name} ({len(configs)} experiments)")
     return 0
 
 

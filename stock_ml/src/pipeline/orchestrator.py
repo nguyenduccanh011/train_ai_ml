@@ -94,14 +94,16 @@ class Pipeline:
 
         abs_data_dir = resolve_data_dir(data_dir)
 
-        trades = runner_fn(
-            self.symbols,
-            abs_data_dir,
-            prediction_cache=cache,
-            device=self.device,
-            mods=self.cfg.mods or None,
-            params=self.cfg.params or None,
-        )
+        runner_kwargs: dict[str, Any] = {
+            "prediction_cache": cache,
+            "device": self.device,
+            "mods": self.cfg.mods or None,
+            "params": self.cfg.params or None,
+        }
+        if self.cfg.enable_model_b_exit:
+            runner_kwargs["enable_model_b_exit"] = True
+
+        trades = runner_fn(self.symbols, abs_data_dir, **runner_kwargs)
 
         trades_df = df_converter(trades) if trades else pd.DataFrame()
 

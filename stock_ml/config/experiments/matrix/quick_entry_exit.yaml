@@ -1,0 +1,11 @@
+name_prefix: quick_entry_exit
+
+axes:
+  features: [leading_v2, leading_v4]
+  model_type: [lightgbm, xgboost]
+  strategy: [v22]
+
+base:
+  split:
+    first_test_year: 2023
+    last_test_year: 2024

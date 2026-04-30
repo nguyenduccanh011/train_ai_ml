@@ -112,33 +112,8 @@ def backtest_v34(y_pred, returns, df_test, feature_cols, **kwargs):
     return backtest_v32(y_pred, returns, df_test, feature_cols, **kwargs)
 
 
-def backtest_v35a(y_pred, returns, df_test, feature_cols, **kwargs):
-    """V35a = V34 engine + early_wave_v2 target (handled at training layer)."""
-    return backtest_v32(y_pred, returns, df_test, feature_cols, **kwargs)
-
-
 def backtest_v35b(y_pred, returns, df_test, feature_cols, **kwargs):
     """V35b = V34 engine + V35 entry filter relaxations (flags from yaml)."""
-    return backtest_v32(y_pred, returns, df_test, feature_cols, **kwargs)
-
-
-def backtest_v35c(y_pred, returns, df_test, feature_cols, **kwargs):
-    """V35c = V34 engine + hybrid rule entry (flags from yaml)."""
-    return backtest_v32(y_pred, returns, df_test, feature_cols, **kwargs)
-
-
-def backtest_v36a(y_pred, returns, df_test, feature_cols, **kwargs):
-    """V36a = V34 + rule_override only."""
-    return backtest_v32(y_pred, returns, df_test, feature_cols, **kwargs)
-
-
-def backtest_v36b(y_pred, returns, df_test, feature_cols, **kwargs):
-    """V36b = V36a + skip_price_proximity."""
-    return backtest_v32(y_pred, returns, df_test, feature_cols, **kwargs)
-
-
-def backtest_v36c(y_pred, returns, df_test, feature_cols, **kwargs):
-    """V36c = V36b + moderate relax_cooldown."""
     return backtest_v32(y_pred, returns, df_test, feature_cols, **kwargs)
 
 

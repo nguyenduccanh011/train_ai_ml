@@ -19,6 +19,7 @@ from src.components.fusion.strategies.core import (
     HardStopExit,
     MaCrossHybridExit,
     MinHoldProtection,
+    ModelBExit,
     PeakProtectDist,
     PeakProtectEma8Streak,
     ProfitLock,
@@ -27,9 +28,13 @@ from src.components.fusion.strategies.core import (
 )
 from src.components.fusion.strategies.entry import V19EntryCascade
 from src.components.fusion.strategies.hold import V19SignalHoldGuard
+from src.components.runners import _sim_utils
+
+_atr_stop = _sim_utils.atr_stop
+_format_date = _sim_utils.format_date
+_track_result = _sim_utils.track_result
 
 if TYPE_CHECKING:
-    from src.components.base import FusionResult
     from src.components.fusion.base import FusionStrategy
 
 
@@ -79,29 +84,6 @@ V19_TRADE_COLUMNS: list[str] = [
 ]
 
 
-def _format_date(value: object) -> str:
-    return str(value)[:10]
-
-
-def _track_result(res: FusionResult, counters: Counter[str]) -> None:
-    key = res.metadata.get("counter")
-    if isinstance(key, str) and key:
-        counters[key] += 1
-    bulk = res.metadata.get("counters")
-    if isinstance(bulk, dict):
-        for bulk_key, value in bulk.items():
-            if isinstance(bulk_key, str) and isinstance(value, int):
-                counters[bulk_key] += value
-
-
-def _atr_stop(ind: dict[str, Any], i: int) -> float:
-    atr14 = ind["atr14"]
-    close = ind["close"]
-    if not np.isnan(atr14[i]) and close[i] > 0:
-        return max(0.025, min(1.8 * atr14[i] / close[i], 0.06))
-    return 0.04
-
-
 def _base_ctx(
     *,
     i: int,
@@ -114,13 +96,16 @@ def _base_ctx(
     regime_cfg: dict[str, Any],
     trade_state: dict[str, Any] | None = None,
     entry_state: dict[str, Any] | None = None,
+    exit_signal_override: int | None = None,
 ) -> BarContext:
     return BarContext(
         bar_idx=i,
         df_test=df,
         entry_signal=pred,
         entry_proba=None,
-        exit_signal=1 if pred == 0 else 0,
+        exit_signal=exit_signal_override
+        if exit_signal_override is not None
+        else (1 if pred == 0 else 0),
         exit_proba=None,
         position=position,
         config={
@@ -150,14 +135,19 @@ def _run_exit_sequence(
     return None
 
 
-def _make_force_exit_strategies() -> list[FusionStrategy]:
-    return [
-        HardStopExit(),
-        SignalHardCapExit(),
-        FastExitLossLegacy(),
-        AtrStopLoss(),
-        PeakProtectDist(),
-    ]
+def _make_force_exit_strategies(enable_model_b_exit: bool = False) -> list[FusionStrategy]:
+    strategies: list[FusionStrategy] = [HardStopExit()]
+    if enable_model_b_exit:
+        strategies.append(ModelBExit())
+    strategies.extend(
+        [
+            SignalHardCapExit(),
+            FastExitLossLegacy(),
+            AtrStopLoss(),
+            PeakProtectDist(),
+        ]
+    )
+    return strategies
 
 
 def _make_continuation_exit_strategies() -> list[FusionStrategy]:
@@ -209,6 +199,7 @@ def run_v19_3(
     commission: float = 0.0015,
     tax: float = 0.001,
     record_trades: bool = True,
+    enable_model_b_exit: bool = False,
 ) -> list[Trade]:
     del data_dir, first_test_year, last_test_year, train_years
     active_mods = {**DEFAULT_V19_MODS, **(mods or {})}
@@ -226,6 +217,7 @@ def run_v19_3(
                 commission=commission,
                 tax=tax,
                 record_trades=record_trades,
+                enable_model_b_exit=enable_model_b_exit,
             )
         )
     return all_trades
@@ -239,8 +231,14 @@ def _run_cache_item(
     commission: float,
     tax: float,
     record_trades: bool,
+    enable_model_b_exit: bool = False,
 ) -> list[Trade]:  # noqa: PLR0912, PLR0915, C901
     y_pred = np.asarray(item["y_pred"])
+    y_pred_exit = (
+        np.asarray(item["y_pred_exit"])
+        if enable_model_b_exit and item.get("y_pred_exit") is not None
+        else None
+    )
     returns = np.asarray(item["returns"])
     df = item["sym_test_df"].reset_index(drop=True)
     symbol = str(item["symbol"])
@@ -253,7 +251,7 @@ def _run_cache_item(
     entry_strategy = V19EntryCascade()
     min_hold = MinHoldProtection()
     signal_hold_guard = V19SignalHoldGuard()
-    force_exit_strategies = _make_force_exit_strategies()
+    force_exit_strategies = _make_force_exit_strategies(enable_model_b_exit)
     continuation_exit_strategies = _make_continuation_exit_strategies()
 
     trades: list[Trade] = []
@@ -269,6 +267,7 @@ def _run_cache_item(
 
     for i in range(1, n):
         pred = int(y_pred[i - 1])
+        exit_signal_val: int | None = int(y_pred_exit[i - 1]) if y_pred_exit is not None else None
         ret = float(returns[i]) if not np.isnan(returns[i]) else 0.0
         raw_signal = 1 if pred == 1 else 0
         if cooldown_remaining > 0:
@@ -296,6 +295,7 @@ def _run_cache_item(
                 trend=trend,
                 regime_cfg=regime_cfg,
                 entry_state=entry_state,
+                exit_signal_override=exit_signal_val,
             )
             res = entry_strategy.apply(ctx)
             _track_result(res, counters)
@@ -371,6 +371,7 @@ def _run_cache_item(
             trend=trend,
             regime_cfg=regime_cfg,
             trade_state=trade_state,
+            exit_signal_override=exit_signal_val,
         )
 
         pending_exit_reason: str | None = "signal" if raw_signal == 0 else None

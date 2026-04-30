@@ -29,13 +29,14 @@ def build_prediction_cache(
     import src.data.target as target_module
     import src.features.engine as feature_engine_module
     from src.cache.feature_cache import FeatureCacheManager
+    from src.components.models.registry import get_model
     from src.config_loader import load_config
     from src.data.loader import DataLoader
     from src.data.splitter import WalkForwardSplitter
     from src.data.target import TargetGenerator
     from src.env import get_results_dir, resolve_data_dir
     from src.features.engine import FeatureEngine
-    from src.models.registry import build_model, detect_device
+    from src.models.registry import detect_device
     from src.signal_adapter import canonicalize_predictions
 
     pipeline_cfg = load_config().get("pipeline", {})
@@ -63,6 +64,7 @@ def build_prediction_cache(
     print(f"    Training device: {resolved_device.upper()}")
 
     effective_model_type = cfg.entry_model_type()
+    entry_model_extras = cfg.components.entry_model.extras
     exit_model_dict = cfg.exit_model_dict()
 
     loader = DataLoader(abs_data_dir)
@@ -129,14 +131,14 @@ def build_prediction_cache(
     target_cfg_dict = legacy_split.get("target", {})
 
     for _window, train_df, test_df in splitter.split(df):
-        model = build_model(effective_model_type, device=device)
+        model = get_model(effective_model_type, device=device, **entry_model_extras)
         X_train = np.nan_to_num(train_df[feature_cols].values)
         y_train = train_df["target"].values.astype(int)
         model.fit(X_train, y_train)
 
         sell_model = None
         if has_exit:
-            sell_model = build_model(effective_model_type, device=device)
+            sell_model = get_model(effective_model_type, device=device, **entry_model_extras)
             sell_model.fit(X_train, train_df["target_sell"].values.astype(int))
 
         for sym in test_df["symbol"].unique():

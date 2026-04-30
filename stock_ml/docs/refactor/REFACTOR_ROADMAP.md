@@ -901,13 +901,22 @@ warnings.warn("Deprecated, use 'python -m stock_ml run'", DeprecationWarning)
 - Trigger: push lên `master` hoặc `refactor/**`; PR vào `master`.
 - Regression job cache `tests/regression/golden/` qua `actions/cache@v4`.
 
-### Phase 6.3 — Cleanup ✅ PARTIAL 2026-04-28
+### Phase 6.3 — Cleanup ✅ DONE 2026-04-28
 
 **Result (2026-04-28)**:
 - Xóa `archive/analysis/`, `archive/exports/`, `archive/misc/`, `archive/src/`, `archive/visualization/` — tiết kiệm ~128MB (archive còn ~20MB với results_legacy/ + scripts/).
 - Regression 12/12 pass sau cleanup.
-- `archive/results_legacy/` giữ nguyên (historical), `archive/scripts/` giữ nguyên (model configs).
-- **Chưa thực hiện**: legacy/ structure, scripts_reference move, experiments/ cleanup, tag v2.0 — defer theo user preference.
+
+**Result (2026-04-28 — phase tiếp theo)**:
+- Tạo [legacy/](../../legacy/) structure (scripts_reference/, strategies/, configs/, docs/) + README.
+- Move 17 scripts có model config từ `archive/scripts/` → [legacy/scripts_reference/](../../legacy/scripts_reference/) (700KB).
+- Xóa toàn bộ `archive/scripts/` (27 one-off scripts, ~500KB) sau khi move.
+- Nén `archive/results_legacy/` (19MB) → `archive/results_legacy.tar.gz` (~12MB).
+- Cleanup [experiments/](../../experiments/): xóa 37 one-off variants, intermediate CSV/JSON, superseded *_final.py. Còn 12 champion/final files (run_v22_final, run_v3*_final, run_v37a/b/c/d, run_v39d, run_v42).
+- Move `visualize_v42.py` → `visualization/scripts_v42.py`; `compare_rule_vs_model.py` → `analysis/compare_rule_vs_model.py`.
+- Xóa `run_exit_29.log`, `run_exit_remaining.log` khỏi root.
+- Regression 12/12 + component 203 pass sau cleanup.
+- **Chưa thực hiện**: tag v2.0 — defer theo user preference.
 
 ---
 

@@ -24,6 +24,7 @@ def _build_catboost(**kwargs: Any):
 def _build_random_forest(**kwargs: Any):
     from src.components.models.random_forest import RandomForestEntryModel
 
+    kwargs.pop("device", None)
     return RandomForestEntryModel(**kwargs)
 
 

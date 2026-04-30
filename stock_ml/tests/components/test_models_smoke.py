@@ -75,6 +75,7 @@ class TestXGBoostEntryModel:
         m.fit(X, y)
         preds = m.predict(X)
         assert preds.shape == (len(X),)
+        assert set(preds).issubset({-1, 0, 1})
 
     def test_predict_proba(self):
         pytest.importorskip("xgboost")
@@ -86,6 +87,15 @@ class TestXGBoostEntryModel:
         proba = m.predict_proba(X)
         assert proba is not None
         assert proba.shape[1] == 3
+
+    def test_classes(self):
+        pytest.importorskip("xgboost")
+        from src.components.models.xgboost_classifier import XGBoostEntryModel
+
+        X, y = _make_data()
+        m = XGBoostEntryModel(n_estimators=10)
+        m.fit(X, y)
+        assert sorted(m.classes_) == [-1, 0, 1]
 
     def test_name(self):
         pytest.importorskip("xgboost")
@@ -107,6 +117,7 @@ class TestCatBoostEntryModel:
         m.fit(X, y)
         preds = m.predict(X)
         assert preds.shape == (len(X),)
+        assert set(preds).issubset({-1, 0, 1})
 
     def test_predict_proba(self):
         pytest.importorskip("catboost")
@@ -118,6 +129,15 @@ class TestCatBoostEntryModel:
         proba = m.predict_proba(X)
         assert proba is not None
         assert proba.shape[1] == 3
+
+    def test_classes(self):
+        pytest.importorskip("catboost")
+        from src.components.models.catboost_classifier import CatBoostEntryModel
+
+        X, y = _make_data()
+        m = CatBoostEntryModel(iterations=10)
+        m.fit(X, y)
+        assert sorted(m.classes_) == [-1, 0, 1]
 
     def test_name(self):
         pytest.importorskip("catboost")
@@ -164,6 +184,39 @@ class TestRandomForestEntryModel:
         assert RandomForestEntryModel.name == "random_forest"
 
 
+# ── GRU ───────────────────────────────────────────────────────────────────────
+
+
+class TestGRUEntryModel:
+    def test_fit_predict(self):
+        pytest.importorskip("torch")
+        from src.components.models.gru_seq import GRUEntryModel
+
+        X, y = _make_data(n=80, n_features=8)
+        m = GRUEntryModel(window=5, hidden=8, n_layers=1, epochs=1, batch_size=16)
+        m.fit(X, y)
+        preds = m.predict(X)
+        assert preds.shape == (len(X),)
+        assert set(preds).issubset({-1, 0, 1})
+
+    def test_predict_proba(self):
+        pytest.importorskip("torch")
+        from src.components.models.gru_seq import GRUEntryModel
+
+        X, y = _make_data(n=80, n_features=8)
+        m = GRUEntryModel(window=5, hidden=8, n_layers=1, epochs=1, batch_size=16)
+        m.fit(X, y)
+        proba = m.predict_proba(X)
+        assert proba is not None
+        assert proba.shape[0] == len(X)
+
+    def test_name(self):
+        pytest.importorskip("torch")
+        from src.components.models.gru_seq import GRUEntryModel
+
+        assert GRUEntryModel.name == "gru"
+
+
 # ── Ensemble ──────────────────────────────────────────────────────────────────
 
 
@@ -182,6 +235,7 @@ class TestEnsembleEntryModel:
         m.fit(X, y)
         preds = m.predict(X)
         assert preds.shape == (len(X),)
+        assert set(preds).issubset({-1, 0, 1})
 
     def test_hard_voting(self):
         from src.components.models.ensemble import EnsembleEntryModel
@@ -195,6 +249,7 @@ class TestEnsembleEntryModel:
         m.fit(X, y)
         preds = m.predict(X)
         assert preds.shape == (len(X),)
+        assert set(preds).issubset({-1, 0, 1})
 
     def test_empty_models_raises(self):
         from src.components.models.ensemble import EnsembleEntryModel

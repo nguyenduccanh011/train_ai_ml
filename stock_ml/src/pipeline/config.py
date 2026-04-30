@@ -65,6 +65,7 @@ class ExperimentConfig(BaseModel):
     mods: dict[str, bool] = Field(default_factory=dict)
     params: dict[str, Any] = Field(default_factory=dict)
     fusion: dict[str, Any] = Field(default_factory=dict)
+    enable_model_b_exit: bool = False
 
     @model_validator(mode="before")
     @classmethod

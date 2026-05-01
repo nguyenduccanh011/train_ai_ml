@@ -13,6 +13,7 @@ from src.components.runners.v34_runner import (
     trades_to_v34_dataframe,
 )
 from src.config_loader import get_model_config
+from src.pipeline.config import StrategyV3Config
 
 
 @dataclass(frozen=True)
@@ -62,12 +63,16 @@ def run_lineage(
     tax: float = 0.001,
     record_trades: bool = True,
     enable_model_b_exit: bool = False,
+    strategy_v3: StrategyV3Config | None = None,
 ) -> list[Trade]:
     del data_dir, first_test_year, last_test_year, train_years
     model_cfg = get_model_config(defn.version_key)
-    active_mods = {**model_cfg.get("mods", {}), **(mods or {})}
+    strategy_mods = strategy_v3.mods if strategy_v3 is not None else {}
+    strategy_params = strategy_v3.params if strategy_v3 is not None else {}
+    active_mods = {**model_cfg.get("mods", {}), **strategy_mods, **(mods or {})}
     active_params = {
         **model_cfg.get("params", {}),
+        **strategy_params,
         **(params or {}),
         "initial_capital": initial_capital,
         "commission": commission,

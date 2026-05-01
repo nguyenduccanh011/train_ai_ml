@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 import yaml
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class TargetConfig(BaseModel):
@@ -31,13 +31,20 @@ class EntryModelConfig(BaseModel):
 
 class ExitModelConfig(BaseModel):
     enabled: bool = False
+    type: str = "lightgbm"
     forward_window: int = 15
     loss_threshold: float = 0.05
+    extras: dict[str, Any] = Field(default_factory=dict)
 
     def to_legacy_dict(self) -> dict[str, Any] | None:
         if not self.enabled:
             return None
-        return {"forward_window": self.forward_window, "loss_threshold": self.loss_threshold}
+        return {
+            "type": self.type,
+            "forward_window": self.forward_window,
+            "loss_threshold": self.loss_threshold,
+            "extras": self.extras,
+        }
 
 
 class ComponentsConfig(BaseModel):
@@ -56,6 +63,42 @@ class SplitConfig(BaseModel):
     last_test_year: int = 2025
 
 
+class FusionItemConfig(BaseModel):
+    name: str
+
+    model_config = ConfigDict(extra="allow")
+
+
+class FusionGroupConfig(BaseModel):
+    entry: list[FusionItemConfig] = Field(default_factory=list)
+    force_exit: list[FusionItemConfig] = Field(default_factory=list)
+    active_exit: list[FusionItemConfig] = Field(default_factory=list)
+    hold: list[FusionItemConfig] = Field(default_factory=list)
+
+
+class SignalsConfig(BaseModel):
+    features: str = "leading_v2"
+    target: TargetConfig = Field(default_factory=TargetConfig)
+    entry_model: EntryModelConfig = Field(default_factory=EntryModelConfig)
+    exit_model: ExitModelConfig = Field(default_factory=ExitModelConfig)
+
+
+class StrategyV3Config(BaseModel):
+    entry_rules: list[str] = Field(default_factory=list)
+    hold_rules: list[str] = Field(default_factory=list)
+    exit_rules: list[str] = Field(default_factory=list)
+    force_exit_rules: list[str] = Field(default_factory=list)
+    active_exit_rules: list[str] = Field(default_factory=list)
+    mods: dict[str, bool] = Field(default_factory=dict)
+    params: dict[str, Any] = Field(default_factory=dict)
+
+
+class ExecutionConfig(BaseModel):
+    backtester: str = ""
+    capital: float = 100_000_000
+    split: SplitConfig = Field(default_factory=SplitConfig)
+
+
 class ExperimentConfig(BaseModel):
     name: str
     strategy: str
@@ -64,8 +107,18 @@ class ExperimentConfig(BaseModel):
     split: SplitConfig = Field(default_factory=SplitConfig)
     mods: dict[str, bool] = Field(default_factory=dict)
     params: dict[str, Any] = Field(default_factory=dict)
-    fusion: dict[str, Any] = Field(default_factory=dict)
+    fusion: FusionGroupConfig = Field(default_factory=FusionGroupConfig)
     enable_model_b_exit: bool = False
+    signals: SignalsConfig | None = None
+    strategy_v3: StrategyV3Config | None = None
+    execution: ExecutionConfig | None = None
+
+    @field_validator("fusion", mode="before")
+    @classmethod
+    def _coerce_fusion(cls, value: Any) -> Any:
+        if value is None:
+            return {}
+        return value
 
     @model_validator(mode="before")
     @classmethod
@@ -76,6 +129,38 @@ class ExperimentConfig(BaseModel):
             strategy = values.get("strategy", "")
             values["runner"] = f"src.components.runners.{strategy}_runner" if strategy else ""
         return values
+
+    @model_validator(mode="after")
+    def _fill_v3_sections(self) -> ExperimentConfig:
+        if self.signals is None:
+            self.signals = SignalsConfig(
+                features=self.components.features,
+                target=self.components.target,
+                entry_model=self.components.entry_model,
+                exit_model=self.components.exit_model,
+            )
+        if self.strategy_v3 is None:
+            force_exit_rules = [item.name for item in self.fusion.force_exit]
+            active_exit_rules = [item.name for item in self.fusion.active_exit]
+            self.strategy_v3 = StrategyV3Config(
+                entry_rules=[item.name for item in self.fusion.entry],
+                hold_rules=[item.name for item in self.fusion.hold],
+                exit_rules=force_exit_rules + active_exit_rules,
+                force_exit_rules=force_exit_rules,
+                active_exit_rules=active_exit_rules,
+                mods=self.mods,
+                params=self.params,
+            )
+        if self.execution is None:
+            self.execution = ExecutionConfig(
+                backtester=self._normalize_runner(self.runner),
+                split=self.split,
+            )
+        return self
+
+    @staticmethod
+    def _normalize_runner(runner: str) -> str:
+        return runner.rsplit(".", 1)[-1] if runner else ""
 
     @classmethod
     def from_yaml(cls, path: str | Path) -> ExperimentConfig:

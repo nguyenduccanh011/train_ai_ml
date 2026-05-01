@@ -9,6 +9,7 @@ import pandas as pd
 from src.backtest.defaults import DEFAULT_PARAMS
 from src.backtest.indicators import compute_indicators, detect_trend_strength, get_regime_adapter
 from src.components.base import BarContext, Position, Trade
+from src.components.fusion.strategies import build_exit_strategies
 from src.components.fusion.strategies.core import (
     AdaptiveTrailing,
     AtrStopLoss,
@@ -33,6 +34,7 @@ _track_result = _sim_utils.track_result
 
 if TYPE_CHECKING:
     from src.components.fusion.base import FusionStrategy
+    from src.pipeline.config import StrategyV3Config
 
 
 DEFAULT_V22_MODS: dict[str, bool] = {
@@ -169,14 +171,29 @@ def _run_exit_sequence(
     return None
 
 
-def _make_force_exit_strategies() -> list[FusionStrategy]:
+def _make_force_exit_strategies(
+    strategy_v3: StrategyV3Config | None = None,
+) -> list[FusionStrategy]:
+    if strategy_v3 is not None and strategy_v3.force_exit_rules:
+        return build_exit_strategies(strategy_v3.force_exit_rules)
     return [
         HardStopExit(),
         V22HardCap(),
     ]
 
 
-def _make_active_exit_strategies(enable_model_b_exit: bool = False) -> list[FusionStrategy]:
+def _make_active_exit_strategies(
+    enable_model_b_exit: bool = False,
+    strategy_v3: StrategyV3Config | None = None,
+) -> list[FusionStrategy]:
+    if strategy_v3 is not None and strategy_v3.active_exit_rules:
+        rule_names = list(strategy_v3.active_exit_rules)
+        if enable_model_b_exit and "model_b_exit" not in rule_names:
+            rule_names.insert(0, "model_b_exit")
+        if not enable_model_b_exit:
+            rule_names = [name for name in rule_names if name != "model_b_exit"]
+        return build_exit_strategies(rule_names)
+
     strategies: list[FusionStrategy] = []
     if enable_model_b_exit:
         strategies.append(ModelBExit())
@@ -236,11 +253,15 @@ def run_v22(
     tax: float = 0.001,
     record_trades: bool = True,
     enable_model_b_exit: bool = False,
+    strategy_v3: StrategyV3Config | None = None,
 ) -> list[Trade]:
     del data_dir, first_test_year, last_test_year, train_years
     active_mods = {**DEFAULT_V22_MODS, **(mods or {})}
     active_params = {**V22_DEFAULTS, **(params or {})}
     cache = prediction_cache or _build_prediction_cache(symbols, device=device)
+
+    force_exit_strategies = _make_force_exit_strategies(strategy_v3)
+    active_exit_strategies = _make_active_exit_strategies(enable_model_b_exit, strategy_v3)
 
     all_trades: list[Trade] = []
     for item in cache:
@@ -256,6 +277,8 @@ def run_v22(
                 tax=tax,
                 record_trades=record_trades,
                 enable_model_b_exit=enable_model_b_exit,
+                force_exit_strategies=force_exit_strategies,
+                active_exit_strategies=active_exit_strategies,
             )
         )
     return all_trades
@@ -271,6 +294,8 @@ def _run_cache_item(
     tax: float,
     record_trades: bool,
     enable_model_b_exit: bool = False,
+    force_exit_strategies: list[FusionStrategy] | None = None,
+    active_exit_strategies: list[FusionStrategy] | None = None,
 ) -> list[Trade]:  # noqa: PLR0912, PLR0915, C901
     y_pred = np.asarray(item["y_pred"])
     y_pred_exit = (
@@ -292,8 +317,10 @@ def _run_cache_item(
     min_hold = MinHoldProtection()
     signal_hold_guard = V19SignalHoldGuard()
     long_horizon_carry = LongHorizonCarry()
-    force_exit_strategies = _make_force_exit_strategies()
-    active_exit_strategies = _make_active_exit_strategies(enable_model_b_exit)
+    if force_exit_strategies is None:
+        force_exit_strategies = _make_force_exit_strategies()
+    if active_exit_strategies is None:
+        active_exit_strategies = _make_active_exit_strategies(enable_model_b_exit)
 
     trades: list[Trade] = []
     counters: Counter[str] = Counter()

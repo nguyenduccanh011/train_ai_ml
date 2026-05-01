@@ -12,6 +12,7 @@ from src.components.fusion.helpers import (
     detect_trend_strength,
     get_regime_adapter,
 )
+from src.components.fusion.strategies import build_exit_strategies
 from src.components.fusion.strategies.core import (
     AdaptiveTrailing,
     AtrStopLoss,
@@ -36,6 +37,7 @@ _track_result = _sim_utils.track_result
 
 if TYPE_CHECKING:
     from src.components.fusion.base import FusionStrategy
+    from src.pipeline.config import StrategyV3Config
 
 
 DEFAULT_V19_MODS: dict[str, bool] = {
@@ -135,7 +137,20 @@ def _run_exit_sequence(
     return None
 
 
-def _make_force_exit_strategies(enable_model_b_exit: bool = False) -> list[FusionStrategy]:
+def _make_force_exit_strategies(
+    enable_model_b_exit: bool = False,
+    strategy_v3: StrategyV3Config | None = None,
+) -> list[FusionStrategy]:
+    if strategy_v3 is not None and strategy_v3.force_exit_rules:
+        rule_names = list(strategy_v3.force_exit_rules)
+        if enable_model_b_exit and "model_b_exit" not in rule_names:
+            rule_names.insert(
+                1, "model_b_exit"
+            )  # after hard_stop_exit, before remaining force exits
+        if not enable_model_b_exit:
+            rule_names = [name for name in rule_names if name != "model_b_exit"]
+        return build_exit_strategies(rule_names)
+
     strategies: list[FusionStrategy] = [HardStopExit()]
     if enable_model_b_exit:
         strategies.append(ModelBExit())
@@ -150,7 +165,11 @@ def _make_force_exit_strategies(enable_model_b_exit: bool = False) -> list[Fusio
     return strategies
 
 
-def _make_continuation_exit_strategies() -> list[FusionStrategy]:
+def _make_continuation_exit_strategies(
+    strategy_v3: StrategyV3Config | None = None,
+) -> list[FusionStrategy]:
+    if strategy_v3 is not None and strategy_v3.active_exit_rules:
+        return build_exit_strategies(strategy_v3.active_exit_rules)
     return [
         PeakProtectEma8Streak(),
         MaCrossHybridExit(),
@@ -200,10 +219,14 @@ def run_v19_3(
     tax: float = 0.001,
     record_trades: bool = True,
     enable_model_b_exit: bool = False,
+    strategy_v3: StrategyV3Config | None = None,
 ) -> list[Trade]:
     del data_dir, first_test_year, last_test_year, train_years
     active_mods = {**DEFAULT_V19_MODS, **(mods or {})}
     cache = prediction_cache or _build_prediction_cache(symbols, device=device)
+
+    force_exit_strategies = _make_force_exit_strategies(enable_model_b_exit, strategy_v3)
+    continuation_exit_strategies = _make_continuation_exit_strategies(strategy_v3)
 
     all_trades: list[Trade] = []
     for item in cache:
@@ -218,6 +241,8 @@ def run_v19_3(
                 tax=tax,
                 record_trades=record_trades,
                 enable_model_b_exit=enable_model_b_exit,
+                force_exit_strategies=force_exit_strategies,
+                continuation_exit_strategies=continuation_exit_strategies,
             )
         )
     return all_trades
@@ -232,6 +257,8 @@ def _run_cache_item(
     tax: float,
     record_trades: bool,
     enable_model_b_exit: bool = False,
+    force_exit_strategies: list[FusionStrategy] | None = None,
+    continuation_exit_strategies: list[FusionStrategy] | None = None,
 ) -> list[Trade]:  # noqa: PLR0912, PLR0915, C901
     y_pred = np.asarray(item["y_pred"])
     y_pred_exit = (
@@ -251,8 +278,10 @@ def _run_cache_item(
     entry_strategy = V19EntryCascade()
     min_hold = MinHoldProtection()
     signal_hold_guard = V19SignalHoldGuard()
-    force_exit_strategies = _make_force_exit_strategies(enable_model_b_exit)
-    continuation_exit_strategies = _make_continuation_exit_strategies()
+    if force_exit_strategies is None:
+        force_exit_strategies = _make_force_exit_strategies(enable_model_b_exit)
+    if continuation_exit_strategies is None:
+        continuation_exit_strategies = _make_continuation_exit_strategies()
 
     trades: list[Trade] = []
     counters: Counter[str] = Counter()

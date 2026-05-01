@@ -8,6 +8,7 @@ from src.components.base import Trade
 from src.components.runners._lineage_v34 import run_lineage
 from src.components.runners.runner_registry import RUNNER_DEFS
 from src.components.runners.v34_runner import trades_to_v34_dataframe
+from src.pipeline.config import StrategyV3Config
 
 _DEF = RUNNER_DEFS["v35b"]
 
@@ -28,6 +29,7 @@ def run_v35b(
     tax: float = 0.001,
     record_trades: bool = True,
     enable_model_b_exit: bool = False,
+    strategy_v3: StrategyV3Config | None = None,
 ) -> list[Trade]:
     return run_lineage(
         _DEF,
@@ -45,6 +47,7 @@ def run_v35b(
         tax=tax,
         record_trades=record_trades,
         enable_model_b_exit=enable_model_b_exit,
+        strategy_v3=strategy_v3,
     )
 
 

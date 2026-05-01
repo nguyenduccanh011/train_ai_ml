@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from src.pipeline.config import ExperimentConfig
 
 VALID_TARGET_TYPES = {"trend_regime", "early_wave", "early_wave_v2", "early_wave_dual"}
-EXIT_LABEL_TARGETS = {"early_wave_dual"}
+EXIT_LABEL_TARGETS = {"early_wave", "early_wave_v2", "early_wave_dual"}
 
 
 @dataclass
@@ -45,6 +45,7 @@ def validate_config(cfg: ExperimentConfig) -> list[ValidationError]:
         )
 
     # 2. Entry model type
+    from src.components.exit_models.registry import list_exit_models
     from src.components.models.registry import list_models
 
     valid_models = set(list_models())
@@ -53,6 +54,18 @@ def validate_config(cfg: ExperimentConfig) -> list[ValidationError]:
             ValidationError(
                 "components.entry_model.type",
                 f"'{cfg.entry_model_type()}' is not registered. Valid: {sorted(valid_models)}",
+            )
+        )
+
+    valid_exit_models = set(list_exit_models())
+    if (
+        cfg.components.exit_model.enabled
+        and cfg.components.exit_model.type not in valid_exit_models
+    ):
+        errors.append(
+            ValidationError(
+                "components.exit_model.type",
+                f"'{cfg.components.exit_model.type}' is not registered. Valid: {sorted(valid_exit_models)}",
             )
         )
 
@@ -80,6 +93,40 @@ def validate_config(cfg: ExperimentConfig) -> list[ValidationError]:
         )
     if s.train_years < 1:
         errors.append(ValidationError("split.train_years", "must be >= 1"))
+
+    # 6. Fusion rule names
+    for group_name in ("entry", "force_exit", "active_exit", "hold"):
+        for idx, item in enumerate(getattr(cfg.fusion, group_name)):
+            if not item.name.strip():
+                errors.append(
+                    ValidationError(
+                        f"fusion.{group_name}.{idx}.name",
+                        "must not be empty",
+                    )
+                )
+
+    # 7. V3 strategy rule names
+    import src.components.fusion.strategies  # noqa: F401 — triggers register_strategy() calls
+    from src.components.fusion.registry import list_strategies
+
+    valid_strategies = set(list_strategies())
+    assert valid_strategies, "strategy registry empty — import of fusion.strategies may have failed"
+    if cfg.strategy_v3 is not None:
+        for group_name in (
+            "entry_rules",
+            "hold_rules",
+            "exit_rules",
+            "force_exit_rules",
+            "active_exit_rules",
+        ):
+            for idx, name in enumerate(getattr(cfg.strategy_v3, group_name)):
+                if name not in valid_strategies:
+                    errors.append(
+                        ValidationError(
+                            f"strategy_v3.{group_name}.{idx}",
+                            f"'{name}' is not registered. Valid: {sorted(valid_strategies)}",
+                        )
+                    )
 
     return errors
 

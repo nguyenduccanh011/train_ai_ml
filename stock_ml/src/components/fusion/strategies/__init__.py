@@ -1,13 +1,19 @@
-from src.components.fusion.registry import register_strategy
+from src.components.fusion.base import FusionStrategy
+from src.components.fusion.registry import get_strategy, register_strategy
 from src.components.fusion.strategies.core import (
     AdaptiveTrailing,
     AtrStopLoss,
+    EarlyLossCutExit,
+    FastExitLossLegacy,
+    HapPreemptExit,
     HardStopExit,
     MaCrossHybridExit,
     MinHoldProtection,
+    ModelBExit,
     PeakProtectDist,
     PeakProtectEma8Streak,
     ProfitLock,
+    SignalHardCapExit,
     V22FastExit,
     V22HardCap,
     ZombieExit,
@@ -21,7 +27,12 @@ register_strategy("rule_signal_exit", "exit_override", RuleSignalExit)
 register_strategy("v19_entry_cascade", "entry", V19EntryCascade)
 register_strategy("v19_signal_hold_guard", "hold", V19SignalHoldGuard)
 register_strategy("hard_stop_exit", "exit_override", HardStopExit, always_on=True)
+register_strategy("model_b_exit", "exit_override", ModelBExit)
+register_strategy("signal_hard_cap", "exit_override", SignalHardCapExit)
+register_strategy("fast_exit_loss", "exit_override", FastExitLossLegacy)
+register_strategy("early_loss_cut", "exit_override", EarlyLossCutExit)
 register_strategy("v22_hard_cap", "exit_override", V22HardCap)
+register_strategy("hap_preempt", "exit_override", HapPreemptExit)
 register_strategy("v22_fast_exit", "exit_override", V22FastExit)
 register_strategy("atr_stop_loss", "exit_override", AtrStopLoss, always_on=True)
 register_strategy("peak_protect_dist", "exit_override", PeakProtectDist, always_on=True)
@@ -38,8 +49,12 @@ register_strategy("long_horizon_carry", "hold", LongHorizonCarry)
 __all__ = [
     "AdaptiveTrailing",
     "AtrStopLoss",
+    "EarlyLossCutExit",
+    "FastExitLossLegacy",
+    "HapPreemptExit",
     "HardStopExit",
     "LongHorizonCarry",
+    "ModelBExit",
     "MaCrossHybridExit",
     "MinHoldProtection",
     "PeakProtectDist",
@@ -47,9 +62,18 @@ __all__ = [
     "ProfitLock",
     "RuleSignalEntry",
     "RuleSignalExit",
+    "SignalHardCapExit",
     "V19EntryCascade",
     "V19SignalHoldGuard",
     "V22FastExit",
     "V22HardCap",
     "ZombieExit",
+    "build_exit_strategies",
 ]
+
+
+def build_exit_strategies(rule_names: list[str]) -> list[FusionStrategy]:
+    strategies: list[FusionStrategy] = []
+    for name in rule_names:
+        strategies.append(get_strategy(name))
+    return strategies

@@ -359,9 +359,9 @@ def cmd_add(args):
     print(f"  Color: {new_model['color']}")
     print(f"  Strategy: {new_model['strategy']}")
     print("\n  Next steps:")
-    print(f"    1. Create backtest function in experiments/run_{args.version}.py")
-    print(f"    2. Run: python experiments/run_{args.version}.py")
-    print(f"    3. Export: python -m src.export.unified_export --versions {args.version}")
+    print(f"    1. Add YAML config: config/experiments/champions/{args.version}.yaml")
+    print(f"    2. Run:  python -m stock_ml run champions/{args.version} --device cpu")
+    print(f"    3. Export: python -m stock_ml export --version {args.version}")
     print("    4. Open dashboard.html — model appears automatically!")
 
 

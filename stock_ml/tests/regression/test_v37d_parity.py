@@ -17,10 +17,10 @@ GOLDEN_META = GOLDEN_DIR / "trades_v37d.meta.json"
 
 @pytest.mark.regression
 def test_v37d_matches_golden() -> None:
-    from run_pipeline import _build_predictions
     from src.components.runners import run_v37d, trades_to_v37d_dataframe
     from src.config_loader import get_model_config
     from src.env import resolve_data_dir
+    from src.pipeline.build_predictions import _build_predictions
 
     if not GOLDEN_CSV.exists() or not GOLDEN_META.exists():
         pytest.fail(f"Golden artefacts missing: {GOLDEN_CSV} / {GOLDEN_META}")
@@ -59,5 +59,5 @@ def test_v37d_matches_golden() -> None:
         df_new[col] = df_new[col].astype(str)
         df_gold[col] = df_gold[col].astype(str)
 
-    assert (df_new["exit_reason"] == "model_b_exit").sum() == 0
+    assert (df_new["exit_reason"] == "exit_model").sum() == 0
     pd.testing.assert_frame_equal(df_new, df_gold, check_exact=True)

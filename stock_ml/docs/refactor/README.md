@@ -32,6 +32,11 @@ Bộ tài liệu refactor cho dự án Stock ML Trading System v2.0.
    - Execution plan từng bước (commit-by-commit)
    - Rollback plan
 
+5. **[ENTRY_EXIT_RESEARCH_REFACTOR_PLAN.md](ENTRY_EXIT_RESEARCH_REFACTOR_PLAN.md)** — Refactor entry/exit research sau v2 foundation
+   - ExitModel component, fusion exit policies, matrix entry × exit
+   - Artifact/ranking để promote champion
+   - Trạng thái Phase 0–8 và việc còn lại
+
 ## Quick reference
 
 ### Mục tiêu refactor
@@ -39,18 +44,32 @@ Bộ tài liệu refactor cho dự án Stock ML Trading System v2.0.
 - 60 strategy file rời rạc → composable components
 - Khó thử tổ hợp → grid-search Entry × Exit × Feature × Fusion qua YAML
 
-### Status hiện tại (2026-04-28)
-- Phase 0: seeds, CPU golden baseline, tooling, architecture lock và branch policy đã chốt.
-- Phase 1: base interfaces, feature blocks, targets và model wrappers đã port.
-- Phase 2.1-2.4f: fusion inventory/interface + parity runners cho 11 champion đã xong.
-- Phase 3: pipeline orchestrator (`Pipeline`, `ExperimentConfig`, `PredictionCacheManager`, `expand_matrix`, CLI `python -m stock_ml`) đã hoàn thành.
-- Phase 4: Legacy adapter (`LegacyVersionAdapter`), migration tool (`migrate-legacy`), deprecate `run_pipeline.py` — đã hoàn thành.
-- Phase 5: Smoke tests (10 legacy + property-based fusion), benchmark script, 5 HOW_TO guides — đã hoàn thành.
-- Phase 6: Dashboard export CLI (`python -m stock_ml export`), GitHub Actions CI/CD (4 jobs: lint/typecheck/test-unit/regression), cleanup archive/ (~128MB freed) — đã hoàn thành.
-- Next: Tag `v2.0`, merge về main (khi có explicit instruction).
+### Status hiện tại (2026-05-01)
+- Foundation v2 đã có: component folders, champion runners, `Pipeline`, `ExperimentConfig`, prediction cache, matrix expander, CLI `python -m stock_ml`.
+- Entry/exit research refactor đã triển khai đến quick matrix:
+  - EntryModel contract/registry smoke đã có.
+  - ExitModel component có `null`, `lightgbm`, `xgboost`, `catboost`.
+  - Matrix `quick_entry_exit` hiện expand `2 features × 2 entry models × 2 exit configs = 8 experiments`.
+  - Artifact/ranking matrix có `metrics.json`, `ranking_row.json`, `config.resolved.yaml`, `compare-matrix`.
+  - Winner quick matrix đã promote thành champion `v22_with_exit_model`; champion hash regression hiện pass.
+- Partial/còn lại:
+  - Exit-rule validation sâu (`signals.exit_model.type: null` + exit-model rule, exit model bật nhưng strategy không consume signal) chưa hoàn chỉnh.
+  - `predictions_meta.json`, cache hit-rate metadata và parallel matrix execution chưa có.
+  - Một phần exit logic legacy vẫn nằm trong champion runners/backtest legacy để giữ parity.
 
-### Champion versions (11)
-v22, v32, v34, v35b, v37a, v37a_exit, v37d, v39d, v42_a, v19_3, rule
+### Exit terminology
+
+| Thuật ngữ | Ý nghĩa |
+|-----------|---------|
+| `exit_model` | Model supervised dự đoán exit signal riêng (`signals.exit_model`). |
+| `strategy.exit_rules` | Rule thoát chạy trong strategy layer, ví dụ `hard_stop`, `v22_fast_exit`, `ma_cross_hybrid_exit`. |
+| `v22` | Champion baseline không train/consume exit model, nhưng vẫn dùng rule exits. |
+| `v22_with_exit_model` | Champion có exit model cộng với rule exits an toàn. |
+
+Không dùng `hybrid` đơn lẻ cho artifact mới; tên này dễ nhầm với `ma_cross_hybrid_exit` legacy. Nếu cần mô tả combo exit model + rule, dùng `exit_model_plus_rules`.
+
+### Champion versions
+v22, v22_with_exit_model, v32, v34, v35b, v37a, v37a_exit, v37d, v39d, v42_a, v19_3, rule
 
 ### Timeline
 8 tuần, full-time, solo dev.
@@ -72,7 +91,7 @@ Bắt buộc làm trước Phase 1:
 
 ## Bugs phát hiện
 
-- **[EXIT_MODEL_BUG.md](EXIT_MODEL_BUG.md)** — Exit model trained nhưng pipeline drop output (2026-04-27). Phase 2.4 preserve behavior để match golden; Model B fix tách sau parity.
+- **[EXIT_MODEL_BUG.md](EXIT_MODEL_BUG.md)** — Exit model trained nhưng pipeline drop output (2026-04-27). Phase 2.4 preserve behavior để match golden; exit-model fix tách sau parity.
 
 ## Support docs
 
@@ -82,6 +101,7 @@ Bắt buộc làm trước Phase 1:
 - ✅ `HOW_TO_ADD_ENTRY_MODEL.md` — Guide thêm entry model (Phase 5.3)
 - ✅ `HOW_TO_PORT_LEGACY_VERSION.md` — Guide promote legacy version (Phase 5.3)
 - ✅ `HOW_TO_RUN_MATRIX.md` — Guide grid search (Phase 5.3)
+- ✅ `ENTRY_EXIT_RESEARCH_REFACTOR_PLAN.md` — Kế hoạch refactor entry/exit research; Phase 0/1/2/4/5/6/7 done cho quick-matrix scope, Phase 3/8 partial
 - `BENCHMARK.md` — Performance benchmarks (chạy bằng `python -m stock_ml benchmark`)
 
 ## Diary template

@@ -4,12 +4,12 @@ from src.components.fusion.strategies.core import (
     AdaptiveTrailing,
     AtrStopLoss,
     EarlyLossCutExit,
+    ExitModelExit,
     FastExitLossLegacy,
     HapPreemptExit,
     HardStopExit,
     MaCrossHybridExit,
     MinHoldProtection,
-    ModelBExit,
     PeakProtectDist,
     PeakProtectEma8Streak,
     ProfitLock,
@@ -27,7 +27,7 @@ register_strategy("rule_signal_exit", "exit_override", RuleSignalExit)
 register_strategy("v19_entry_cascade", "entry", V19EntryCascade)
 register_strategy("v19_signal_hold_guard", "hold", V19SignalHoldGuard)
 register_strategy("hard_stop_exit", "exit_override", HardStopExit, always_on=True)
-register_strategy("model_b_exit", "exit_override", ModelBExit)
+register_strategy("exit_model", "exit_override", ExitModelExit)
 register_strategy("signal_hard_cap", "exit_override", SignalHardCapExit)
 register_strategy("fast_exit_loss", "exit_override", FastExitLossLegacy)
 register_strategy("early_loss_cut", "exit_override", EarlyLossCutExit)
@@ -54,7 +54,7 @@ __all__ = [
     "HapPreemptExit",
     "HardStopExit",
     "LongHorizonCarry",
-    "ModelBExit",
+    "ExitModelExit",
     "MaCrossHybridExit",
     "MinHoldProtection",
     "PeakProtectDist",

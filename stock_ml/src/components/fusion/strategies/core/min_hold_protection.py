@@ -21,7 +21,7 @@ _BYPASS_REASONS: frozenset[str] = frozenset(
         "fast_loss_cut",
         "signal_hard_cap",
         "fast_exit_loss",
-        "model_b_exit",
+        "exit_model",
     }
 )
 

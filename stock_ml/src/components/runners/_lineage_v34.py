@@ -62,7 +62,7 @@ def run_lineage(
     commission: float = 0.0015,
     tax: float = 0.001,
     record_trades: bool = True,
-    enable_model_b_exit: bool = False,
+    enable_exit_model: bool = False,
     strategy_v3: StrategyV3Config | None = None,
 ) -> list[Trade]:
     del data_dir, first_test_year, last_test_year, train_years
@@ -91,7 +91,7 @@ def run_lineage(
         mods=active_mods,
         params=active_params,
         entry_reason=defn.entry_reason,
-        enable_model_b_exit=enable_model_b_exit,
+        enable_exit_model=enable_exit_model,
     )
 
 

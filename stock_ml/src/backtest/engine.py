@@ -325,7 +325,7 @@ def backtest_unified(y_pred, returns, df_test, feature_cols, y_pred_exit=None, *
         else:
             ha_arrays[c] = np.zeros(n)
 
-    MODEL_B_MIN_HOLD = cfg.get("model_b_min_hold", 3)
+    EXIT_MODEL_MIN_HOLD = cfg.get("exit_model_min_hold", 3)
 
     # --- State ---
     equity = np.zeros(n)
@@ -968,12 +968,12 @@ def backtest_unified(y_pred, returns, df_test, feature_cols, y_pred_exit=None, *
             # Model B exit — separate exit model override (runs after hard_stop only)
             elif (
                 y_pred_exit is not None
-                and hold_days >= MODEL_B_MIN_HOLD
+                and hold_days >= EXIT_MODEL_MIN_HOLD
                 and y_pred_exit[i - 1] == 1
             ):
                 new_position = 0
-                exit_reason = "model_b_exit"
-                counters["model_b_exit"] += 1
+                exit_reason = "exit_model"
+                counters["exit_model"] += 1
 
             # V38b: Stall-exit — giu N ngay nhung max profit qua thap, dang lo nho -> chot
             elif (
@@ -1615,7 +1615,7 @@ def backtest_unified(y_pred, returns, df_test, feature_cols, y_pred_exit=None, *
                     "signal_hard_cap",
                     "fast_exit_loss",
                     "v31_hap_exit",
-                    "model_b_exit",
+                    "exit_model",
                 )
                 and hold_days < extended_min_hold
             ):

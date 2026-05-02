@@ -34,13 +34,16 @@ def validate_config(cfg: ExperimentConfig) -> list[ValidationError]:
     errors: list[ValidationError] = []
 
     # 1. Strategy runner
+    from src.components.runners.generic_fusion import FUSION_RUNNER_DEFS
+    from src.components.runners.runner_registry import RUNNER_DEFS
     from src.pipeline.orchestrator import CHAMPION_RUNNER_MAP
 
-    if cfg.strategy not in CHAMPION_RUNNER_MAP:
+    valid_runners = set(CHAMPION_RUNNER_MAP) | set(FUSION_RUNNER_DEFS) | set(RUNNER_DEFS)
+    if cfg.strategy not in valid_runners:
         errors.append(
             ValidationError(
                 "strategy",
-                f"'{cfg.strategy}' has no registered runner. Valid: {sorted(CHAMPION_RUNNER_MAP)}",
+                f"'{cfg.strategy}' has no registered runner. Valid: {sorted(valid_runners)}",
             )
         )
 
@@ -52,7 +55,7 @@ def validate_config(cfg: ExperimentConfig) -> list[ValidationError]:
     if cfg.entry_model_type() not in valid_models:
         errors.append(
             ValidationError(
-                "components.entry_model.type",
+                "signals.entry_model.type",
                 f"'{cfg.entry_model_type()}' is not registered. Valid: {sorted(valid_models)}",
             )
         )

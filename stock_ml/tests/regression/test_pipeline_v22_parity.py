@@ -18,9 +18,9 @@ CHAMPION_YAML = REPO_ROOT / "stock_ml" / "config" / "experiments" / "champions" 
 
 @pytest.mark.regression
 def test_v22_via_pipeline_matches_golden() -> None:
-    from run_pipeline import _build_predictions
     from src.env import resolve_data_dir
     from src.pipeline import ExperimentConfig, Pipeline
+    from src.pipeline.build_predictions import _build_predictions
 
     if not GOLDEN_CSV.exists() or not GOLDEN_META.exists():
         pytest.fail(f"Golden artefacts missing: {GOLDEN_CSV} / {GOLDEN_META}")

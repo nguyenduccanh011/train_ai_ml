@@ -1,22 +1,21 @@
 # Golden Baseline — 11 Champion Versions
 
-Phase 0.2 deliverable.
+Phase 0.2 deliverable. Phase 7 giữ golden format hiện tại; checksum có thể regenerate khi CSV schema thay đổi, nhưng phải giữ parity hành vi (trade count/PnL tương đương).
 
 ## Reproduction
 
 ```bash
-PYTHONHASHSEED=42 python run_pipeline.py \
-  --version v22 \
-  --compare v32,v34,v35b,v37a,v37a_exit,v37d,v39d,v42_a,v19_3,rule \
-  --device cpu --force --no-export
+python -m pytest stock_ml/tests/regression/test_champions.py -q
 ```
 
-Sau đó so checksums:
+Sau đó so checksums nếu cần kiểm tra file trực tiếp:
 
 ```bash
-cd tests/regression/golden
+cd stock_ml/tests/regression/golden
 sha256sum -c checksums.txt
 ```
+
+Lưu ý: `trades_v22_with_exit_model.csv` được regression bằng checksum CSV; `.meta.json` có thể generate sau nếu cần parity metadata riêng.
 
 ## Tại sao CPU, không GPU
 

@@ -954,10 +954,10 @@ config/experiments/champions/v50_sentiment.yaml
 config/experiments/matrix/q3_2026.yaml
 
 # Run
-python -m stock_ml run-matrix matrix/q3_2026 --parallel 4
+python -m stock_ml run-matrix matrix/q3_2026
 
-# Compare
-python -m stock_ml compare matrix/q3_2026/* --top 10
+# Compare saved artifacts
+python -m stock_ml compare-matrix results/experiments/q3_2026
 ```
 
 ---

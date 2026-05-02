@@ -1,11 +1,10 @@
-"""Benchmark: compare runtime of new Pipeline vs legacy run_pipeline for champion versions.
+"""Benchmark champion pipeline runtime.
 
 Usage:
     python -m stock_ml benchmark [--versions v22,v34] [--output benchmark.json]
     python stock_ml/scripts/benchmark.py  (direct run)
 
 Reports wall-clock time for prediction-cache build + backtest per champion.
-Goal: new pipeline must be < 20% slower than legacy (roadmap Phase 5.2 criterion).
 """
 
 from __future__ import annotations
@@ -62,38 +61,6 @@ def _bench_new_pipeline(version: str, symbols: list[str], *, device: str = "cpu"
     return time.perf_counter() - t0
 
 
-def _bench_legacy(version: str, symbols: list[str], *, device: str = "cpu") -> float:
-    """Return elapsed seconds for legacy run_pipeline path (prediction build + backtest)."""
-    import warnings
-
-    from run_pipeline import _build_predictions
-
-    meta = _load_meta(version)
-
-    t0 = time.perf_counter()
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", DeprecationWarning)
-        cache = _build_predictions(
-            symbols,
-            meta["feature_set"],
-            meta["target_config"],
-            device,
-            model_type=meta["model_type"],
-            exit_model_cfg=meta.get("exit_model_config"),
-        )
-
-    # Dispatch legacy backtest (approximate — uses adapter)
-    from src.pipeline.legacy_adapter import LEGACY_STRATEGY_MAP, LegacyVersionAdapter
-
-    if version in LEGACY_STRATEGY_MAP:
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", UserWarning)
-            adapter = LegacyVersionAdapter(version)
-        adapter.run(symbols=symbols, device=device, prediction_cache=cache)
-
-    return time.perf_counter() - t0
-
-
 def run_benchmark(
     versions: list[str],
     *,
@@ -125,45 +92,26 @@ def run_benchmark(
             t_new = -1.0
             print(f"  NEW pipeline ERROR: {e}")
 
-        try:
-            t_legacy = _bench_legacy(version, symbols, device=device)
-        except Exception as e:
-            t_legacy = -1.0
-            print(f"  LEGACY ERROR: {e}")
-
-        delta_pct = ((t_new - t_legacy) / t_legacy * 100) if t_legacy > 0 else float("nan")
-        status = "OK" if abs(delta_pct) < 20 else ("FAST" if delta_pct < 0 else "SLOW")
-
         row = {
             "version": version,
-            "new_s": round(t_new, 2),
-            "legacy_s": round(t_legacy, 2),
-            "delta_pct": round(delta_pct, 1),
-            "status": status,
+            "pipeline_s": round(t_new, 2),
+            "status": "OK" if t_new >= 0 else "ERROR",
             "n_symbols": len(symbols),
         }
         results.append(row)
-        print(f"  new={t_new:.1f}s  legacy={t_legacy:.1f}s  delta={delta_pct:+.1f}%  [{status}]")
+        print(f"  pipeline={t_new:.1f}s  [{row['status']}]")
 
     return results
 
 
 def _print_table(results: list[dict[str, Any]]) -> None:
-    header = f"{'Version':<12} {'New(s)':>7} {'Legacy(s)':>10} {'Delta%':>7} {'Status':<8}"
+    header = f"{'Version':<12} {'Pipeline(s)':>11} {'Status':<8}"
     print("\n" + "=" * len(header))
     print(header)
     print("-" * len(header))
     for r in results:
-        print(
-            f"{r['version']:<12} {r['new_s']:>7.1f} {r['legacy_s']:>10.1f} "
-            f"{r['delta_pct']:>+7.1f}  {r['status']:<8}"
-        )
+        print(f"{r['version']:<12} {r['pipeline_s']:>11.1f}  {r['status']:<8}")
     print("=" * len(header))
-    slow = [r for r in results if r["status"] == "SLOW"]
-    if slow:
-        print(f"WARNING: {len(slow)} version(s) > 20% slower: {[r['version'] for r in slow]}")
-    else:
-        print("All benchmarked versions within 20% threshold.")
 
 
 def main() -> None:

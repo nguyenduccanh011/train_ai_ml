@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from functools import partial
 from inspect import signature
 from typing import Any
 
@@ -20,37 +21,16 @@ from src.pipeline.trainer import build_prediction_cache
 
 CHAMPION_RUNNER_MAP: dict[str, str] = {
     "rule": "src.components.runners.rule_runner",
-    "v19_3": "src.components.runners.v19_3_runner",
-    "v22": "src.components.runners.v22_runner",
-    "v22_exit_b": "src.components.runners.v22_runner",
-    "v32": "src.components.runners.v32_runner",
     "v34": "src.components.runners.v34_runner",
-    "v35b": "src.components.runners.v35b_runner",
-    "v37a": "src.components.runners.v37a_runner",
-    "v37a_exit": "src.components.runners.v37a_exit_runner",
-    "v37d": "src.components.runners.v37d_runner",
-    "v39d": "src.components.runners.v39d_runner",
-    "v42_a": "src.components.runners.v42_a_runner",
 }
 
 CHAMPION_RUNNER_FUNCTION_MAP: dict[str, str] = {
     "rule": "run_rule_baseline",
-    "v22_exit_b": "run_v22",
 }
 
 CHAMPION_DF_CONVERTER_MAP: dict[str, str] = {
     "rule": "trades_to_dataframe",
-    "v19_3": "trades_to_v19_3_dataframe",
-    "v22": "trades_to_v22_dataframe",
-    "v22_exit_b": "trades_to_v22_dataframe",
-    "v32": "trades_to_v32_dataframe",
     "v34": "trades_to_v34_dataframe",
-    "v35b": "trades_to_v35b_dataframe",
-    "v37a": "trades_to_v37a_dataframe",
-    "v37a_exit": "trades_to_v37a_exit_dataframe",
-    "v37d": "trades_to_v37d_dataframe",
-    "v39d": "trades_to_v39d_dataframe",
-    "v42_a": "trades_to_v42_a_dataframe",
 }
 
 
@@ -116,8 +96,8 @@ class Pipeline:
             "params": self.cfg.params or None,
             "strategy_v3": self.cfg.strategy_v3,
         }
-        if self.cfg.components.exit_model.enabled or self.cfg.enable_model_b_exit:
-            runner_kwargs["enable_model_b_exit"] = True
+        if self.cfg.components.exit_model.enabled:
+            runner_kwargs["enable_exit_model"] = True
 
         allowed_kwargs = set(signature(runner_fn).parameters)
         runner_kwargs = {k: v for k, v in runner_kwargs.items() if k in allowed_kwargs}
@@ -172,11 +152,29 @@ class Pipeline:
     def _resolve_runner(self):
         import importlib
 
+        from src.components.runners._lineage_v34 import run_lineage
+        from src.components.runners.generic_fusion import (
+            FUSION_RUNNER_DEFS,
+            run_fusion,
+            trades_to_v19_3_dataframe,
+            trades_to_v22_dataframe,
+        )
+        from src.components.runners.runner_registry import RUNNER_DEFS
+        from src.components.runners.v34_runner import trades_to_v34_dataframe
+
         strategy = self.cfg.strategy
+        if strategy in FUSION_RUNNER_DEFS:
+            defn = FUSION_RUNNER_DEFS[strategy]
+            converter = (
+                trades_to_v19_3_dataframe if strategy == "v19_3" else trades_to_v22_dataframe
+            )
+            return partial(run_fusion, defn), converter
+        if strategy in RUNNER_DEFS:
+            return partial(run_lineage, RUNNER_DEFS[strategy]), trades_to_v34_dataframe
         if strategy not in CHAMPION_RUNNER_MAP:
+            available = [*CHAMPION_RUNNER_MAP, *FUSION_RUNNER_DEFS, *RUNNER_DEFS]
             raise ValueError(
-                f"No component runner registered for strategy '{strategy}'. "
-                f"Available: {list(CHAMPION_RUNNER_MAP)}"
+                f"No component runner registered for strategy '{strategy}'. Available: {available}"
             )
 
         module = importlib.import_module(CHAMPION_RUNNER_MAP[strategy])

@@ -324,14 +324,14 @@ src/components/exit_models/
 └──────────────────────┬──────────────────────────────┘
                        ▼
 ┌─────────────────────────────────────────────────────┐
-│  Exit Override Layer                                 │
+│  Exit Rules Layer                                    │
 │  (force exit before natural signal/end)              │
 │  Ordered by priority:                                │
 │  1. emergency_exit (max_loss hit)                    │
 │  2. hap_preempt (hardcap after profit)              │
 │  3. early_loss_cut                                   │
-│  4. signal_exit_defer (defer ML exit signal)         │
-│  5. ml_exit_model (Model B prediction)               │
+│  4. signal_exit_defer (defer exit-model signal)      │
+│  5. exit_model (exit-model prediction)               │
 │  6. trailing_stop                                    │
 └──────────────────────┬──────────────────────────────┘
                        ▼
@@ -349,9 +349,9 @@ class BarContext:
     """Everything a fusion strategy needs at one bar."""
     bar_idx: int
     df_test: pd.DataFrame             # full test data
-    entry_signal: int                 # from Model A (-1, 0, 1)
-    entry_proba: np.ndarray | None    # from Model A
-    exit_signal: int | None           # from Model B (0, 1)
+    entry_signal: int                 # from entry_model (-1, 0, 1)
+    entry_proba: np.ndarray | None    # from entry_model
+    exit_signal: int | None           # from exit_model (0, 1)
     exit_proba: np.ndarray | None
     position: Position | None         # current position state
     config: dict                      # strategy-specific params
@@ -359,7 +359,7 @@ class BarContext:
 
 class FusionStrategy(Protocol):
     name: str
-    layer: Literal["pre_entry", "entry", "hold", "exit_override"]
+    layer: Literal["pre_entry", "entry", "hold", "exit_rules"]
     priority: int  # within layer, lower = first
     
     def apply(self, ctx: BarContext) -> FusionResult:
@@ -393,12 +393,12 @@ src/components/fusion/
 │   ├── time_decay.py
 │   ├── cooldown_after_loss.py
 │   └── ...
-├── exit_override/
+├── exit_rules/
 │   ├── hap_preempt.py
 │   ├── early_loss_cut.py
 │   ├── short_hold_exit_filter.py
 │   ├── signal_exit_defer.py
-│   ├── ml_exit_model.py        # Wraps ExitModel into fusion
+│   ├── exit_model.py           # Wraps exit_model signal into strategy
 │   ├── trailing_stop.py
 │   ├── weak_oversold_exit.py
 │   └── ...
@@ -407,22 +407,20 @@ src/components/fusion/
 
 **Composition**:
 ```yaml
-fusion:
-  pre_entry:
+strategy:
+  entry_rules:
     - {name: skip_choppy, params: {threshold: 0.3}}
     - {name: early_wave_filter, params: {min_score: 1}}
-  
-  entry:
     - {name: ml_or_rule_ensemble, params: {min_score: 1}}
   
-  hold:
+  hold_rules:
     - {name: trend_persistence_hold, params: {max_extra_bars: 5}}
   
-  exit_override:
+  exit_rules:
     - {name: emergency_exit, params: {max_loss: -0.20}, priority: 1}
     - {name: hap_preempt, params: {trigger: 0.04, floor: -0.07}, priority: 2}
     - {name: early_loss_cut, params: {threshold: -0.04, days: 5}, priority: 3}
-    - {name: ml_exit_model, params: {min_hold: 3}, priority: 5}
+    - {name: exit_model, params: {min_hold: 3}, priority: 5}
 ```
 
 ### 4.7 Backtester (pure position management)
@@ -488,33 +486,47 @@ active: true
 order: 5
 color: '#66BB6A'
 
-# Component selection
-components:
-  features: leading_v2
-  target: trend_regime
+feature_set: leading_v2
+target: trend_regime
+
+signals:
   entry_model:
     type: lightgbm
-    hyperparams:
+    params:
       n_estimators: 500
       max_depth: 8
-  exit_model: null  # explicit, không có
+  exit_model:
+    type: null
 
-# Fusion stack
-fusion:
-  pre_entry:
-    - {name: sma200_filter}
-    - {name: hybrid_entry}
-  entry:
-    - {name: ml_only}
-  exit_override:
-    - {name: fast_exit_loss, params: {threshold_hb: -0.07, threshold_std: -0.05}}
-    - {name: signal_hard_cap, params: {floor_hb: 0.15, floor_std: 0.12, mult_hb: 3.0}}
-    - {name: time_decay, params: {bars: 20, mult: 0.5}}
+strategy:
+  entry_rules:
+    - sma200_filter
+    - hybrid_entry
+    - ml_only
+  exit_rules:
+    - fast_exit_loss
+    - signal_hard_cap
+    - time_decay
+  params:
+    fast_exit_loss:
+      threshold_hb: -0.07
+      threshold_std: -0.05
+    signal_hard_cap:
+      floor_hb: 0.15
+      floor_std: 0.12
+      mult_hb: 3.0
+    time_decay:
+      bars: 20
+      mult: 0.5
+
+execution:
+  backtester: simple_long
+  capital: 100_000_000
 
 # Symbol profile dispatch (override params per profile)
 profile_overrides:
   high_beta:
-    fusion.exit_override.fast_exit_loss.threshold_hb: -0.05
+    strategy.exit_rules.fast_exit_loss.threshold_hb: -0.05
 ```
 
 So với cũ (~30 dòng dày params không rõ thuộc về đâu), schema này **rõ ai làm gì**.
@@ -529,9 +541,8 @@ description: Grid search Entry × Exit × Feature
 base:
   components:
     target: early_wave
-  fusion:
-    pre_entry: [skip_choppy, early_wave_filter]
-    entry: [ml_only]
+  strategy:
+    entry_rules: [skip_choppy, early_wave_filter, ml_only]
 
 axes:
   features:
@@ -551,7 +562,7 @@ axes:
   fusion_exit:
     - []  # no override
     - [hap_preempt, early_loss_cut]
-    - [hap_preempt, early_loss_cut, ml_exit_model]
+    - [hap_preempt, early_loss_cut, exit_model]
 
 # Generates 2 × 3 × 3 × 3 = 54 experiments
 naming_pattern: "matrix_{features}_{entry_model.type}_{exit_model.type}_{fusion_exit_idx}"
@@ -719,8 +730,8 @@ Khi load experiment YAML, runner check:
 | Rule | Error |
 |------|-------|
 | Component name không tồn tại trong registry | `UnknownComponentError: features 'leading_v9' not registered` |
-| Exit_model bật nhưng không có ml_exit_model trong fusion | `ConfigError: exit_model defined but no fusion strategy uses it` |
-| Fusion strategy yêu cầu y_pred_exit nhưng exit_model=None | `ConfigError: ml_exit_model fusion requires exit_model in components` |
+| `exit_model` bật nhưng không có `exit_model` trong `strategy.exit_rules` | `ConfigError: exit_model defined but no strategy exit rule uses it` |
+| Exit rule yêu cầu `y_pred_exit` nhưng `signals.exit_model.type=null` | `ConfigError: exit_model rule requires signals.exit_model` |
 | Target không support exit nhưng exit_model bật | `ConfigError: target 'trend_regime' does not support exit labels` |
 | Hyperparam không hợp lệ | Validate via dataclass + Pydantic schema |
 | Tên duplicate giữa các experiments | `DuplicateNameError` |
@@ -758,7 +769,8 @@ python -m stock_ml run champions/v22 --device gpu --force
 python -m stock_ml run champions/v22 champions/v34 champions/v37a
 
 # Matrix
-python -m stock_ml run-matrix matrix/q2_2026_grid --parallel 4
+python -m stock_ml run-matrix matrix/q2_2026_grid
+python -m stock_ml run-matrix matrix/q2_2026_grid --resume
 
 # Validate config without running
 python -m stock_ml validate champions/v22
@@ -865,11 +877,11 @@ Trước khi viết dòng code đầu tiên, lock các quyết định sau:
 
 ### 14.1 Legacy adapter
 
-49 retired versions vẫn chạy được qua adapter — KHÔNG xóa code:
+Legacy versions vẫn chạy được qua adapter trong giai đoạn migration; sau khi validate Phase 6 xong sẽ xóa legacy path:
 
 ```python
-# legacy/adapter.py
-class LegacyVersionAdapter:
+# src/pipeline/legacy_adapter.py
+class LegacyAdapter:
     """Wraps old backtest_vXX functions to fit new pipeline interface."""
     
     def __init__(self, version_key: str):
@@ -884,7 +896,7 @@ class LegacyVersionAdapter:
         ...
 ```
 
-→ User vẫn run được `python -m stock_ml run legacy/v25` (mặc dù không recommended).
+→ Trong migration window vẫn run được `python -m stock_ml run legacy/v25`.
 
 ### 14.2 Future port
 

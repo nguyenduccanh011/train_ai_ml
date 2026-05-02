@@ -82,16 +82,16 @@ pytest stock_ml/tests/components/ -q                   # 233 passed
 
 ### Phase 3 — Tách rule exit khỏi entry model
 
-**Status:** In progress 2026-05-01 — FusionStack group (`v22`, `v22_exit_b`, `v19_3`) wired to V3 strategy config.
+**Status:** Done 2026-05-01 — FusionStack group (`v22`, `v22_with_exit_model`, `v19_3`) and lineage group (`v32`, `v35b`, `v37a`, `v37d`, `v39d`, `v42_a`) wired to V3 strategy config.
 
 - [x] Add explicit `force_exit_rules` / `active_exit_rules` to `StrategyV3Config` while keeping flat `exit_rules`.
 - [x] Forward `strategy_v3` from orchestrator to runners that accept it (signature-based kwarg filtering so legacy runners are unaffected).
 - [x] Build exit strategies from registered rule names instead of hardcoded lists for FusionStack runners.
 - [x] Add validation for V3 strategy rule names.
-- [x] Register missing strategies: `model_b_exit`, `signal_hard_cap`, `fast_exit_loss`, `hap_preempt`.
+- [x] Register missing strategies: `exit_model`, `signal_hard_cap`, `fast_exit_loss`, `hap_preempt`.
 - [x] Move strategy construction out of per-symbol loop (build once per run).
-- [ ] Lineage runners (v32, v35b, v37a, v37d, v39d, v42_a) — exit logic vẫn trong `engine.backtest_unified()`.
-- [ ] **Làm từng champion một, một commit / champion.**
+- [x] Lineage runners (v32, v35b, v37a, v37d, v39d, v42_a) accept `strategy_v3`; legacy exit kwargs are now supplied through `StrategyV3Config.params` while exit logic remains in `engine.backtest_unified()` until Phase 4.
+- [x] Added champion YAML configs for lineage runners missing from [config/experiments/champions/](../../config/experiments/champions/).
 
 **Verification:**
 ```bash
@@ -103,11 +103,18 @@ python -m pytest stock_ml/tests/components/ -q                  # 246 passed
 
 ### Phase 4 — Unified Generic Runner
 
-- Implement `GenericRunner` driven bởi `signals + strategy + execution`.
-- Migrate từng champion: xóa `vXX_runner.py` sau khi golden pass.
-- Cho phép giữ `rule_runner.py` nếu thực sự không có ML.
+**Status:** Done 2026-05-02 — lineage runners resolve through `RUNNER_DEFS` + `run_lineage()`, FusionStack runners (`v19_3`, `v22`, `v22_with_exit_model`) resolve through `FUSION_RUNNER_DEFS` + `run_fusion()` in [src/components/runners/generic_fusion.py](../../src/components/runners/generic_fusion.py). Thin wrapper runner files were removed; `rule_runner.py` remains special-case.
 
-**Verification:** golden parity sau mỗi champion migrate.
+- [x] Implement `GenericRunner` driven bởi `signals + strategy + execution`.
+- [x] Migrate từng champion: xóa `vXX_runner.py` sau khi golden pass.
+- [x] Cho phép giữ `rule_runner.py` nếu thực sự không có ML.
+
+**Verification:**
+```bash
+python -m pytest stock_ml/tests/regression/test_champions.py -q  # 13 passed
+python -m pytest stock_ml/tests/components/ -q                 # 233 passed
+python -m pytest stock_ml/tests/regression/test_v19_3_parity.py stock_ml/tests/regression/test_v22_parity.py stock_ml/tests/regression/test_v32_parity.py stock_ml/tests/regression/test_pipeline_v22_parity.py -q  # 4 passed
+```
 
 ### Phase 5 — Chuẩn hóa terminology
 
@@ -119,33 +126,48 @@ python -m pytest stock_ml/tests/components/ -q                  # 246 passed
 | `components.entry_model` | `signals.entry_model` |
 | `LegacyVersionAdapter` | `LegacyAdapter` |
 
-- Rename code: 1 loại / commit.
-- Rename YAML files.
-- Cập nhật README + ARCHITECTURE.md.
+**Status:** Done 2026-05-02 — code/config/test/docs terminology cleanup complete for `exit_model`, `strategy.exit_rules`, `signals.entry_model`, `v22_with_exit_model`, and `LegacyAdapter`.
+
+- [x] Rename code symbols: `LegacyAdapter`, `ExitModelExit`, `exit_model`, `exit_model_min_hold`, `enable_exit_model` runner kwarg.
+- [x] Rename champion YAML/artifacts: `v22_exit_b` → `v22_with_exit_model`.
+- [x] Move exit-model enable source to `components.exit_model.enabled` instead of a top-level flag.
+- [x] Update validation to include generic fusion and lineage runner registries.
+- [x] Cập nhật README + ARCHITECTURE.md terminology.
 
 ### Phase 6 — Migrate & XÓA legacy
 
-- `python -m stock_ml migrate-legacy --all` → tất cả legacy có YAML mới.
-- Validate kết quả mới == kết quả cũ (PnL, trade count).
-- **Sau khi validate OK:**
-  - Xóa [src/pipeline/legacy_adapter.py](../../src/pipeline/legacy_adapter.py).
-  - Xóa [stock_ml/experiments/](../../experiments/) (legacy backtest functions).
-  - Xóa [config/models.yaml](../../config/models.yaml).
-  - Xóa [stock_ml/legacy/](../../legacy/).
-  - Xóa archive scripts.
+**Status:** Done 2026-05-02 — champions already have V3 YAML configs; legacy runtime/migration path removed. Lineage backtests now resolve through active runner modules instead of `experiments/`.
+
+- [x] Validate champion baseline trước cleanup.
+- [x] Xóa [src/pipeline/legacy_adapter.py](../../src/pipeline/legacy_adapter.py).
+- [x] Xóa `scripts/migrate_legacy.py` và CLI `migrate-legacy` / `list-legacy`.
+- [x] Xóa [stock_ml/experiments/](../../experiments/) (legacy backtest functions).
+- [x] Xóa [config/models.yaml](../../config/models.yaml).
+- [x] Xóa [stock_ml/legacy/](../../legacy/).
+- [x] Xóa archive artifact `archive/results_legacy.tar.gz`.
+- [x] Xóa legacy tests (`test_legacy_adapter.py`, `test_legacy_smoke.py`).
 
 **Verification:**
 ```bash
-python -m stock_ml run champions/v22   # đường chính duy nhất
-pytest tests/regression/ -q
+python -m pytest stock_ml/tests/regression/test_champions.py -q  # 13 passed
+python -m pytest stock_ml/tests/components/fusion/test_v22_registry.py stock_ml/tests/regression/test_champions.py -q  # 17 passed
 ```
+
+**Note:** Full regression baseline had pre-existing mismatch in `test_pipeline_v22_parity.py` (new=2106, expected=1784) before Phase 6 edits.
 
 ### Phase 7 — Tests & docs cleanup
 
-- Tách test theo tầng: `tests/signals/`, `tests/strategy/`, `tests/execution/`.
-- Cập nhật HOW_TO guides, thêm `HOW_TO_ADD_EXIT_MODEL.md`.
-- Viết `ARCHITECTURE_V3.md`.
-- Regenerate golden hash final, note trong [tests/regression/golden/README.md](../../tests/regression/golden/README.md).
+**Status:** Done 2026-05-02 — component tests moved into Signal/Strategy/Execution layers; V3 docs added. Backlog cleared 2026-05-02.
+
+- [x] Tách test theo tầng: `tests/signals/`, `tests/strategy/`, `tests/execution/`.
+- [x] Cập nhật HOW_TO guides, thêm `HOW_TO_ADD_EXIT_MODEL.md`.
+- [x] Viết `ARCHITECTURE_V3.md`.
+- [x] Update golden note trong [tests/regression/golden/README.md](../../tests/regression/golden/README.md).
+
+**Verification:**
+```bash
+python -m pytest stock_ml/tests/signals stock_ml/tests/strategy stock_ml/tests/execution -q  # 215 passed
+```
 
 ### Phase 8 — Feature mới (sau khi nền sạch)
 

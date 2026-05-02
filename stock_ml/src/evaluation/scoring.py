@@ -32,10 +32,11 @@ def _get_weights():
     cfg = load_config()
     w = cfg.get("scoring", {}).get("weights", {})
     return {
-        "total_pnl": w.get("total_pnl", 0.45),
-        "profit_factor": w.get("profit_factor", 0.25),
-        "mdd_per_symbol": w.get("mdd_per_symbol", 0.20),
-        "sharpe": w.get("sharpe", 0.10),
+        "sharpe": w.get("sharpe", 0.30),
+        "avg_pnl": w.get("avg_pnl", 0.25),
+        "profit_factor": w.get("profit_factor", 0.22),
+        "mdd_per_symbol": w.get("mdd_per_symbol", 0.15),
+        "yr_consistency": w.get("yr_consistency", 0.08),
     }
 
 
@@ -108,13 +109,7 @@ def calc_yearly_consistency(trades: list) -> float:
     if not sym_yr:
         return 0.0
 
-    # For each symbol, compute yearly PnL vector; then std across symbols' yearly means
-    all_yearly_means = []
-    for sym, yr_pnl in sym_yr.items():
-        if len(yr_pnl) >= 2:
-            all_yearly_means.append(list(yr_pnl.values()))
-
-    if not all_yearly_means:
+    if not any(len(yr_pnl) >= 2 for yr_pnl in sym_yr.values()):
         return 0.0
 
     # Flatten into per-year averages across all symbols
@@ -154,6 +149,23 @@ def calc_max_drawdown(trades: list) -> float:
     return float(np.max(peak - equity)) if len(equity) > 0 else 0.0
 
 
+def calc_symbol_coverage(trades: list) -> dict:
+    if not trades:
+        return {"symbol_count": 0, "top_symbol_pnl_ratio": 0.0}
+
+    pnl_by_symbol = defaultdict(float)
+    for trade in trades:
+        pnl_by_symbol[trade.get("symbol", "_")] += trade.get("pnl_pct", 0.0)
+
+    total_abs_pnl = sum(abs(pnl) for pnl in pnl_by_symbol.values())
+    top_abs_pnl = max((abs(pnl) for pnl in pnl_by_symbol.values()), default=0.0)
+    ratio = top_abs_pnl / total_abs_pnl if total_abs_pnl > 0 else 0.0
+    return {
+        "symbol_count": len(pnl_by_symbol),
+        "top_symbol_pnl_ratio": round(float(ratio), 4),
+    }
+
+
 # ─── Main scoring ─────────────────────────────────────────────────────────────
 
 
@@ -173,19 +185,20 @@ def composite_score(metrics: dict, trades: list | None = None) -> float:
 
     avg_pnl = metrics.get("avg_pnl", 0)
     pf = metrics.get("pf", 0)
-    total_pnl = metrics.get("total_pnl", 0)
 
     if trades is not None:
         sharpe = calc_sharpe(trades)
         mdd_sym = calc_mdd_per_symbol(trades)
+        yr_cv = calc_yearly_consistency(trades)
     else:
         pnl_std = 1.0
         sharpe = avg_pnl / max(pnl_std, 0.01)
         mdd_sym = abs(metrics.get("max_loss", 0))
+        yr_cv = 0.0
 
     # ── Normalise to [-1, 1] or [0, 1] ──────────────────────────────────────
-    # total_pnl: 0% → 0, 10000% → 1 (absolute bottom-line, fee-adjusted)
-    norm_total = np.clip(total_pnl / 10000, -1, 1)
+    # Avg PnL: 0% → 0, 5%+ per trade → 1
+    norm_avg = np.clip(avg_pnl / 5.0, -1, 1)
 
     # PF: 1 → 0, 4 → 1
     norm_pf = np.clip((pf - 1) / 3, -1, 1)
@@ -196,11 +209,15 @@ def composite_score(metrics: dict, trades: list | None = None) -> float:
     # Sharpe: 0 → 0, 0.3 → 1 (stability)
     norm_sharpe = np.clip(sharpe / 0.30, -1, 1)
 
+    # Yearly CV: 0 → 0 penalty, 2+ → full penalty
+    norm_yr = np.clip(yr_cv / 2.0, 0, 1)
+
     score = (
-        w["total_pnl"] * norm_total
+        w["sharpe"] * norm_sharpe
+        + w["avg_pnl"] * norm_avg
         + w["profit_factor"] * norm_pf
         - w["mdd_per_symbol"] * norm_mdd
-        + w["sharpe"] * norm_sharpe
+        - w["yr_consistency"] * norm_yr
     ) * 1000
 
     return round(score, 1)

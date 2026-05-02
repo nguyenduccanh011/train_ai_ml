@@ -1,6 +1,6 @@
 {
   "version": "v37d",
-  "generated_at": "2026-04-26T17:18:21",
+  "generated_at": "2026-05-02T00:15:58",
   "generator": "run_pipeline.py",
   "symbols": [
     "AAS",
@@ -68,7 +68,7 @@
   "n_symbols": 61,
   "min_rows": 2000,
   "feature_set": "leading_v4",
-  "model_type": "lightgbm",
+  "model_type": "gru",
   "target_config": {
     "type": "early_wave",
     "forward_window": 8,
@@ -79,7 +79,7 @@
     "classes": 3
   },
   "target_fingerprint": "{\"classes\":3,\"forward_window\":8,\"gain_threshold\":0.06,\"long_window\":20,\"loss_threshold\":0.03,\"short_window\":8,\"type\":\"early_wave\"}",
-  "n_trades": 1407,
+  "n_trades": 1404,
   "exit_model_config": {
     "enabled": true,
     "forward_window": 15,

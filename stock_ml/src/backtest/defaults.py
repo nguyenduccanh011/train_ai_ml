@@ -1,25 +1,5 @@
-import os as _os
-
-import yaml as _yaml
-
-
 def _load_symbol_configs():
-    """Load symbol classification configs from models.yaml. Fallback to hardcoded values."""
-    try:
-        config_path = _os.path.join(_os.path.dirname(__file__), "..", "..", "config", "models.yaml")
-        with open(config_path, encoding="utf-8") as f:
-            cfg = _yaml.safe_load(f)
-
-        profiles = {}
-        for profile_name, syms in cfg.get("symbol_profiles", {}).items():
-            for sym in syms or []:
-                profiles[str(sym)] = profile_name
-
-        rule_priority = set(str(s) for s in cfg.get("rule_priority_symbols", []))
-        score5_risky = set(str(s) for s in cfg.get("score5_risky_symbols", []))
-        return profiles, rule_priority, score5_risky
-    except Exception:
-        return _FALLBACK_SYMBOL_PROFILES, _FALLBACK_RULE_PRIORITY, _FALLBACK_SCORE5_RISKY
+    return _FALLBACK_SYMBOL_PROFILES, _FALLBACK_RULE_PRIORITY, _FALLBACK_SCORE5_RISKY
 
 
 _FALLBACK_SYMBOL_PROFILES = {
@@ -71,7 +51,7 @@ DEFAULT_PARAMS = {
     "commission": 0.0015,
     "tax": 0.001,
     "record_trades": True,
-    "model_b_min_hold": 3,
+    "exit_model_min_hold": 3,
     # Mods
     "mod_a": True,
     "mod_b": True,

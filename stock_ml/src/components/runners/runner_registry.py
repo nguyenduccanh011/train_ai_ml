@@ -34,39 +34,39 @@ def _lazy(module: str, fn: str) -> Callable[..., Any]:
 RUNNER_DEFS: dict[str, RunnerDef] = {
     "v32": RunnerDef(
         version_key="v32",
-        backtest_fn=_lazy("experiments.run_v32_final", "backtest_v32"),
+        backtest_fn=_lazy("src.components.runners.lineage_backtests", "backtest_v32"),
         entry_reason="v32",
         feature_set_default="leading_v3",
         target_default=copy.deepcopy(V32_TARGET),
     ),
     "v35b": RunnerDef(
         version_key="v35b",
-        backtest_fn=_lazy("experiments.run_v34_final", "backtest_v35b"),
+        backtest_fn=_lazy("src.components.runners.lineage_backtests", "backtest_v35b"),
         entry_reason="v35b",
     ),
     "v37a": RunnerDef(
         version_key="v37a",
-        backtest_fn=_lazy("experiments.run_v37a", "backtest_v37a"),
+        backtest_fn=_lazy("src.components.runners.lineage_backtests", "backtest_v37a"),
         entry_reason="v37a",
     ),
     "v37a_exit": RunnerDef(
         version_key="v37a_exit",
-        backtest_fn=_lazy("experiments.run_v37a", "backtest_v37a"),
+        backtest_fn=_lazy("src.components.runners.lineage_backtests", "backtest_v37a"),
         entry_reason="v37a_exit",
     ),
     "v37d": RunnerDef(
         version_key="v37d",
-        backtest_fn=_lazy("experiments.run_v37d", "backtest_v37d"),
+        backtest_fn=_lazy("src.components.runners.lineage_backtests", "backtest_v37d"),
         entry_reason="v37d",
     ),
     "v39d": RunnerDef(
         version_key="v39d",
-        backtest_fn=_lazy("experiments.run_v39d", "backtest_v39d"),
+        backtest_fn=_lazy("src.components.runners.lineage_backtests", "backtest_v39d"),
         entry_reason="v39d",
     ),
     "v42_a": RunnerDef(
         version_key="v42_a",
-        backtest_fn=_lazy("experiments.run_v42", "backtest_v42"),
+        backtest_fn=_lazy("src.components.runners.lineage_backtests", "backtest_v42"),
         entry_reason="v42_a",
     ),
 }

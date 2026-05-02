@@ -2,11 +2,13 @@
 
 from src.components.fusion.strategies.core.adaptive_trailing import AdaptiveTrailing
 from src.components.fusion.strategies.core.atr_stop import AtrStopLoss
+from src.components.fusion.strategies.core.early_loss_cut import EarlyLossCutExit
+from src.components.fusion.strategies.core.exit_model_exit import ExitModelExit
 from src.components.fusion.strategies.core.fast_exit_loss import FastExitLossLegacy
+from src.components.fusion.strategies.core.hap_preempt import HapPreemptExit
 from src.components.fusion.strategies.core.hard_stop import HardStopExit
 from src.components.fusion.strategies.core.ma_cross_hybrid_exit import MaCrossHybridExit
 from src.components.fusion.strategies.core.min_hold_protection import MinHoldProtection
-from src.components.fusion.strategies.core.model_b_exit import ModelBExit
 from src.components.fusion.strategies.core.peak_protect_dist import PeakProtectDist
 from src.components.fusion.strategies.core.peak_protect_ema import PeakProtectEma8Streak
 from src.components.fusion.strategies.core.profit_lock import ProfitLock
@@ -17,9 +19,11 @@ from src.components.fusion.strategies.core.zombie_exit import ZombieExit
 
 __all__ = [
     "AdaptiveTrailing",
-    "ModelBExit",
+    "ExitModelExit",
     "AtrStopLoss",
+    "EarlyLossCutExit",
     "FastExitLossLegacy",
+    "HapPreemptExit",
     "HardStopExit",
     "MaCrossHybridExit",
     "MinHoldProtection",

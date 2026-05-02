@@ -45,6 +45,9 @@ class PredictionCacheManager:
     def __init__(self, cache_root: str | Path) -> None:
         self.cache_root = Path(cache_root)
         self.cache_root.mkdir(parents=True, exist_ok=True)
+        self._hits = 0
+        self._misses = 0
+        self._stored = 0
 
     def key(self, cfg: ExperimentConfig, symbols: list[str]) -> str:
         return _build_prediction_cache_key(cfg, symbols)
@@ -59,12 +62,15 @@ class PredictionCacheManager:
         k = self.key(cfg, symbols)
         path = self.cache_path(k)
         if not path.exists():
+            self._misses += 1
             return None, k
         try:
             with open(path, "rb") as f:
                 data = pickle.load(f)
+            self._hits += 1
             return data, k
         except Exception:
+            self._misses += 1
             return None, k
 
     def save(
@@ -81,10 +87,14 @@ class PredictionCacheManager:
             with open(tmp_fd, "wb") as f:
                 pickle.dump(data, f, protocol=pickle.HIGHEST_PROTOCOL)
             Path(tmp_path).replace(path)
+            self._stored += 1
         except Exception:
             Path(tmp_path).unlink(missing_ok=True)
             raise
         return k
+
+    def stats(self) -> dict[str, int]:
+        return {"hits": self._hits, "misses": self._misses, "stored": self._stored}
 
     def invalidate(self, cfg: ExperimentConfig, symbols: list[str]) -> bool:
         """Delete cached predictions. Returns True if something was deleted."""

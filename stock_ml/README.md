@@ -16,7 +16,6 @@ pip install -r requirements-dev.txt   # ruff, mypy, pytest (dev only)
 ```
 stock_ml/
 ├── config/
-│   ├── models.yaml                  # Registry legacy — 60+ versions (vẫn dùng cho adapter)
 │   ├── base.yaml                    # Cấu hình pipeline (data_dir, device, symbols)
 │   ├── feature_sets/                # YAML định nghĩa feature block composition
 │   │   ├── leading.yaml
@@ -24,12 +23,11 @@ stock_ml/
 │   │   ├── leading_v3.yaml
 │   │   └── leading_v4.yaml
 │   └── experiments/
-│       ├── champions/               # YAML cho 11 champion versions
+│       ├── champions/               # YAML cho champion versions
 │       │   ├── v22.yaml
 │       │   ├── v35b.yaml
 │       │   └── ...
-│       ├── matrix/                  # Grid search matrix configs
-│       └── legacy/                  # Auto-generated từ migrate-legacy
+│       └── matrix/                  # Grid search matrix configs
 │
 ├── src/
 │   ├── components/                  # ← KIẾN TRÚC MỚI (v2)
@@ -44,25 +42,24 @@ stock_ml/
 │   │   ├── fusion/
 │   │   │   ├── stack.py             # FusionStack — chain strategies theo layer
 │   │   │   ├── registry.py          # register_strategy / list_strategies
-│   │   │   └── strategies/          # ~92 strategy classes (pre_entry/entry/hold/exit_override)
+│   │   │   └── strategies/          # fusion strategy classes (pre_entry/entry/hold/exit_rules)
 │   │   ├── backtest/
 │   │   │   └── engine.py            # SimpleLongBacktester
-│   │   └── runners/                 # Dedicated runner cho 11 champions
+│   │   └── runners/                 # Generic runners cho champion groups + rule special-case
+│   │       ├── generic_fusion.py
+│   │       ├── v34_runner.py
 │   │       ├── rule_runner.py
-│   │       ├── v22_runner.py
-│   │       ├── v32_runner.py
-│   │       └── ... (11 runners)
+│   │       └── runner_registry.py
 │   │
 │   ├── pipeline/                    # ← ORCHESTRATOR MỚI
 │   │   ├── config.py                # ExperimentConfig (Pydantic)
 │   │   ├── orchestrator.py          # Pipeline class + PipelineResult
 │   │   ├── trainer.py               # build_prediction_cache()
-│   │   ├── build_predictions.py     # Shared legacy prediction builder (không import run_pipeline.py)
+│   │   ├── build_predictions.py     # Shared prediction builder (không import run_pipeline.py)
 │   │   ├── walker.py                # walk_forward() splits
 │   │   ├── cache.py                 # PredictionCacheManager (pickle + sha256 key)
 │   │   ├── matrix_expander.py       # expand_matrix(yaml) → list[ExperimentConfig]
-│   │   ├── validate.py              # validate_config() → list[ValidationError]
-│   │   └── legacy_adapter.py        # LegacyVersionAdapter — wrap 60+ backtest_vXX
+│   │   └── validate.py              # validate_config() → list[ValidationError]
 │   │
 │   ├── data/                        # DataLoader, WalkForwardSplitter, TargetGenerator (legacy)
 │   ├── features/engine.py           # FeatureEngine legacy (vẫn dùng bởi runners)
@@ -72,20 +69,19 @@ stock_ml/
 │
 ├── scripts/
 │   ├── cli.py                       # Entry point CLI
-│   ├── migrate_legacy.py            # models.yaml entry → ExperimentConfig YAML
-│   └── benchmark.py                 # Pipeline mới vs legacy timing
+│   └── benchmark.py                 # Pipeline timing
 │
 ├── tests/
-│   ├── components/                  # Unit + equivalence tests (200+ tests)
+│   ├── signals/                     # Feature, target, signal/rule helpers
+│   ├── strategy/                    # Fusion stack, entry/hold/exit rules
+│   ├── execution/                   # Backtest engine behavior
 │   └── regression/
-│       ├── golden/                  # 11 CSV + checksums.txt (CPU, deterministic)
-│       ├── test_champions.py        # Hash check 11 champions vs golden
+│       ├── golden/                  # CSV + checksums.txt (CPU, deterministic)
+│       ├── test_champions.py        # Hash check champions vs golden
 │       └── test_*_parity.py         # Per-champion exact parity tests
 │
-├── experiments/                     # Legacy/champion backtest functions (adapter + parity reference)
 ├── archive/
-│   ├── results_legacy/              # Historical backtest results (giữ nguyên)
-│   └── scripts/                     # run_v10_compare.py → run_v22_compare.py (model config reference)
+│   └── scripts/                     # Historical scripts kept as reference
 │
 ├── visualization/                   # Dashboard (HTML + JS + per-symbol JSON)
 ├── docs/refactor/                   # ARCHITECTURE.md, roadmap, HOW_TO guides
@@ -122,18 +118,10 @@ python -m stock_ml compare champions/v22 champions/v35b champions/v34
 python -m stock_ml list-components
 python -m stock_ml list-components --type fusion
 
-# List experiments / legacy versions
+# List experiments
 python -m stock_ml list-experiments
-python -m stock_ml list-legacy
 
-# Chạy version legacy (qua adapter, không cần component runner)
-python -m stock_ml run legacy/v25
-
-# Migrate legacy config → YAML
-python -m stock_ml migrate-legacy v25
-python -m stock_ml migrate-legacy --all
-
-# Benchmark pipeline mới vs legacy
+# Benchmark pipeline
 python -m stock_ml benchmark --versions v22,v34,v37a
 ```
 
@@ -168,7 +156,7 @@ Bar i:
   1. pre_entry   → skip_choppy, sma200_filter, anti_fomo, ...
   2. entry       → ML signal, hybrid_entry, rule_ensemble, ...
   3. hold        → trend_persistence, confirm_bars, min_hold, ...
-  4. exit_override → hard_stop, ATR_stop, trailing, peak_protect, zombie, ...
+  4. exit_rules   → hard_stop, ATR_stop, trailing, peak_protect, zombie, ...
 ```
 
 ### Walk-Forward Validation
@@ -226,10 +214,21 @@ src/components/models/transformer.py
 src/components/models/registry.py
 
 # 2. Dùng trong YAML
-config/experiments/exp_transformer_v1.yaml   # components.entry_model.type: transformer
+config/experiments/exp_transformer_v1.yaml   # signals.entry_model.type: transformer
 ```
 
 → Xem [HOW_TO_ADD_ENTRY_MODEL.md](docs/refactor/HOW_TO_ADD_ENTRY_MODEL.md)
+
+### Exit terminology
+
+| Thuật ngữ | Ý nghĩa | Ví dụ |
+|-----------|---------|-------|
+| `exit_model` | Model supervised dự đoán điểm thoát riêng; khi bật sẽ train `y_pred_exit` và strategy consume tín hiệu này. | `signals.exit_model.type: lightgbm`, `v22_with_exit_model` |
+| `strategy.exit_rules` | Rule thoát trong strategy layer; không cần train exit model riêng. | `hard_stop`, `v22_fast_exit`, `ma_cross_hybrid_exit` |
+| `v22` | Champion baseline không dùng exit model; vẫn dùng rule exits. | `champions/v22` |
+| `v22_with_exit_model` | Champion có bật exit model, cộng thêm rule exits an toàn. | `champions/v22_with_exit_model` |
+
+Tránh dùng tên `hybrid` đơn lẻ cho artifact mới vì dễ nhầm với `ma_cross_hybrid_exit`; nếu cần mô tả combo exit model + rule, dùng tên cụ thể như `exit_model_plus_rules`.
 
 ### Grid Search (~5 phút setup)
 
@@ -237,11 +236,16 @@ config/experiments/exp_transformer_v1.yaml   # components.entry_model.type: tran
 # 1. Định nghĩa matrix
 config/experiments/matrix/q3_2026.yaml
 
-# 2. Chạy
+# 2. Chạy hoặc dry-run nhanh
 python -m stock_ml run-matrix matrix/q3_2026
+python -m stock_ml run-matrix matrix/q3_2026 --dry-run --limit 3
 
-# 3. So sánh
-python -m stock_ml compare matrix/q3_2026/* --top 10
+# 3. Resume / preview top-k nếu matrix lớn
+python -m stock_ml run-matrix matrix/q3_2026 --resume
+python -m stock_ml run-matrix matrix/q3_2026 --symbols-limit 10 --top-k-preview 3
+
+# 4. So sánh artifact đã lưu
+python -m stock_ml compare-matrix results/experiments/q3_2026
 ```
 
 → Xem [HOW_TO_RUN_MATRIX.md](docs/refactor/HOW_TO_RUN_MATRIX.md)
@@ -251,10 +255,10 @@ python -m stock_ml compare matrix/q3_2026/* --top 10
 Các lệnh dưới đây chạy từ thư mục `stock_ml/`. Nếu chạy từ repo root, thêm prefix `PYTHONPATH=stock_ml python -m pytest stock_ml/...`.
 
 ```bash
-# Hash check 11 champions vs golden (nhanh, ~1s)
+# Hash check champion CSVs vs golden (nhanh, ~1s)
 pytest tests/regression/test_champions.py -q
 
-# Full parity test (tất cả 11 champions, ~336s CPU)
+# Full parity test (tất cả champion CSVs, ~336s CPU)
 PYTHONHASHSEED=42 pytest tests/regression/ -q
 
 # Unit tests components
@@ -311,13 +315,14 @@ Data tự động được mount từ Google Drive qua `colab_setup.py`. Xem [do
 |------|----------|
 | [docs/refactor/ARCHITECTURE.md](docs/refactor/ARCHITECTURE.md) | Kiến trúc đích v2, component interfaces, YAML schema |
 | [docs/refactor/CHAMPION_VERSIONS.md](docs/refactor/CHAMPION_VERSIONS.md) | 11 champion: lý do chọn, coverage matrix |
-| [docs/refactor/REFACTOR_ROADMAP.md](docs/refactor/REFACTOR_ROADMAP.md) | 6 phase đã hoàn thành, diary từng ngày |
+| [docs/refactor/REFACTOR_ROADMAP.md](docs/refactor/REFACTOR_ROADMAP.md) | Foundation v2 và diary refactor ban đầu |
+| [docs/refactor/ENTRY_EXIT_RESEARCH_REFACTOR_PLAN.md](docs/refactor/ENTRY_EXIT_RESEARCH_REFACTOR_PLAN.md) | Entry/exit research matrix, champion `v22_with_exit_model`, phase còn partial |
 | [docs/refactor/HOW_TO_ADD_FEATURE_BLOCK.md](docs/refactor/HOW_TO_ADD_FEATURE_BLOCK.md) | Thêm feature block mới |
 | [docs/refactor/HOW_TO_ADD_FUSION_STRATEGY.md](docs/refactor/HOW_TO_ADD_FUSION_STRATEGY.md) | Thêm fusion strategy mới |
 | [docs/refactor/HOW_TO_ADD_ENTRY_MODEL.md](docs/refactor/HOW_TO_ADD_ENTRY_MODEL.md) | Thêm entry model mới |
 | [docs/refactor/HOW_TO_PORT_LEGACY_VERSION.md](docs/refactor/HOW_TO_PORT_LEGACY_VERSION.md) | Promote legacy version lên component runner |
 | [docs/refactor/HOW_TO_RUN_MATRIX.md](docs/refactor/HOW_TO_RUN_MATRIX.md) | Grid search qua YAML |
-| [docs/refactor/FUSION_STRATEGY_INVENTORY.md](docs/refactor/FUSION_STRATEGY_INVENTORY.md) | 92 strategy classes, mapping flag cũ → class mới |
+| [docs/refactor/FUSION_STRATEGY_INVENTORY.md](docs/refactor/FUSION_STRATEGY_INVENTORY.md) | Inventory fusion strategies, mapping flag cũ → class mới |
 | [docs/refactor/EXIT_MODEL_BUG.md](docs/refactor/EXIT_MODEL_BUG.md) | Bug exit model trained-but-dropped, status, fix plan |
 
 ## CI/CD
@@ -326,8 +331,8 @@ GitHub Actions (`.github/workflows/ci.yml`) chạy tự động khi push:
 - **lint**: `ruff check` + `ruff format --check`
 - **typecheck**: `mypy src/components/ src/pipeline/`
 - **test-unit**: `pytest tests/components/ -k "not integration"`
-- **test-regression**: hash check 11 champions vs golden (push-only, không chạy mỗi PR)
+- **test-regression**: hash check champion CSVs vs golden (push-only, không chạy mỗi PR)
 
 ---
 
-*Cập nhật: 2026-04-29 — Phase 7 Step 0 hoàn tất: `_build_predictions` đã tách khỏi `run_pipeline.py`; `run_pipeline.py` vẫn deprecated, dùng `python -m stock_ml run` thay thế.*
+*Cập nhật: 2026-05-02 — Phase 5 terminology đã chuyển sang `exit_model`, `strategy.exit_rules`, `signals.entry_model`, `v22_with_exit_model`, `LegacyAdapter`; `run_pipeline.py` vẫn deprecated, dùng `python -m stock_ml run` thay thế.*

@@ -17,10 +17,10 @@ GOLDEN_META = GOLDEN_DIR / "trades_v34.meta.json"
 
 @pytest.mark.regression
 def test_v34_matches_golden() -> None:
-    from run_pipeline import _build_predictions
     from src.components.runners import run_v34, trades_to_v34_dataframe
     from src.config_loader import get_model_config
     from src.env import resolve_data_dir
+    from src.pipeline.build_predictions import _build_predictions
 
     if not GOLDEN_CSV.exists() or not GOLDEN_META.exists():
         pytest.fail(f"Golden artefacts missing: {GOLDEN_CSV} / {GOLDEN_META}")

@@ -21,6 +21,7 @@ import pytest
 
 CHAMPIONS = [
     "v22",
+    "v22_with_exit_model",
     "v32",
     "v34",
     "v35b",
@@ -96,7 +97,7 @@ def test_champion_trades_hash_matches_golden(version: str, golden_hashes: dict[s
 
 @pytest.mark.regression
 def test_golden_dir_has_all_champions(golden_hashes: dict[str, str]) -> None:
-    """Sanity: checksums.txt phải có đủ 11 entries."""
+    """Sanity: checksums.txt phải có đủ entry cho mọi champion."""
     expected = {f"trades_{v}.csv" for v in CHAMPIONS}
     missing = expected - set(golden_hashes.keys())
     assert not missing, f"Golden checksums thiếu: {sorted(missing)}"

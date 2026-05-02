@@ -1,0 +1,43 @@
+name: v37a_exit
+strategy: v37a_exit
+runner: src.components.runners.v37a_exit_runner
+components:
+  features: leading_v4
+  target:
+    type: early_wave_dual
+    forward_window: 8
+    short_window: 8
+    long_window: 20
+    gain_threshold: 0.06
+    loss_threshold: 0.03
+    classes: 3
+  entry_model:
+    type: lightgbm
+    device: cpu
+    extras: {}
+  exit_model:
+    enabled: true
+    type: lightgbm
+    forward_window: 8
+    loss_threshold: 0.03
+    extras: {}
+split:
+  method: walk_forward
+  train_years: 4
+  test_years: 1
+  gap_days: 0
+  first_test_year: 2020
+  last_test_year: 2025
+mods:
+  a: true
+  b: true
+  c: false
+  d: false
+  e: true
+  f: true
+  g: true
+  h: true
+  i: true
+  j: true
+params: {}
+fusion: {}

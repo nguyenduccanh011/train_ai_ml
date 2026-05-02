@@ -19,7 +19,7 @@ def resolve_data_dir(config_data_dir):
     """Resolve the data directory based on environment.
 
     Args:
-        config_data_dir: relative path from models.yaml (e.g., "../portable_data/...")
+        config_data_dir: relative path from runtime config (e.g., "../portable_data/...")
 
     Returns:
         Absolute path to the data directory.

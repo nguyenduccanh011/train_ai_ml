@@ -1,0 +1,71 @@
+name: v37d
+strategy: v37d
+runner: src.components.runners.v37d_runner
+components:
+  features: leading_v4
+  target:
+    type: early_wave
+    forward_window: 8
+    short_window: 8
+    long_window: 20
+    gain_threshold: 0.06
+    loss_threshold: 0.03
+    classes: 3
+  entry_model:
+    type: gru
+    device: cpu
+    extras: {}
+  exit_model:
+    enabled: true
+    type: lightgbm
+    forward_window: 15
+    loss_threshold: 0.05
+    extras: {}
+split:
+  method: walk_forward
+  train_years: 4
+  test_years: 1
+  gap_days: 0
+  first_test_year: 2020
+  last_test_year: 2025
+mods:
+  a: true
+  b: true
+  c: false
+  d: false
+  e: true
+  f: true
+  g: true
+  h: true
+  i: true
+  j: true
+params:
+  patch_smart_hardcap: true
+  patch_pp_restore: true
+  patch_long_horizon: true
+  patch_symbol_tuning: true
+  patch_rule_ensemble: true
+  v26_relaxed_entry: true
+  v26_skip_choppy: true
+  v26_strong_rule_ensemble: true
+  v27_hardcap_two_step: true
+  v27_rule_priority: true
+  v27_dynamic_score5_penalty: true
+  v27_trend_persistence_hold: true
+  v28_early_wave_filter: true
+  v28_early_loss_cut: true
+  v28_early_loss_cut_threshold: -0.04
+  v28_early_loss_cut_days: 5
+  v30_signal_exit_defer: true
+  v30_sed_defer_bars: 3
+  v30_sed_min_cum_ret: 0.02
+  v31_short_hold_exit_filter: true
+  v31_shef_min_hold: 18
+  v31_shef_min_pnl: -0.03
+  v31_hardcap_after_profit: true
+  v31_hap_profit_trigger: 0.05
+  v31_hap_floor: -0.03
+  v32_hap_preempt: true
+  v32_hap_pre_trigger: 0.04
+  v32_hap_pre_floor: -0.07
+fusion: {}

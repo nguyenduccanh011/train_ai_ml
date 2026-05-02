@@ -29,6 +29,7 @@ def build_prediction_cache(
     import src.data.target as target_module
     import src.features.engine as feature_engine_module
     from src.cache.feature_cache import FeatureCacheManager
+    from src.components.exit_models.registry import get_exit_model
     from src.components.models.registry import get_model
     from src.config_loader import load_config
     from src.data.loader import DataLoader
@@ -64,7 +65,7 @@ def build_prediction_cache(
     print(f"    Training device: {resolved_device.upper()}")
 
     effective_model_type = cfg.entry_model_type()
-    entry_model_extras = cfg.components.entry_model.extras
+    entry_model_extras = cfg.signals.entry_model.extras
     exit_model_dict = cfg.exit_model_dict()
 
     loader = DataLoader(abs_data_dir)
@@ -138,7 +139,8 @@ def build_prediction_cache(
 
         sell_model = None
         if has_exit:
-            sell_model = get_model(effective_model_type, device=device, **entry_model_extras)
+            exit_model_cfg = cfg.components.exit_model
+            sell_model = get_exit_model(exit_model_cfg.type, device=device, **exit_model_cfg.extras)
             sell_model.fit(X_train, train_df["target_sell"].values.astype(int))
 
         for sym in test_df["symbol"].unique():

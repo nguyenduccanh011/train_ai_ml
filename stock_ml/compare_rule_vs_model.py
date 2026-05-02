@@ -23,11 +23,8 @@ from src.models.registry import build_model
 
 
 def _load_backtest_v9():
-    """Optional loader for legacy V9 backtest in active code paths only."""
-    candidates = [
-        "experiments.run_v9_compare",
-        "run_v9_compare",
-    ]
+    """Optional loader for local V9 comparison script, if still present."""
+    candidates = ["run_v9_compare"]
     for module_name in candidates:
         try:
             module = importlib.import_module(module_name)
@@ -182,7 +179,7 @@ def main():
 
     backtest_v9 = _load_backtest_v9()
     if backtest_v9 is None:
-        print("V9 backtest function not found in active modules (experiments.run_v9_compare).")
+        print("V9 backtest function not found in active modules.")
         print("Rule backtest API remains available via backtest_rule().")
         return
 

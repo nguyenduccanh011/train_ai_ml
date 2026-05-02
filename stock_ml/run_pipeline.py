@@ -1,12 +1,10 @@
 """
 DEPRECATED: Use `python -m stock_ml run <experiment>` instead.
     python -m stock_ml run champions/v22
-    python -m stock_ml run legacy/v25
     python -m stock_ml run-matrix matrix/q3_2026
-    python -m stock_ml migrate-legacy --all
 
-This file is preserved for backward compatibility and production workflows that
-have not yet migrated. It will be removed in Phase 6.3 (tag v2.0).
+This file is preserved only for direct-script workflows that have not yet migrated.
+It supports active champion strategies and rule baseline only.
 
 Unified Pipeline Runner — train, backtest, export, and visualize in one command.
 
@@ -68,59 +66,17 @@ from src.signal_adapter import target_fingerprint
 def get_backtest_function(strategy_key):
     """Dynamically import the backtest function for a given strategy."""
     strategy_map = {
-        "v37a_exit": ("experiments.run_v37a", "backtest_v37a"),
-        "v42_a": ("experiments.run_v42", "backtest_v42"),
-        "v42_base": ("experiments.run_v42", "backtest_v42"),
-        "v39g": ("experiments.run_v39g", "backtest_v39g"),
-        "v39f": ("experiments.run_v39f", "backtest_v39f"),
-        "v39d": ("experiments.run_v39d", "backtest_v39d"),
-        "v39e": ("experiments.run_v39e", "backtest_v39e"),
-        "v39b": ("experiments.run_v39b", "backtest_v39b"),
-        "v39a2": ("experiments.run_v39a2", "backtest_v39a2"),
-        "v39a": ("experiments.run_v39a", "backtest_v39a"),
-        "v38b": ("experiments.run_v38b", "backtest_v38b"),
-        "v38c": ("experiments.run_v38c", "backtest_v38c"),
-        "v38d": ("experiments.run_v38d", "backtest_v38d"),
-        "v38b2": ("experiments.run_v38b2", "backtest_v38b2"),
-        "v38b3": ("experiments.run_v38b3", "backtest_v38b3"),
-        "v38e": ("experiments.run_v38e", "backtest_v38e"),
-        "v38c2": ("experiments.run_v38c2", "backtest_v38c2"),
-        "v38d2": ("experiments.run_v38d2", "backtest_v38d2"),
-        "v38bc": ("experiments.run_v38_combos", "backtest_v38bc"),
-        "v38bd": ("experiments.run_v38_combos", "backtest_v38bd"),
-        "v38cd": ("experiments.run_v38_combos", "backtest_v38cd"),
-        "v38bcd": ("experiments.run_v38_combos", "backtest_v38bcd"),
-        "v37a": ("experiments.run_v37a", "backtest_v37a"),
-        "v37d": ("experiments.run_v37d", "backtest_v37d"),
-        "v35b": ("experiments.run_v34_final", "backtest_v35b"),
-        "v34": ("experiments.run_v34_final", "backtest_v34"),
-        "v33": ("experiments.run_v33_final", "backtest_v33"),
-        "v32": ("experiments.run_v32_final", "backtest_v32"),
-        "v31": ("experiments.run_v31_final", "backtest_v31"),
-        "v30": ("experiments.run_v30", "backtest_v30"),
-        "v29": ("experiments.run_v29", "backtest_v29"),
-        "v28": ("experiments.run_v28", "backtest_v28"),
-        "v27": ("experiments.run_v27", "backtest_v27"),
-        "v26": ("experiments.run_v26", "backtest_v26"),
-        "v25": ("experiments.run_v25", "backtest_v25"),
-        "v24": ("experiments.run_v24", "backtest_v24"),
-        "v23": ("experiments.run_v23_optimal", "backtest_v23"),
-        "v22": ("experiments.run_v22_final", "backtest_v22"),
-        "v21": ("src.strategies.legacy", "backtest_v21"),
-        "v20": ("src.strategies.legacy", "backtest_v20"),
-        "v19_4": ("src.strategies.legacy", "backtest_v19_4"),
         "v19_3": ("src.strategies.legacy", "backtest_v19_3"),
-        "v19_2": ("src.strategies.legacy", "backtest_v19_2"),
-        "v19_1": ("src.strategies.legacy", "backtest_v19_1"),
-        "v19": ("src.strategies.legacy", "backtest_v19"),
-        "v18": ("src.strategies.legacy", "backtest_v18"),
-        "v17": ("src.strategies.legacy", "backtest_v17"),
-        "v16": ("src.strategies.legacy", "backtest_v16"),
-        "v15": ("src.strategies.legacy", "backtest_v15"),
-        "v14": ("src.strategies.legacy", "backtest_v14"),
-        "v13": ("src.strategies.legacy", "backtest_v13"),
-        "v12": ("src.strategies.legacy", "backtest_v12"),
-        "v11": ("src.strategies.legacy", "backtest_v11"),
+        "v22": ("src.backtest.engine", "backtest_unified"),
+        "v22_with_exit_model": ("src.backtest.engine", "backtest_unified"),
+        "v32": ("src.components.runners.lineage_backtests", "backtest_v32"),
+        "v34": ("src.components.runners.lineage_backtests", "backtest_v34"),
+        "v35b": ("src.components.runners.lineage_backtests", "backtest_v35b"),
+        "v37a": ("src.components.runners.lineage_backtests", "backtest_v37a"),
+        "v37a_exit": ("src.components.runners.lineage_backtests", "backtest_v37a"),
+        "v37d": ("src.components.runners.lineage_backtests", "backtest_v37d"),
+        "v39d": ("src.components.runners.lineage_backtests", "backtest_v39d"),
+        "v42_a": ("src.components.runners.lineage_backtests", "backtest_v42"),
         "rule": ("compare_rule_vs_model", "backtest_rule"),
     }
 

@@ -3,24 +3,24 @@
 Usage:
     python -m stock_ml run champions/v22
     python -m stock_ml run champions/v22 --device gpu
-    python -m stock_ml run legacy/v25              # run any legacy version via adapter
     python -m stock_ml run-matrix matrix/test_2x2
     python -m stock_ml validate champions/v22
     python -m stock_ml list-components
     python -m stock_ml list-components --type fusion
     python -m stock_ml list-experiments
-    python -m stock_ml list-legacy                  # list all legacy version keys
     python -m stock_ml compare champions/v22 champions/v34
-    python -m stock_ml migrate-legacy v25           # convert legacy config → YAML
-    python -m stock_ml migrate-legacy --all         # convert all legacy configs
 """
 
 from __future__ import annotations
 
 import argparse
+import hashlib
+import json
 import sys
 from pathlib import Path
 from typing import Any
+
+import yaml
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CONFIG_DIR = REPO_ROOT / "config" / "experiments"
@@ -39,15 +39,6 @@ def _load_symbols() -> list[str]:
     return get_pipeline_symbols()
 
 
-def _is_legacy_run(experiment_arg: str) -> bool:
-    """Return True if the experiment arg refers to a legacy version (legacy/vXX)."""
-    return experiment_arg.startswith("legacy/") or experiment_arg.startswith("legacy\\")
-
-
-def _extract_legacy_key(experiment_arg: str) -> str:
-    return Path(experiment_arg).stem
-
-
 def _print_result_summary(result_name: str, n_trades: int, trades_df: Any) -> None:
     print(f"\nResult: {n_trades} trades for {result_name}")
     if not hasattr(trades_df, "empty") or trades_df.empty:
@@ -64,20 +55,98 @@ def _save_result_csv(result_name: str, trades_df: Any, output_path: Path) -> Non
     print(f"  Saved to: {output_path}")
 
 
+def _json_default(value: Any) -> Any:
+    if hasattr(value, "isoformat"):
+        return value.isoformat()
+    if hasattr(value, "item"):
+        return value.item()
+    return str(value)
+
+
+def _stable_config_hash(config_dict: dict[str, Any]) -> str:
+    payload = json.dumps(config_dict, sort_keys=True, default=_json_default)
+    return hashlib.sha1(payload.encode("utf-8")).hexdigest()[:12]
+
+
+def _artifact_run_name(name: str) -> str:
+    return "".join(ch if ch.isalnum() or ch in "._-" else "_" for ch in name)
+
+
+def _get_matrix_artifact_dir(matrix_name: str, run_name: str) -> Path:
+    from src.env import get_results_dir
+
+    return Path(get_results_dir()) / "experiments" / matrix_name / _artifact_run_name(run_name)
+
+
+def _save_matrix_artifacts(matrix_name: str, cfg: Any, result: Any) -> None:
+    from src.evaluation.scoring import (
+        calc_max_drawdown,
+        calc_mdd_per_symbol,
+        calc_symbol_coverage,
+        calc_yearly_consistency,
+    )
+
+    config_dict = cfg.model_dump()
+    config_hash = _stable_config_hash(config_dict)
+    run_dir = _get_matrix_artifact_dir(matrix_name, result.name)
+    run_dir.mkdir(parents=True, exist_ok=True)
+
+    if not result.trades_df.empty:
+        result.trades_df.to_csv(run_dir / "trades.csv", index=False)
+
+    trades = result.trades_df.to_dict("records") if not result.trades_df.empty else []
+    symbol_coverage = calc_symbol_coverage(trades)
+    metrics = dict(result.metrics)
+    metrics["max_drawdown"] = round(calc_max_drawdown(trades), 2)
+    metrics.setdefault("mdd_per_symbol", round(calc_mdd_per_symbol(trades), 2))
+    metrics.setdefault("yearly_consistency", round(calc_yearly_consistency(trades), 4))
+    metrics["symbol_coverage"] = symbol_coverage
+
+    ranking_row = {
+        "name": result.name,
+        "composite_score": metrics.get("composite_score", 0.0),
+        "total_pnl": metrics.get("total_pnl", 0.0),
+        "win_rate": metrics.get("wr", 0.0),
+        "max_drawdown": metrics.get("max_drawdown", 0.0),
+        "mdd_per_symbol": metrics.get("mdd_per_symbol", 0.0),
+        "trade_count": metrics.get("trades", 0),
+        "avg_holding_days": metrics.get("avg_hold", 0.0),
+        "per_year_consistency": metrics.get("yearly_consistency", 0.0),
+        "per_symbol_coverage": symbol_coverage,
+        "config_hash": config_hash,
+    }
+    predictions_meta = {
+        "config_hash": config_hash,
+        "entry_model": cfg.entry_model_type(),
+        "exit_model_type": cfg.components.exit_model.type,
+        "exit_model_enabled": cfg.components.exit_model.enabled,
+        "feature_set": cfg.feature_set(),
+        "split": cfg.split.model_dump(),
+        "cache_stats": result.metadata.get("cache_stats", {}),
+    }
+
+    (run_dir / "metrics.json").write_text(
+        json.dumps(metrics, indent=2, ensure_ascii=False, default=_json_default),
+        encoding="utf-8",
+    )
+    (run_dir / "ranking_row.json").write_text(
+        json.dumps(ranking_row, indent=2, ensure_ascii=False, default=_json_default),
+        encoding="utf-8",
+    )
+    (run_dir / "predictions_meta.json").write_text(
+        json.dumps(predictions_meta, indent=2, ensure_ascii=False, default=_json_default),
+        encoding="utf-8",
+    )
+    (run_dir / "config.resolved.yaml").write_text(
+        yaml.safe_dump(config_dict, sort_keys=False, allow_unicode=True),
+        encoding="utf-8",
+    )
+    print(f"  Artifacts: {run_dir}")
+
+
 def cmd_run(args: argparse.Namespace) -> int:
     device = args.device or "cpu"
     symbols = _load_symbols()
-
-    if _is_legacy_run(args.experiment):
-        version_key = _extract_legacy_key(args.experiment)
-        from src.pipeline.legacy_adapter import LegacyVersionAdapter
-
-        adapter = LegacyVersionAdapter(version_key)
-        result = adapter.run(symbols, device=device)
-        _print_result_summary(result.name, result.n_trades, result.trades_df)
-        if args.output:
-            _save_result_csv(result.name, result.trades_df, Path(args.output))
-        return 0
 
     from src.pipeline import ExperimentConfig, Pipeline
 
@@ -105,8 +174,62 @@ def cmd_run(args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_run_matrix(args: argparse.Namespace) -> int:
+def _run_matrix_configs(
+    *,
+    matrix_name: str,
+    configs: list[Any],
+    symbols: list[str],
+    device: str,
+    dry_run: bool,
+    save_results: bool,
+    resume: bool,
+) -> list[Any]:
+    from src.env import get_results_dir
     from src.pipeline import Pipeline
+    from src.pipeline.cache import PredictionCacheManager
+
+    if resume and not save_results:
+        print("  [WARN] --resume ignored because --no-save-results was set")
+
+    cache_root = Path(get_results_dir()) / "cache" / "predictions"
+    cache_manager = PredictionCacheManager(cache_root)
+    results = []
+    for i, cfg in enumerate(configs, 1):
+        print(f"\n[{i}/{len(configs)}] {cfg.name}")
+        print(
+            f"  strategy={cfg.strategy} features={cfg.feature_set()} "
+            f"entry={cfg.entry_model_type()} exit={cfg.components.exit_model.type} "
+            f"exit_enabled={cfg.components.exit_model.enabled}"
+        )
+        if dry_run:
+            continue
+        if resume and save_results:
+            run_dir = _get_matrix_artifact_dir(matrix_name, cfg.name)
+            if (run_dir / "ranking_row.json").exists():
+                print("  [SKIP] already done")
+                continue
+        pipeline = Pipeline(cfg, symbols=symbols, device=device, cache_manager=cache_manager)
+        result = pipeline.run()
+        results.append(result)
+        print(f"  -> {result.n_trades} trades")
+        if save_results:
+            _save_matrix_artifacts(matrix_name, cfg, result)
+    return results
+
+
+def _select_top_k_matrix_configs(matrix_name: str, configs: list[Any], k: int) -> list[Any]:
+    rows = []
+    by_name = {cfg.name: cfg for cfg in configs}
+    for cfg in configs:
+        row_path = _get_matrix_artifact_dir(matrix_name, cfg.name) / "ranking_row.json"
+        if row_path.exists():
+            row = json.loads(row_path.read_text(encoding="utf-8"))
+            rows.append((cfg.name, float(row.get("composite_score", 0.0))))
+    rows.sort(key=lambda item: item[1], reverse=True)
+    return [by_name[name] for name, _score in rows[:k] if name in by_name]
+
+
+def cmd_run_matrix(args: argparse.Namespace) -> int:
     from src.pipeline.matrix_expander import expand_matrix
 
     yaml_path = _resolve_yaml(args.matrix)
@@ -114,17 +237,107 @@ def cmd_run_matrix(args: argparse.Namespace) -> int:
         print(f"Error: matrix config not found: {yaml_path}", file=sys.stderr)
         return 1
 
-    configs = expand_matrix(yaml_path)
-    symbols = _load_symbols()
+    configs = expand_matrix(yaml_path, limit=args.limit)
+    all_symbols = _load_symbols()
+    symbols = all_symbols[: args.symbols_limit] if args.symbols_limit is not None else all_symbols
     device = args.device or "cpu"
 
     print(f"Matrix: {len(configs)} experiments from {yaml_path.name}")
-    for i, cfg in enumerate(configs, 1):
-        print(f"\n[{i}/{len(configs)}] {cfg.name}")
-        pipeline = Pipeline(cfg, symbols=symbols, device=device)
-        result = pipeline.run()
-        print(f"  → {result.n_trades} trades")
+    if args.top_k_preview is not None:
+        if args.top_k_preview <= 0:
+            print("Error: --top-k-preview must be > 0", file=sys.stderr)
+            return 1
+        preview_limit = args.symbols_limit or 10
+        preview_symbols = all_symbols[:preview_limit]
+        preview_matrix_name = f"{yaml_path.stem}_preview"
+        print(
+            f"Top-k preview: running {len(configs)} experiments on {len(preview_symbols)} symbols"
+        )
+        _run_matrix_configs(
+            matrix_name=preview_matrix_name,
+            configs=configs,
+            symbols=preview_symbols,
+            device=device,
+            dry_run=args.dry_run,
+            save_results=args.save_results,
+            resume=args.resume,
+        )
+        if args.dry_run:
+            return 0
+        top_configs = _select_top_k_matrix_configs(preview_matrix_name, configs, args.top_k_preview)
+        if not top_configs:
+            print("Error: no preview ranking rows found", file=sys.stderr)
+            return 1
+        print(f"\nTop-k full run: {len(top_configs)} experiments")
+        _run_matrix_configs(
+            matrix_name=yaml_path.stem,
+            configs=top_configs,
+            symbols=symbols,
+            device=device,
+            dry_run=False,
+            save_results=args.save_results,
+            resume=args.resume,
+        )
+        return 0
 
+    _run_matrix_configs(
+        matrix_name=yaml_path.stem,
+        configs=configs,
+        symbols=symbols,
+        device=device,
+        dry_run=args.dry_run,
+        save_results=args.save_results,
+        resume=args.resume,
+    )
+    return 0
+
+
+def cmd_compare_matrix(args: argparse.Namespace) -> int:
+    import pandas as pd
+
+    matrix_dir = Path(args.results_dir)
+    if not matrix_dir.is_absolute():
+        matrix_dir = REPO_ROOT / matrix_dir
+    if not matrix_dir.exists():
+        print(f"Error: matrix results dir not found: {matrix_dir}", file=sys.stderr)
+        return 1
+
+    rows = []
+    for row_path in sorted(matrix_dir.glob("*/ranking_row.json")):
+        rows.append(json.loads(row_path.read_text(encoding="utf-8")))
+
+    if not rows:
+        print(f"Error: no ranking_row.json found under {matrix_dir}", file=sys.stderr)
+        return 1
+
+    df = pd.DataFrame(rows).sort_values("composite_score", ascending=False)
+    if "mdd_per_symbol" not in df.columns:
+        df["mdd_per_symbol"] = df.get("max_drawdown", 0.0)
+    display = df.assign(
+        score=df["composite_score"],
+        mdd=df["mdd_per_symbol"],
+        trades=df["trade_count"],
+        hold_days=df["avg_holding_days"],
+        yr_cv=df["per_year_consistency"],
+    )[["name", "score", "total_pnl", "win_rate", "mdd", "trades", "hold_days", "yr_cv"]]
+    print(display.to_string(index=False))
+
+    warnings = []
+    for row in rows:
+        flags = []
+        coverage = row.get("per_symbol_coverage", {}) or {}
+        if row.get("trade_count", 0) < 20:
+            flags.append("LOW_TRADES")
+        if coverage.get("top_symbol_pnl_ratio", 0.0) > 0.5:
+            flags.append("SYMBOL_CONCENTRATION")
+        if row.get("per_year_consistency", 0.0) > 1.5:
+            flags.append("YEAR_INCONSISTENT")
+        if flags:
+            warnings.append(f"  {row.get('name')}: {', '.join(flags)}")
+
+    if warnings:
+        print("\nWinner guard warnings:")
+        print("\n".join(warnings))
     return 0
 
 
@@ -164,6 +377,7 @@ def cmd_validate(args: argparse.Namespace) -> int:
 
 
 def cmd_list_components(args: argparse.Namespace) -> int:
+    from src.components.exit_models.registry import list_exit_models
     from src.components.features.registry import _BLOCK_REGISTRY
     from src.components.fusion.registry import list_strategies
     from src.components.models.registry import list_models
@@ -181,6 +395,11 @@ def cmd_list_components(args: argparse.Namespace) -> int:
         for name in list_models():
             print(f"  {name}")
 
+    if component_type in (None, "exit_models"):
+        print("=== Exit Models ===")
+        for name in list_exit_models():
+            print(f"  {name}")
+
     if component_type in (None, "targets"):
         print("=== Target Generators ===")
         for name in list_targets():
@@ -192,38 +411,6 @@ def cmd_list_components(args: argparse.Namespace) -> int:
         print("=== Fusion Strategies ===")
         for name in list_strategies():
             print(f"  {name}")
-
-    return 0
-
-
-def cmd_list_legacy(args: argparse.Namespace) -> int:
-    del args
-    from src.pipeline.legacy_adapter import CHAMPION_VERSIONS, LEGACY_STRATEGY_MAP
-
-    print("=== Legacy Versions (non-champion) ===")
-    for key in sorted(k for k in LEGACY_STRATEGY_MAP if k not in CHAMPION_VERSIONS):
-        print(f"  {key}")
-
-    print("\n=== Champion Aliases in Legacy Map ===")
-    for key in sorted(k for k in LEGACY_STRATEGY_MAP if k in CHAMPION_VERSIONS):
-        print(f"  {key}  (has component runner — use champions/{key} instead)")
-
-    return 0
-
-
-def cmd_migrate_legacy(args: argparse.Namespace) -> int:
-    from scripts.migrate_legacy import migrate_all, migrate_version
-
-    if args.all:
-        paths = migrate_all(
-            output_dir=args.output_dir,
-            dry_run=args.dry_run,
-            skip_champions=not args.include_champions,
-        )
-        print(f"\nMigrated {len(paths)} version(s).")
-    else:
-        output_path = Path(args.output) if args.output else None
-        migrate_version(args.version, output_path=output_path, dry_run=args.dry_run)
 
     return 0
 
@@ -363,7 +550,36 @@ def build_parser() -> argparse.ArgumentParser:
     p_mat = sub.add_parser("run-matrix", help="Run all experiments in a matrix YAML")
     p_mat.add_argument("matrix", help="Path to matrix YAML (e.g. matrix/test_2x2)")
     p_mat.add_argument("--device", default="cpu", help="cpu or gpu")
+    p_mat.add_argument(
+        "--dry-run", action="store_true", help="Print expanded experiments without running"
+    )
+    p_mat.add_argument("--limit", type=int, help="Run only the first N expanded experiments")
+    p_mat.add_argument(
+        "--symbols-limit", type=int, help="Run each experiment on the first N symbols"
+    )
+    p_mat.add_argument(
+        "--resume", action="store_true", help="Skip experiments that already have ranking_row.json"
+    )
+    p_mat.add_argument(
+        "--top-k-preview",
+        type=int,
+        metavar="K",
+        dest="top_k_preview",
+        help="Run all experiments with limited symbols first, then re-run top K",
+    )
+    p_mat.add_argument(
+        "--save-results",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        dest="save_results",
+        help="Save matrix artifacts under results/experiments/<matrix_name>/",
+    )
     p_mat.set_defaults(func=cmd_run_matrix)
+
+    # compare-matrix
+    p_cmp_mat = sub.add_parser("compare-matrix", help="Rank saved matrix experiment artifacts")
+    p_cmp_mat.add_argument("results_dir", help="Path to results/experiments/<matrix_name>")
+    p_cmp_mat.set_defaults(func=cmd_compare_matrix)
 
     # validate
     p_val = sub.add_parser("validate", help="Validate experiment config")
@@ -372,38 +588,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     # list-components
     p_lc = sub.add_parser("list-components", help="List registered components")
-    p_lc.add_argument("--type", choices=["features", "models", "targets", "fusion"])
+    p_lc.add_argument("--type", choices=["features", "models", "exit_models", "targets", "fusion"])
     p_lc.set_defaults(func=cmd_list_components)
 
     # list-experiments
     p_le = sub.add_parser("list-experiments", help="List available experiment configs")
     p_le.set_defaults(func=cmd_list_experiments)
-
-    # list-legacy
-    p_ll = sub.add_parser("list-legacy", help="List available legacy version keys")
-    p_ll.set_defaults(func=cmd_list_legacy)
-
-    # migrate-legacy
-    p_ml = sub.add_parser("migrate-legacy", help="Convert legacy models.yaml entries to YAML")
-    ml_group = p_ml.add_mutually_exclusive_group(required=True)
-    ml_group.add_argument("version", nargs="?", help="Single version key (e.g. v25)")
-    ml_group.add_argument("--all", action="store_true", help="Migrate all versions")
-    p_ml.add_argument("--output", help="Output file path (single-version mode)")
-    p_ml.add_argument(
-        "--output-dir",
-        type=Path,
-        default=None,
-        dest="output_dir",
-        help="Output directory (--all mode)",
-    )
-    p_ml.add_argument(
-        "--include-champions",
-        action="store_true",
-        dest="include_champions",
-        help="Also migrate champion versions",
-    )
-    p_ml.add_argument("--dry-run", action="store_true", dest="dry_run")
-    p_ml.set_defaults(func=cmd_migrate_legacy)
 
     # compare
     p_cmp = sub.add_parser("compare", help="Run and compare multiple experiments")
@@ -436,7 +626,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_exp.set_defaults(func=cmd_export)
 
     # benchmark
-    p_bm = sub.add_parser("benchmark", help="Benchmark new pipeline vs legacy runtime")
+    p_bm = sub.add_parser("benchmark", help="Benchmark pipeline runtime")
     p_bm.add_argument(
         "--versions",
         default="v22,v34,v37a,v32",

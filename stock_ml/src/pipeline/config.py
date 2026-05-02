@@ -108,7 +108,6 @@ class ExperimentConfig(BaseModel):
     mods: dict[str, bool] = Field(default_factory=dict)
     params: dict[str, Any] = Field(default_factory=dict)
     fusion: FusionGroupConfig = Field(default_factory=FusionGroupConfig)
-    enable_model_b_exit: bool = False
     signals: SignalsConfig | None = None
     strategy_v3: StrategyV3Config | None = None
     execution: ExecutionConfig | None = None
@@ -169,7 +168,7 @@ class ExperimentConfig(BaseModel):
         return cls.model_validate(data)
 
     def entry_model_type(self) -> str:
-        return self.components.entry_model.type
+        return self.signals.entry_model.type
 
     def feature_set(self) -> str:
         return self.components.features

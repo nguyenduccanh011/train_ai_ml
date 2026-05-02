@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 from collections.abc import Callable
 from typing import Any
 
@@ -71,7 +72,7 @@ def _build_prediction_cache(
     device: str,
     feature_set: str | None = None,
 ) -> list[dict[str, Any]]:
-    from run_pipeline import _build_predictions
+    from src.pipeline.build_predictions import _build_predictions
 
     model_cfg = get_model_config("v34")
     return _build_predictions(
@@ -114,7 +115,7 @@ def run_v34(
     commission: float = 0.0015,
     tax: float = 0.001,
     record_trades: bool = True,
-    enable_model_b_exit: bool = False,
+    enable_exit_model: bool = False,
 ) -> list[Trade]:
     del data_dir, first_test_year, last_test_year, train_years
     model_cfg = get_model_config("v34")
@@ -139,7 +140,7 @@ def run_v34(
         mods=active_mods,
         params=active_params,
         entry_reason="v34",
-        enable_model_b_exit=enable_model_b_exit,
+        enable_exit_model=enable_exit_model,
     )
 
 
@@ -150,7 +151,7 @@ def _backtest_v34(
     feature_cols: Any,
     **kwargs: Any,
 ) -> dict[str, Any]:
-    from experiments.run_v34_final import backtest_v34
+    from src.components.runners.lineage_backtests import backtest_v34
 
     return backtest_v34(y_pred, returns, df_test, feature_cols, **kwargs)
 
@@ -163,7 +164,7 @@ def _run_v34_lineage_cache(
     mods: dict[str, bool],
     params: dict[str, Any],
     entry_reason: str,
-    enable_model_b_exit: bool = False,
+    enable_exit_model: bool = False,
 ) -> list[Trade]:
     symbol_set = set(symbols)
     all_trades: list[Trade] = []
@@ -177,7 +178,7 @@ def _run_v34_lineage_cache(
                 mods=mods,
                 params=params,
                 entry_reason=entry_reason,
-                enable_model_b_exit=enable_model_b_exit,
+                enable_exit_model=enable_exit_model,
             )
         )
     return all_trades
@@ -190,17 +191,19 @@ def _run_cache_item(
     mods: dict[str, bool],
     params: dict[str, Any],
     entry_reason: str,
-    enable_model_b_exit: bool = False,
+    enable_exit_model: bool = False,
 ) -> list[Trade]:
+    sig_params = set(inspect.signature(backtest_fn).parameters)
+    mod_kwargs = {k: v for k, v in _mod_kwargs(mods).items() if k in sig_params}
     extra: dict[str, Any] = {}
-    if enable_model_b_exit and item.get("y_pred_exit") is not None:
+    if enable_exit_model and item.get("y_pred_exit") is not None and "y_pred_exit" in sig_params:
         extra["y_pred_exit"] = item["y_pred_exit"]
     result = backtest_fn(
         item["y_pred"],
         item["returns"],
         item["sym_test_df"],
         item["feature_cols"],
-        **_mod_kwargs(mods),
+        **mod_kwargs,
         **params,
         **extra,
     )

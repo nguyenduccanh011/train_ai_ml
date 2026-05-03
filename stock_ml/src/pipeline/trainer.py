@@ -57,9 +57,9 @@ def build_prediction_cache(
         "target": cfg.target_dict(),
     }
 
-    target_type = cfg.components.target.type
+    target_type = cfg.signals.target.type
     if str(target_type).lower() == "return_regression":
-        raise ValueError("target.type='return_regression' is not supported.")
+        raise ValueError("signals.target.type='return_regression' is not supported.")
 
     resolved_device = detect_device(device)
     print(f"    Training device: {resolved_device.upper()}")
@@ -139,7 +139,7 @@ def build_prediction_cache(
 
         sell_model = None
         if has_exit:
-            exit_model_cfg = cfg.components.exit_model
+            exit_model_cfg = cfg.signals.exit_model
             sell_model = get_exit_model(exit_model_cfg.type, device=device, **exit_model_cfg.extras)
             sell_model.fit(X_train, train_df["target_sell"].values.astype(int))
 

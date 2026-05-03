@@ -72,4 +72,14 @@ RUNNER_DEFS: dict[str, RunnerDef] = {
 }
 
 
-__all__ = ["RUNNER_DEFS"]
+def list_runners() -> dict[str, str]:
+    from src.components.runners.generic_fusion import FUSION_RUNNER_DEFS
+    from src.pipeline.orchestrator import CHAMPION_RUNNER_MAP
+
+    runners = {name: "lineage" for name in RUNNER_DEFS}
+    runners.update({name: "fusion" for name in FUSION_RUNNER_DEFS})
+    runners.update({name: "champion" for name in CHAMPION_RUNNER_MAP})
+    return runners
+
+
+__all__ = ["RUNNER_DEFS", "list_runners"]

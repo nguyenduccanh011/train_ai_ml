@@ -1,0 +1,45 @@
+name_prefix: finalists_entry_exit
+
+axes:
+  signals:
+    - label: leading_v2_random_forest_lightgbm_exit
+      features: leading_v2
+      entry_model: {type: random_forest}
+      exit_model: {enabled: true, type: lightgbm, forward_window: 15, loss_threshold: 0.05}
+    - label: leading_v2_random_forest_xgboost_exit
+      features: leading_v2
+      entry_model: {type: random_forest}
+      exit_model: {enabled: true, type: xgboost, forward_window: 15, loss_threshold: 0.05}
+    - label: leading_v2_random_forest_catboost_exit
+      features: leading_v2
+      entry_model: {type: random_forest}
+      exit_model: {enabled: true, type: catboost, forward_window: 15, loss_threshold: 0.05}
+    - label: leading_v2_gru_lightgbm_exit
+      features: leading_v2
+      entry_model: {type: gru}
+      exit_model: {enabled: true, type: lightgbm, forward_window: 15, loss_threshold: 0.05}
+    - label: leading_v2_gru_xgboost_exit
+      features: leading_v2
+      entry_model: {type: gru}
+      exit_model: {enabled: true, type: xgboost, forward_window: 15, loss_threshold: 0.05}
+    - label: leading_v2_gru_catboost_exit
+      features: leading_v2
+      entry_model: {type: gru}
+      exit_model: {enabled: true, type: catboost, forward_window: 15, loss_threshold: 0.05}
+    - label: leading_v4_random_forest_lightgbm_exit
+      features: leading_v4
+      entry_model: {type: random_forest}
+      exit_model: {enabled: true, type: lightgbm, forward_window: 15, loss_threshold: 0.05}
+    - label: leading_v4_random_forest_xgboost_exit
+      features: leading_v4
+      entry_model: {type: random_forest}
+      exit_model: {enabled: true, type: xgboost, forward_window: 15, loss_threshold: 0.05}
+  strategy: [v22]
+
+base:
+  signals:
+    target:
+      type: early_wave
+  split:
+    first_test_year: 2023
+    last_test_year: 2024

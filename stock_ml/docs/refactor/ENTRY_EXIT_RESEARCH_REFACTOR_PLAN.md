@@ -683,10 +683,11 @@ python -m stock_ml compare-matrix results/experiments/entry_exit_grid_q2_2026
 
 ### File liên quan
 
-- `src/evaluation/scoring.py`
-- `src/components/evaluation/`
-- `src/pipeline/orchestrator.py`
-- `scripts/benchmark.py`
+- `- `src/evaluation/scoring.py`: `composite_score()` da chuyen sang che do live-aware:
+  - quality score dung `sharpe`, `avg_pnl`, `profit_factor`, `mdd_per_symbol`, `yr_consistency`.
+  - co confidence shrinkage theo `trade_count`: `sqrt(N/(N+k))`.
+  - co bonus `total_pnl_scale` dang nen `log1p(total_pnl)` de phan anh kha nang tao PnL thuc ma khong de raw total PnL lan at.
+  - co `calc_symbol_coverage()` de tinh `symbol_count` va `top_symbol_pnl_ratio` phuc vu guard winner gia.
 - `scripts/cli.py`
 - `results/`
 
@@ -707,10 +708,11 @@ python -m stock_ml compare-matrix results/experiments/entry_exit_quick
 Đã hoàn thiện nền tảng artifact/ranking cho matrix runs:
 
 - `src/pipeline/orchestrator.py`: `PipelineResult` đã có `metrics`; `Pipeline.run()` tự tính `calc_metrics()`, `mdd_per_symbol`, `yearly_consistency`, và `composite_score()` khi có trades.
-- `src/evaluation/scoring.py`: `composite_score()` đã khớp thiết kế symbol-count neutral trong docstring:
-  - dùng `sharpe`, `avg_pnl`, `profit_factor`, `mdd_per_symbol`, `yr_consistency`.
-  - không dùng `total_pnl` trong score để tránh bias theo số symbol.
-  - có `calc_symbol_coverage()` để tính `symbol_count` và `top_symbol_pnl_ratio` phục vụ guard winner giả.
+- `src/evaluation/scoring.py`: `composite_score()` da chuyen sang che do live-aware:
+  - quality score dung `sharpe`, `avg_pnl`, `profit_factor`, `mdd_per_symbol`, `yr_consistency`.
+  - co confidence shrinkage theo `trade_count`: `sqrt(N/(N+k))`.
+  - co bonus `total_pnl_scale` dang nen `log1p(total_pnl)` de phan anh kha nang tao PnL thuc ma khong de raw total PnL lan at.
+  - co `calc_symbol_coverage()` de tinh `symbol_count` va `top_symbol_pnl_ratio` phuc vu guard winner gia.
 - `scripts/cli.py`: `run-matrix` mặc định lưu artifact env-aware qua `get_results_dir()` vào `results/experiments/<matrix_name>/<experiment_name>/`:
   - `trades.csv` nếu run có trades.
   - `metrics.json`.

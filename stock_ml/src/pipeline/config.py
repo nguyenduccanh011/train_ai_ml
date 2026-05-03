@@ -127,6 +127,19 @@ class ExperimentConfig(BaseModel):
         if "runner" not in values or not values.get("runner"):
             strategy = values.get("strategy", "")
             values["runner"] = f"src.components.runners.{strategy}_runner" if strategy else ""
+
+        has_components = "components" in values and values["components"] is not None
+        has_signals = "signals" in values and values["signals"] is not None
+        if has_components and has_signals:
+            components = ComponentsConfig.model_validate(values["components"])
+            signals = SignalsConfig.model_validate(values["signals"])
+            if components.model_dump() != signals.model_dump():
+                raise ValueError(
+                    "components and signals config sections must match when both are provided"
+                )
+        elif has_signals:
+            signals = SignalsConfig.model_validate(values["signals"])
+            values["components"] = signals.model_dump()
         return values
 
     @model_validator(mode="after")
@@ -138,6 +151,12 @@ class ExperimentConfig(BaseModel):
                 entry_model=self.components.entry_model,
                 exit_model=self.components.exit_model,
             )
+        self.components = ComponentsConfig(
+            features=self.signals.features,
+            target=self.signals.target,
+            entry_model=self.signals.entry_model,
+            exit_model=self.signals.exit_model,
+        )
         if self.strategy_v3 is None:
             force_exit_rules = [item.name for item in self.fusion.force_exit]
             active_exit_rules = [item.name for item in self.fusion.active_exit]
@@ -171,10 +190,10 @@ class ExperimentConfig(BaseModel):
         return self.signals.entry_model.type
 
     def feature_set(self) -> str:
-        return self.components.features
+        return self.signals.features
 
     def target_dict(self) -> dict[str, Any]:
-        return self.components.target.to_legacy_dict()
+        return self.signals.target.to_legacy_dict()
 
     def exit_model_dict(self) -> dict[str, Any] | None:
-        return self.components.exit_model.to_legacy_dict()
+        return self.signals.exit_model.to_legacy_dict()

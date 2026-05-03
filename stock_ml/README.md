@@ -104,6 +104,13 @@ python -m stock_ml run champions/v22 --save-results --export
 # Chạy tất cả experiments trong matrix YAML
 python -m stock_ml run-matrix matrix/test_2x2
 
+# Xếp hạng artifact đã lưu của một matrix
+python -m stock_ml compare-matrix results/experiments/finalists_entry_exit --top 10
+
+# Chạy & xếp hạng toàn bộ champion với 1 split chung (aggregator)
+python -m stock_ml compare-champions --first-test-year 2023 --last-test-year 2024 --device gpu --resume
+python -m stock_ml compare-champions --first-test-year 2019 --last-test-year 2025 --champions v22,v34,v37a,v39d --device gpu --resume
+
 # Validate config
 python -m stock_ml validate champions/v22
 
@@ -173,21 +180,23 @@ Bar i:
 
 ## Champion Versions (11)
 
-| Version | Feature Set | Target | Model | Score |
-|---------|------------|--------|-------|------:|
-| **v22** | leading_v2 | trend_regime | LightGBM | 686.3 |
-| **v32** | leading_v3 | early_wave | LightGBM | 353.4 |
-| **v34** | leading_v4 | early_wave | LightGBM | 598.4 |
-| **v35b** | leading_v4 | early_wave | LightGBM | 603.7 |
-| **v37a** | leading_v4 | early_wave_dual | LightGBM | 603.4 |
-| **v37a_exit** | leading_v4 | early_wave_dual | LightGBM | — |
-| **v37d** | leading_v4 | early_wave | GRU | — |
-| **v39d** | leading_v4 | early_wave_dual | LightGBM | **611.7** |
-| **v42_a** | leading_v4 | early_wave_dual fw=15 | LightGBM | 550.1 |
-| **v19_3** | leading_v2 | early_wave | LightGBM | — |
-| **rule** | — | — | Rule (MACD+MA20) | 295.2 |
+| Version | Feature Set | Target | Entry Model | Exit Model | Ghi chú |
+|---------|------------|--------|-------------|------------|---------|
+| **v22** | leading_v2 | trend_regime | LightGBM | rule-only | Baseline `generic_fusion`, không bật exit model. |
+| **v22_with_exit_model** | leading_v2 | early_wave | LightGBM | LightGBM | v22 + exit model (champion `entry_exit` track). |
+| **v32** | leading_v3 | early_wave | LightGBM | LightGBM | Lineage `v32_runner` với patch_smart_hardcap, v26–v32 params. |
+| **v34** | leading_v4 | early_wave | LightGBM | LightGBM | Lineage `v34_runner`. |
+| **v35b** | leading_v4 | early_wave | LightGBM | LightGBM | `run_v35b` với strategy_v3 rule set. |
+| **v37a** | leading_v4 | early_wave | LightGBM | LightGBM | Lineage `v37a_runner`. |
+| **v37a_exit** | leading_v4 | early_wave_dual | LightGBM | LightGBM (fw=8) | v37a + exit model forward_window ngắn. |
+| **v37d** | leading_v4 | early_wave | GRU | LightGBM | GRU entry, lineage `v37d_runner`. |
+| **v39d** | leading_v4 | early_wave | LightGBM | LightGBM | Lineage `v39d_runner`. |
+| **v42_a** | leading_v4 | early_wave_dual (fw=15) | LightGBM | LightGBM | Lineage `v42_a_runner`. |
+| **rule** | leading_v2 | early_wave | Rule | — | Rule baseline (MACD+MA20), benchmark cho ML champion. |
 
-Tất cả 11 champion có golden baseline (CPU, deterministic) tại `tests/regression/golden/` và pass exact parity test.
+> **Primary champion hiện tại (Pha 6, 2026-05-03):** `leading_v2 + random_forest + lightgbm_exit` (strategy `v22`), được chốt trong [docs/refactor/MODEL_SELECTION_RUN_PLAN.md](docs/refactor/MODEL_SELECTION_RUN_PLAN.md). Cấu hình này sống dưới dạng row trong các matrix `finalists_*`, không có file `champions/*.yaml` riêng.
+
+Tất cả champion có golden baseline (CPU, deterministic) tại `tests/regression/golden/` và pass exact parity test.
 
 ## Thêm component mới
 
@@ -335,4 +344,4 @@ GitHub Actions (`.github/workflows/ci.yml`) chạy tự động khi push:
 
 ---
 
-*Cập nhật: 2026-05-02 — Phase 5 terminology đã chuyển sang `exit_model`, `strategy.exit_rules`, `signals.entry_model`, `v22_with_exit_model`, `LegacyAdapter`; `run_pipeline.py` vẫn deprecated, dùng `python -m stock_ml run` thay thế.*
+*Cập nhật: 2026-05-03 — Pha 6 model selection đã chốt primary champion `leading_v2 + random_forest + lightgbm_exit` (strategy `v22`); thêm CLI `compare-champions` để chạy & xếp hạng toàn bộ champion với 1 split chung. Phase 5 terminology giữ nguyên: `exit_model`, `strategy.exit_rules`, `signals.entry_model`, `v22_with_exit_model`, `LegacyAdapter`; `run_pipeline.py` vẫn deprecated, dùng `python -m stock_ml run` thay thế.*

@@ -36,6 +36,8 @@ class GRUEntryModel:
     ) -> None:
         if not HAS_TORCH:
             raise ImportError("torch is required for GRUEntryModel")
+        if device == "gpu":
+            device = "cuda"
         clf = GRUClassifier(
             window=window,
             hidden=hidden,

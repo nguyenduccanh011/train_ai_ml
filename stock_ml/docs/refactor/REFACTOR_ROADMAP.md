@@ -1,5 +1,7 @@
 # Refactor Roadmap — chi tiết từng bước
 
+> Historical: tài liệu này là roadmap V2 ban đầu. Đọc [REFACTOR_V3_PLAN.md](REFACTOR_V3_PLAN.md) cho lịch sử phase V3 đã làm và [CLEAN_ARCH_NEXT_STEPS.md](CLEAN_ARCH_NEXT_STEPS.md) cho cleanup tiếp theo.
+
 ## Overview
 
 8 giai đoạn, ~8 tuần làm full-time. Mỗi giai đoạn:

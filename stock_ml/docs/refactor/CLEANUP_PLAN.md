@@ -1,5 +1,7 @@
 # Cleanup Plan — dọn dẹp archive/ và codebase
 
+> Historical: tài liệu này là kế hoạch cleanup archive/codebase đời đầu. Đọc [CLEAN_ARCH_NEXT_STEPS.md](CLEAN_ARCH_NEXT_STEPS.md) cho trạng thái cleanup hiện tại.
+
 ## Triết lý
 
 **Giữ lại**: cấu hình model cũ (vì có thể dùng để promote sau này) + lịch sử quan trọng.

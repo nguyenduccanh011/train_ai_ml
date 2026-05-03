@@ -1,5 +1,7 @@
 # Kiến trúc mới — Stock ML Trading System v2.0
 
+> Historical: tài liệu này mô tả mục tiêu V2 trước khi V3 Signal / Strategy / Execution được triển khai. Đọc [ARCHITECTURE_V3.md](ARCHITECTURE_V3.md) cho kiến trúc hiện tại.
+
 ## 1. Mục tiêu thiết kế
 
 Kiến trúc này thay thế hoàn toàn pipeline hiện tại để giải quyết 3 vấn đề:

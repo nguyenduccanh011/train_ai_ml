@@ -27,6 +27,7 @@ from src.config_loader import (
     get_model_config,
 )
 from src.env import get_experiment_dir, get_results_dir
+from src.evaluation.scoring import calc_metrics, composite_score
 
 
 def make_markers(trades, version_key, color, marker_shape="arrowUp"):
@@ -157,6 +158,13 @@ def select_fields(df):
     return out
 
 
+def _score_trades(trades):
+    if not trades:
+        return 0.0
+    metrics = calc_metrics(trades)
+    return composite_score(metrics, trades)
+
+
 def export_version(version_key, model_cfg, results_dir, viz_dir):
     """Export a single model version's trades to JSON files."""
     # Determine trades CSV path
@@ -191,10 +199,14 @@ def export_version(version_key, model_cfg, results_dir, viz_dir):
 
     symbols_from_trades = sorted(df["symbol"].dropna().astype(str).unique().tolist())
     index_entries = []
+    all_trades = []
 
     for symbol in symbols_from_trades:
         sym_df = grouped.get(symbol, pd.DataFrame())
         trades = select_fields(sym_df) if len(sym_df) > 0 else []
+        for trade in trades:
+            trade["symbol"] = symbol
+        all_trades.extend(trades)
         stats = compute_stats(trades, version_key)
         markers = make_markers(trades, version_key, color, marker_shape)
 
@@ -245,9 +257,61 @@ def export_version(version_key, model_cfg, results_dir, viz_dir):
         "total_symbols": len(index_entries),
         "symbols_with_trades": with_trades,
         "total_pnl": total_pnl,
+        "composite_score": _score_trades(all_trades),
         "active": model_cfg.get("active", True),
         "order": model_cfg.get("order", 99),
     }
+
+
+def load_trades_from_viz(version_key, viz_dir):
+    data_dir = os.path.join(viz_dir, f"data_{version_key}")
+    if not os.path.isdir(data_dir):
+        return []
+
+    trades = []
+    for filename in sorted(os.listdir(data_dir)):
+        if not filename.endswith(".json") or filename == "index.json":
+            continue
+        path = os.path.join(data_dir, filename)
+        try:
+            with open(path, encoding="utf-8") as f:
+                payload = json.load(f)
+        except (json.JSONDecodeError, OSError):
+            continue
+
+        symbol = payload.get("symbol") or os.path.splitext(filename)[0]
+        for trade in payload.get(f"{version_key}_trades", []):
+            item = dict(trade)
+            item["symbol"] = symbol
+            trades.append(item)
+    return trades
+
+
+def backfill_scores_from_viz(viz_dir, force=False):
+    manifest_path = os.path.join(viz_dir, "manifest.json")
+    if not os.path.exists(manifest_path):
+        raise FileNotFoundError(f"manifest not found: {manifest_path}")
+
+    with open(manifest_path, encoding="utf-8") as f:
+        manifest = json.load(f)
+
+    scores = {}
+    for model in manifest.get("models", []):
+        version_key = model.get("version_key")
+        if not version_key:
+            continue
+        if model.get("composite_score") is not None and not force:
+            scores[version_key] = model["composite_score"]
+            continue
+        trades = load_trades_from_viz(version_key, viz_dir)
+        score = _score_trades(trades)
+        model["composite_score"] = score
+        scores[version_key] = score
+
+    manifest["generated_at"] = datetime.now().isoformat()
+    with open(manifest_path, "w", encoding="utf-8") as f:
+        json.dump(manifest, f, indent=2, ensure_ascii=False)
+    return scores
 
 
 def generate_manifest(exported_versions, viz_dir, base_data_dir="data"):

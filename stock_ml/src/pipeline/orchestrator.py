@@ -33,6 +33,8 @@ CHAMPION_DF_CONVERTER_MAP: dict[str, str] = {
     "v34": "trades_to_v34_dataframe",
 }
 
+STRATEGIES_WITHOUT_PREDICTION_CACHE = {"rule"}
+
 
 @dataclass
 class PipelineResult:
@@ -77,9 +79,12 @@ class Pipeline:
     def run(self) -> PipelineResult:
         print(f"  [Pipeline] Running experiment: {self.cfg.name}")
 
-        cache = self._prediction_cache or self._build_cache()
-
         runner_fn, df_converter = self._resolve_runner()
+        cache = (
+            []
+            if self.cfg.strategy in STRATEGIES_WITHOUT_PREDICTION_CACHE
+            else self._prediction_cache or self._build_cache()
+        )
 
         from src.config_loader import load_config
 
@@ -96,7 +101,7 @@ class Pipeline:
             "params": self.cfg.params or None,
             "strategy_v3": self.cfg.strategy_v3,
         }
-        if self.cfg.components.exit_model.enabled:
+        if self.cfg.signals.exit_model.enabled:
             runner_kwargs["enable_exit_model"] = True
 
         allowed_kwargs = set(signature(runner_fn).parameters)
@@ -150,6 +155,7 @@ class Pipeline:
         return result
 
     def _resolve_runner(self):
+        """Resolve strategy runners from fusion, lineage, then champion registries."""
         import importlib
 
         from src.components.runners._lineage_v34 import run_lineage

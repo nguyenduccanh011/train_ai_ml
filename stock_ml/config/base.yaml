@@ -53,6 +53,20 @@ evaluation:
   commission: 0.0015  # 0.15% each way
   slippage: 0.001
 
+scoring:
+  # live | legacy
+  mode: "live"
+  # Confidence shrinkage strength for small sample sizes.
+  confidence_k: 120
+  weights:
+    sharpe: 0.30
+    avg_pnl: 0.25
+    profit_factor: 0.22
+    mdd_per_symbol: 0.15
+    yr_consistency: 0.08
+    # Compressed total-PnL bonus for live ranking.
+    total_pnl_scale: 0.10
+
 output:
   experiments_dir: "experiments"
   save_predictions: true

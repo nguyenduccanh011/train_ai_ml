@@ -452,7 +452,9 @@ def _run_cache_item(
     df = item["sym_test_df"].reset_index(drop=True)
     symbol = str(item["symbol"])
 
-    n = len(y_pred)
+    n = min(len(y_pred), len(returns), len(df))
+    if y_pred_exit is not None:
+        n = min(n, len(y_pred_exit))
     equity = np.zeros(n)
     equity[0] = initial_capital
 

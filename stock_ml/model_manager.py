@@ -15,7 +15,6 @@ import argparse
 import os
 import sys
 
-import numpy as np
 import pandas as pd
 import yaml
 
@@ -24,7 +23,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import src.safe_io  # noqa: F401 — fix UnicodeEncodeError on Windows console
 from src.config_loader import get_config_path, load_config
 from src.env import get_experiment_dir, get_results_dir
-from src.evaluation.scoring import composite_score
+from src.evaluation.scoring import calc_metrics, composite_score
 
 
 def cmd_list(args):
@@ -165,20 +164,9 @@ def cmd_compare(args):
         df = pd.read_csv(csv_path)
         if "pnl_pct" not in df.columns:
             continue
-        pnls = df["pnl_pct"].values
-        wins = pnls[pnls > 0]
-        losses = pnls[pnls <= 0]
-        gp = wins.sum()
-        gl = abs(losses.sum())
         metrics[key] = {
             "name": m.get("name", key),
-            "trades": len(df),
-            "wr": len(wins) / len(df) * 100 if len(df) > 0 else 0,
-            "avg_pnl": np.mean(pnls),
-            "total_pnl": np.sum(pnls),
-            "pf": gp / gl if gl > 0 else 99,
-            "max_loss": np.min(pnls) if len(pnls) > 0 else 0,
-            "avg_hold": df["holding_days"].mean() if "holding_days" in df.columns else 0,
+            **calc_metrics(df.to_dict("records")),
         }
         trades_cache[key] = df.to_dict("records")
 
@@ -196,8 +184,8 @@ def cmd_compare(args):
     for key, m in metrics.items():
         tl = trades_cache.get(key, [])
         m["sharpe"] = calc_sharpe(tl)
-        m["mdd_sym"] = calc_mdd_per_symbol(tl)
-        m["cv"] = calc_yearly_consistency(tl)
+        m["mdd_per_symbol"] = calc_mdd_per_symbol(tl)
+        m["yearly_consistency"] = calc_yearly_consistency(tl)
         m["score"] = composite_score(m, trades=tl)
 
     # Check metadata consistency
@@ -235,7 +223,7 @@ def cmd_compare(args):
         print(
             f"  {m['name']:<20} | {m['trades']:>4} {m['avg_pnl']:>+7.2f}% "
             f"{m['total_pnl']:>+9.1f}% {m['pf']:>5.2f} "
-            f"{m['sharpe']:>7.3f} {m['mdd_sym']:>7.1f}% {m['cv']:>5.2f} "
+            f"{m['sharpe']:>7.3f} {m['mdd_per_symbol']:>7.1f}% {m['yearly_consistency']:>5.2f} "
             f"{m['score']:>6.1f}{star}"
         )
 
@@ -251,7 +239,7 @@ def cmd_compare(args):
     worst = metrics[worst_key]
     print(
         f"    Best:  {best_key} ({metrics[best_key]['name']}) — Score={metrics[best_key]['score']:.1f}, "
-        f"Sharpe={metrics[best_key]['sharpe']:.3f}, MDD/sym={metrics[best_key]['mdd_sym']:.1f}%"
+        f"Sharpe={metrics[best_key]['sharpe']:.3f}, MDD/sym={metrics[best_key]['mdd_per_symbol']:.1f}%"
     )
     if worst["total_pnl"] < 0 or worst["score"] < 0:
         print(

@@ -86,21 +86,21 @@ class GRUClassifier(ClassifierMixin, BaseEstimator):
         self.classes_ = None
 
     def _build_windows(self, X):
-        """Build sliding windows of length `window` over X (n, F).
-
-        Returns (n, window, F). Pads first (window-1) rows by repeating row[0].
-        """
-        n, f = X.shape
+        """Build sliding windows of length `window` over X (n, F)."""
+        original_n, f = X.shape
         w = self.window
-        if n < w:
-            pad = np.tile(X[0:1], (w - n, 1)) if n > 0 else np.zeros((w, f), dtype=np.float32)
+        if original_n < w:
+            pad = (
+                np.tile(X[0:1], (w - original_n, 1))
+                if original_n > 0
+                else np.zeros((w, f), dtype=np.float32)
+            )
             X = np.concatenate([pad, X], axis=0)
-            n = X.shape[0]
+        n = X.shape[0]
         idx = np.arange(w)[None, :] + np.arange(n - w + 1)[:, None]
         windows = X[idx]
-        # Pad start: first w-1 rows reuse the first window to keep n alignment
         first = np.repeat(windows[0:1], w - 1, axis=0)
-        return np.concatenate([first, windows], axis=0).astype(np.float32)
+        return np.concatenate([first, windows], axis=0)[-original_n:].astype(np.float32)
 
     def fit(self, X, y):
         torch.manual_seed(self.random_state)

@@ -61,14 +61,21 @@ def _base_to_runtime_config(base: dict) -> dict:
     return {
         **base,
         "pipeline": pipeline,
-        "scoring": {
-            "weights": {
-                "total_pnl": 0.45,
-                "profit_factor": 0.25,
-                "mdd_per_symbol": 0.2,
-                "sharpe": 0.1,
-            }
-        },
+        "scoring": base.get(
+            "scoring",
+            {
+                "mode": "live",
+                "confidence_k": 120,
+                "weights": {
+                    "sharpe": 0.30,
+                    "avg_pnl": 0.25,
+                    "profit_factor": 0.22,
+                    "mdd_per_symbol": 0.15,
+                    "yr_consistency": 0.08,
+                    "total_pnl_scale": 0.10,
+                },
+            },
+        ),
         "visualization": {},
         "training": training,
         "evaluation": evaluation,

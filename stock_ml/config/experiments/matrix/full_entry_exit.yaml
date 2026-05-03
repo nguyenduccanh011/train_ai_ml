@@ -1,0 +1,19 @@
+name_prefix: full_entry_exit
+
+axes:
+  features: [leading_v2, leading_v4]
+  model_type: [lightgbm, xgboost, catboost, random_forest, gru]
+  exit_model:
+    - {label: no_exit_model, enabled: false, type: "null"}
+    - {label: lightgbm_exit, enabled: true, type: lightgbm, forward_window: 15, loss_threshold: 0.05}
+    - {label: xgboost_exit, enabled: true, type: xgboost, forward_window: 15, loss_threshold: 0.05}
+    - {label: catboost_exit, enabled: true, type: catboost, forward_window: 15, loss_threshold: 0.05}
+  strategy: [v22]
+
+base:
+  signals:
+    target:
+      type: early_wave
+  split:
+    first_test_year: 2023
+    last_test_year: 2024

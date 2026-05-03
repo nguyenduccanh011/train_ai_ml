@@ -37,10 +37,12 @@ Thumbs.db
 .ipynb_checkpoints/
 
 # Large generated results (CSV/JSON data)
+results/
 stock_ml/results/*.csv
 stock_ml/results/*.json
 stock_ml/results/*.png
 stock_ml/results/cache/
+stock_ml/results/experiments/
 
 # Claude
 .claude/

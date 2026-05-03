@@ -1,24 +1,25 @@
 """
-Unified scoring — single source of truth for model ranking.
+Unified scoring - single source of truth for model ranking.
 
 Design principles:
-  - Symbol-count neutral: adding more symbols should NOT inflate the score
-  - No redundant components: Expectancy == avg_pnl; WR is implicit in PF
+  - Quality-first: rank by edge + risk + stability, not raw turnover alone
+  - Live-aware: include confidence shrinkage and compressed total-PnL scale
   - Risk-adjusted: penalize per-symbol drawdown, not aggregate portfolio MDD
   - Stability: penalize models that only shine in 1-2 years
 
 Score components (weights sum to 1.0):
-  + sharpe          0.30  avg_pnl / std(pnl) — return per unit of risk
-  + avg_pnl         0.25  per-trade expectancy — symbol-count neutral
+  + sharpe          0.30  avg_pnl / std(pnl) - return per unit of risk
+  + avg_pnl         0.25  per-trade expectancy (symbol-count neutral)
   + profit_factor   0.22  gross profit / gross loss
-  - mdd_per_symbol  0.15  avg max-drawdown per symbol — real per-position risk
-  - yr_consistency  0.08  CV of per-year PnL — penalize "lucky year" models
+  - mdd_per_symbol  0.15  avg max-drawdown per symbol - per-position risk
+  - yr_consistency  0.08  CV of per-year PnL - penalize lucky-year models
+  + total_pnl_scale 0.10  compressed bonus from log1p(total_pnl) in live mode
 
 Excluded (with reason):
-  - total_pnl      → scales with #symbols → biases toward bigger universes
-  - win_rate       → already captured by PF = WR/(1-WR) × R/R
-  - trade_count    → used as confidence weight, not score
-  - expectancy     → mathematically equal to avg_pnl
+  - raw total_pnl   - can bias to larger universes; only compressed scale is used
+  - win_rate        - already captured by PF = WR/(1-WR) * R/R
+  - trade_count     - used as confidence weight, not standalone additive score
+  - expectancy      - mathematically equal to avg_pnl
 """
 
 from collections import defaultdict
@@ -37,6 +38,18 @@ def _get_weights():
         "profit_factor": w.get("profit_factor", 0.22),
         "mdd_per_symbol": w.get("mdd_per_symbol", 0.15),
         "yr_consistency": w.get("yr_consistency", 0.08),
+        # Live-oriented extension: compressed scale term to reward durable throughput
+        # without letting raw total_pnl dominate cross-universe comparison.
+        "total_pnl_scale": w.get("total_pnl_scale", 0.10),
+    }
+
+
+def _get_scoring_params():
+    cfg = load_config()
+    s = cfg.get("scoring", {})
+    return {
+        "mode": s.get("mode", "live"),  # legacy | live
+        "confidence_k": float(s.get("confidence_k", 120.0)),
     }
 
 
@@ -212,7 +225,7 @@ def composite_score(metrics: dict, trades: list | None = None) -> float:
     # Yearly CV: 0 → 0 penalty, 2+ → full penalty
     norm_yr = np.clip(yr_cv / 2.0, 0, 1)
 
-    score = (
+    quality_score = (
         w["sharpe"] * norm_sharpe
         + w["avg_pnl"] * norm_avg
         + w["profit_factor"] * norm_pf
@@ -220,7 +233,25 @@ def composite_score(metrics: dict, trades: list | None = None) -> float:
         - w["yr_consistency"] * norm_yr
     ) * 1000
 
-    return round(score, 1)
+    params = _get_scoring_params()
+    mode = params["mode"]
+    if mode == "legacy":
+        return round(quality_score, 1)
+
+    # Live mode:
+    # 1) Confidence shrinkage by trade count (soft, never hard reject small-N models).
+    # 2) Add compressed PnL-scale term so high-turnover profitable models are not ignored.
+    n_trades = max(int(metrics.get("trades", 0)), 0)
+    k = max(float(params["confidence_k"]), 1.0)
+    confidence = float(np.sqrt(n_trades / (n_trades + k))) if n_trades > 0 else 0.0
+    scaled_quality = quality_score * confidence
+
+    total_pnl = float(metrics.get("total_pnl", 0.0))
+    # 0 at 0%, approaches 1 around +300% and above.
+    pnl_scale = float(np.clip(np.log1p(max(total_pnl, 0.0)) / np.log1p(300.0), 0.0, 1.0))
+    live_bonus = w["total_pnl_scale"] * pnl_scale * 1000
+
+    return round(scaled_quality + live_bonus, 1)
 
 
 # ─── Metrics aggregator ───────────────────────────────────────────────────────

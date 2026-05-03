@@ -3,13 +3,13 @@ name_prefix: quick_entry_exit
 axes:
   features: [leading_v2, leading_v4]
   model_type: [lightgbm, xgboost]
-  components.exit_model:
+  exit_model:
     - {label: no_exit_model, enabled: false, type: "null"}
     - {label: lightgbm_exit, enabled: true, type: lightgbm, forward_window: 15, loss_threshold: 0.05}
   strategy: [v22]
 
 base:
-  components:
+  signals:
     target:
       type: early_wave
   split:

@@ -29,16 +29,27 @@ class ValidationError:
         return f"[{self.field}] {self.message}"
 
 
-def validate_config(cfg: ExperimentConfig) -> list[ValidationError]:
-    """Return list of validation errors (empty = OK)."""
+@dataclass
+class ValidationWarning:
+    field: str
+    message: str
+
+    def __str__(self) -> str:
+        return f"[{self.field}] {self.message}"
+
+
+def validate_config(
+    cfg: ExperimentConfig, strict: bool = False
+) -> tuple[list[ValidationError], list[ValidationWarning]]:
+    """Return validation errors and warnings."""
     errors: list[ValidationError] = []
+    warnings: list[ValidationWarning] = []
 
     # 1. Strategy runner
-    from src.components.runners.generic_fusion import FUSION_RUNNER_DEFS
-    from src.components.runners.runner_registry import RUNNER_DEFS
-    from src.pipeline.orchestrator import CHAMPION_RUNNER_MAP
+    from src.components.runners.runner_registry import list_runners
+    from src.pipeline.orchestrator import STRATEGIES_WITHOUT_PREDICTION_CACHE
 
-    valid_runners = set(CHAMPION_RUNNER_MAP) | set(FUSION_RUNNER_DEFS) | set(RUNNER_DEFS)
+    valid_runners = set(list_runners())
     if cfg.strategy not in valid_runners:
         errors.append(
             ValidationError(
@@ -52,7 +63,10 @@ def validate_config(cfg: ExperimentConfig) -> list[ValidationError]:
     from src.components.models.registry import list_models
 
     valid_models = set(list_models())
-    if cfg.entry_model_type() not in valid_models:
+    if (
+        cfg.strategy not in STRATEGIES_WITHOUT_PREDICTION_CACHE
+        and cfg.entry_model_type() not in valid_models
+    ):
         errors.append(
             ValidationError(
                 "signals.entry_model.type",
@@ -61,29 +75,39 @@ def validate_config(cfg: ExperimentConfig) -> list[ValidationError]:
         )
 
     valid_exit_models = set(list_exit_models())
-    if (
-        cfg.components.exit_model.enabled
-        and cfg.components.exit_model.type not in valid_exit_models
-    ):
+    if cfg.signals.exit_model.enabled and cfg.signals.exit_model.type not in valid_exit_models:
         errors.append(
             ValidationError(
-                "components.exit_model.type",
-                f"'{cfg.components.exit_model.type}' is not registered. Valid: {sorted(valid_exit_models)}",
+                "signals.exit_model.type",
+                f"'{cfg.signals.exit_model.type}' is not registered. Valid: {sorted(valid_exit_models)}",
             )
         )
 
     # 3. Target type
-    target_type = cfg.components.target.type
+    target_type = cfg.signals.target.type
     if target_type not in VALID_TARGET_TYPES:
         errors.append(
             ValidationError(
-                "components.target.type",
+                "signals.target.type",
                 f"'{target_type}' is not a known target type. Valid: {sorted(VALID_TARGET_TYPES)}",
             )
         )
 
-    # 4. Exit model with non-dual target: note only (EXIT_MODEL_BUG.md — output currently dropped)
-    # Not an error — legacy behavior preserved for golden parity.
+    if strict and cfg.signals.exit_model.enabled:
+        if target_type not in EXIT_LABEL_TARGETS:
+            errors.append(
+                ValidationError(
+                    "signals.exit_model",
+                    f"exit_model enabled but target '{target_type}' does not support exit labels",
+                )
+            )
+        if cfg.strategy_v3 is not None and not cfg.strategy_v3.active_exit_rules:
+            warnings.append(
+                ValidationWarning(
+                    "signals.exit_model",
+                    "exit_model enabled but strategy_v3.active_exit_rules is empty - exit signal may not be consumed",
+                )
+            )
 
     # 5. Split range validity
     s = cfg.split
@@ -131,12 +155,12 @@ def validate_config(cfg: ExperimentConfig) -> list[ValidationError]:
                         )
                     )
 
-    return errors
+    return errors, warnings
 
 
-def assert_valid(cfg: ExperimentConfig) -> None:
+def assert_valid(cfg: ExperimentConfig, strict: bool = False) -> None:
     """Raise ValueError with all errors if config is invalid."""
-    errors = validate_config(cfg)
+    errors, _ = validate_config(cfg, strict=strict)
     if errors:
         msg = "\n".join(f"  {e}" for e in errors)
         raise ValueError(f"Invalid ExperimentConfig '{cfg.name}':\n{msg}")

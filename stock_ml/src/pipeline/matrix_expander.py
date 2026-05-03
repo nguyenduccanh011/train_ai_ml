@@ -49,7 +49,7 @@ def _axes_to_cfg_data(overrides: dict[str, Any]) -> dict[str, Any]:
 
     for key, value in overrides.items():
         path = _axis_path(key)
-        if isinstance(value, dict) and path in {"signals.entry_model", "components.exit_model"}:
+        if isinstance(value, dict) and path in {"signals.entry_model", "signals.exit_model"}:
             current = deepcopy(value)
         else:
             current = value
@@ -60,9 +60,10 @@ def _axes_to_cfg_data(overrides: dict[str, Any]) -> dict[str, Any]:
 
 def _axis_path(key: str) -> str:
     aliases = {
-        "features": "components.features",
+        "features": "signals.features",
         "model_type": "signals.entry_model.type",
-        "target_type": "components.target.type",
+        "target_type": "signals.target.type",
+        "exit_model": "signals.exit_model",
     }
     path = aliases.get(key, key)
     allowed_roots = {
@@ -74,6 +75,7 @@ def _axis_path(key: str) -> str:
         "mods",
         "params",
         "fusion",
+        "signals",
     }
     if path.split(".", 1)[0] not in allowed_roots:
         raise ValueError(f"Unknown matrix axis '{key}'")

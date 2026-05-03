@@ -109,6 +109,8 @@ class Pipeline:
         trades = runner_fn(self.symbols, abs_data_dir, **runner_kwargs)
 
         trades_df = df_converter(trades) if trades else pd.DataFrame()
+        if isinstance(trades_df, list):
+            trades_df = pd.DataFrame(trades_df)
         metrics: dict[str, Any] = {}
         if not trades_df.empty:
             trades_list = trades_df.to_dict("records")

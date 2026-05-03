@@ -1,0 +1,8 @@
+baseline:
+  bundle: champions_2020_2025_fair
+  run_name: v22
+fairness_dims:
+  - symbols
+  - window
+  - cost_profile
+  - target

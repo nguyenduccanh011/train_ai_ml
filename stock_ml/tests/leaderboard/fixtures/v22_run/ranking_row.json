@@ -1,0 +1,21 @@
+{
+  "name": "v22",
+  "composite_score": 631.3,
+  "total_pnl": 9974.04,
+  "win_rate": 61.35,
+  "max_drawdown": 281.02,
+  "mdd_per_symbol": 25.82,
+  "yearly_consistency": 0.505,
+  "trade_count": 2106,
+  "avg_holding_days": 12.2,
+  "per_year_consistency": 0.505,
+  "feature_set": "leading_v2",
+  "entry_model": "lightgbm",
+  "exit_model_type": "lightgbm",
+  "exit_model_enabled": true,
+  "per_symbol_coverage": {
+    "symbol_count": 61,
+    "top_symbol_pnl_ratio": 0.0353
+  },
+  "config_hash": "c43b43903d6f"
+}

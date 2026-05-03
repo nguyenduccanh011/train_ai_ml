@@ -1,0 +1,20 @@
+{
+  "config_hash": "c43b43903d6f",
+  "entry_model": "lightgbm",
+  "exit_model_type": "lightgbm",
+  "exit_model_enabled": true,
+  "feature_set": "leading_v2",
+  "split": {
+    "method": "walk_forward",
+    "train_years": 4,
+    "test_years": 1,
+    "gap_days": 0,
+    "first_test_year": 2020,
+    "last_test_year": 2025
+  },
+  "created_at": "2026-05-03T13:40:35.499242",
+  "run_scope": "full",
+  "symbols_count": 61,
+  "matrix_name": "champions_2020_2025_fair",
+  "cache_stats": {"hits": 1, "misses": 0, "stored": 0}
+}

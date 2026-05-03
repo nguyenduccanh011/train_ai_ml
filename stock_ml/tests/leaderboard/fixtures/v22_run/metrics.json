@@ -1,0 +1,17 @@
+{
+  "trades": 2106,
+  "wr": 61.35,
+  "avg_pnl": 4.736,
+  "total_pnl": 9974.04,
+  "pf": 3.165,
+  "max_loss": -37.96,
+  "avg_hold": 12.2,
+  "mdd_per_symbol": 25.82,
+  "yearly_consistency": 0.505,
+  "composite_score": 631.3,
+  "max_drawdown": 281.02,
+  "symbol_coverage": {
+    "symbol_count": 61,
+    "top_symbol_pnl_ratio": 0.0353
+  }
+}

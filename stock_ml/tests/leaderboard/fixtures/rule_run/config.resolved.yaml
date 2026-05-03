@@ -1,0 +1,34 @@
+name: rule
+strategy: rule
+runner: src.components.runners.rule_runner
+
+signals:
+  features: leading_v2
+  target:
+    type: early_wave
+    trend_method: dual_ma
+    short_window: 5
+    long_window: 20
+    classes: 3
+    forward_window: 8
+    gain_threshold: 0.06
+    loss_threshold: 0.03
+
+split:
+  method: walk_forward
+  train_years: 4
+  test_years: 1
+  gap_days: 0
+  first_test_year: 2020
+  last_test_year: 2025
+
+execution:
+  backtester: rule_runner
+  capital: 100000000
+  split:
+    method: walk_forward
+    train_years: 4
+    test_years: 1
+    gap_days: 0
+    first_test_year: 2020
+    last_test_year: 2025

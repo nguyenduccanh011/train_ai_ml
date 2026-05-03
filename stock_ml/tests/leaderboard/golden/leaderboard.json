@@ -1,0 +1,88 @@
+[
+  {
+    "run_id": "champions_2020_2025_fair/v22#c43b4390",
+    "bundle": "champions_2020_2025_fair",
+    "run_name": "v22",
+    "config_hash": "c43b43903d6f",
+    "generated_at": "2026-05-03T13:40:35.499242",
+    "superseded": false,
+    "strategy": "v22",
+    "feature_set": "leading_v2",
+    "entry_model": "lightgbm",
+    "exit_model_type": "lightgbm",
+    "exit_model_enabled": true,
+    "target": {
+      "type": "trend_regime",
+      "forward_window": 8,
+      "gain_threshold": 0.06,
+      "loss_threshold": 0.03
+    },
+    "trades": 11,
+    "wr": 72.73,
+    "avg_pnl": 0.037,
+    "total_pnl": 0.41,
+    "pf": 7.833,
+    "avg_hold": 10.4,
+    "sharpe": 0.9589,
+    "max_drawdown": 0.06,
+    "mdd_per_symbol": 0.015,
+    "yearly_consistency": 0.0,
+    "composite_score": 157.2,
+    "score_mode": "live",
+    "n_symbols": 4,
+    "first_test_year": 2020,
+    "last_test_year": 2025,
+    "cost_profile": {
+      "commission": "unknown",
+      "tax": "unknown",
+      "slippage": "unknown"
+    },
+    "fairness_group_key": "1805731ae9748d946c4eb3ed6620a3f716bea570",
+    "warnings": [
+      "cost_profile=unknown"
+    ]
+  },
+  {
+    "run_id": "rule/rule#35a72911",
+    "bundle": "rule",
+    "run_name": "rule",
+    "config_hash": "35a7291113d2",
+    "generated_at": "2026-05-01T10:00:00.000000",
+    "superseded": false,
+    "strategy": "rule",
+    "feature_set": "leading_v2",
+    "entry_model": "rule",
+    "exit_model_type": "null",
+    "exit_model_enabled": false,
+    "target": {
+      "type": "early_wave",
+      "forward_window": 8,
+      "gain_threshold": 0.06,
+      "loss_threshold": 0.03
+    },
+    "trades": 10,
+    "wr": 70.0,
+    "avg_pnl": 0.028,
+    "total_pnl": 0.28,
+    "pf": 5.0,
+    "avg_hold": 16.8,
+    "sharpe": 0.7338,
+    "max_drawdown": 0.07,
+    "mdd_per_symbol": 0.0175,
+    "yearly_consistency": 0.0,
+    "composite_score": 148.9,
+    "score_mode": "live",
+    "n_symbols": 4,
+    "first_test_year": 2020,
+    "last_test_year": 2025,
+    "cost_profile": {
+      "commission": "unknown",
+      "tax": "unknown",
+      "slippage": "unknown"
+    },
+    "fairness_group_key": "c6cc6a74eb8e474e3aa4aea5c478ed664ce337b8",
+    "warnings": [
+      "cost_profile=unknown"
+    ]
+  }
+]

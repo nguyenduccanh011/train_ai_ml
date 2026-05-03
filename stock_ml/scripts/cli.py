@@ -3,7 +3,7 @@
 Usage:
     python -m stock_ml run champions/v22
     python -m stock_ml run champions/v22 --device gpu
-    python -m stock_ml run-matrix matrix/test_2x2
+    python -m stock_ml run-matrix matrix/model_selection
     python -m stock_ml validate champions/v22
     python -m stock_ml list-components
     python -m stock_ml list-components --type fusion
@@ -116,14 +116,40 @@ def _get_experiment_artifact_dir(run_name: str) -> Path:
     return Path(get_results_dir()) / "experiments" / _artifact_run_name(run_name)
 
 
-def _save_experiment_artifacts(cfg: Any, result: Any) -> None:
+def _default_leaderboard_dir() -> Path:
+    from src.env import get_results_dir
+
+    return Path(get_results_dir()) / "leaderboard"
+
+
+def _update_leaderboard(run_dir: Path, *, skip_leaderboard: bool = False) -> None:
+    if skip_leaderboard:
+        return
+    from src.leaderboard.hooks import append_or_update
+
+    row = append_or_update(run_dir, _default_leaderboard_dir())
+    print(f"  Leaderboard: {row.run_id}")
+
+
+def _save_experiment_artifacts(cfg: Any, result: Any, *, skip_leaderboard: bool = False) -> None:
     _save_artifacts(_get_experiment_artifact_dir(result.name), cfg, result)
+    _update_leaderboard(
+        _get_experiment_artifact_dir(result.name), skip_leaderboard=skip_leaderboard
+    )
 
 
 def _save_matrix_artifacts(
-    matrix_name: str, cfg: Any, result: Any, run_meta: dict[str, Any] | None = None
-) -> None:
-    _save_artifacts(_get_matrix_artifact_dir(matrix_name, result.name), cfg, result, run_meta)
+    matrix_name: str,
+    cfg: Any,
+    result: Any,
+    run_meta: dict[str, Any] | None = None,
+    *,
+    skip_leaderboard: bool = False,
+) -> Path:
+    run_dir = _get_matrix_artifact_dir(matrix_name, result.name)
+    _save_artifacts(run_dir, cfg, result, run_meta)
+    _update_leaderboard(run_dir, skip_leaderboard=skip_leaderboard)
+    return run_dir
 
 
 def _save_artifacts(
@@ -229,7 +255,7 @@ def cmd_run(args: argparse.Namespace) -> int:
             results_dir = REPO_ROOT / "results"
             out = results_dir / f"trades_{cfg.strategy}.csv"
             _save_result_csv(result.name, result.trades_df, out)
-        _save_experiment_artifacts(cfg, result)
+        _save_experiment_artifacts(cfg, result, skip_leaderboard=args.skip_leaderboard)
 
     if getattr(args, "export", False) and not result.trades_df.empty:
         _export_to_dashboard(cfg.strategy, result.trades_df)
@@ -256,13 +282,17 @@ def _run_matrix_worker(payload: dict[str, Any]) -> dict[str, Any] | None:
     elapsed_seconds = round(time.perf_counter() - start, 3)
     worker_run_meta = dict(run_meta)
     worker_run_meta["elapsed_seconds"] = elapsed_seconds
+    run_dir = None
     if save_results:
-        _save_matrix_artifacts(matrix_name, cfg, result, worker_run_meta)
+        run_dir = _save_matrix_artifacts(
+            matrix_name, cfg, result, worker_run_meta, skip_leaderboard=True
+        )
     return {
         "name": cfg.name,
         "n_trades": result.n_trades,
         "elapsed_seconds": elapsed_seconds,
         "cache_stats": cache_manager.stats(),
+        "run_dir": str(run_dir) if run_dir is not None else None,
     }
 
 
@@ -290,6 +320,7 @@ def _run_matrix_configs_parallel(
     run_meta: dict[str, Any] | None,
     jobs: int,
     cache_root: Path,
+    skip_leaderboard: bool,
 ) -> list[dict[str, Any]]:
     results: list[dict[str, Any]] = []
     cache_stats = {"hits": 0, "misses": 0, "stored": 0}
@@ -316,6 +347,9 @@ def _run_matrix_configs_parallel(
             if result is None:
                 continue
             results.append(result)
+            run_dir = result.get("run_dir")
+            if save_results and run_dir:
+                _update_leaderboard(Path(run_dir), skip_leaderboard=skip_leaderboard)
             _merge_cache_stats(cache_stats, result.get("cache_stats", {}))
             print(
                 f"[run-matrix] {index}/{len(configs)} {name} done in "
@@ -336,6 +370,7 @@ def _run_matrix_configs(
     resume: bool,
     run_meta: dict[str, Any] | None = None,
     jobs: int = 1,
+    skip_leaderboard: bool = False,
 ) -> list[Any]:
     from src.env import get_results_dir
     from src.pipeline import Pipeline
@@ -381,6 +416,7 @@ def _run_matrix_configs(
             run_meta=run_meta,
             jobs=jobs,
             cache_root=cache_root,
+            skip_leaderboard=skip_leaderboard,
         )
 
     cache_manager = PredictionCacheManager(cache_root)
@@ -396,7 +432,9 @@ def _run_matrix_configs(
         if save_results:
             save_run_meta = dict(run_meta or {})
             save_run_meta["elapsed_seconds"] = elapsed_seconds
-            _save_matrix_artifacts(matrix_name, cfg, result, save_run_meta)
+            _save_matrix_artifacts(
+                matrix_name, cfg, result, save_run_meta, skip_leaderboard=skip_leaderboard
+            )
     _print_cache_stats(cache_manager.stats())
     return results
 
@@ -489,6 +527,7 @@ def cmd_run_matrix(args: argparse.Namespace) -> int:
                 "device": device,
             },
             jobs=args.jobs,
+            skip_leaderboard=args.skip_leaderboard,
         )
         if args.dry_run:
             return 0
@@ -516,6 +555,7 @@ def cmd_run_matrix(args: argparse.Namespace) -> int:
                 "device": device,
             },
             jobs=args.jobs,
+            skip_leaderboard=args.skip_leaderboard,
         )
         if args.save_results:
             _write_matrix_ranking(matrix_bundle_dir)
@@ -538,6 +578,7 @@ def cmd_run_matrix(args: argparse.Namespace) -> int:
             "device": device,
         },
         jobs=args.jobs,
+        skip_leaderboard=args.skip_leaderboard,
     )
     if args.save_results and not args.dry_run:
         _write_matrix_ranking(matrix_bundle_dir)
@@ -902,7 +943,23 @@ def cmd_export_matrix(args: argparse.Namespace) -> int:
     sort_key = args.sort or "composite_score"
     reverse = sort_key not in {"mdd_per_symbol", "yearly_consistency"}
     rows = sorted(rows, key=lambda row: row.get(sort_key, 0) or 0, reverse=reverse)
-    top_rows = rows[: args.top_k]
+
+    seen_fingerprints: set[tuple[float, float, int]] = set()
+    deduped: list[dict[str, Any]] = []
+    for row in rows:
+        fingerprint = (
+            round(float(row.get("composite_score", 0) or 0), 4),
+            round(float(row.get("total_pnl", 0) or 0), 4),
+            int(row.get("trade_count", 0) or 0),
+        )
+        if fingerprint in seen_fingerprints:
+            continue
+        seen_fingerprints.add(fingerprint)
+        deduped.append(row)
+    skipped = len(rows) - len(deduped)
+    if skipped:
+        print(f"  Dedup: skipped {skipped} row(s) with identical metrics")
+    top_rows = deduped[: args.top_k]
 
     colors = [
         "#2196F3",
@@ -1079,6 +1136,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Auto-save trades to results/trades_{strategy}.csv",
     )
     p_run.add_argument(
+        "--skip-leaderboard",
+        action="store_true",
+        dest="skip_leaderboard",
+        help="Skip updating results/leaderboard after saving artifacts",
+    )
+    p_run.add_argument(
         "--export",
         action="store_true",
         help="After run, export trades to dashboard visualization JSON",
@@ -1087,7 +1150,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     # run-matrix
     p_mat = sub.add_parser("run-matrix", help="Run all experiments in a matrix YAML")
-    p_mat.add_argument("matrix", help="Path to matrix YAML (e.g. matrix/test_2x2)")
+    p_mat.add_argument("matrix", help="Path to matrix YAML (e.g. matrix/model_selection)")
     p_mat.add_argument("--device", default="cpu", help="cpu or gpu")
     p_mat.add_argument(
         "--dry-run", action="store_true", help="Print expanded experiments without running"
@@ -1125,6 +1188,12 @@ def build_parser() -> argparse.ArgumentParser:
         default=True,
         dest="save_results",
         help="Save matrix artifacts under results/experiments/<matrix_name>/",
+    )
+    p_mat.add_argument(
+        "--skip-leaderboard",
+        action="store_true",
+        dest="skip_leaderboard",
+        help="Skip updating results/leaderboard after saving artifacts",
     )
     p_mat.set_defaults(func=cmd_run_matrix)
 
@@ -1182,6 +1251,12 @@ def build_parser() -> argparse.ArgumentParser:
         default=True,
         dest="save_results",
         help="Save artifacts under results/experiments/<bundle_name>/",
+    )
+    p_cc.add_argument(
+        "--skip-leaderboard",
+        action="store_true",
+        dest="skip_leaderboard",
+        help="Skip updating results/leaderboard after saving artifacts",
     )
     p_cc.add_argument("--top", type=int, default=15, help="Show top N rows in final table")
     p_cc.set_defaults(func=cmd_compare_champions)
@@ -1241,7 +1316,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p_exmat.add_argument(
         "bundle_dir",
-        help="Path to matrix bundle dir or name (e.g. strategy_sweep_finalists)",
+        help="Path to matrix bundle dir or name (e.g. model_selection)",
     )
     p_exmat.add_argument(
         "--top-k",

@@ -1,0 +1,21 @@
+{
+  "name": "rule",
+  "composite_score": 316.4,
+  "total_pnl": 7621.66,
+  "win_rate": 41.66,
+  "max_drawdown": 612.42,
+  "mdd_per_symbol": 39.13,
+  "yearly_consistency": 1.1748,
+  "trade_count": 2585,
+  "avg_holding_days": 18.9,
+  "per_year_consistency": 1.1748,
+  "feature_set": "leading_v2",
+  "entry_model": "rule",
+  "exit_model_type": "null",
+  "exit_model_enabled": false,
+  "per_symbol_coverage": {
+    "symbol_count": 61,
+    "top_symbol_pnl_ratio": 0.0416
+  },
+  "config_hash": "35a7291113d2"
+}

@@ -1,0 +1,24 @@
+name_prefix: model_selection
+axes:
+  features: [leading_v2, leading_v4]
+  model_type: [lightgbm, xgboost, catboost, random_forest, gru]
+  exit_model:
+    - {label: no_exit_model, enabled: false, type: "null"}
+    - {label: lightgbm_exit, enabled: true, type: lightgbm, forward_window: 15, loss_threshold: 0.05}
+  strategy:
+    - v22
+    - v32
+    - v34
+    - v35b
+    - v37a
+    - v37a_exit
+    - v37d
+    - v39d
+    - v42_a
+base:
+  signals:
+    target:
+      type: early_wave
+  split:
+    first_test_year: 2020
+    last_test_year: 2025

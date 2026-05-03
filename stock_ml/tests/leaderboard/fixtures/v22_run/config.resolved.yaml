@@ -1,0 +1,34 @@
+name: v22
+strategy: v22
+runner: components.runners.run_v22
+
+signals:
+  features: leading_v2
+  target:
+    type: trend_regime
+    trend_method: dual_ma
+    short_window: 5
+    long_window: 20
+    classes: 3
+    forward_window: 8
+    gain_threshold: 0.06
+    loss_threshold: 0.03
+
+split:
+  method: walk_forward
+  train_years: 4
+  test_years: 1
+  gap_days: 0
+  first_test_year: 2020
+  last_test_year: 2025
+
+execution:
+  backtester: run_v22
+  capital: 100000000
+  split:
+    method: walk_forward
+    train_years: 4
+    test_years: 1
+    gap_days: 0
+    first_test_year: 2020
+    last_test_year: 2025

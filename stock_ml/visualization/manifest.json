@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-05-03T13:26:14.761203",
+  "generated_at": "2026-05-03T21:10:49.795948",
   "base_data_dir": "data",
   "base_symbols": [
     "AAA",
@@ -501,7 +501,7 @@
       "total_pnl": 7147.2,
       "active": false,
       "order": -51,
-      "composite_score": 173.3
+      "composite_score": 453.8
     },
     {
       "version_key": "v37a_exit",
@@ -514,7 +514,7 @@
       "total_pnl": 12385.6,
       "active": true,
       "order": -51,
-      "composite_score": 296.4
+      "composite_score": 600.1
     },
     {
       "version_key": "v38b3",
@@ -527,7 +527,7 @@
       "total_pnl": 7767.5,
       "active": false,
       "order": -50,
-      "composite_score": 247.2
+      "composite_score": 533.9
     },
     {
       "version_key": "v42_a",
@@ -540,7 +540,7 @@
       "total_pnl": 11141.7,
       "active": true,
       "order": -50,
-      "composite_score": 216.4
+      "composite_score": 528.4
     },
     {
       "version_key": "v38d2",
@@ -553,7 +553,7 @@
       "total_pnl": 7240.7,
       "active": false,
       "order": -49,
-      "composite_score": 195.4
+      "composite_score": 480.1
     },
     {
       "version_key": "v42_base",
@@ -566,7 +566,7 @@
       "total_pnl": 8232.8,
       "active": true,
       "order": -49,
-      "composite_score": 245.2
+      "composite_score": 530.2
     },
     {
       "version_key": "v38c2",
@@ -579,7 +579,7 @@
       "total_pnl": 7681.4,
       "active": false,
       "order": -48,
-      "composite_score": 235.7
+      "composite_score": 521.7
     },
     {
       "version_key": "v38b2",
@@ -592,7 +592,7 @@
       "total_pnl": 11505.4,
       "active": true,
       "order": -47,
-      "composite_score": 277.3
+      "composite_score": 585.2
     },
     {
       "version_key": "v38bcd",
@@ -605,7 +605,7 @@
       "total_pnl": 6516.5,
       "active": false,
       "order": -46,
-      "composite_score": 96.7
+      "composite_score": 362.4
     },
     {
       "version_key": "v38cd",
@@ -618,7 +618,7 @@
       "total_pnl": 6768.7,
       "active": false,
       "order": -45,
-      "composite_score": 134.7
+      "composite_score": 408.7
     },
     {
       "version_key": "v38bd",
@@ -631,7 +631,7 @@
       "total_pnl": 6771.8,
       "active": false,
       "order": -44,
-      "composite_score": 117.9
+      "composite_score": 385.4
     },
     {
       "version_key": "v38bc",
@@ -644,7 +644,7 @@
       "total_pnl": 7572.6,
       "active": false,
       "order": -43,
-      "composite_score": 224.4
+      "composite_score": 501.5
     },
     {
       "version_key": "v38d",
@@ -657,7 +657,7 @@
       "total_pnl": 7161.0,
       "active": false,
       "order": -42,
-      "composite_score": 173.9
+      "composite_score": 453.2
     },
     {
       "version_key": "v38c",
@@ -670,7 +670,7 @@
       "total_pnl": 7631.6,
       "active": false,
       "order": -41,
-      "composite_score": 232.7
+      "composite_score": 516.5
     },
     {
       "version_key": "v39g",
@@ -683,7 +683,7 @@
       "total_pnl": 12474.8,
       "active": true,
       "order": -41,
-      "composite_score": 327.2
+      "composite_score": 629.0
     },
     {
       "version_key": "v38b",
@@ -696,7 +696,7 @@
       "total_pnl": 7540.1,
       "active": false,
       "order": -40,
-      "composite_score": 220.7
+      "composite_score": 496.6
     },
     {
       "version_key": "v39f",
@@ -709,7 +709,7 @@
       "total_pnl": 12490.9,
       "active": true,
       "order": -40,
-      "composite_score": 329.3
+      "composite_score": 630.7
     },
     {
       "version_key": "v39d",
@@ -722,7 +722,7 @@
       "total_pnl": 12611.4,
       "active": true,
       "order": -39,
-      "composite_score": 339.4
+      "composite_score": 639.4
     },
     {
       "version_key": "v39e",
@@ -735,7 +735,7 @@
       "total_pnl": 12611.4,
       "active": true,
       "order": -38,
-      "composite_score": 339.4
+      "composite_score": 639.4
     },
     {
       "version_key": "v39b",
@@ -748,7 +748,7 @@
       "total_pnl": 12474.8,
       "active": true,
       "order": -37,
-      "composite_score": 327.2
+      "composite_score": 629.0
     },
     {
       "version_key": "v39a2",
@@ -761,7 +761,7 @@
       "total_pnl": 12490.9,
       "active": true,
       "order": -36,
-      "composite_score": 329.3
+      "composite_score": 630.7
     },
     {
       "version_key": "v39a",
@@ -774,7 +774,7 @@
       "total_pnl": 12611.4,
       "active": true,
       "order": -35,
-      "composite_score": 339.4
+      "composite_score": 639.4
     },
     {
       "version_key": "v37d",
@@ -787,7 +787,7 @@
       "total_pnl": 7067.1,
       "active": false,
       "order": -33,
-      "composite_score": 208.8
+      "composite_score": 489.0
     },
     {
       "version_key": "v37b",
@@ -800,7 +800,7 @@
       "total_pnl": 7974.6,
       "active": false,
       "order": -32,
-      "composite_score": 257.9
+      "composite_score": 550.9
     },
     {
       "version_key": "v37c",
@@ -813,7 +813,7 @@
       "total_pnl": 7284.9,
       "active": false,
       "order": -31,
-      "composite_score": 232.0
+      "composite_score": 524.2
     },
     {
       "version_key": "v37a",
@@ -826,7 +826,7 @@
       "total_pnl": 12474.8,
       "active": true,
       "order": -30,
-      "composite_score": 327.2
+      "composite_score": 629.0
     },
     {
       "version_key": "v36c",
@@ -839,7 +839,7 @@
       "total_pnl": 12497.8,
       "active": true,
       "order": -22,
-      "composite_score": 327.4
+      "composite_score": 629.2
     },
     {
       "version_key": "v36b",
@@ -852,7 +852,7 @@
       "total_pnl": 12504.0,
       "active": true,
       "order": -21,
-      "composite_score": 329.3
+      "composite_score": 630.8
     },
     {
       "version_key": "v36a",
@@ -865,7 +865,7 @@
       "total_pnl": 12159.4,
       "active": true,
       "order": -20,
-      "composite_score": 320.8
+      "composite_score": 623.5
     },
     {
       "version_key": "v35c",
@@ -878,7 +878,7 @@
       "total_pnl": 8037.6,
       "active": false,
       "order": -12,
-      "composite_score": 247.2
+      "composite_score": 538.7
     },
     {
       "version_key": "v35b",
@@ -891,7 +891,7 @@
       "total_pnl": 12524.5,
       "active": true,
       "order": -11,
-      "composite_score": 328.1
+      "composite_score": 629.8
     },
     {
       "version_key": "v35a",
@@ -904,7 +904,7 @@
       "total_pnl": 7046.8,
       "active": false,
       "order": -10,
-      "composite_score": 218.2
+      "composite_score": 508.2
     },
     {
       "version_key": "v34",
@@ -917,7 +917,7 @@
       "total_pnl": 12063.8,
       "active": true,
       "order": -6,
-      "composite_score": 321.9
+      "composite_score": 624.4
     },
     {
       "version_key": "v33",
@@ -930,7 +930,7 @@
       "total_pnl": 7510.9,
       "active": false,
       "order": -5,
-      "composite_score": 227.6
+      "composite_score": 510.1
     },
     {
       "version_key": "v32",
@@ -943,7 +943,7 @@
       "total_pnl": 7510.9,
       "active": true,
       "order": -4,
-      "composite_score": 227.6
+      "composite_score": 510.1
     },
     {
       "version_key": "v31",
@@ -956,7 +956,7 @@
       "total_pnl": 7558.4,
       "active": true,
       "order": -3,
-      "composite_score": 230.6
+      "composite_score": 514.8
     },
     {
       "version_key": "v30",
@@ -969,7 +969,7 @@
       "total_pnl": 7526.4,
       "active": true,
       "order": -2,
-      "composite_score": 234.7
+      "composite_score": 514.1
     },
     {
       "version_key": "v29",
@@ -982,7 +982,7 @@
       "total_pnl": 7078.5,
       "active": true,
       "order": -1,
-      "composite_score": 173.2
+      "composite_score": 458.3
     },
     {
       "version_key": "v2_rf_v22",
@@ -993,10 +993,10 @@
       "total_symbols": 61,
       "symbols_with_trades": 61,
       "total_pnl": 10322.6,
+      "composite_score": 742.7,
       "active": true,
       "order": 0,
-      "matrix_bundle": "strategy_sweep_finalists",
-      "composite_score": 470.4
+      "matrix_bundle": "model_selection"
     },
     {
       "version_key": "v28",
@@ -1009,7 +1009,7 @@
       "total_pnl": 7250.4,
       "active": true,
       "order": 0,
-      "composite_score": 140.9
+      "composite_score": 423.2
     },
     {
       "version_key": "v27",
@@ -1022,7 +1022,21 @@
       "total_pnl": 7164.4,
       "active": true,
       "order": 0,
-      "composite_score": 129.2
+      "composite_score": 409.3
+    },
+    {
+      "version_key": "v2_gru_v22",
+      "name": "v2_gru_v22",
+      "color": "#FF9800",
+      "marker_shape": "arrowUp",
+      "data_dir": "data_v2_gru_v22",
+      "total_symbols": 61,
+      "symbols_with_trades": 61,
+      "total_pnl": 8292.0,
+      "composite_score": 729.6,
+      "active": true,
+      "order": 1,
+      "matrix_bundle": "model_selection"
     },
     {
       "version_key": "v2_rf_v22_with_exit_model",
@@ -1036,7 +1050,7 @@
       "active": true,
       "order": 1,
       "matrix_bundle": "strategy_sweep_finalists",
-      "composite_score": 470.4
+      "composite_score": 742.7
     },
     {
       "version_key": "v26",
@@ -1049,21 +1063,35 @@
       "total_pnl": 7136.2,
       "active": true,
       "order": 1,
-      "composite_score": 126.5
+      "composite_score": 406.0
     },
     {
-      "version_key": "v2_gru_v22",
-      "name": "v2_gru_v22",
+      "version_key": "v4_rf_v22",
+      "name": "v4_rf_v22",
       "color": "#9C27B0",
       "marker_shape": "arrowUp",
-      "data_dir": "data_v2_gru_v22",
+      "data_dir": "data_v4_rf_v22",
       "total_symbols": 61,
       "symbols_with_trades": 61,
-      "total_pnl": 8292.0,
+      "total_pnl": 8319.2,
+      "composite_score": 728.9,
       "active": true,
       "order": 2,
-      "matrix_bundle": "strategy_sweep_finalists",
-      "composite_score": 457.2
+      "matrix_bundle": "model_selection"
+    },
+    {
+      "version_key": "v4_gru_v22",
+      "name": "v4_gru_v22",
+      "color": "#F44336",
+      "marker_shape": "arrowUp",
+      "data_dir": "data_v4_gru_v22",
+      "total_symbols": 61,
+      "symbols_with_trades": 61,
+      "total_pnl": 7706.2,
+      "composite_score": 726.2,
+      "active": true,
+      "order": 3,
+      "matrix_bundle": "model_selection"
     },
     {
       "version_key": "v2_gru_v22_with_exit_model",
@@ -1077,21 +1105,7 @@
       "active": true,
       "order": 3,
       "matrix_bundle": "strategy_sweep_finalists",
-      "composite_score": 457.2
-    },
-    {
-      "version_key": "v4_rf_v22",
-      "name": "v4_rf_v22",
-      "color": "#F44336",
-      "marker_shape": "arrowUp",
-      "data_dir": "data_v4_rf_v22",
-      "total_symbols": 20,
-      "symbols_with_trades": 20,
-      "total_pnl": 2541.9,
-      "active": true,
-      "order": 3,
-      "matrix_bundle": "strategy_sweep_finalists",
-      "composite_score": 439.8
+      "composite_score": 729.6
     },
     {
       "version_key": "v24",
@@ -1104,7 +1118,21 @@
       "total_pnl": 7120.9,
       "active": true,
       "order": 3,
-      "composite_score": 119.1
+      "composite_score": 396.6
+    },
+    {
+      "version_key": "v2_xgb_v22",
+      "name": "v2_xgb_v22",
+      "color": "#4CAF50",
+      "marker_shape": "arrowUp",
+      "data_dir": "data_v2_xgb_v22",
+      "total_symbols": 61,
+      "symbols_with_trades": 61,
+      "total_pnl": 5255.9,
+      "composite_score": 639.9,
+      "active": true,
+      "order": 4,
+      "matrix_bundle": "model_selection"
     },
     {
       "version_key": "v4_rf_v22_with_exit_model",
@@ -1118,7 +1146,7 @@
       "active": true,
       "order": 4,
       "matrix_bundle": "strategy_sweep_finalists",
-      "composite_score": 456.7
+      "composite_score": 728.9
     },
     {
       "version_key": "v22",
@@ -1131,7 +1159,7 @@
       "total_pnl": 6593.1,
       "active": true,
       "order": 5,
-      "composite_score": 131.0
+      "composite_score": 404.8
     },
     {
       "version_key": "v19_3",
@@ -1144,7 +1172,7 @@
       "total_pnl": 6775.1,
       "active": false,
       "order": 6,
-      "composite_score": 147.0
+      "composite_score": 425.9
     },
     {
       "version_key": "rule",
@@ -1157,7 +1185,7 @@
       "total_pnl": 7621.7,
       "active": true,
       "order": 99,
-      "composite_score": 52.6
+      "composite_score": 316.4
     }
   ],
   "exit_abbreviations": {}

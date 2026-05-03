@@ -44,5 +44,15 @@ stock_ml/results/*.png
 stock_ml/results/cache/
 stock_ml/results/experiments/
 
+# CatBoost training artifacts
+catboost_info/
+**/catboost_info/
+
+# Generated visualization exports
+stock_ml/visualization/data_*/
+
+# Temporary implementation notes
+stock_ml/docs/refactor/*PLAN*.md
+
 # Claude
 .claude/

@@ -1,3 +1,4 @@
+market: vn_stock
 name: v22_with_exit_model
 strategy: v22_with_exit_model
 runner: src.components.runners.generic_fusion

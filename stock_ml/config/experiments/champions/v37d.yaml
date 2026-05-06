@@ -1,3 +1,4 @@
+market: vn_stock
 name: v37d
 strategy: v37d
 runner: src.components.runners.v37d_runner

@@ -46,12 +46,47 @@ FEATURE_DEFAULTS = {
     "obv_price_divergence": 0,
 }
 
-DEFAULT_PARAMS = {
-    "initial_capital": 100_000_000,
+DEFAULT_TRADING_COST = {
     "commission": 0.0015,
     "tax": 0.001,
+    "slippage": 0.0,
+}
+
+DEFAULT_PARAMS = {
+    **DEFAULT_TRADING_COST,
+    "pnl_mode": "equity_spot",
+    "margin_mode": "isolated",
+    "contract_multiplier": 1.0,
+    "funding_rate_column": None,
+    "borrow_rate_column": None,
+    "borrow_available_column": None,
+    "roll_cost_rate": 0.0,
+    "expiry_date_column": None,
+    "roll_rule": None,
+    "roll_days_before_expiry": 3,
+    "next_volume_column": None,
+    "next_oi_column": None,
+    "leverage": 1.0,
+    "maintenance_margin_rate": 0.0,
+    "liquidation_fee": 0.0,
+    "short_enabled": False,
+    "position_size": 1.0,
+    "short_position_size": None,
+    "atr_position_sizing": False,
+    "atr_risk_target": 0.01,
+    "short_hard_cap": None,
+    "short_squeeze_exit": False,
+    "short_squeeze_vol_mult": 3.0,
+    "short_squeeze_price_pct": 0.03,
+    "max_short_notional": None,
+    "max_total_short_notional": None,
+    "initial_capital": 100_000_000,
     "record_trades": True,
     "exit_model_min_hold": 3,
+    # Symbol profile/grouping injected from market context (None = use module-level fallback)
+    "symbol_groups": None,
+    "rule_priority_symbols": None,
+    "score5_risky_symbols": None,
     # Mods
     "mod_a": True,
     "mod_b": True,

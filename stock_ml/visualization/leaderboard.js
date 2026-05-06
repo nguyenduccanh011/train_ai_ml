@@ -55,6 +55,15 @@ function formatInt(value) {
   return Number.isFinite(num) ? num.toLocaleString() : '—';
 }
 
+function pnlClass(value) {
+  return Number(value) >= 0 ? 'positive' : 'negative';
+}
+
+function tableMessageRow(message, className) {
+  const colCount = document.querySelectorAll('thead th').length;
+  return `<tr><td colspan="${colCount}" class="${className}">${message}</td></tr>`;
+}
+
 function compareValues(a, b, col) {
   const av = col === 'rank' ? a.rank : a[col];
   const bv = col === 'rank' ? b.rank : b[col];
@@ -170,12 +179,13 @@ function renderExit(row) {
 
 function renderTable() {
   if (!filteredRows.length) {
-    els.body.innerHTML = '<tr><td colspan="19" class="empty">No rows match current filters.</td></tr>';
+    els.body.innerHTML = tableMessageRow('No rows match current filters.', 'empty');
     return;
   }
 
   els.body.innerHTML = filteredRows.map((row) => {
-    const pnlClass = Number(row.avg_pnl) >= 0 ? 'positive' : 'negative';
+    const avgPnlClass = pnlClass(row.avg_pnl);
+    const totalPnlClass = pnlClass(row.total_pnl);
     const mddClass = Number(row.max_drawdown) > 0 ? 'negative' : 'muted';
     return `
       <tr class="${rowClass(row)}">
@@ -189,7 +199,8 @@ function renderTable() {
         <td>${renderExit(row)}</td>
         <td class="num">${formatInt(row.trades)}</td>
         <td class="num">${formatNum(row.wr, 2)}%</td>
-        <td class="num ${pnlClass}">${formatNum(row.avg_pnl, 3)}</td>
+        <td class="num ${avgPnlClass}">${formatNum(row.avg_pnl, 3)}</td>
+        <td class="num ${totalPnlClass}">${formatNum(row.total_pnl, 2)}</td>
         <td class="num">${formatNum(row.pf, 2)}</td>
         <td class="num">${formatNum(row.sharpe, 3)}</td>
         <td class="num ${mddClass}">${formatNum(row.max_drawdown, 2)}</td>
@@ -257,7 +268,7 @@ function bindEvents() {
       if (sortCol === col) sortDir *= -1;
       else {
         sortCol = col;
-        sortDir = col === 'composite_score' ? -1 : 1;
+        sortDir = ['composite_score', 'trades', 'wr', 'avg_pnl', 'total_pnl', 'pf', 'sharpe'].includes(col) ? -1 : 1;
       }
       applyFilters();
     });
@@ -276,7 +287,7 @@ async function loadData() {
     renderFilters();
     applyFilters();
   } catch (error) {
-    els.body.innerHTML = `<tr><td colspan="19" class="error">Failed to load ${DATA_URL}: ${escapeHtml(error.message)}</td></tr>`;
+    els.body.innerHTML = tableMessageRow(`Failed to load ${DATA_URL}: ${escapeHtml(error.message)}`, 'error');
   }
 }
 

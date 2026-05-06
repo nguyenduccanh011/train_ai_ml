@@ -17,22 +17,35 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
+    from src.market_profile import ResolvedRunContext
     from src.pipeline.config import ExperimentConfig
 
 
 def _build_prediction_cache_key(
     cfg: ExperimentConfig,
     symbols: list[str],
+    run_context: ResolvedRunContext | None = None,
 ) -> str:
-    payload = {
-        "feature_set": cfg.feature_set(),
-        "model_type": cfg.entry_model_type(),
-        "target": cfg.target_dict(),
-        "exit_model": cfg.exit_model_dict(),
-        "symbols": sorted(symbols),
-        "split": cfg.split.model_dump(),
-    }
-    raw = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+    if run_context is not None:
+        payload = {
+            **run_context.run_identity,
+            "symbols": sorted(symbols),
+            "split": cfg.split.model_dump(),
+            "exit_model": cfg.exit_model_dict(),
+            "execution": cfg.execution.model_dump() if cfg.execution is not None else {},
+        }
+    else:
+        payload = {
+            "market": getattr(cfg, "market", "vn_stock"),
+            "feature_set": cfg.feature_set(),
+            "model_type": cfg.entry_model_type(),
+            "target": cfg.target_dict(),
+            "exit_model": cfg.exit_model_dict(),
+            "execution": cfg.execution.model_dump() if cfg.execution is not None else {},
+            "symbols": sorted(symbols),
+            "split": cfg.split.model_dump(),
+        }
+    raw = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=True, default=str)
     return hashlib.sha256(raw.encode()).hexdigest()[:24]
 
 
@@ -49,17 +62,25 @@ class PredictionCacheManager:
         self._misses = 0
         self._stored = 0
 
-    def key(self, cfg: ExperimentConfig, symbols: list[str]) -> str:
-        return _build_prediction_cache_key(cfg, symbols)
+    def key(
+        self,
+        cfg: ExperimentConfig,
+        symbols: list[str],
+        run_context: ResolvedRunContext | None = None,
+    ) -> str:
+        return _build_prediction_cache_key(cfg, symbols, run_context)
 
     def cache_path(self, key: str) -> Path:
         return self.cache_root / f"{key}.pkl"
 
     def load(
-        self, cfg: ExperimentConfig, symbols: list[str]
+        self,
+        cfg: ExperimentConfig,
+        symbols: list[str],
+        run_context: ResolvedRunContext | None = None,
     ) -> tuple[list[dict[str, Any]] | None, str]:
         """Load prediction cache from disk. Returns (cache, key). cache=None on miss."""
-        k = self.key(cfg, symbols)
+        k = self.key(cfg, symbols, run_context)
         path = self.cache_path(k)
         if not path.exists():
             self._misses += 1
@@ -78,9 +99,10 @@ class PredictionCacheManager:
         data: list[dict[str, Any]],
         cfg: ExperimentConfig,
         symbols: list[str],
+        run_context: ResolvedRunContext | None = None,
     ) -> str:
         """Atomically write prediction cache to disk. Returns cache key."""
-        k = self.key(cfg, symbols)
+        k = self.key(cfg, symbols, run_context)
         path = self.cache_path(k)
         tmp_fd, tmp_path = tempfile.mkstemp(dir=self.cache_root, suffix=".tmp")
         try:
@@ -96,9 +118,14 @@ class PredictionCacheManager:
     def stats(self) -> dict[str, int]:
         return {"hits": self._hits, "misses": self._misses, "stored": self._stored}
 
-    def invalidate(self, cfg: ExperimentConfig, symbols: list[str]) -> bool:
+    def invalidate(
+        self,
+        cfg: ExperimentConfig,
+        symbols: list[str],
+        run_context: ResolvedRunContext | None = None,
+    ) -> bool:
         """Delete cached predictions. Returns True if something was deleted."""
-        k = self.key(cfg, symbols)
+        k = self.key(cfg, symbols, run_context)
         path = self.cache_path(k)
         if path.exists():
             path.unlink()

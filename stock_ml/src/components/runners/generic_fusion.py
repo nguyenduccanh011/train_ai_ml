@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any
 import numpy as np
 import pandas as pd
 
-from src.backtest.defaults import DEFAULT_PARAMS
+from src.backtest.defaults import DEFAULT_PARAMS, DEFAULT_TRADING_COST
 from src.backtest.indicators import (
     compute_indicators,
 )
@@ -18,6 +18,7 @@ from src.backtest.indicators import (
 from src.backtest.indicators import (
     get_regime_adapter as get_v22_regime_adapter,
 )
+from src.backtest.pnl import get_pnl_calculator
 from src.components.base import BarContext, Position, Trade
 from src.components.fusion.helpers import (
     compute_v19_indicators,
@@ -378,11 +379,14 @@ def run_fusion(
     device: str = "cpu",
     prediction_cache: list[dict[str, Any]] | None = None,
     initial_capital: float = 100_000_000,
-    commission: float = 0.0015,
-    tax: float = 0.001,
+    commission: float = DEFAULT_TRADING_COST["commission"],
+    tax: float = DEFAULT_TRADING_COST["tax"],
+    slippage: float = DEFAULT_TRADING_COST["slippage"],
+    pnl_mode: str = DEFAULT_PARAMS["pnl_mode"],
     record_trades: bool = True,
     enable_exit_model: bool = False,
     strategy_v3: StrategyV3Config | None = None,
+    symbol_groups: dict[str, str] | None = None,
 ) -> list[Trade]:
     del data_dir, first_test_year, last_test_year, train_years
     active_mods = {**DEFAULT_FUSION_MODS, **(mods or {})}
@@ -405,10 +409,13 @@ def run_fusion(
                 initial_capital=initial_capital,
                 commission=commission,
                 tax=tax,
+                slippage=slippage,
+                pnl_mode=pnl_mode,
                 record_trades=record_trades,
                 enable_exit_model=enable_exit_model,
                 force_exit_strategies=force_exit_strategies,
                 active_exit_strategies=active_exit_strategies,
+                symbol_groups=symbol_groups,
             )
         )
     return all_trades
@@ -421,11 +428,18 @@ def _trend(defn: FusionRunnerDef, ind: dict[str, Any], i: int) -> str:
 
 
 def _regime(
-    defn: FusionRunnerDef, symbol: str, ind: dict[str, Any], i: int, trend: str
+    defn: FusionRunnerDef,
+    symbol: str,
+    ind: dict[str, Any],
+    i: int,
+    trend: str,
+    symbol_groups: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     if defn.version_key == "v19_3":
-        return defn.regime_adapter_fn(symbol, ind, i, trend)
-    return defn.regime_adapter_fn(i, trend, ind, patch_symbol_tuning=False)
+        return defn.regime_adapter_fn(symbol, ind, i, trend, symbol_groups=symbol_groups)
+    return defn.regime_adapter_fn(
+        i, trend, ind, patch_symbol_tuning=False, symbol_groups=symbol_groups
+    )
 
 
 def _run_cache_item(
@@ -437,10 +451,13 @@ def _run_cache_item(
     initial_capital: float,
     commission: float,
     tax: float,
+    slippage: float,
+    pnl_mode: str,
     record_trades: bool,
     enable_exit_model: bool = False,
     force_exit_strategies: list[FusionStrategy] | None = None,
     active_exit_strategies: list[FusionStrategy] | None = None,
+    symbol_groups: dict[str, str] | None = None,
 ) -> list[Trade]:  # noqa: PLR0912, PLR0915, C901
     y_pred = np.asarray(item["y_pred"])
     y_pred_exit = (
@@ -457,6 +474,7 @@ def _run_cache_item(
         n = min(n, len(y_pred_exit))
     equity = np.zeros(n)
     equity[0] = initial_capital
+    pnl_calc = get_pnl_calculator(pnl_mode)
 
     ind = defn.indicator_fn(df, mod_e=mods.get("e", True))
     if defn.patch_open_indicator:
@@ -490,7 +508,7 @@ def _run_cache_item(
             cooldown_remaining -= 1
 
         trend = _trend(defn, ind, i)
-        regime_cfg = _regime(defn, symbol, ind, i, trend)
+        regime_cfg = _regime(defn, symbol, ind, i, trend, symbol_groups=symbol_groups)
 
         if position is None:
             entry_state = {
@@ -520,7 +538,7 @@ def _run_cache_item(
             if res.action == "enter":
                 size = float(res.metadata.get("size", 1.0))
                 deploy = equity[i - 1] * size
-                cost = deploy * commission
+                cost = pnl_calc.entry_cost(deploy, commission, slippage)
                 entry_equity = deploy - cost
                 position = Position(
                     symbol=symbol,
@@ -544,7 +562,7 @@ def _run_cache_item(
                 equity[i] = equity[i - 1]
             continue
 
-        projected = equity[i - 1] * (1 + ret * position.size)
+        projected = equity[i - 1] * (1 + pnl_calc.bar_return(ret, position.size))
         position.max_equity_in_trade = max(position.max_equity_in_trade, projected)
         if close[i] > position.max_price_in_trade:
             position.max_price_in_trade = float(close[i])
@@ -564,12 +582,15 @@ def _run_cache_item(
             if position.entry_close > 0
             else 0.0
         )
-        price_cur_ret = close[i] / position.entry_close - 1 if position.entry_close > 0 else 0.0
+        price_cur_ret = pnl_calc.trade_return(position.entry_close, close[i], slippage)
+        use_price_based_risk = bool(params.get("patch_price_based_risk", False))
+        risk_cum_ret = price_cur_ret if use_price_based_risk else cum_ret
+        risk_max_profit = price_max_profit if use_price_based_risk else max_profit
 
         trade_state = {
             "raw_signal": raw_signal,
-            "cum_ret": cum_ret,
-            "max_profit": max_profit,
+            "cum_ret": risk_cum_ret,
+            "max_profit": risk_max_profit,
             "price_max_profit": price_max_profit,
             "price_cur_ret": price_cur_ret,
             "hold_days": position.holding_days,
@@ -603,7 +624,7 @@ def _run_cache_item(
         reason = _run_exit_sequence(force_exit_strategies, ctx, counters)
         if reason is not None:
             pending_exit_reason = reason
-        elif raw_signal == 1:
+        elif raw_signal == 1 or bool(params.get("patch_active_exit_on_raw0", False)):
             reason = _run_exit_sequence(active_exit_strategies, ctx, counters)
             if reason is not None:
                 pending_exit_reason = reason
@@ -635,10 +656,9 @@ def _run_cache_item(
             position.holding_days += 1
             continue
 
-        cost = equity[i - 1] * position.size * (commission + tax)
-        pnl_pct_now = (
-            (close[i] / position.entry_close - 1) * 100 if position.entry_close > 0 else 0.0
-        )
+        exit_notional = equity[i - 1] * position.size
+        cost = pnl_calc.exit_cost(exit_notional, commission, tax, slippage)
+        pnl_pct_now = pnl_calc.trade_return(position.entry_close, close[i], slippage) * 100
         cooldown_remaining = 5 if pnl_pct_now < -5 else 3
         last_exit_price = float(close[i])
         last_exit_reason = pending_exit_reason
@@ -655,6 +675,7 @@ def _run_cache_item(
                     exit_price=float(close[i]),
                     exit_reason=pending_exit_reason,
                     max_profit_pct=round(max_profit * 100, 2),
+                    slippage=slippage,
                 )
             )
         equity[i] = projected - cost
@@ -671,6 +692,7 @@ def _run_cache_item(
                 exit_price=float(close[-1]),
                 exit_reason="end",
                 max_profit_pct=None,
+                slippage=slippage,
             )
         )
 
@@ -687,8 +709,12 @@ def _make_trade(
     exit_price: float,
     exit_reason: str,
     max_profit_pct: float | None,
+    slippage: float,
 ) -> Trade:
-    pnl_pct = (exit_price / position.entry_close - 1) * 100 if position.entry_close > 0 else 0.0
+    pnl_pct = (
+        get_pnl_calculator("equity_spot").trade_return(position.entry_close, exit_price, slippage)
+        * 100
+    )
     metadata = dict(position.metadata)
     metadata.update(
         {
@@ -820,6 +846,23 @@ FUSION_RUNNER_DEFS: dict[str, FusionRunnerDef] = {
     "v22_with_exit_model": FusionRunnerDef(
         version_key="v22",
         entry_reason="v22",
+        feature_set_default="leading_v2",
+        indicator_fn=compute_indicators,
+        detect_trend_fn=detect_v22_trend_strength,
+        regime_adapter_fn=get_v22_regime_adapter,
+        force_exit_factory=_make_v22_force_exit_strategies,
+        active_exit_factory=_make_v22_active_exit_strategies,
+        defaults=V22_DEFAULTS,
+        include_params_in_ctx=True,
+        include_symbol_profile=True,
+        include_strong_uptrend=True,
+        include_atr_ratio_now=True,
+        use_long_horizon_carry=True,
+        patch_open_indicator=True,
+    ),
+    "v43_rf_v22_guardfix": FusionRunnerDef(
+        version_key="v22",
+        entry_reason="v43_rf_v22_guardfix",
         feature_set_default="leading_v2",
         indicator_fn=compute_indicators,
         detect_trend_fn=detect_v22_trend_strength,

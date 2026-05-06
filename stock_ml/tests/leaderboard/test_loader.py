@@ -25,7 +25,10 @@ def test_loader_rule_run():
     assert row.target.type == "early_wave"
     assert row.first_test_year == 2020
     assert row.last_test_year == 2025
-    assert COST_PROFILE_UNKNOWN_WARNING in row.warnings
+    assert row.cost_profile.commission == 0.0015
+    assert row.cost_profile.tax == 0.001
+    assert row.cost_profile.slippage == 0.0
+    assert COST_PROFILE_UNKNOWN_WARNING not in row.warnings
 
 
 def test_loader_v22_run_uses_matrix_name_bundle():

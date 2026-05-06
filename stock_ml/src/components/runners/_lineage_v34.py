@@ -5,6 +5,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
+from src.backtest.defaults import DEFAULT_PARAMS, DEFAULT_TRADING_COST
 from src.components.base import Trade
 from src.components.runners.v34_runner import (
     V34_TARGET,
@@ -59,8 +60,10 @@ def run_lineage(
     device: str = "cpu",
     prediction_cache: list[dict[str, Any]] | None = None,
     initial_capital: float = 100_000_000,
-    commission: float = 0.0015,
-    tax: float = 0.001,
+    commission: float = DEFAULT_TRADING_COST["commission"],
+    tax: float = DEFAULT_TRADING_COST["tax"],
+    slippage: float = DEFAULT_TRADING_COST["slippage"],
+    pnl_mode: str = DEFAULT_PARAMS["pnl_mode"],
     record_trades: bool = True,
     enable_exit_model: bool = False,
     strategy_v3: StrategyV3Config | None = None,
@@ -77,6 +80,8 @@ def run_lineage(
         "initial_capital": initial_capital,
         "commission": commission,
         "tax": tax,
+        "slippage": slippage,
+        "pnl_mode": pnl_mode,
         "record_trades": record_trades,
     }
     cache = (

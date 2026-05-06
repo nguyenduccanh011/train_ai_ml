@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 
 import pandas as pd
 
+from src.backtest.defaults import DEFAULT_TRADING_COST
 from src.components.base import Trade
 
 if TYPE_CHECKING:
@@ -34,7 +35,11 @@ class SimpleLongBacktester:
     Trailing positions without a matching exit are dropped (no auto-close).
     """
 
-    def __init__(self, commission: float = 0.0015, tax: float = 0.001) -> None:
+    def __init__(
+        self,
+        commission: float = DEFAULT_TRADING_COST["commission"],
+        tax: float = DEFAULT_TRADING_COST["tax"],
+    ) -> None:
         self.commission = commission
         self.tax = tax
 

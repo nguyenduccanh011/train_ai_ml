@@ -1,3 +1,4 @@
+market: vn_stock
 name: v22
 strategy: v22
 runner: components.runners.run_v22

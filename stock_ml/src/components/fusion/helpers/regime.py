@@ -52,10 +52,12 @@ def get_regime_adapter(
     ind: dict[str, Any],
     i: int,
     trend: TrendStrength,
+    symbol_groups: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     """Per-profile regime config — mirrors legacy lines 2613-2697."""
     n = ind["n"]
-    profile = SYMBOL_PROFILES.get(symbol, "balanced")
+    _groups = symbol_groups if symbol_groups is not None else SYMBOL_PROFILES
+    profile = _groups.get(symbol, "balanced")
     bb_i = ind["feat_arrays"]["bb_width_percentile"][i]
     ret_20d_i = ind["ret_20d"][i]
     atr14 = ind["atr14"]

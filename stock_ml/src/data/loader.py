@@ -12,11 +12,23 @@ from tqdm import tqdm
 class DataLoader:
     """Load stock data from cleaned dataset directory."""
 
-    def __init__(self, data_dir: str, timeframe: str = "1D"):
+    def __init__(
+        self,
+        data_dir: str,
+        timeframe: str = "1D",
+        timestamp_column: str = "timestamp",
+        timezone: str | None = None,
+        required_columns: list[str] | None = None,
+        optional_columns: list[str] | None = None,
+    ):
         self.data_dir = Path(data_dir)
         self.all_symbols_dir = self.data_dir / "all_symbols"
         self.context_dir = self.data_dir / "context_features"
         self.timeframe = timeframe
+        self.timestamp_column = timestamp_column
+        self.timezone = timezone
+        self.required_columns = required_columns or ["open", "high", "low", "close", "volume"]
+        self.optional_columns = optional_columns or []
         self._symbols_cache: list[str] | None = None
         self._data_cache: dict[str, pd.DataFrame] = {}
 
@@ -50,9 +62,14 @@ class DataLoader:
         if not csv_path.exists():
             raise FileNotFoundError(f"No data for {symbol} at {csv_path}")
 
-        df = pd.read_csv(csv_path, parse_dates=["timestamp"])
-        df = df.sort_values("timestamp").reset_index(drop=True)
-        df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True)
+        df = pd.read_csv(csv_path, parse_dates=[self.timestamp_column])
+        missing = [col for col in self.required_columns if col not in df.columns]
+        if missing:
+            raise ValueError(f"Missing required columns for {symbol}: {missing}")
+        df = df.sort_values(self.timestamp_column).reset_index(drop=True)
+        df[self.timestamp_column] = pd.to_datetime(df[self.timestamp_column], utc=True)
+        if self.timestamp_column != "timestamp" and "timestamp" not in df.columns:
+            df["timestamp"] = df[self.timestamp_column]
 
         if use_cache:
             self._data_cache[symbol] = df
@@ -83,8 +100,10 @@ class DataLoader:
         result = result.sort_values(["symbol", "timestamp"]).reset_index(drop=True)
         return result
 
-    def load_context(self, context_symbol: str = "HNXINDEX") -> pd.DataFrame:
+    def load_context(self, context_symbol: str | None = None) -> pd.DataFrame:
         """Load context/market data (indices, futures)."""
+        if context_symbol is None:
+            return pd.DataFrame()
         csv_path = (
             self.context_dir
             / f"symbol={context_symbol}"
@@ -94,9 +113,11 @@ class DataLoader:
         if not csv_path.exists():
             raise FileNotFoundError(f"No context data for {context_symbol}")
 
-        df = pd.read_csv(csv_path, parse_dates=["timestamp"])
-        df = df.sort_values("timestamp").reset_index(drop=True)
-        df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True)
+        df = pd.read_csv(csv_path, parse_dates=[self.timestamp_column])
+        df = df.sort_values(self.timestamp_column).reset_index(drop=True)
+        df[self.timestamp_column] = pd.to_datetime(df[self.timestamp_column], utc=True)
+        if self.timestamp_column != "timestamp" and "timestamp" not in df.columns:
+            df["timestamp"] = df[self.timestamp_column]
         return df
 
     def load_all_context(self) -> dict[str, pd.DataFrame]:

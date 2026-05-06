@@ -54,6 +54,7 @@ def _ctx(
     trade_state: dict[str, Any] | None = None,
     indicators: dict[str, Any] | None = None,
     mods: dict[str, bool] | None = None,
+    params: dict[str, Any] | None = None,
     in_position: bool = True,
 ) -> BarContext:
     pos: Position | None = None
@@ -77,6 +78,7 @@ def _ctx(
             "trade_state": trade_state or {},
             "indicators": indicators or _ind(),
             "mods": mods or {},
+            "params": params or {},
         },
     )
 
@@ -347,6 +349,31 @@ class TestMinHoldProtection:
                 "cum_ret": -0.05,
                 "atr_stop": 0.04,
             }
+        )
+        assert MinHoldProtection().apply(ctx).action == "pass"
+
+    def test_pass_when_price_loss_hits_patch_bypass(self) -> None:
+        ctx = _ctx(
+            trade_state={
+                "pending_exit_reason": "signal",
+                "hold_days": 3,
+                "cum_ret": 0.01,
+                "price_cur_ret": -0.07,
+                "atr_stop": 0.04,
+            },
+            params={"patch_min_hold_loss_bypass_pct": -0.05},
+        )
+        assert MinHoldProtection().apply(ctx).action == "pass"
+
+    def test_pass_when_custom_min_hold_bars_reached(self) -> None:
+        ctx = _ctx(
+            trade_state={
+                "pending_exit_reason": "signal",
+                "hold_days": 4,
+                "cum_ret": 0.01,
+                "atr_stop": 0.04,
+            },
+            params={"patch_min_hold_bars": 4},
         )
         assert MinHoldProtection().apply(ctx).action == "pass"
 

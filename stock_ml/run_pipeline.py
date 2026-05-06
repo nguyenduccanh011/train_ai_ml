@@ -60,6 +60,7 @@ from src.config_loader import (
     load_config,
 )
 from src.env import get_experiment_dir, get_results_dir, resolve_data_dir
+from src.market_profile import resolve_run_context
 from src.signal_adapter import target_fingerprint
 
 
@@ -210,11 +211,20 @@ def _run_rule_backtest_fair(symbols_list):
     from src.data.loader import DataLoader
 
     pipeline_cfg = load_config().get("pipeline", {})
-    data_dir = pipeline_cfg.get("data_dir", "../portable_data/vn_stock_ai_dataset_cleaned")
-    abs_data_dir = resolve_data_dir(data_dir)
+    run_context = resolve_run_context({"market": pipeline_cfg.get("market")})
+    if run_context.resolved_data_dir is None:
+        raise ValueError(f"Market {run_context.market!r} does not define data.data_dir")
+    abs_data_dir = resolve_data_dir(run_context.resolved_data_dir)
     first_test_year = pipeline_cfg.get("first_test_year", 2020)
 
-    loader = DataLoader(abs_data_dir)
+    loader = DataLoader(
+        abs_data_dir,
+        timeframe=run_context.timeframe,
+        timestamp_column=run_context.market_profile.data.timestamp_column,
+        timezone=run_context.market_profile.data.timezone,
+        required_columns=run_context.market_profile.data.required_columns,
+        optional_columns=run_context.market_profile.data.optional_columns,
+    )
     raw_df = loader.load_all(symbols=symbols_list)
     date_col = "timestamp" if "timestamp" in raw_df.columns else "date"
     raw_df[date_col] = pd.to_datetime(raw_df[date_col], utc=True)

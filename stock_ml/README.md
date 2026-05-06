@@ -1,6 +1,6 @@
 # Stock ML Trading System v2
 
-Hệ thống ML dự đoán xu hướng giá cổ phiếu Việt Nam (dữ liệu 2015-2025), sử dụng walk-forward validation với kiến trúc component-based composable (v2.0).
+Hệ thống ML giao dịch đa thị trường (VN stock, crypto spot/perp, VN derivatives), sử dụng walk-forward validation với kiến trúc component-based composable và MarketProfile để tách cấu hình market khỏi core pipeline.
 
 ## Cài đặt
 
@@ -16,7 +16,12 @@ pip install -r requirements-dev.txt   # ruff, mypy, pytest (dev only)
 ```
 stock_ml/
 ├── config/
-│   ├── base.yaml                    # Cấu hình pipeline (data_dir, device, symbols)
+│   ├── base.yaml                    # Cấu hình pipeline mặc định (market, device, split)
+│   ├── markets/                     # MarketProfile: data/execution/symbols/features/models/target
+│   │   ├── vn_stock.yaml
+│   │   ├── crypto_spot.yaml
+│   │   ├── crypto_perp.yaml
+│   │   └── vn_derivatives.yaml
 │   ├── feature_sets/                # YAML định nghĩa feature block composition
 │   │   ├── leading.yaml
 │   │   ├── leading_v2.yaml
@@ -61,11 +66,14 @@ stock_ml/
 │   │   ├── matrix_expander.py       # expand_matrix(yaml) → list[ExperimentConfig]
 │   │   └── validate.py              # validate_config() → list[ValidationError]
 │   │
-│   ├── data/                        # DataLoader, WalkForwardSplitter, TargetGenerator (legacy)
+│   ├── data/                        # DataLoader theo schema/timestamp/timezone từ MarketProfile
+│   ├── backtest/                    # Unified backtest + PnL calculators theo pnl_mode
+│   ├── leaderboard/                 # Leaderboard scoped theo market/schema/timeframe
+│   ├── market_profile.py            # MarketProfile loader + ResolvedRunContext + run_identity
 │   ├── features/engine.py           # FeatureEngine legacy (vẫn dùng bởi runners)
 │   ├── models/registry.py           # ModelRegistry legacy
 │   ├── export/unified_export.py     # CSV → JSON cho dashboard
-│   └── env.py / config_loader.py    # Path resolution, YAML loading
+│   └── env.py / config_loader.py    # Path resolution, YAML loading legacy-compatible
 │
 ├── scripts/
 │   ├── cli.py                       # Entry point CLI
@@ -113,6 +121,7 @@ python -m stock_ml compare-champions --first-test-year 2019 --last-test-year 202
 
 # Validate config
 python -m stock_ml validate champions/v22
+python -m stock_ml validate matrix/q3_2026   # matrix có thể dùng axis market
 
 # Export trades CSV → dashboard JSON (tất cả active models)
 python -m stock_ml export
@@ -132,7 +141,30 @@ python -m stock_ml list-experiments
 python -m stock_ml benchmark --versions v22,v34,v37a
 ```
 
-## Kiến trúc v2 — Component Pipeline
+### Flow bắt đầu mô hình phái sinh
+
+1. Chuẩn hóa dataset theo `config/markets/vn_derivatives.yaml`: OHLCV, `date`, `volume`, `expiry_date` nếu dùng rollover, và các cột spread như `next_volume`/`next_oi` nếu dùng smart roll.
+2. Tạo experiment YAML riêng với `market: vn_derivatives`, chọn feature set/model/target giống matrix hiện có hoặc override theo market.
+3. Validate trước khi chạy:
+
+```bash
+python -m stock_ml validate experiments/my_vn_derivatives_exp
+```
+
+4. Chạy smoke test ít symbol/hợp đồng trước:
+
+```bash
+python -m stock_ml run experiments/my_vn_derivatives_exp --symbols-limit 3 --save-results
+```
+
+5. Khi smoke test ổn, mở rộng bằng matrix hoặc full run:
+
+```bash
+python -m stock_ml run-matrix matrix/my_vn_derivatives_matrix --resume
+python -m stock_ml compare-matrix results/experiments/my_vn_derivatives_matrix --top 10
+```
+
+## Kiến trúc v2 — Component Pipeline + MarketProfile
 
 ### Luồng xử lý
 
@@ -140,21 +172,68 @@ python -m stock_ml benchmark --versions v22,v34,v37a
 ExperimentConfig (YAML)
         │
         ▼
+  resolve_run_context()
+        │
+        ├── MarketProfile (data/execution/symbols/features/models/target)
+        ├── ResolvedRunContext (market, schema, timeframe, run_identity)
+        │
+        ▼
    Pipeline.run()
         │
         ├── build_prediction_cache()   ← WalkForwardSplitter + Model train/predict
         │        │
-        │        └── PredictionCacheManager (sha256 cache key)
+        │        └── PredictionCacheManager (cache key scoped theo run_identity)
         │
         └── Champion Runner (per strategy)
                  │
-                 ├── DataLoader → FeatureEngine → FusionStack
+                 ├── DataLoader → FeatureEngine/blocks → FusionStack
                  │
-                 └── SimpleLongBacktester → list[Trade]
+                 └── Unified Backtest Engine → PnlCalculator → list[Trade]
                           │
                           ▼
-                    trades_df (CSV format)
+                    trades_df + market/schema/timeframe metadata
 ```
+
+### MarketProfile
+
+Mỗi run có `market` explicit. `ExperimentConfig` được resolve cùng `config/markets/<market>.yaml` thành `ResolvedRunContext`, sau đó context này đi xuyên trainer, cache, runner, backtest, artifact và leaderboard.
+
+MarketProfile chỉ chứa defaults theo market:
+
+- `data`: schema, timeframe, timestamp column, timezone, required columns, benchmark
+- `execution`: `pnl_mode`, commission/tax/slippage, capital, currency, multiplier, funding, leverage/liquidation, rollover
+- `symbols`: universe mặc định và symbol groups
+- `features`, `models`, `target`: defaults theo market
+
+Market hiện có:
+
+| Market | Profile | PnL mode | Ghi chú |
+|--------|---------|----------|---------|
+| VN stock | `config/markets/vn_stock.yaml` | `equity_spot` | Stock daily, VND, có tax |
+| Crypto spot | `config/markets/crypto_spot.yaml` | `equity_spot` | Spot OHLCV, USDT, không tax |
+| Crypto perp | `config/markets/crypto_perp.yaml` | `linear_usdt_perp` | Funding/leverage/liquidation, cross-margin, short risk controls |
+| VN derivatives | `config/markets/vn_derivatives.yaml` | `futures_contract` | Contract multiplier + rollover, cross-margin/short-ready |
+
+### Backtest PnL modes
+
+Backtest engine dispatch qua `src/backtest/pnl.py` theo `execution.pnl_mode`:
+
+| Mode | Dùng cho |
+|------|----------|
+| `equity_spot` | VN stock, crypto spot |
+| `linear_usdt_perp` | USDT-margined perpetual |
+| `inverse_perp` | Inverse perpetual |
+| `futures_contract` | Futures có contract multiplier/expiry rollover |
+
+Derivatives path hiện đã có production-risk support trong scope hiện tại:
+
+- short enable/disable rõ ràng qua MarketProfile/config
+- funding/borrow fee, borrow availability/recall
+- hard stop, hard cap, fast profit, zombie exit, squeeze exit cho short
+- cross-margin portfolio engine với margin exhaustion, liquidation và aggregate short cap
+- forced rollover và smart rollover theo `volume_crossover`, `oi_crossover`, `n_days_before_expiry`
+
+Gap còn lại không block production path: ATR sizing hiện chỉ có trong portfolio engine, và tooling tạo spread columns (`next_volume`, `next_oi`) từ raw contract chain chưa có.
 
 ### Fusion Stack (4 layers)
 
@@ -239,25 +318,128 @@ config/experiments/exp_transformer_v1.yaml   # signals.entry_model.type: transfo
 
 Tránh dùng tên `hybrid` đơn lẻ cho artifact mới vì dễ nhầm với `ma_cross_hybrid_exit`; nếu cần mô tả combo exit model + rule, dùng tên cụ thể như `exit_model_plus_rules`.
 
-### Grid Search (~5 phút setup)
+### Tạo tổ hợp mới bằng Matrix YAML
 
-```bash
-# 1. Định nghĩa matrix
-config/experiments/matrix/q3_2026.yaml
+Matrix dùng để backtest nhiều tổ hợp `feature_set × entry_model × exit_model × strategy` mà không cần viết thêm Python file.
 
-# 2. Chạy hoặc dry-run nhanh
-python -m stock_ml run-matrix matrix/q3_2026
-python -m stock_ml run-matrix matrix/q3_2026 --dry-run --limit 3
+#### 1. Tạo file matrix
 
-# 3. Resume / preview top-k nếu matrix lớn
-python -m stock_ml run-matrix matrix/q3_2026 --resume
-python -m stock_ml run-matrix matrix/q3_2026 --symbols-limit 10 --top-k-preview 3
+Tạo YAML mới dưới `config/experiments/matrix/`, ví dụ `config/experiments/matrix/q3_2026.yaml`:
 
-# 4. So sánh artifact đã lưu
-python -m stock_ml compare-matrix results/experiments/q3_2026
+```yaml
+name_prefix: q3_2026
+axes:
+  features: [leading_v2, leading_v4]
+  model_type: [lightgbm, random_forest]
+  exit_model:
+    - {label: no_exit_model, enabled: false, type: "null"}
+    - {label: lightgbm_exit, enabled: true, type: lightgbm, forward_window: 15, loss_threshold: 0.05}
+  strategy:
+    - v22
+    - v34
+base:
+  signals:
+    target:
+      type: early_wave
+  split:
+    first_test_year: 2020
+    last_test_year: 2025
 ```
 
-→ Xem [HOW_TO_RUN_MATRIX.md](docs/refactor/HOW_TO_RUN_MATRIX.md)
+Tham khảo matrix thật tại `config/experiments/matrix/model_selection.yaml`. Các giá trị hợp lệ có thể xem bằng:
+
+```bash
+python -m stock_ml list-components --type models
+python -m stock_ml list-components --type exit_models
+python -m stock_ml list-components --type runners
+python -m stock_ml list-experiments
+```
+
+#### 2. Validate và dry-run trước khi backtest
+
+```bash
+python -m stock_ml validate matrix/q3_2026
+python -m stock_ml run-matrix matrix/q3_2026 --dry-run
+python -m stock_ml run-matrix matrix/q3_2026 --dry-run --limit 3
+```
+
+#### 3. Chạy backtest matrix
+
+```bash
+# Chạy full, mặc định lưu artifact vào results/experiments/q3_2026/
+python -m stock_ml run-matrix matrix/q3_2026 --device cpu
+
+# Chạy nhanh trên ít mã để kiểm tra flow
+python -m stock_ml run-matrix matrix/q3_2026 --symbols-limit 10
+
+# Resume matrix lớn, skip tổ hợp đã có ranking_row.json
+python -m stock_ml run-matrix matrix/q3_2026 --resume
+
+# Preview tất cả tổ hợp trên ít mã, sau đó chạy full top 3
+python -m stock_ml run-matrix matrix/q3_2026 --symbols-limit 10 --top-k-preview 3 --resume
+
+# Chạy song song CPU
+python -m stock_ml run-matrix matrix/q3_2026 --jobs 4 --device cpu
+```
+
+Mỗi tổ hợp sẽ có artifact riêng gồm `trades.csv`, `metrics.json`, `ranking_row.json`, `predictions_meta.json`, `config.resolved.yaml`. Sau khi chạy xong, bundle matrix có thêm `ranking.csv` và `ranking.json`.
+
+#### 4. Xếp hạng kết quả matrix
+
+```bash
+python -m stock_ml compare-matrix results/experiments/q3_2026 --top 10
+python -m stock_ml compare-matrix results/experiments/q3_2026 --top 20 --min-trades 20 --max-mdd 20
+python -m stock_ml compare-matrix results/experiments/q3_2026 --sort total_pnl --top 10
+```
+
+#### 5. Thêm kết quả vào leaderboard
+
+Khi `run-matrix` lưu artifact, leaderboard tự cập nhật vào `results/leaderboard/` trừ khi dùng `--skip-leaderboard`.
+
+```bash
+# Cập nhật leaderboard tự động
+python -m stock_ml run-matrix matrix/q3_2026 --resume
+
+# Không cập nhật leaderboard nếu chỉ chạy thử
+python -m stock_ml run-matrix matrix/q3_2026 --symbols-limit 10 --skip-leaderboard
+```
+
+#### 6. Benchmark tổ hợp/champion
+
+`benchmark` nhận danh sách version champion trong `config/experiments/champions/*.yaml`:
+
+```bash
+python -m stock_ml benchmark --versions v22,v34,v37a --symbols-limit 10
+python -m stock_ml benchmark --versions v22,v34,v37a --device gpu --output results/benchmark_q3_2026.json
+```
+
+Nếu winner đang nằm trong matrix, promote thành champion YAML trước rồi mới benchmark bằng tên version đó.
+
+#### 7. Xuất top matrix vào leaderboard HTML/dashboard
+
+Dashboard đọc dữ liệu trong `visualization/manifest.json` và các JSON được export. Với matrix, dùng `export-matrix` để lấy top-K từ bundle đã backtest:
+
+```bash
+# Export top 5 theo composite_score vào visualization/
+python -m stock_ml export-matrix q3_2026 --top-k 5
+
+# Hoặc truyền đường dẫn đầy đủ
+python -m stock_ml export-matrix results/experiments/q3_2026 --top-k 10 --sort total_pnl
+
+# Nếu cần tính/lấp composite_score trong manifest
+python -m stock_ml score-models --force
+```
+
+Mở HTML bằng HTTP server:
+
+```bash
+cd visualization && python -m http.server 8080
+# Mở http://localhost:8080/dashboard.html
+```
+
+Không cần sửa `visualization/dashboard.html`; file này đọc `manifest.json` và tự render model được export.
+
+→ Xem thêm [HOW_TO_RUN_MATRIX.md](docs/refactor/HOW_TO_RUN_MATRIX.md)
 
 ## Regression & Tooling
 
@@ -322,6 +504,7 @@ Data tự động được mount từ Google Drive qua `colab_setup.py`. Xem [do
 
 | File | Nội dung |
 |------|----------|
+| [docs/refactor_multi_market.md](docs/refactor_multi_market.md) | Kế hoạch và trạng thái refactor multi-market, MarketProfile, PnL modes |
 | [docs/refactor/ARCHITECTURE.md](docs/refactor/ARCHITECTURE.md) | Kiến trúc đích v2, component interfaces, YAML schema |
 | [docs/refactor/CHAMPION_VERSIONS.md](docs/refactor/CHAMPION_VERSIONS.md) | 11 champion: lý do chọn, coverage matrix |
 | [docs/refactor/REFACTOR_ROADMAP.md](docs/refactor/REFACTOR_ROADMAP.md) | Foundation v2 và diary refactor ban đầu |
@@ -344,4 +527,4 @@ GitHub Actions (`.github/workflows/ci.yml`) chạy tự động khi push:
 
 ---
 
-*Cập nhật: 2026-05-03 — Pha 6 model selection đã chốt primary champion `leading_v2 + random_forest + lightgbm_exit` (strategy `v22`); thêm CLI `compare-champions` để chạy & xếp hạng toàn bộ champion với 1 split chung. Phase 5 terminology giữ nguyên: `exit_model`, `strategy.exit_rules`, `signals.entry_model`, `v22_with_exit_model`, `LegacyAdapter`; `run_pipeline.py` vẫn deprecated, dùng `python -m stock_ml run` thay thế.*
+*Cập nhật: 2026-05-06 — Multi-market Phase 0–7 đã hoàn tất: `MarketProfile`, `ResolvedRunContext`, cache/artifact/leaderboard scoping theo `run_identity`, profile `vn_stock`, `crypto_spot`, `crypto_perp`, `vn_derivatives`, backtest PnL dispatch cho spot/perp/futures, cross-margin portfolio engine, short risk controls và smart futures rollover. `run_pipeline.py` vẫn deprecated, dùng `python -m stock_ml run` thay thế.*

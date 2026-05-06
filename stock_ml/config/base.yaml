@@ -1,4 +1,6 @@
 # Base configuration
+market: "vn_stock"
+
 data:
   data_dir: "../portable_data/vn_stock_ai_dataset_cleaned"
   symbols_file: "clean_symbols.txt"
@@ -51,7 +53,8 @@ evaluation:
     - mid_wave_sell_rate
   initial_capital: 100000000  # 100M VND
   commission: 0.0015  # 0.15% each way
-  slippage: 0.001
+  tax: 0.001
+  slippage: 0.0
 
 scoring:
   # live | legacy

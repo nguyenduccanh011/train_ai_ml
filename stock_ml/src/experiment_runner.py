@@ -10,6 +10,7 @@ from compare_rule_vs_model import backtest_rule
 
 import src.data.target as target_module
 import src.features.engine as feature_engine_module
+from src.backtest.portfolio_engine import backtest_portfolio
 from src.cache.feature_cache import FeatureCacheManager
 from src.config_loader import get_training_device, load_config
 from src.data.loader import DataLoader
@@ -17,8 +18,22 @@ from src.data.splitter import WalkForwardSplitter
 from src.data.target import TargetGenerator
 from src.env import get_results_dir, resolve_data_dir
 from src.features.engine import FeatureEngine
+from src.market_profile import resolve_run_context
 from src.models.registry import build_model, detect_device
 from src.signal_adapter import canonicalize_predictions
+
+
+def _build_backtest_config(run_context, **overrides):
+    strategy_overrides = run_context.market_profile.strategy_overrides
+    min_hold = strategy_overrides.get("min_hold_protection")
+    v19_entry = strategy_overrides.get("v19_entry_cascade")
+    return {
+        **run_context.execution_costs,
+        **overrides,
+        "symbol_groups": run_context.resolved_symbol_groups,
+        "rule_priority_symbols": min_hold.rule_priority if min_hold else None,
+        "score5_risky_symbols": v19_entry.score5_risky if v19_entry else None,
+    }
 
 
 def _build_pipeline_config():
@@ -67,9 +82,10 @@ def run_test(
         raise ValueError("run_test requires backtest_fn")
 
     pipeline_cfg = load_config().get("pipeline", {})
-    data_dir = resolve_data_dir(
-        pipeline_cfg.get("data_dir", "../portable_data/vn_stock_ai_dataset_cleaned")
-    )
+    run_context = resolve_run_context({"market": pipeline_cfg.get("market")})
+    if run_context.resolved_data_dir is None:
+        raise ValueError(f"Market {run_context.market!r} does not define data.data_dir")
+    data_dir = resolve_data_dir(run_context.resolved_data_dir)
     config = _build_pipeline_config()
     if target_override is not None:
         config["target"] = target_override
@@ -88,7 +104,14 @@ def run_test(
     )
 
     pick = [s.strip() for s in symbols_str.split(",") if s.strip()]
-    loader = DataLoader(data_dir)
+    loader = DataLoader(
+        data_dir,
+        timeframe=run_context.timeframe,
+        timestamp_column=run_context.market_profile.data.timestamp_column,
+        timezone=run_context.market_profile.data.timezone,
+        required_columns=run_context.market_profile.data.required_columns,
+        optional_columns=run_context.market_profile.data.optional_columns,
+    )
     available_symbols = set(loader.symbols)
     if pick:
         pick = [s for s in pick if s in available_symbols]
@@ -137,6 +160,20 @@ def run_test(
         drop_cols.append("target_sell")
     df = df.dropna(subset=drop_cols)
 
+    backtest_cfg = _build_backtest_config(
+        run_context,
+        mod_a=mod_a,
+        mod_b=mod_b,
+        mod_c=mod_c,
+        mod_d=mod_d,
+        mod_e=mod_e,
+        mod_f=mod_f,
+        mod_g=mod_g,
+        mod_h=mod_h,
+        mod_i=mod_i,
+        mod_j=mod_j,
+    )
+
     all_trades = []
     for _, train_df, test_df in splitter.split(df):
         model = build_model("lightgbm", device=device)
@@ -150,6 +187,10 @@ def run_test(
             model_exit = build_model("lightgbm", device=device)
             model_exit.fit(X_train, train_df["target_sell"].values.astype(int))
 
+        split_predictions = {}
+        split_returns = {}
+        split_dfs = {}
+        split_exits = {}
         for sym in test_df["symbol"].unique():
             if sym not in pick_set:
                 continue
@@ -159,28 +200,34 @@ def run_test(
             X_sym = np.nan_to_num(sym_test[feature_cols].values)
             y_pred = model.predict(X_sym)
             y_pred = canonicalize_predictions(y_pred, config["target"])
-            rets = sym_test["return_1d"].values
+            split_predictions[sym] = y_pred
+            split_returns[sym] = sym_test["return_1d"].values
+            split_dfs[sym] = sym_test
 
-            y_pred_exit = None
             if model_exit is not None:
-                y_pred_exit = model_exit.predict(X_sym).astype(int)
+                split_exits[sym] = model_exit.predict(X_sym).astype(int)
 
+        if backtest_cfg.get("margin_mode") == "cross":
+            result = backtest_portfolio(
+                split_predictions,
+                split_returns,
+                split_dfs,
+                feature_cols,
+                **backtest_cfg,
+            )
+            for trade in result["trades"]:
+                trade["symbol"] = trade.get("entry_symbol")
+            all_trades.extend(result["trades"])
+            continue
+
+        for sym, y_pred in split_predictions.items():
             result = backtest_fn(
                 y_pred,
-                rets,
-                sym_test,
+                split_returns[sym],
+                split_dfs[sym],
                 feature_cols,
-                mod_a=mod_a,
-                mod_b=mod_b,
-                mod_c=mod_c,
-                mod_d=mod_d,
-                mod_e=mod_e,
-                mod_f=mod_f,
-                mod_g=mod_g,
-                mod_h=mod_h,
-                mod_i=mod_i,
-                mod_j=mod_j,
-                y_pred_exit=y_pred_exit,
+                y_pred_exit=split_exits.get(sym),
+                **backtest_cfg,
             )
             for trade in result["trades"]:
                 trade["symbol"] = sym
@@ -191,12 +238,20 @@ def run_test(
 
 def run_rule_test(symbols_str):
     pipeline_cfg = load_config().get("pipeline", {})
-    data_dir = resolve_data_dir(
-        pipeline_cfg.get("data_dir", "../portable_data/vn_stock_ai_dataset_cleaned")
-    )
+    run_context = resolve_run_context({"market": pipeline_cfg.get("market")})
+    if run_context.resolved_data_dir is None:
+        raise ValueError(f"Market {run_context.market!r} does not define data.data_dir")
+    data_dir = resolve_data_dir(run_context.resolved_data_dir)
     config = _build_pipeline_config()
     pick = [s.strip() for s in symbols_str.split(",") if s.strip()]
-    loader = DataLoader(data_dir)
+    loader = DataLoader(
+        data_dir,
+        timeframe=run_context.timeframe,
+        timestamp_column=run_context.market_profile.data.timestamp_column,
+        timezone=run_context.market_profile.data.timezone,
+        required_columns=run_context.market_profile.data.required_columns,
+        optional_columns=run_context.market_profile.data.optional_columns,
+    )
     splitter = WalkForwardSplitter.from_config(config)
     if pick:
         symbols = [s for s in pick if s in loader.symbols]

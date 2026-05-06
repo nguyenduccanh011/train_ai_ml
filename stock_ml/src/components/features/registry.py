@@ -56,8 +56,14 @@ def build_engine_from_yaml(path: Path) -> ComposableFeatureEngine:
 def build_engine_from_name(name: str, config_dir: Path | None = None) -> ComposableFeatureEngine:
     """Resolve a feature set name to a YAML config and build engine."""
     if config_dir is None:
-        config_dir = Path(__file__).parents[4] / "config" / "feature_sets"
+        config_dir = Path(__file__).parents[3] / "config" / "feature_sets"
     yaml_path = config_dir / f"{name}.yaml"
     if not yaml_path.exists():
         raise FileNotFoundError(f"Feature set config not found: {yaml_path}")
     return build_engine_from_yaml(yaml_path)
+
+
+def build_engine_from_blocks(names: list[str]) -> ComposableFeatureEngine:
+    """Build a ComposableFeatureEngine from an explicit list of block names."""
+    blocks = [get_block(name) for name in names]
+    return ComposableFeatureEngine(blocks)

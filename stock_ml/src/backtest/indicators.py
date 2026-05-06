@@ -271,7 +271,7 @@ def detect_trend_strength(i, ind):
     return "weak"
 
 
-def get_regime_adapter(i, trend, ind, patch_symbol_tuning=False):
+def get_regime_adapter(i, trend, ind, patch_symbol_tuning=False, symbol_groups=None):
     n = ind["n"]
     symbols = ind["symbols"]
     atr14 = ind["atr14"]
@@ -279,8 +279,9 @@ def get_regime_adapter(i, trend, ind, patch_symbol_tuning=False):
     ret_20d = ind["ret_20d"]
     feat_arrays = ind["feat_arrays"]
 
+    _groups = symbol_groups if symbol_groups is not None else SYMBOL_PROFILES
     sym = str(symbols[i]) if i < n else "?"
-    profile = SYMBOL_PROFILES.get(sym, "balanced")
+    profile = _groups.get(sym, "balanced")
     bb_i = feat_arrays["bb_width_percentile"][i]
     low_vol = bb_i < 0.35
     weak_move = abs(ret_20d[i]) < 0.05

@@ -39,10 +39,13 @@ def _resolve_yaml(path_arg: str) -> Path:
     return REPO_ROOT / "config" / "experiments" / f"{path_arg}.yaml"
 
 
-def _load_symbols() -> list[str]:
+def _load_symbols(market: str | None = None, limit: int | None = None) -> list[str]:
     from src.config_loader import get_pipeline_symbols
 
-    return get_pipeline_symbols()
+    symbols = get_pipeline_symbols(market=market)
+    if limit is not None:
+        return symbols[:limit]
+    return symbols
 
 
 def _print_result_summary(result_name: str, n_trades: int, trades_df: Any) -> None:
@@ -166,6 +169,13 @@ def _save_artifacts(
     config_dict = cfg.model_dump()
     config_hash = _stable_config_hash(config_dict)
     run_dir.mkdir(parents=True, exist_ok=True)
+    execution_cfg = {
+        **(config_dict.get("execution", {}) or {}),
+        **result.metadata.get("execution", {}),
+    }
+    for key in ("currency", "pnl_mode"):
+        if key in result.metadata:
+            execution_cfg[key] = result.metadata[key]
 
     if not result.trades_df.empty:
         result.trades_df.to_csv(run_dir / "trades.csv", index=False)
@@ -182,6 +192,11 @@ def _save_artifacts(
 
     predictions_meta = {
         "config_hash": config_hash,
+        "market": cfg.market,
+        "currency": execution_cfg.get("currency", "unknown"),
+        "pnl_mode": execution_cfg.get("pnl_mode", "equity_spot"),
+        "schema": result.metadata.get("schema", "unknown"),
+        "timeframe": result.metadata.get("timeframe", "unknown"),
         "entry_model": cfg.entry_model_type(),
         "exit_model_type": cfg.signals.exit_model.type,
         "exit_model_enabled": cfg.signals.exit_model.enabled,
@@ -210,6 +225,11 @@ def _save_artifacts(
         "exit_model_enabled": predictions_meta["exit_model_enabled"],
         "per_symbol_coverage": symbol_coverage,
         "config_hash": config_hash,
+        "market": predictions_meta["market"],
+        "currency": predictions_meta["currency"],
+        "pnl_mode": predictions_meta["pnl_mode"],
+        "schema": predictions_meta["schema"],
+        "timeframe": predictions_meta["timeframe"],
     }
 
     (run_dir / "metrics.json").write_text(
@@ -233,7 +253,6 @@ def _save_artifacts(
 
 def cmd_run(args: argparse.Namespace) -> int:
     device = args.device or "cpu"
-    symbols = _load_symbols()
 
     from src.pipeline import ExperimentConfig, Pipeline
 
@@ -243,6 +262,7 @@ def cmd_run(args: argparse.Namespace) -> int:
         return 1
 
     cfg = ExperimentConfig.from_yaml(yaml_path)
+    symbols = _load_symbols(cfg.market)
     pipeline = Pipeline(cfg, symbols=symbols, device=device)
     result = pipeline.run()
 
@@ -269,7 +289,10 @@ def _run_matrix_worker(payload: dict[str, Any]) -> dict[str, Any] | None:
 
     cfg = payload["cfg"]
     matrix_name = payload["matrix_name"]
-    symbols = payload["symbols"]
+    symbols_limit = payload.get("symbols_limit")
+    symbols = _load_symbols(cfg.market, symbols_limit)
+    if not symbols:
+        raise ValueError(f"No symbols resolved for market='{cfg.market}' in run '{cfg.name}'")
     device = payload["device"]
     save_results = payload["save_results"]
     run_meta = payload.get("run_meta") or {}
@@ -282,6 +305,8 @@ def _run_matrix_worker(payload: dict[str, Any]) -> dict[str, Any] | None:
     elapsed_seconds = round(time.perf_counter() - start, 3)
     worker_run_meta = dict(run_meta)
     worker_run_meta["elapsed_seconds"] = elapsed_seconds
+    worker_run_meta["symbols_count"] = len(symbols)
+    worker_run_meta["market"] = cfg.market
     run_dir = None
     if save_results:
         run_dir = _save_matrix_artifacts(
@@ -314,7 +339,7 @@ def _run_matrix_configs_parallel(
     *,
     matrix_name: str,
     configs: list[Any],
-    symbols: list[str],
+    symbols_limit: int | None,
     device: str,
     save_results: bool,
     run_meta: dict[str, Any] | None,
@@ -328,7 +353,7 @@ def _run_matrix_configs_parallel(
         {
             "matrix_name": matrix_name,
             "cfg": cfg,
-            "symbols": symbols,
+            "symbols_limit": symbols_limit,
             "device": device,
             "save_results": save_results,
             "run_meta": run_meta,
@@ -363,7 +388,7 @@ def _run_matrix_configs(
     *,
     matrix_name: str,
     configs: list[Any],
-    symbols: list[str],
+    symbols_limit: int | None,
     device: str,
     dry_run: bool,
     save_results: bool,
@@ -387,7 +412,7 @@ def _run_matrix_configs(
     for i, cfg in enumerate(configs, 1):
         print(f"\n[{i}/{len(configs)}] {cfg.name}")
         print(
-            f"  strategy={cfg.strategy} features={cfg.feature_set()} "
+            f"  market={cfg.market} strategy={cfg.strategy} features={cfg.feature_set()} "
             f"entry={cfg.entry_model_type()} exit={cfg.signals.exit_model.type} "
             f"exit_enabled={cfg.signals.exit_model.enabled}"
         )
@@ -410,7 +435,7 @@ def _run_matrix_configs(
         return _run_matrix_configs_parallel(
             matrix_name=matrix_name,
             configs=runnable_configs,
-            symbols=symbols,
+            symbols_limit=symbols_limit,
             device=device,
             save_results=save_results,
             run_meta=run_meta,
@@ -422,6 +447,9 @@ def _run_matrix_configs(
     cache_manager = PredictionCacheManager(cache_root)
     results = []
     for i, cfg in enumerate(runnable_configs, 1):
+        symbols = _load_symbols(cfg.market, symbols_limit)
+        if not symbols:
+            raise ValueError(f"No symbols resolved for market='{cfg.market}' in run '{cfg.name}'")
         start = time.perf_counter()
         pipeline = Pipeline(cfg, symbols=symbols, device=device, cache_manager=cache_manager)
         result = pipeline.run()
@@ -432,6 +460,8 @@ def _run_matrix_configs(
         if save_results:
             save_run_meta = dict(run_meta or {})
             save_run_meta["elapsed_seconds"] = elapsed_seconds
+            save_run_meta["symbols_count"] = len(symbols)
+            save_run_meta["market"] = cfg.market
             _save_matrix_artifacts(
                 matrix_name, cfg, result, save_run_meta, skip_leaderboard=skip_leaderboard
             )
@@ -493,8 +523,6 @@ def cmd_run_matrix(args: argparse.Namespace) -> int:
                 print(f"Validation error [{cfg.name}]: {err}", file=sys.stderr)
             return 1
 
-    all_symbols = _load_symbols()
-    symbols = all_symbols[: args.symbols_limit] if args.symbols_limit is not None else all_symbols
     device = args.device or "cpu"
     matrix_bundle_dir = Path(get_results_dir()) / "experiments" / yaml_path.stem
 
@@ -504,23 +532,19 @@ def cmd_run_matrix(args: argparse.Namespace) -> int:
             print("Error: --top-k-preview must be > 0", file=sys.stderr)
             return 1
         preview_limit = args.symbols_limit or 10
-        preview_symbols = all_symbols[:preview_limit]
         preview_matrix_name = f"{yaml_path.stem}_preview"
         preview_bundle_dir = Path(get_results_dir()) / "experiments" / preview_matrix_name
-        print(
-            f"Top-k preview: running {len(configs)} experiments on {len(preview_symbols)} symbols"
-        )
+        print(f"Top-k preview: running {len(configs)} experiments (symbols_limit={preview_limit})")
         _run_matrix_configs(
             matrix_name=preview_matrix_name,
             configs=configs,
-            symbols=preview_symbols,
+            symbols_limit=preview_limit,
             device=device,
             dry_run=args.dry_run,
             save_results=args.save_results,
             resume=args.resume,
             run_meta={
                 "run_scope": "preview",
-                "symbols_count": len(preview_symbols),
                 "symbols_limit": preview_limit,
                 "matrix_name": preview_matrix_name,
                 "source_matrix_yaml": str(yaml_path),
@@ -541,14 +565,13 @@ def cmd_run_matrix(args: argparse.Namespace) -> int:
         _run_matrix_configs(
             matrix_name=yaml_path.stem,
             configs=top_configs,
-            symbols=symbols,
+            symbols_limit=args.symbols_limit,
             device=device,
             dry_run=False,
             save_results=args.save_results,
             resume=args.resume,
             run_meta={
                 "run_scope": "full",
-                "symbols_count": len(symbols),
                 "symbols_limit": args.symbols_limit,
                 "matrix_name": yaml_path.stem,
                 "source_matrix_yaml": str(yaml_path),
@@ -564,14 +587,13 @@ def cmd_run_matrix(args: argparse.Namespace) -> int:
     _run_matrix_configs(
         matrix_name=yaml_path.stem,
         configs=configs,
-        symbols=symbols,
+        symbols_limit=args.symbols_limit,
         device=device,
         dry_run=args.dry_run,
         save_results=args.save_results,
         resume=args.resume,
         run_meta={
             "run_scope": "full",
-            "symbols_count": len(symbols),
             "symbols_limit": args.symbols_limit,
             "matrix_name": yaml_path.stem,
             "source_matrix_yaml": str(yaml_path),
@@ -714,6 +736,7 @@ def cmd_compare_matrix(args: argparse.Namespace) -> int:
 
 def cmd_compare_champions(args: argparse.Namespace) -> int:
     from src.env import get_results_dir
+    from src.market_profile import resolve_market_name
     from src.pipeline import ExperimentConfig, Pipeline
     from src.pipeline.cache import PredictionCacheManager
 
@@ -727,30 +750,33 @@ def cmd_compare_champions(args: argparse.Namespace) -> int:
                 f"Error: champion configs not found: {[str(p) for p in missing]}", file=sys.stderr
             )
             return 1
+        configs_with_paths = [(ExperimentConfig.from_yaml(path), path) for path in yaml_paths]
     else:
-        yaml_paths = sorted(champions_dir.glob("*.yaml"))
+        target_market = resolve_market_name(None)
+        configs_with_paths = [
+            (cfg, path)
+            for path in sorted(champions_dir.glob("*.yaml"))
+            if (cfg := ExperimentConfig.from_yaml(path)).market == target_market
+        ]
 
-    if not yaml_paths:
+    if not configs_with_paths:
         print(f"Error: no champion configs under {champions_dir}", file=sys.stderr)
         return 1
 
     bundle_name = args.bundle_name or f"champions_{args.first_test_year}_{args.last_test_year}"
     bundle_dir = Path(get_results_dir()) / "experiments" / bundle_name
 
-    all_symbols = _load_symbols()
-    symbols = all_symbols[: args.symbols_limit] if args.symbols_limit is not None else all_symbols
     device = args.device or "cpu"
 
     cache_root = Path(get_results_dir()) / "cache" / "predictions"
     cache_manager = PredictionCacheManager(cache_root)
 
     print(
-        f"Bundle: {bundle_name} ({len(yaml_paths)} champions, split={args.first_test_year}-{args.last_test_year})"
+        f"Bundle: {bundle_name} ({len(configs_with_paths)} champions, split={args.first_test_year}-{args.last_test_year})"
     )
     print(f"Output: {bundle_dir}")
 
-    for i, yaml_path in enumerate(yaml_paths, 1):
-        cfg = ExperimentConfig.from_yaml(yaml_path)
+    for i, (cfg, yaml_path) in enumerate(configs_with_paths, 1):
         cfg.split.first_test_year = args.first_test_year
         cfg.split.last_test_year = args.last_test_year
         if cfg.execution is not None:
@@ -769,6 +795,11 @@ def cmd_compare_champions(args: argparse.Namespace) -> int:
         if args.dry_run:
             continue
 
+        symbols = _load_symbols(cfg.market, args.symbols_limit)
+        if not symbols:
+            print(f"  [SKIP] no symbols resolved for market={cfg.market}")
+            continue
+
         pipeline = Pipeline(cfg, symbols=symbols, device=device, cache_manager=cache_manager)
         result = pipeline.run()
         print(f"  -> {result.n_trades} trades")
@@ -779,6 +810,7 @@ def cmd_compare_champions(args: argparse.Namespace) -> int:
                 result,
                 {
                     "run_scope": "full",
+                    "market": cfg.market,
                     "symbols_count": len(symbols),
                     "symbols_limit": args.symbols_limit,
                     "matrix_name": bundle_name,
@@ -1075,12 +1107,18 @@ def cmd_benchmark(args: argparse.Namespace) -> int:
 
 def cmd_list_experiments(args: argparse.Namespace) -> int:
     del args
+    from src.market_profile import resolve_market_name
+    from src.pipeline import ExperimentConfig
+
     champions_dir = CONFIG_DIR / "champions"
     matrix_dir = CONFIG_DIR / "matrix"
+    target_market = resolve_market_name(None)
 
     print("=== Champion Experiments ===")
     for yaml_path in sorted(champions_dir.glob("*.yaml")):
-        print(f"  champions/{yaml_path.stem}")
+        cfg = ExperimentConfig.from_yaml(yaml_path)
+        if cfg.market == target_market:
+            print(f"  champions/{yaml_path.stem}")
 
     print("\n=== Matrix Experiments ===")
     for yaml_path in sorted(matrix_dir.glob("*.yaml")):
@@ -1101,7 +1139,7 @@ def cmd_compare(args: argparse.Namespace) -> int:
             print(f"Error: config not found: {yaml_path}", file=sys.stderr)
             return 1
         cfg = ExperimentConfig.from_yaml(yaml_path)
-        symbols = _load_symbols()
+        symbols = _load_symbols(cfg.market)
         pipeline = Pipeline(cfg, symbols=symbols, device=args.device or "cpu")
         result = pipeline.run()
         frames[cfg.name] = result.trades_df

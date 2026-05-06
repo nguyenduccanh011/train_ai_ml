@@ -1,3 +1,4 @@
+market: vn_stock
 name: v42_a
 strategy: v42_a
 runner: src.components.runners.v42_a_runner

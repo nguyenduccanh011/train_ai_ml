@@ -8,10 +8,6 @@ import yaml
 from src.leaderboard.schema import LeaderboardRow
 
 DEFAULT_CONFIG = {
-    "baseline": {
-        "bundle": "champions_2020_2025_fair",
-        "run_name": "v22",
-    },
     "fairness_dims": ["symbols", "window", "cost_profile", "target"],
 }
 
@@ -39,8 +35,10 @@ def resolve_baseline(
         for row in candidates:
             if row.bundle == bundle and row.run_name == run_name:
                 return row
+        # bundle/run_name được chỉ định nhưng không tìm thấy → không có baseline
+        return None
 
-    return max(candidates, key=lambda row: row.composite_score)
+    return None
 
 
 def annotate_rows(

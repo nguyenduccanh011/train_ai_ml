@@ -69,6 +69,7 @@ def _axis_path(key: str) -> str:
     allowed_roots = {
         "name",
         "strategy",
+        "market",
         "runner",
         "components",
         "split",

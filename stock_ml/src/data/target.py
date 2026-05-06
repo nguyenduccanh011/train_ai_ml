@@ -43,6 +43,11 @@ class TargetGenerator:
         """Add target column(s) to DataFrame. Expects per-symbol data."""
         df = df.copy()
 
+        if self.target_type == "forward_return":
+            # Backward-compatible alias for configs that define horizon/unit.
+            df = self._return_classification(df)
+            return df
+
         if self.target_type == "trend_regime":
             df = self._trend_regime(df)
         elif self.target_type == "return_classification":
@@ -132,7 +137,8 @@ class TargetGenerator:
 
     def _return_classification(self, df: pd.DataFrame) -> pd.DataFrame:
         """Classify based on forward return threshold."""
-        fwd_return = df["close"].pct_change(5).shift(-5)
+        fw = max(int(self.forward_window), 1)
+        fwd_return = df["close"].pct_change(fw).shift(-fw)
 
         if self.n_classes == 3:
             threshold = fwd_return.std() * 0.5
@@ -146,7 +152,8 @@ class TargetGenerator:
 
     def _return_regression(self, df: pd.DataFrame) -> pd.DataFrame:
         """Forward return as continuous target."""
-        df["target"] = df["close"].pct_change(5).shift(-5)
+        fw = max(int(self.forward_window), 1)
+        df["target"] = df["close"].pct_change(fw).shift(-fw)
         return df
 
     def _forward_risk_reward(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -425,13 +432,17 @@ class TargetGenerator:
     def from_config(cls, config: dict[str, Any]) -> "TargetGenerator":
         """Create from config dict."""
         tgt_cfg = config.get("target", config)
+        target_type = str(tgt_cfg.get("type", "trend_regime"))
+        if target_type.lower() == "forward_return":
+            target_type = "return_classification"
+        fw = tgt_cfg.get("forward_window", tgt_cfg.get("horizon", 10))
         return cls(
-            target_type=tgt_cfg.get("type", "trend_regime"),
+            target_type=target_type,
             trend_method=tgt_cfg.get("trend_method", "dual_ma"),
             short_window=tgt_cfg.get("short_window", 10),
             long_window=tgt_cfg.get("long_window", 40),
             n_classes=tgt_cfg.get("classes", 3),
-            forward_window=tgt_cfg.get("forward_window", 10),
+            forward_window=fw,
             gain_threshold=tgt_cfg.get("gain_threshold", 0.05),
             loss_threshold=tgt_cfg.get("loss_threshold", 0.03),
             rr_threshold=tgt_cfg.get("rr_threshold", 2.0),

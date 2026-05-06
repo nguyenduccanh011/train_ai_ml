@@ -1,6 +1,7 @@
 from collections import defaultdict
 
 import numpy as np
+import pandas as pd
 
 from .defaults import (
     DEFAULT_PARAMS,
@@ -9,15 +10,121 @@ from .defaults import (
     SCORE5_RISKY_SYMBOLS,
     SYMBOL_PROFILES,
 )
+
+# NOTE: RULE_PRIORITY_SYMBOLS / SCORE5_RISKY_SYMBOLS / SYMBOL_PROFILES kept as fallback.
+# Callers should pass symbol_groups / rule_priority_symbols / score5_risky_symbols via cfg
+# (resolved from market context) to avoid hardcoded VN defaults.
 from .indicators import compute_indicators, detect_trend_strength, get_regime_adapter
+from .pnl import get_pnl_calculator
+
+
+def _should_roll(
+    i,
+    position,
+    new_position,
+    expiry_dates,
+    dates,
+    roll_rule,
+    roll_days_before_expiry,
+    next_volume,
+    current_volume,
+    next_oi,
+    current_oi,
+    last_roll_expiry,
+):
+    if expiry_dates is None or position == 0 or new_position != position:
+        return False
+    expiry = pd.Timestamp(expiry_dates[i])
+    if pd.isna(expiry):
+        return False
+    if last_roll_expiry is not None and expiry == pd.Timestamp(last_roll_expiry):
+        return False
+    date = pd.Timestamp(dates[i])
+    if date >= expiry:
+        return True
+    if roll_rule == "volume_crossover":
+        return next_volume is not None and next_volume[i] > current_volume[i]
+    if roll_rule == "oi_crossover":
+        return next_oi is not None and current_oi is not None and next_oi[i] > current_oi[i]
+    if roll_rule == "n_days_before_expiry":
+        return (expiry.normalize() - date.normalize()).days <= roll_days_before_expiry
+    return False
 
 
 def backtest_unified(y_pred, returns, df_test, feature_cols, y_pred_exit=None, **config):
     cfg = {**DEFAULT_PARAMS, **config}
 
+    _symbol_groups = cfg["symbol_groups"] or SYMBOL_PROFILES
+    _rule_priority = (
+        set(cfg["rule_priority_symbols"])
+        if cfg["rule_priority_symbols"] is not None
+        else RULE_PRIORITY_SYMBOLS
+    )
+    _score5_risky = (
+        set(cfg["score5_risky_symbols"])
+        if cfg["score5_risky_symbols"] is not None
+        else SCORE5_RISKY_SYMBOLS
+    )
+
     initial_capital = cfg["initial_capital"]
     commission = cfg["commission"]
     tax = cfg["tax"]
+    slippage = cfg["slippage"]
+    contract_multiplier = cfg["contract_multiplier"]
+    leverage = cfg["leverage"]
+    maintenance_margin_rate = cfg["maintenance_margin_rate"]
+    liquidation_fee = cfg["liquidation_fee"]
+    short_enabled = cfg["short_enabled"]
+    short_position_size = cfg["short_position_size"]
+    short_hard_cap = cfg["short_hard_cap"]
+    short_squeeze_exit = cfg["short_squeeze_exit"]
+    short_squeeze_vol_mult = cfg["short_squeeze_vol_mult"]
+    short_squeeze_price_pct = cfg["short_squeeze_price_pct"]
+    max_short_notional = cfg["max_short_notional"]
+    liquidation_drawdown = None
+    if leverage > 1:
+        liquidation_drawdown = max(0.0, (1.0 / leverage) - maintenance_margin_rate)
+    pnl_calc = get_pnl_calculator(cfg["pnl_mode"])
+    funding_rate_column = cfg["funding_rate_column"]
+    funding_rates = None
+    if funding_rate_column in df_test.columns:
+        funding_rates = df_test[funding_rate_column].to_numpy(dtype=float)
+        funding_rates = np.where(np.isnan(funding_rates), 0.0, funding_rates)
+    borrow_rate_column = cfg["borrow_rate_column"]
+    borrow_rates = None
+    if borrow_rate_column in df_test.columns:
+        borrow_rates = df_test[borrow_rate_column].to_numpy(dtype=float)
+        borrow_rates = np.where(np.isnan(borrow_rates), 0.0, borrow_rates)
+    borrow_available_column = cfg["borrow_available_column"]
+    borrow_available = None
+    if borrow_available_column in df_test.columns:
+        borrow_available = df_test[borrow_available_column].to_numpy(dtype=float)
+        borrow_available = np.where(np.isnan(borrow_available), 0.0, borrow_available)
+    roll_cost_rate = cfg["roll_cost_rate"]
+    expiry_date_column = cfg["expiry_date_column"]
+    roll_rule = cfg["roll_rule"]
+    roll_days_before_expiry = cfg["roll_days_before_expiry"]
+    next_volume_column = cfg["next_volume_column"]
+    next_oi_column = cfg["next_oi_column"]
+    expiry_dates = None
+    next_roll_volume = None
+    next_roll_oi = None
+    current_roll_oi = None
+    if (
+        cfg["pnl_mode"] == "futures_contract"
+        and expiry_date_column
+        and expiry_date_column in df_test.columns
+    ):
+        expiry_dates = pd.to_datetime(df_test[expiry_date_column]).to_numpy()
+        if next_volume_column and next_volume_column in df_test.columns:
+            next_roll_volume = df_test[next_volume_column].to_numpy(dtype=float)
+            next_roll_volume = np.where(np.isnan(next_roll_volume), 0.0, next_roll_volume)
+        if next_oi_column and next_oi_column in df_test.columns:
+            next_roll_oi = df_test[next_oi_column].to_numpy(dtype=float)
+            next_roll_oi = np.where(np.isnan(next_roll_oi), 0.0, next_roll_oi)
+        if "open_interest" in df_test.columns:
+            current_roll_oi = df_test["open_interest"].to_numpy(dtype=float)
+            current_roll_oi = np.where(np.isnan(current_roll_oi), 0.0, current_roll_oi)
     record_trades = cfg["record_trades"]
     mod_a = cfg["mod_a"]
     mod_b = cfg["mod_b"]
@@ -307,6 +414,11 @@ def backtest_unified(y_pred, returns, df_test, feature_cols, y_pred_exit=None, *
     dates = ind["dates"]
     symbols = ind["symbols"]
     feat_arrays = ind["feat_arrays"]
+    short_squeeze_avg_vol20 = (
+        pd.Series(volume).rolling(20, min_periods=1).mean().to_numpy()
+        if short_squeeze_exit
+        else None
+    )
 
     # V38c: extract HA columns from df_test if available (leading_v4)
     _HA_COLS = [
@@ -379,11 +491,14 @@ def backtest_unified(y_pred, returns, df_test, feature_cols, y_pred_exit=None, *
 
     entry_features = {}
     counters = defaultdict(int)
+    last_roll_expiry = None
 
     for i in range(1, n):
         pred = int(y_pred[i - 1])
         ret = returns[i] if not np.isnan(returns[i]) else 0
-        raw_signal = 1 if pred == 1 else 0
+        raw_signal = 1 if pred == 1 else (-1 if pred == -1 else 0)
+        if raw_signal == -1 and not short_enabled:
+            raw_signal = 0
         new_position = raw_signal
         exit_reason = "signal"
 
@@ -397,11 +512,13 @@ def backtest_unified(y_pred, returns, df_test, feature_cols, y_pred_exit=None, *
         bb = gf("bb_width_percentile", i)
 
         trend = detect_trend_strength(i, ind)
-        regime_cfg = get_regime_adapter(i, trend, ind, patch_symbol_tuning=patch_symbol_tuning)
+        regime_cfg = get_regime_adapter(
+            i, trend, ind, patch_symbol_tuning=patch_symbol_tuning, symbol_groups=_symbol_groups
+        )
         dp_floor = regime_cfg["dp_floor"]
         ret5_hot = regime_cfg["ret5_hot"]
         sym = str(symbols[i]) if i < n else "?"
-        profile = SYMBOL_PROFILES.get(sym, "balanced")
+        profile = _symbol_groups.get(sym, "balanced")
 
         if cooldown_remaining > 0:
             cooldown_remaining -= 1
@@ -844,7 +961,7 @@ def backtest_unified(y_pred, returns, df_test, feature_cols, y_pred_exit=None, *
         # V27: rule-priority entry
         if v27_rule_priority and position == 0 and new_position == 0:
             if (
-                sym in RULE_PRIORITY_SYMBOLS
+                sym in _rule_priority
                 and rule_consecutive[i] >= 2
                 and trend in ("strong", "moderate")
             ):
@@ -892,7 +1009,7 @@ def backtest_unified(y_pred, returns, df_test, feature_cols, y_pred_exit=None, *
             # V27: dynamic score-5 penalty
             if v27_dynamic_score5_penalty and entry_score == 5:
                 score5_penalty = 1.0
-                if sym in SCORE5_RISKY_SYMBOLS:
+                if sym in _score5_risky:
                     score5_penalty *= 0.70
                 if trend == "weak":
                     score5_penalty *= 0.85
@@ -936,6 +1053,17 @@ def backtest_unified(y_pred, returns, df_test, feature_cols, y_pred_exit=None, *
             if v26_min_position and position_size < 0.28:
                 new_position = 0
                 counters["v26_min_pos_blocked"] += 1
+
+        if new_position == -1 and position == 0:
+            if borrow_available is not None and borrow_available[i] <= 0:
+                new_position = 0
+            else:
+                if short_position_size is not None:
+                    position_size = max(0.0, min(float(short_position_size), 1.0))
+                if max_short_notional is not None:
+                    position_size = min(position_size, max(0.0, float(max_short_notional)))
+                if position_size <= 0:
+                    new_position = 0
 
         # === EXIT LOGIC ===
         if position == 1:
@@ -1589,6 +1717,41 @@ def backtest_unified(y_pred, returns, df_test, feature_cols, y_pred_exit=None, *
                     new_position = 0
                     exit_reason = "zombie_exit"
 
+        elif position == -1:
+            projected = equity[i - 1] * (1 - ret * position_size)
+            max_equity_in_trade = max(max_equity_in_trade, projected)
+            if entry_equity > 0:
+                cum_ret = (projected - entry_equity) / entry_equity
+            else:
+                cum_ret = 0
+            price_cur_ret = (entry_close / close[i] - 1) if close[i] > 0 else 0
+
+            if cum_ret <= -HARD_STOP:
+                new_position = 0
+                exit_reason = "hard_stop"
+            elif short_hard_cap is not None and price_cur_ret >= float(short_hard_cap):
+                new_position = 0
+                exit_reason = "signal_hard_cap"
+                counters["signal_hard_cap"] += 1
+            elif hold_days >= 3 and price_cur_ret >= abs(fast_exit_weak):
+                new_position = 0
+                exit_reason = "fast_exit_profit"
+                counters["fast_exit_profit"] += 1
+            elif hold_days >= ZOMBIE_BARS and price_cur_ret < 0.01:
+                new_position = 0
+                exit_reason = "zombie_exit"
+            elif borrow_available is not None and borrow_available[i] <= 0:
+                new_position = 0
+                exit_reason = "borrow_recalled"
+            elif short_squeeze_exit and short_squeeze_avg_vol20 is not None:
+                avg_volume_now = short_squeeze_avg_vol20[i]
+                vol_ratio = volume[i] / avg_volume_now if avg_volume_now > 0 else 0
+                bar_ret = (close[i] / opn[i] - 1) if opn[i] > 0 else 0
+                if vol_ratio >= short_squeeze_vol_mult and bar_ret >= short_squeeze_price_pct:
+                    new_position = 0
+                    exit_reason = "short_squeeze"
+
+        if position == 1:
             # Extended hold / trend persistence
             extended_min_hold = MIN_HOLD
             if v26_extended_hold and strong_uptrend and cum_ret > 0.05:
@@ -1868,6 +2031,37 @@ def backtest_unified(y_pred, returns, df_test, feature_cols, y_pred_exit=None, *
             consecutive_below_ema8 = 0
             v33_consec_below_ema8 = 0  # reset when not in position
 
+        liquidation_price = None
+        if position == 1 and liquidation_drawdown is not None and entry_close > 0:
+            effective_entry = entry_close * (1.0 + slippage)
+            liquidation_price = effective_entry * (1.0 - liquidation_drawdown)
+            if low[i] <= liquidation_price:
+                new_position = 0
+                exit_reason = "liquidation"
+        elif position == -1 and liquidation_drawdown is not None and entry_close > 0:
+            effective_entry = entry_close * (1.0 - slippage)
+            liquidation_price = effective_entry * (1.0 + liquidation_drawdown)
+            if high[i] >= liquidation_price:
+                new_position = 0
+                exit_reason = "liquidation"
+
+        roll_happened = _should_roll(
+            i,
+            position,
+            new_position,
+            expiry_dates,
+            dates,
+            roll_rule,
+            roll_days_before_expiry,
+            next_roll_volume,
+            volume,
+            next_roll_oi,
+            current_roll_oi,
+            last_roll_expiry,
+        )
+        if roll_happened:
+            exit_reason = "rollover"
+
         # Track prev signal exit for V33-F confirm
         v33_prev_signal_exit = (
             (new_position == 0 and exit_reason == "signal") if position == 1 else False
@@ -1876,9 +2070,9 @@ def backtest_unified(y_pred, returns, df_test, feature_cols, y_pred_exit=None, *
         # EXECUTE
         cost = 0
         if new_position != position:
-            if new_position == 1:
+            if new_position != 0:
                 deploy = equity[i - 1] * position_size
-                cost = deploy * commission
+                cost = pnl_calc.entry_cost(deploy, commission, slippage)
                 entry_equity = deploy - cost
                 max_equity_in_trade = entry_equity
                 current_entry_day = i
@@ -1918,8 +2112,15 @@ def backtest_unified(y_pred, returns, df_test, feature_cols, y_pred_exit=None, *
                     "entry_choppy_regime": regime_cfg["choppy_regime"],
                 }
             else:
-                cost = equity[i - 1] * position_size * (commission + tax)
-                pnl_pct_now = (close[i] / entry_close - 1) * 100 if entry_close > 0 else 0
+                exit_notional = equity[i - 1] * position_size
+                cost = pnl_calc.exit_cost(exit_notional, commission, tax, slippage)
+                exit_price = close[i]
+                if exit_reason == "liquidation":
+                    cost += exit_notional * liquidation_fee
+                    exit_price = liquidation_price
+                pnl_pct_now = pnl_calc.trade_return(entry_close, exit_price, slippage) * 100
+                if position == -1:
+                    pnl_pct_now = -pnl_pct_now
                 if v35_relax_cooldown:
                     cooldown_remaining = (
                         v35_cooldown_after_big_loss if pnl_pct_now < -5 else v35_cooldown_after_loss
@@ -1930,7 +2131,9 @@ def backtest_unified(y_pred, returns, df_test, feature_cols, y_pred_exit=None, *
                 last_exit_reason = exit_reason
                 last_exit_bar = i
                 if record_trades and entry_equity > 0:
-                    pnl_pct = (close[i] / entry_close - 1) * 100 if entry_close > 0 else 0
+                    pnl_pct = pnl_calc.trade_return(entry_close, exit_price, slippage) * 100
+                    if position == -1:
+                        pnl_pct = -pnl_pct
                     max_pnl_pct = (max_equity_in_trade - entry_equity) / entry_equity * 100
                     trade_rec = {
                         "entry_day": current_entry_day,
@@ -1971,16 +2174,41 @@ def backtest_unified(y_pred, returns, df_test, feature_cols, y_pred_exit=None, *
                 position_size = 1.0
                 hard_cap_pending_bars = 0
                 pp_pending_bars = 0
+        elif roll_happened:
+            roll_notional = equity[i - 1] * position_size
+            roll_cost_fn = getattr(pnl_calc, "compute_roll_cost", None)
+            roll_cost = roll_cost_fn(roll_notional, roll_cost_rate) if roll_cost_fn else 0.0
+            cost = (
+                pnl_calc.exit_cost(roll_notional, commission, tax, slippage)
+                + roll_cost
+                + pnl_calc.entry_cost(roll_notional, commission, slippage)
+            )
+            entry_close = close[i]
+            current_entry_day = i
+            hold_days = 0
+            last_roll_expiry = expiry_dates[i]
 
-        if position == 1:
-            equity[i] = equity[i - 1] * (1 + ret * position_size) - cost
+        if position != 0:
+            signed_ret = ret if position == 1 else -ret
+            equity[i] = (
+                equity[i - 1]
+                * (1 + pnl_calc.bar_return(signed_ret, position_size) * contract_multiplier)
+                - cost
+            )
+            if funding_rates is not None:
+                signed_funding = funding_rates[i] if position == 1 else -funding_rates[i]
+                equity[i] -= equity[i - 1] * position_size * signed_funding
+            if position == -1 and borrow_rates is not None:
+                equity[i] -= equity[i - 1] * position_size * borrow_rates[i]
             hold_days += 1
         else:
             equity[i] = equity[i - 1] - cost
         position = new_position
 
-    if position == 1 and entry_equity > 0 and record_trades:
-        pnl_pct = (close[-1] / entry_close - 1) * 100 if entry_close > 0 else 0
+    if position != 0 and entry_equity > 0 and record_trades:
+        pnl_pct = pnl_calc.trade_return(entry_close, close[-1], slippage) * 100
+        if position == -1:
+            pnl_pct = -pnl_pct
         trades.append(
             {
                 "entry_day": current_entry_day,

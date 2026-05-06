@@ -27,14 +27,15 @@ function renderToggleButtons() {
   group.innerHTML = '';
   for (const model of manifest.models) {
     const vk = model.version_key;
+    const isActive = model.active !== false;
     const btn = document.createElement('button');
-    btn.className = 'toggle-btn active';
+    btn.className = isActive ? 'toggle-btn active' : 'toggle-btn retire-btn';
     btn.id = 'btn_' + vk;
     btn.textContent = model.name;
     btn.style.background = hexToRgba(model.color, 0.25);
     btn.style.borderColor = model.color;
     btn.onclick = () => toggleLayer(vk);
-    modelVisibility[vk] = true;
+    modelVisibility[vk] = isActive;
     group.appendChild(btn);
   }
   const tblBtn = document.createElement('button');

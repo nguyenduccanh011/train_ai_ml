@@ -9,6 +9,7 @@ from typing import Any
 
 import yaml
 
+from src.backtest.defaults import DEFAULT_TRADING_COST
 from src.evaluation.scoring import (
     calc_max_drawdown,
     calc_mdd_per_symbol,
@@ -88,6 +89,28 @@ def run_dir_to_row(run_dir: str | Path, *, bundle: str | None = None) -> Leaderb
         config_hash=config_hash,
         generated_at=generated_at,
         superseded=False,
+        market=str(
+            predictions_meta.get("market")
+            or resolved_config.get("market")
+            or ranking_row.get("market")
+            or "unknown"
+        ),
+        currency=str(
+            predictions_meta.get("currency")
+            or resolved_config.get("execution", {}).get("currency")
+            or ranking_row.get("currency")
+            or "unknown"
+        ),
+        pnl_mode=str(
+            predictions_meta.get("pnl_mode")
+            or resolved_config.get("execution", {}).get("pnl_mode")
+            or ranking_row.get("pnl_mode")
+            or "unknown"
+        ),
+        schema=str(predictions_meta.get("schema") or ranking_row.get("schema") or "unknown"),
+        timeframe=str(
+            predictions_meta.get("timeframe") or ranking_row.get("timeframe") or "unknown"
+        ),
         strategy=str(resolved_config.get("strategy") or run_name),
         feature_set=str(
             predictions_meta.get("feature_set")
@@ -124,7 +147,24 @@ def run_dir_to_row(run_dir: str | Path, *, bundle: str | None = None) -> Leaderb
         last_test_year=last_year,
         cost_profile=cost_profile,
         fairness_group_key=_fairness_group_key(
-            symbols, first_year, last_year, cost_profile, target
+            symbols,
+            first_year,
+            last_year,
+            cost_profile,
+            target,
+            str(
+                predictions_meta.get("market")
+                or resolved_config.get("market")
+                or ranking_row.get("market")
+                or "unknown"
+            ),
+            str(
+                predictions_meta.get("currency")
+                or resolved_config.get("execution", {}).get("currency")
+                or ranking_row.get("currency")
+                or "unknown"
+            ),
+            str(predictions_meta.get("schema") or ranking_row.get("schema") or "unknown"),
         ),
         warnings=warnings,
     )
@@ -195,15 +235,20 @@ def _target_config(config: dict[str, Any]) -> TargetConfig:
 
 
 def _cost_profile(config: dict[str, Any], warnings: list[str]) -> CostProfile:
-    execution = config.get("execution", {})
-    values = {
-        "commission": execution.get("commission", "unknown"),
-        "tax": execution.get("tax", "unknown"),
-        "slippage": execution.get("slippage", "unknown"),
-    }
+    values = dict(DEFAULT_TRADING_COST)
+    values.update(_known_cost_values(config.get("evaluation", {})))
+    values.update(_known_cost_values(config.get("execution", {})))
     if any(value == "unknown" for value in values.values()):
         warnings.append(COST_PROFILE_UNKNOWN_WARNING)
     return CostProfile(**values)
+
+
+def _known_cost_values(config_section: dict[str, Any]) -> dict[str, Any]:
+    return {
+        key: config_section[key]
+        for key in DEFAULT_TRADING_COST
+        if key in config_section and config_section[key] != "unknown"
+    }
 
 
 def _test_window(
@@ -232,8 +277,14 @@ def _fairness_group_key(
     last_year: int,
     cost_profile: CostProfile,
     target: TargetConfig,
+    market: str,
+    currency: str,
+    schema: str,
 ) -> str:
     key_obj = {
+        "market": market,
+        "currency": currency,
+        "schema": schema,
         "symbols": symbols,
         "window": [first_year, last_year],
         "cost_profile": cost_profile.model_dump(),

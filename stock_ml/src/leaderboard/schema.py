@@ -41,6 +41,11 @@ class LeaderboardRow(BaseModel):
     superseded: bool = False
 
     # Strategy / model identity
+    market: str = "unknown"
+    currency: str = "unknown"
+    pnl_mode: str = "unknown"
+    schema: str = "unknown"
+    timeframe: str = "unknown"
     strategy: str
     feature_set: str
     entry_model: str
@@ -72,7 +77,7 @@ class LeaderboardRow(BaseModel):
     last_test_year: int
     cost_profile: CostProfile = Field(default_factory=CostProfile)
     fairness_group_key: str = Field(
-        description="sha1 of {symbols_set, window, cost_profile, target}"
+        description="sha1 of {market, currency, schema, symbols_set, window, cost_profile, target}"
     )
     is_baseline: bool = False
     same_symbols_as_baseline: bool | None = None

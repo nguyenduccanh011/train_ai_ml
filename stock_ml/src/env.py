@@ -30,10 +30,15 @@ def resolve_data_dir(config_data_dir):
     if env_override:
         return env_override
 
-    if is_colab():
-        return os.path.join(DRIVE_BASE, "portable_data", "vn_stock_ai_dataset_cleaned")
+    if config_data_dir is None:
+        raise ValueError("data_dir is required")
+
+    if os.path.isabs(config_data_dir):
+        return os.path.normpath(config_data_dir)
 
     stock_ml_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if is_colab():
+        return os.path.normpath(os.path.join(DRIVE_BASE, config_data_dir.lstrip("./")))
     return os.path.normpath(os.path.join(stock_ml_dir, config_data_dir))
 
 
@@ -71,9 +76,16 @@ def get_env_info():
     """Print environment summary."""
     import shutil
 
+    try:
+        from src.market_profile import resolve_run_context
+
+        data_dir = resolve_run_context().resolved_data_dir
+    except Exception:
+        data_dir = None
+
     info = {
         "environment": "Google Colab" if is_colab() else "Local",
-        "data_dir": resolve_data_dir("../portable_data/vn_stock_ai_dataset_cleaned"),
+        "data_dir": resolve_data_dir(data_dir) if data_dir is not None else None,
         "results_dir": get_results_dir(),
     }
 
@@ -101,7 +113,7 @@ def get_env_info():
         except Exception:
             pass
 
-    data_exists = os.path.isdir(info["data_dir"])
+    data_exists = os.path.isdir(info["data_dir"]) if info["data_dir"] is not None else False
     info["data_available"] = data_exists
 
     return info

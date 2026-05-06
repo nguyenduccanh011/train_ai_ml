@@ -1,0 +1,56 @@
+name: vn_derivatives
+market_type: futures_contract
+
+data:
+  data_dir: "../portable_data/vn_derivatives_dataset"
+  schema: ohlcv_futures_daily
+  default_timeframe: "1D"
+  benchmark_symbol: null
+  timestamp_column: timestamp
+  timezone: Asia/Ho_Chi_Minh
+  required_columns: [open, high, low, close, volume]
+  optional_columns: [expiry_date, contract_code, open_interest]
+  volume_unit: contracts
+
+execution:
+  instrument_type: futures
+  pnl_mode: futures_contract
+  commission: 0.0004
+  tax: 0.0
+  slippage: 0.0005
+  initial_capital: 100000000
+  currency: VND
+  contract_multiplier: 100000
+  funding_rate_column: null
+  borrow_rate_column: null
+  margin_mode: null
+  leverage: 1
+  maintenance_margin_rate: 0.0
+  liquidation_fee: 0.0
+  short_enabled: false
+  short_position_size: null
+  short_hard_cap: null
+  roll_cost_rate: 0.0
+  expiry_date_column: expiry_date
+  roll_rule: null
+  roll_days_before_expiry: 3
+  next_volume_column: null
+  next_oi_column: null
+
+symbols:
+  default_group: balanced
+  default_list: []
+  groups: {}
+
+strategy_overrides: {}
+
+features:
+  enabled_blocks: null
+
+models:
+  default_stack: null
+
+target:
+  type: forward_return
+  horizon: 5
+  unit: bars

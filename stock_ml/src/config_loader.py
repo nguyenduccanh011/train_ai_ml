@@ -7,7 +7,9 @@ from pathlib import Path
 
 import yaml
 
+from src.backtest.defaults import DEFAULT_TRADING_COST
 from src.env import resolve_data_dir
+from src.market_profile import resolve_market_name, resolve_run_context
 
 _CONFIG_CACHE = {}
 
@@ -34,8 +36,13 @@ def _base_to_runtime_config(base: dict) -> dict:
     data = base.get("data", {})
     training = base.get("training", {})
     evaluation = base.get("evaluation", {})
+    base_market = resolve_market_name(base.get("market"))
+    context = resolve_run_context({"market": base_market})
+    profile_data_dir = context.resolved_data_dir
+    explicit_list = ",".join(context.resolved_symbols)
     pipeline = {
-        "data_dir": data.get("data_dir", "../portable_data/vn_stock_ai_dataset_cleaned"),
+        "market": base_market,
+        "data_dir": profile_data_dir or data.get("data_dir"),
         "feature_set": "leading_v2",
         "train_years": 4,
         "test_years": 1,
@@ -46,7 +53,7 @@ def _base_to_runtime_config(base: dict) -> dict:
         "symbols": {
             "mode": "explicit",
             "min_rows": 2000,
-            "explicit_list": "ACB,AAS,AAV,ACV,BCG,BCM,BID,BSR,BVH,CTG,DCM,DGC,DIG,DPM,EIB,FPT,FRT,GAS,GEX,GMD,HCM,HDB,HDG,HPG,HSG,KBC,KDH,LPB,MBB,MSN,MWG,NKG,NLG,NT2,NVL,OCB,PC1,PDR,PLX,PNJ,POW,PVD,PVS,REE,SAB,SBT,SHB,SSI,STB,TCB,TPB,VCB,VCI,VDS,VHM,VIC,VJC,VND,VNM,VPB,VTP",
+            "explicit_list": explicit_list,
         },
         "target": {
             "type": "trend_regime",
@@ -55,11 +62,11 @@ def _base_to_runtime_config(base: dict) -> dict:
             "long_window": 20,
             "classes": 3,
         },
-        "commission": 0.0015,
-        "tax": 0.001,
+        **DEFAULT_TRADING_COST,
     }
     return {
         **base,
+        "market": base_market,
         "pipeline": pipeline,
         "scoring": base.get(
             "scoring",
@@ -79,16 +86,20 @@ def _base_to_runtime_config(base: dict) -> dict:
         "visualization": {},
         "training": training,
         "evaluation": evaluation,
-        "models": _load_champion_models(),
+        "models": _load_champion_models(base_market),
         "symbol_profiles": {},
     }
 
 
-def _load_champion_models() -> dict:
+def _load_champion_models(market: str | None = None) -> dict:
     models = {}
+    target_market = resolve_market_name(market)
     for idx, path in enumerate(sorted(_champions_dir().glob("*.yaml"))):
         with open(path, encoding="utf-8") as f:
             raw = yaml.safe_load(f) or {}
+        raw_market = str(raw.get("market") or "vn_stock").strip() or "vn_stock"
+        if raw_market != target_market:
+            continue
         components = raw.get("components", {}) or {}
         entry_model = components.get("entry_model", {}) or {}
         exit_model = components.get("exit_model", {}) or {}
@@ -97,6 +108,7 @@ def _load_champion_models() -> dict:
         model_cfg = {
             "name": raw.get("name", path.stem),
             "strategy": raw.get("strategy", raw.get("name", path.stem)),
+            "market": raw_market,
             "feature_set": components.get("features", raw.get("feature_set", "leading_v2")),
             "target": components.get("target", raw.get("target", {})),
             "model_type": entry_model.get("type", "lightgbm"),
@@ -212,32 +224,49 @@ def get_symbol_profiles():
     return profiles
 
 
-def get_pipeline_symbols(symbols_arg="", min_rows_override=None):
+def get_pipeline_symbols(symbols_arg="", min_rows_override=None, market: str | None = None):
     """Resolve the canonical symbol list for a pipeline run.
 
-    Priority: CLI --symbols > config explicit_list > auto-detect viable symbols.
+    Priority: CLI --symbols > market profile defaults > config explicit_list > auto-detect.
     Returns a sorted list of symbol strings.
     """
     pipeline = get_pipeline_config()
+    run_context = resolve_run_context({"market": market or pipeline.get("market")})
+    resolved_market = run_context.market
+    profile = run_context.market_profile
     sym_cfg = pipeline.get("symbols", {})
     min_rows = min_rows_override or sym_cfg.get("min_rows", pipeline.get("min_rows", 2000))
-    data_dir = pipeline.get("data_dir", "../portable_data/vn_stock_ai_dataset_cleaned")
+    if run_context.resolved_data_dir is None:
+        raise ValueError(f"Market {resolved_market!r} does not define data.data_dir")
 
     from src.data.loader import DataLoader
 
-    abs_data_dir = resolve_data_dir(data_dir)
-    loader = DataLoader(abs_data_dir)
+    abs_data_dir = resolve_data_dir(run_context.resolved_data_dir)
+    loader = DataLoader(
+        abs_data_dir,
+        timeframe=run_context.timeframe,
+        timestamp_column=profile.data.timestamp_column,
+        timezone=profile.data.timezone,
+        required_columns=profile.data.required_columns,
+        optional_columns=profile.data.optional_columns,
+    )
+    available = set(loader.symbols)
 
     if symbols_arg and symbols_arg.strip():
         pick = [s.strip().upper() for s in symbols_arg.split(",") if s.strip()]
-        return sorted(s for s in pick if s in loader.symbols)
+        return sorted(s for s in pick if s in available)
+
+    if profile.symbols.default_list:
+        resolved = sorted(s for s in profile.symbols.default_list if s in available)
+        if resolved:
+            return resolved
 
     mode = sym_cfg.get("mode", "auto")
     if mode == "explicit":
         explicit = sym_cfg.get("explicit_list", "")
         if explicit and explicit.strip():
             pick = [s.strip().upper() for s in explicit.split(",") if s.strip()]
-            return sorted(s for s in pick if s in loader.symbols)
+            return sorted(s for s in pick if s in available)
 
     viable = []
     for sym in loader.symbols:

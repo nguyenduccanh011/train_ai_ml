@@ -1,0 +1,102 @@
+name_prefix: v22_exit_ablation_round3
+axes:
+  fusion:
+    - label: hso_base
+      entry:
+        - name: v19_entry_cascade
+      force_exit:
+        - name: hard_stop_exit
+      active_exit:
+        - name: atr_stop_loss
+        - name: ma_cross_hybrid_exit
+      hold:
+        - name: min_hold_protection
+    - label: hso_no_min_hold
+      entry:
+        - name: v19_entry_cascade
+      force_exit:
+        - name: hard_stop_exit
+      active_exit:
+        - name: atr_stop_loss
+        - name: ma_cross_hybrid_exit
+      hold: []
+    - label: hso_atr_only
+      entry:
+        - name: v19_entry_cascade
+      force_exit:
+        - name: hard_stop_exit
+      active_exit:
+        - name: atr_stop_loss
+      hold:
+        - name: min_hold_protection
+    - label: hso_ma_only
+      entry:
+        - name: v19_entry_cascade
+      force_exit:
+        - name: hard_stop_exit
+      active_exit:
+        - name: ma_cross_hybrid_exit
+      hold:
+        - name: min_hold_protection
+    - label: hso_active_empty
+      entry:
+        - name: v19_entry_cascade
+      force_exit:
+        - name: hard_stop_exit
+      active_exit: []
+      hold:
+        - name: min_hold_protection
+    - label: hso_peak_dist
+      entry:
+        - name: v19_entry_cascade
+      force_exit:
+        - name: hard_stop_exit
+      active_exit:
+        - name: atr_stop_loss
+        - name: ma_cross_hybrid_exit
+        - name: peak_protect_dist
+      hold:
+        - name: min_hold_protection
+  exit_model:
+    - {label: exit_fw10_l03, enabled: true, type: lightgbm, forward_window: 10, loss_threshold: 0.03}
+    - {label: exit_fw10_l05, enabled: true, type: lightgbm, forward_window: 10, loss_threshold: 0.05}
+    - {label: exit_fw15_l05, enabled: true, type: lightgbm, forward_window: 15, loss_threshold: 0.05}
+    - {label: exit_fw20_l05, enabled: true, type: lightgbm, forward_window: 20, loss_threshold: 0.05}
+    - {label: exit_fw20_l07, enabled: true, type: lightgbm, forward_window: 20, loss_threshold: 0.07}
+base:
+  strategy: v22
+  runner: components.runners.run_v22
+  signals:
+    features: leading_v2
+    target:
+      type: early_wave
+      forward_window: 8
+      gain_threshold: 0.06
+      loss_threshold: 0.03
+    entry_model:
+      type: random_forest
+  mods:
+    a: true
+    b: true
+    c: false
+    d: false
+    e: true
+    f: true
+    g: true
+    h: true
+    i: true
+    j: true
+  params:
+    v22_mode: true
+    v22_fast_exit_skip_strong: true
+    v22_fast_exit_vol_confirm: true
+    v22_fast_exit_threshold_hb: -0.07
+    v22_fast_exit_threshold_std: -0.05
+    v22_adaptive_hard_cap: true
+    v22_hard_cap_mult_hb: 3.0
+    v22_hard_cap_mult_std: 2.5
+    v22_hard_cap_floor: 0.12
+    v22_hard_cap_floor_hb: 0.15
+  split:
+    first_test_year: 2020
+    last_test_year: 2025

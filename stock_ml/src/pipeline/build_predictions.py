@@ -39,12 +39,16 @@ def _build_predictions(
     from src.data.splitter import WalkForwardSplitter
     from src.data.target import TargetGenerator
     from src.features.engine import FeatureEngine
+    from src.market_profile import resolve_run_context
     from src.models.registry import detect_device
 
     pipeline_cfg = load_config().get("pipeline", {})
-    data_dir = pipeline_cfg.get("data_dir", "../portable_data/vn_stock_ai_dataset_cleaned")
-    abs_data_dir = resolve_data_dir(data_dir)
+    run_context = resolve_run_context({"market": pipeline_cfg.get("market")})
+    if run_context.resolved_data_dir is None:
+        raise ValueError(f"Market {run_context.market!r} does not define data.data_dir")
+    abs_data_dir = resolve_data_dir(run_context.resolved_data_dir)
 
+    resolved_target = target_cfg or pipeline_cfg.get("target") or run_context.target_config
     config = {
         "split": {
             "method": "walk_forward",
@@ -54,17 +58,7 @@ def _build_predictions(
             "first_test_year": pipeline_cfg.get("first_test_year", 2020),
             "last_test_year": pipeline_cfg.get("last_test_year", 2025),
         },
-        "target": target_cfg
-        or pipeline_cfg.get(
-            "target",
-            {
-                "type": "trend_regime",
-                "trend_method": "dual_ma",
-                "short_window": 5,
-                "long_window": 20,
-                "classes": 3,
-            },
-        ),
+        "target": resolved_target,
     }
     target_type = config["target"].get("type", "trend_regime")
     if str(target_type).lower() == "return_regression":
@@ -84,7 +78,14 @@ def _build_predictions(
     effective_model_type = model_type or pipeline_cfg.get("model_type", "lightgbm")
     model_extras = model_extras or {}
 
-    loader = DataLoader(abs_data_dir)
+    loader = DataLoader(
+        abs_data_dir,
+        timeframe=run_context.timeframe,
+        timestamp_column=run_context.market_profile.data.timestamp_column,
+        timezone=run_context.market_profile.data.timezone,
+        required_columns=run_context.market_profile.data.required_columns,
+        optional_columns=run_context.market_profile.data.optional_columns,
+    )
     splitter = WalkForwardSplitter.from_config(config)
     target_gen = TargetGenerator.from_config(config)
 

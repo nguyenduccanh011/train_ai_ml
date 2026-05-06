@@ -66,6 +66,7 @@ def write_outputs(rows: list[LeaderboardRow], output_dir: str | Path) -> None:
 def _prepare_rows(rows: Iterable[LeaderboardRow]) -> list[LeaderboardRow]:
     prepared = [row.model_copy(update={"superseded": False}) for row in rows]
     _check_duplicate_run_ids(prepared)
+    prepared = _dedupe_rows(prepared)
     latest_by_name: dict[tuple[str, str], str] = {}
     for row in prepared:
         key = (row.bundle, row.run_name)
@@ -90,6 +91,45 @@ def _check_duplicate_run_ids(rows: Iterable[LeaderboardRow]) -> None:
         seen.add(row.run_id)
     if duplicates:
         raise ValueError(f"duplicate run_id: {', '.join(sorted(set(duplicates)))}")
+
+
+def _dedupe_rows(rows: list[LeaderboardRow]) -> list[LeaderboardRow]:
+    best_by_signature: dict[tuple[object, ...], LeaderboardRow] = {}
+    for row in rows:
+        key = _row_signature(row)
+        current = best_by_signature.get(key)
+        if current is None or (row.generated_at, row.run_id) > (
+            current.generated_at,
+            current.run_id,
+        ):
+            best_by_signature[key] = row
+    return list(best_by_signature.values())
+
+
+def _row_signature(row: LeaderboardRow) -> tuple[object, ...]:
+    return (
+        row.fairness_group_key,
+        row.market,
+        row.currency,
+        row.pnl_mode,
+        row.strategy,
+        row.feature_set,
+        row.entry_model,
+        row.exit_model_type,
+        row.exit_model_enabled,
+        row.target.type,
+        row.target.forward_window,
+        row.target.gain_threshold,
+        row.target.loss_threshold,
+        row.trades,
+        row.wr,
+        row.avg_pnl,
+        row.total_pnl,
+        row.pf,
+        row.sharpe,
+        row.mdd_per_symbol,
+        row.yearly_consistency,
+    )
 
 
 def _read_rows(path: Path) -> list[LeaderboardRow]:
@@ -118,6 +158,11 @@ def _write_csv(rows: list[LeaderboardRow], path: Path) -> None:
         "config_hash",
         "generated_at",
         "superseded",
+        "market",
+        "currency",
+        "schema",
+        "timeframe",
+        "pnl_mode",
         "strategy",
         "feature_set",
         "entry_model",

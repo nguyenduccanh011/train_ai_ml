@@ -31,20 +31,22 @@ def build_prediction_cache(
     from src.cache.feature_cache import FeatureCacheManager
     from src.components.exit_models.registry import get_exit_model
     from src.components.models.registry import get_model
-    from src.config_loader import load_config
     from src.data.loader import DataLoader
     from src.data.splitter import WalkForwardSplitter
     from src.data.target import TargetGenerator
     from src.env import get_results_dir, resolve_data_dir
     from src.features.engine import FeatureEngine
+    from src.market_profile import resolve_run_context
     from src.models.registry import detect_device
     from src.signal_adapter import canonicalize_predictions
 
-    pipeline_cfg = load_config().get("pipeline", {})
-    data_dir = pipeline_cfg.get("data_dir", "../portable_data/vn_stock_ai_dataset_cleaned")
-    abs_data_dir = resolve_data_dir(data_dir)
+    run_context = resolve_run_context(cfg)
+    if run_context.resolved_data_dir is None:
+        raise ValueError(f"Market {run_context.market!r} does not define data.data_dir")
+    abs_data_dir = resolve_data_dir(run_context.resolved_data_dir)
 
     split_cfg = cfg.split
+    target_config = run_context.target_config
     legacy_split = {
         "split": {
             "method": split_cfg.method,
@@ -54,21 +56,31 @@ def build_prediction_cache(
             "first_test_year": split_cfg.first_test_year,
             "last_test_year": split_cfg.last_test_year,
         },
-        "target": cfg.target_dict(),
+        "target": target_config,
     }
 
-    target_type = cfg.signals.target.type
+    target_type = target_config.get("type", "trend_regime")
     if str(target_type).lower() == "return_regression":
         raise ValueError("signals.target.type='return_regression' is not supported.")
 
     resolved_device = detect_device(device)
     print(f"    Training device: {resolved_device.upper()}")
 
-    effective_model_type = cfg.entry_model_type()
+    # Model: run_context.model_stack already resolved via experiment > profile priority
+    effective_model_type = (
+        run_context.model_stack[0] if run_context.model_stack else cfg.entry_model_type()
+    )
     entry_model_extras = cfg.signals.entry_model.extras
     exit_model_dict = cfg.exit_model_dict()
 
-    loader = DataLoader(abs_data_dir)
+    loader = DataLoader(
+        abs_data_dir,
+        timeframe=run_context.timeframe,
+        timestamp_column=run_context.market_profile.data.timestamp_column,
+        timezone=run_context.market_profile.data.timezone,
+        required_columns=run_context.market_profile.data.required_columns,
+        optional_columns=run_context.market_profile.data.optional_columns,
+    )
     splitter = WalkForwardSplitter(
         method=split_cfg.method,
         train_years=split_cfg.train_years,
@@ -78,8 +90,18 @@ def build_prediction_cache(
         last_test_year=split_cfg.last_test_year,
     )
     target_gen = TargetGenerator.from_config(legacy_split)
-    feature_set = cfg.feature_set()
-    engine = FeatureEngine(feature_set=feature_set)
+
+    # Feature set: list of blocks (from MarketProfile) or named string (from experiment)
+    resolved_feature_set = run_context.feature_set
+    if isinstance(resolved_feature_set, list):
+        from src.components.features.registry import build_engine_from_blocks
+
+        engine = build_engine_from_blocks(resolved_feature_set)
+        feature_set_key = "|".join(resolved_feature_set)
+    else:
+        feature_set_str = resolved_feature_set or cfg.feature_set()
+        engine = FeatureEngine(feature_set=feature_set_str)
+        feature_set_key = feature_set_str
 
     cache_root = Path(get_results_dir()) / "cache" / "features"
     cache_mgr = FeatureCacheManager(str(cache_root))
@@ -89,12 +111,12 @@ def build_prediction_cache(
         data_dir=abs_data_dir,
         symbols=symbols,
         timeframe=loader.timeframe,
-        feature_set=feature_set,
-        target_config=legacy_split.get("target", {}),
+        feature_set=feature_set_key,
+        target_config=target_config,
         code_paths=code_paths,
     )
     if df is None:
-        print(f"    Feature cache: MISS ({feature_set}) key={cache_key[:8]}")
+        print(f"    Feature cache: MISS ({feature_set_key}) key={cache_key[:8]}")
         raw_df = loader.load_all(symbols=symbols)
         df = engine.compute_for_all_symbols(raw_df)
         saved_key, saved_fmt = cache_mgr.save(
@@ -102,13 +124,15 @@ def build_prediction_cache(
             data_dir=abs_data_dir,
             symbols=symbols,
             timeframe=loader.timeframe,
-            feature_set=feature_set,
-            target_config=legacy_split.get("target", {}),
+            feature_set=feature_set_key,
+            target_config=target_config,
             code_paths=code_paths,
         )
-        print(f"    Feature cache: STORED ({feature_set}) key={saved_key[:8]} format={saved_fmt}")
+        print(
+            f"    Feature cache: STORED ({feature_set_key}) key={saved_key[:8]} format={saved_fmt}"
+        )
     else:
-        print(f"    Feature cache: HIT ({feature_set}) key={cache_key[:8]}")
+        print(f"    Feature cache: HIT ({feature_set_key}) key={cache_key[:8]}")
 
     df = target_gen.generate_for_all_symbols(df)
 
@@ -129,7 +153,7 @@ def build_prediction_cache(
     df = df.dropna(subset=drop_cols)
 
     results: list[dict[str, Any]] = []
-    target_cfg_dict = legacy_split.get("target", {})
+    target_cfg_dict = target_config
 
     for _window, train_df, test_df in splitter.split(df):
         model = get_model(effective_model_type, device=device, **entry_model_extras)

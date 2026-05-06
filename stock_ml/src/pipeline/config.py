@@ -8,6 +8,9 @@ from typing import Any
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
+from src.backtest.defaults import DEFAULT_TRADING_COST
+from src.market_profile import resolve_market_name
+
 
 class TargetConfig(BaseModel):
     type: str = "trend_regime"
@@ -16,8 +19,27 @@ class TargetConfig(BaseModel):
     long_window: int = 20
     classes: int = 3
     forward_window: int = 8
+    horizon: int | None = None
+    unit: str = "bars"
     gain_threshold: float = 0.06
     loss_threshold: float = 0.03
+
+    @model_validator(mode="before")
+    @classmethod
+    def _normalize_horizon(cls, values: dict[str, Any]) -> dict[str, Any]:
+        if values is None:
+            return {}
+        horizon = values.get("horizon")
+        forward_window = values.get("forward_window")
+        if forward_window is None and horizon is not None:
+            values["forward_window"] = horizon
+        if values.get("horizon") is None and values.get("forward_window") is not None:
+            values["horizon"] = values["forward_window"]
+        target_type = str(values.get("type", "trend_regime")).strip().lower()
+        if target_type == "forward_return":
+            # Backward-compatible alias for return target family.
+            values["type"] = "return_classification"
+        return values
 
     def to_legacy_dict(self) -> dict[str, Any]:
         return self.model_dump()
@@ -95,13 +117,19 @@ class StrategyV3Config(BaseModel):
 
 class ExecutionConfig(BaseModel):
     backtester: str = ""
+    pnl_mode: str = "equity_spot"
+    currency: str = "VND"
     capital: float = 100_000_000
+    commission: float = DEFAULT_TRADING_COST["commission"]
+    tax: float = DEFAULT_TRADING_COST["tax"]
+    slippage: float = DEFAULT_TRADING_COST["slippage"]
     split: SplitConfig = Field(default_factory=SplitConfig)
 
 
 class ExperimentConfig(BaseModel):
     name: str
     strategy: str
+    market: str = "vn_stock"
     runner: str = ""
     components: ComponentsConfig = Field(default_factory=ComponentsConfig)
     split: SplitConfig = Field(default_factory=SplitConfig)
@@ -124,6 +152,8 @@ class ExperimentConfig(BaseModel):
     def _fill_defaults(cls, values: dict[str, Any]) -> dict[str, Any]:
         if "name" not in values:
             values["name"] = values.get("strategy", "unknown")
+        if "market" not in values or not str(values.get("market", "")).strip():
+            values["market"] = resolve_market_name(None)
         if "runner" not in values or not values.get("runner"):
             strategy = values.get("strategy", "")
             values["runner"] = f"src.components.runners.{strategy}_runner" if strategy else ""
@@ -183,7 +213,9 @@ class ExperimentConfig(BaseModel):
     @classmethod
     def from_yaml(cls, path: str | Path) -> ExperimentConfig:
         with open(path, encoding="utf-8") as f:
-            data = yaml.safe_load(f)
+            data = yaml.safe_load(f) or {}
+        if "market" not in data or not str(data.get("market", "")).strip():
+            data["market"] = resolve_market_name(None)
         return cls.model_validate(data)
 
     def entry_model_type(self) -> str:

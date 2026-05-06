@@ -1,3 +1,4 @@
+market: vn_stock
 name: rule
 strategy: rule
 runner: src.components.runners.rule_runner

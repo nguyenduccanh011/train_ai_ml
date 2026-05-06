@@ -6,6 +6,7 @@ from typing import Any
 
 import pandas as pd
 
+from src.backtest.defaults import DEFAULT_PARAMS, DEFAULT_TRADING_COST
 from src.components.base import Trade
 from src.config_loader import get_model_config
 
@@ -112,8 +113,10 @@ def run_v34(
     device: str = "cpu",
     prediction_cache: list[dict[str, Any]] | None = None,
     initial_capital: float = 100_000_000,
-    commission: float = 0.0015,
-    tax: float = 0.001,
+    commission: float = DEFAULT_TRADING_COST["commission"],
+    tax: float = DEFAULT_TRADING_COST["tax"],
+    slippage: float = DEFAULT_TRADING_COST["slippage"],
+    pnl_mode: str = DEFAULT_PARAMS["pnl_mode"],
     record_trades: bool = True,
     enable_exit_model: bool = False,
 ) -> list[Trade]:
@@ -126,6 +129,8 @@ def run_v34(
         "initial_capital": initial_capital,
         "commission": commission,
         "tax": tax,
+        "slippage": slippage,
+        "pnl_mode": pnl_mode,
         "record_trades": record_trades,
     }
     cache = (

@@ -1,0 +1,66 @@
+name_prefix: v22_exit_ablation_round19
+axes:
+  signals.target:
+    - {label: t_fw15_g045_l0225, type: early_wave, forward_window: 15, gain_threshold: 0.045, loss_threshold: 0.0225}
+    - {label: t_fw15_g04625_l023125, type: early_wave, forward_window: 15, gain_threshold: 0.04625, loss_threshold: 0.023125}
+    - {label: t_fw15_g0475_l02375, type: early_wave, forward_window: 15, gain_threshold: 0.0475, loss_threshold: 0.02375}
+    - {label: t_fw15_g04875_l024375, type: early_wave, forward_window: 15, gain_threshold: 0.04875, loss_threshold: 0.024375}
+    - {label: t_fw15_g05_l025, type: early_wave, forward_window: 15, gain_threshold: 0.05, loss_threshold: 0.025}
+    - {label: t_fw16_g05_l025, type: early_wave, forward_window: 16, gain_threshold: 0.05, loss_threshold: 0.025}
+    - {label: t_fw16_g0525_l02625, type: early_wave, forward_window: 16, gain_threshold: 0.0525, loss_threshold: 0.02625}
+  exit_model:
+    - {label: exit_fw19_l035, enabled: true, type: lightgbm, forward_window: 19, loss_threshold: 0.035}
+    - {label: exit_fw20_l03375, enabled: true, type: lightgbm, forward_window: 20, loss_threshold: 0.03375}
+    - {label: exit_fw20_l035, enabled: true, type: lightgbm, forward_window: 20, loss_threshold: 0.035}
+    - {label: exit_fw20_l03625, enabled: true, type: lightgbm, forward_window: 20, loss_threshold: 0.03625}
+    - {label: exit_fw21_l035, enabled: true, type: lightgbm, forward_window: 21, loss_threshold: 0.035}
+  fusion:
+    - label: peak_ema_no_hold
+      entry:
+        - name: v19_entry_cascade
+      force_exit:
+        - name: hard_stop_exit
+      active_exit:
+        - name: peak_protect_dist
+        - name: peak_protect_ema8_streak
+      hold: []
+    - label: peak_dist_only
+      entry:
+        - name: v19_entry_cascade
+      force_exit:
+        - name: hard_stop_exit
+      active_exit:
+        - name: peak_protect_dist
+      hold: []
+base:
+  strategy: v22
+  runner: components.runners.run_v22
+  signals:
+    features: leading_v2
+    entry_model:
+      type: random_forest
+  mods:
+    a: true
+    b: true
+    c: false
+    d: false
+    e: true
+    f: true
+    g: true
+    h: true
+    i: true
+    j: true
+  params:
+    v22_mode: true
+    v22_fast_exit_skip_strong: true
+    v22_fast_exit_vol_confirm: true
+    v22_fast_exit_threshold_hb: -0.07
+    v22_fast_exit_threshold_std: -0.05
+    v22_adaptive_hard_cap: true
+    v22_hard_cap_mult_hb: 3.0
+    v22_hard_cap_mult_std: 2.5
+    v22_hard_cap_floor: 0.12
+    v22_hard_cap_floor_hb: 0.15
+  split:
+    first_test_year: 2020
+    last_test_year: 2025

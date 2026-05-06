@@ -183,75 +183,44 @@ def calc_symbol_coverage(trades: list) -> dict:
 
 
 def composite_score(metrics: dict, trades: list | None = None) -> float:
-    """Canonical composite score (higher = better).
-
-    Args:
-        metrics: output of calc_metrics().
-        trades:  raw trade list (dicts with pnl_pct, entry_date, symbol).
-                 When None: falls back to max_loss proxy for MDD and
-                 skips sharpe / consistency (score will be approximate).
-    """
     if metrics.get("trades", 0) == 0:
         return 0.0
 
-    w = _get_weights()
-
     avg_pnl = metrics.get("avg_pnl", 0)
     pf = metrics.get("pf", 0)
+    avg_hold = float(metrics.get("avg_hold", 0.0) or 0.0)
 
     if trades is not None:
         sharpe = calc_sharpe(trades)
         mdd_sym = calc_mdd_per_symbol(trades)
         yr_cv = calc_yearly_consistency(trades)
     else:
-        pnl_std = 1.0
-        sharpe = avg_pnl / max(pnl_std, 0.01)
+        sharpe = avg_pnl
         mdd_sym = abs(metrics.get("max_loss", 0))
         yr_cv = 0.0
 
-    # ── Normalise to [-1, 1] or [0, 1] ──────────────────────────────────────
-    # Avg PnL: 0% → 0, 5%+ per trade → 1
-    norm_avg = np.clip(avg_pnl / 5.0, -1, 1)
-
-    # PF: 1 → 0, 4 → 1
-    norm_pf = np.clip((pf - 1) / 3, -1, 1)
-
-    # MDD per symbol: 0% → 0 penalty, 30%+ → full penalty
-    norm_mdd = np.clip(mdd_sym / 30, 0, 1)
-
-    # Sharpe: 0 → 0, 0.3 → 1 (stability)
-    norm_sharpe = np.clip(sharpe / 0.30, -1, 1)
-
-    # Yearly CV: 0 → 0 penalty, 2+ → full penalty
-    norm_yr = np.clip(yr_cv / 2.0, 0, 1)
+    norm_sharpe = float(np.tanh(sharpe / 0.55))
+    norm_avg = float(np.tanh(avg_pnl / 12.0))
+    norm_pf = float(1.0 - np.exp(-max(pf - 1.0, 0.0) / 9.0))
+    norm_mdd = float(1.0 - np.exp(-max(mdd_sym, 0.0) / 35.0))
+    norm_yr = float(max(yr_cv - 0.35, 0.0) / 2.0)
+    norm_hold = float(max(avg_hold - 50.0, 0.0) / 25.0)
 
     quality_score = (
-        w["sharpe"] * norm_sharpe
-        + w["avg_pnl"] * norm_avg
-        + w["profit_factor"] * norm_pf
-        - w["mdd_per_symbol"] * norm_mdd
-        - w["yr_consistency"] * norm_yr
+        0.18 * norm_sharpe
+        + 0.28 * norm_avg
+        + 0.26 * norm_pf
+        - 0.12 * np.clip(norm_mdd, 0, 1)
+        - 0.05 * np.clip(norm_yr, 0, 1)
+        - 0.01 * np.clip(norm_hold, 0, 1)
     ) * 1000
 
-    params = _get_scoring_params()
-    mode = params["mode"]
-    if mode == "legacy":
-        return round(quality_score, 1)
-
-    # Live mode:
-    # 1) Confidence shrinkage by trade count (soft, never hard reject small-N models).
-    # 2) Add compressed PnL-scale term so high-turnover profitable models are not ignored.
     n_trades = max(int(metrics.get("trades", 0)), 0)
-    k = max(float(params["confidence_k"]), 1.0)
-    confidence = float(np.sqrt(n_trades / (n_trades + k))) if n_trades > 0 else 0.0
-    scaled_quality = quality_score * confidence
+    confidence = min(1.0, float(np.sqrt(n_trades / 1000.0))) if n_trades > 0 else 0.0
 
     total_pnl = float(metrics.get("total_pnl", 0.0))
-    # 0 at 0%, approaches 1 around +300% and above.
-    pnl_scale = float(np.clip(np.log1p(max(total_pnl, 0.0)) / np.log1p(300.0), 0.0, 1.0))
-    live_bonus = w["total_pnl_scale"] * pnl_scale * 1000
-
-    return round(scaled_quality + live_bonus, 1)
+    pnl_scale = float(np.tanh(max(total_pnl, 0.0) / 18000.0))
+    return round(quality_score * confidence + 0.18 * pnl_scale * 1000, 1)
 
 
 # ─── Metrics aggregator ───────────────────────────────────────────────────────

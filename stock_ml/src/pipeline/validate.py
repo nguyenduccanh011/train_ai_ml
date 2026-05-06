@@ -16,7 +16,15 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from src.pipeline.config import ExperimentConfig
 
-VALID_TARGET_TYPES = {"trend_regime", "early_wave", "early_wave_v2", "early_wave_dual"}
+VALID_TARGET_TYPES = {
+    "trend_regime",
+    "early_wave",
+    "early_wave_v2",
+    "early_wave_dual",
+    "return_classification",
+    "forward_risk_reward",
+    "forward_return",
+}
 EXIT_LABEL_TARGETS = {"early_wave", "early_wave_v2", "early_wave_dual"}
 
 
@@ -44,6 +52,17 @@ def validate_config(
     """Return validation errors and warnings."""
     errors: list[ValidationError] = []
     warnings: list[ValidationWarning] = []
+
+    # 0. Market profile exists
+    from src.market_profile import load_market_profile, resolve_market_name
+
+    resolved_market = resolve_market_name(cfg.market)
+    try:
+        load_market_profile(resolved_market)
+    except FileNotFoundError as e:
+        errors.append(ValidationError("market", str(e)))
+    except Exception as e:
+        errors.append(ValidationError("market", f"invalid market profile: {e}"))
 
     # 1. Strategy runner
     from src.components.runners.runner_registry import list_runners
@@ -83,13 +102,22 @@ def validate_config(
             )
         )
 
-    # 3. Target type
+    # 3. Target type — extend with MarketProfile target.type if different
     target_type = cfg.signals.target.type
-    if target_type not in VALID_TARGET_TYPES:
+    effective_valid_target_types = set(VALID_TARGET_TYPES)
+    try:
+        from src.market_profile import load_market_profile
+
+        mprofile = load_market_profile(resolved_market)
+        if mprofile.target.type:
+            effective_valid_target_types.add(mprofile.target.type)
+    except Exception:
+        pass
+    if target_type not in effective_valid_target_types:
         errors.append(
             ValidationError(
                 "signals.target.type",
-                f"'{target_type}' is not a known target type. Valid: {sorted(VALID_TARGET_TYPES)}",
+                f"'{target_type}' is not a known target type. Valid: {sorted(effective_valid_target_types)}",
             )
         )
 

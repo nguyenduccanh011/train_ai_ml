@@ -1,3 +1,4 @@
+market: vn_stock
 name: v37a_exit
 strategy: v37a_exit
 runner: src.components.runners.v37a_exit_runner

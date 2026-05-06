@@ -68,6 +68,7 @@ class V19EntryCascade:
         if ind is None:
             return FusionResult(action="pass", reason="")
         mods: dict[str, bool] = cfg.get("mods", {})
+        params: dict[str, Any] = cfg.get("params", {}) or {}
         entry_state: dict[str, Any] = cfg.get("entry_state", {})
         regime_cfg: dict[str, Any] = cfg.get("regime_cfg", {})
         i = ctx.bar_idx
@@ -189,12 +190,14 @@ class V19EntryCascade:
                     if bs < 3 and not breakout_entry:
                         new_position = 0
 
+        entry_score = sum([wp < 0.75, dp > 0.02, rs > 0, vs > 1.1, hl >= 2])
         strong_breakout_context = trend == "strong" and (bs >= 3 or vs > 1.5 or breakout_entry)
         entry_alpha_ok = True
+        relax_dp_floor_strong = bool(params.get("patch_relax_dp_floor_strong", False))
+        relax_hot_ret5_strong = bool(params.get("patch_relax_hot_ret5_strong", False))
 
         # Entry alpha gate.
         if new_position == 1 and not quick_reentry and not vshape_entry:
-            entry_score = sum([wp < 0.75, dp > 0.02, rs > 0, vs > 1.1, hl >= 2])
             near_sma_support = (
                 not np.isnan(sma20[i])
                 and close[i] <= sma20[i] * 1.02
@@ -233,9 +236,16 @@ class V19EntryCascade:
                 if wp > 0.78 and bb < 0.35 and trend == "weak" and not breakout_entry:
                     entry_alpha_ok = False
             if entry_alpha_ok and dp < dp_floor:
-                if entry_score < 4 and not strong_breakout_context:
+                can_relax_dp_floor = (
+                    relax_dp_floor_strong
+                    and trend == "strong"
+                    and entry_score >= 3
+                    and rs > 0
+                    and vs > 1.0
+                )
+                if entry_score < 4 and not strong_breakout_context and not can_relax_dp_floor:
                     entry_alpha_ok = False
-                elif entry_score < 4 and strong_breakout_context:
+                elif entry_score < 4 and (strong_breakout_context or can_relax_dp_floor):
                     counters["n_v18_relaxed_dp_entries"] = (
                         counters.get("n_v18_relaxed_dp_entries", 0) + 1
                     )
@@ -243,7 +253,19 @@ class V19EntryCascade:
         # Hot ret5 gate.
         if new_position == 1 and not vshape_entry:
             if ret_5d[i] > ret5_hot and not strong_breakout_context:
-                entry_alpha_ok = False
+                can_relax_hot_ret5 = (
+                    relax_hot_ret5_strong
+                    and trend == "strong"
+                    and entry_score >= 3
+                    and dp >= max(0.01, dp_floor * 0.5)
+                    and vs > 1.0
+                )
+                if can_relax_hot_ret5:
+                    counters["n_v18_relaxed_ret5_entries"] = (
+                        counters.get("n_v18_relaxed_ret5_entries", 0) + 1
+                    )
+                else:
+                    entry_alpha_ok = False
             elif ret_5d[i] > ret5_hot and strong_breakout_context:
                 counters["n_v18_relaxed_ret5_entries"] = (
                     counters.get("n_v18_relaxed_ret5_entries", 0) + 1

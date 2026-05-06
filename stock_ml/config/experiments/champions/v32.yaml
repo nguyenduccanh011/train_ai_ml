@@ -1,3 +1,4 @@
+market: vn_stock
 name: v32
 strategy: v32
 runner: src.components.runners.v32_runner

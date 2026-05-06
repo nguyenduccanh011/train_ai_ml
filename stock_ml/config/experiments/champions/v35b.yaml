@@ -1,3 +1,4 @@
+market: vn_stock
 name: v35b
 strategy: v35b
 runner: components.runners.run_v35b

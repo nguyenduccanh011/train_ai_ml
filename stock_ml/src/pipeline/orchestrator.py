@@ -80,19 +80,20 @@ class Pipeline:
         print(f"  [Pipeline] Running experiment: {self.cfg.name}")
 
         runner_fn, df_converter = self._resolve_runner()
+
+        from src.env import resolve_data_dir
+        from src.market_profile import resolve_run_context
+
+        run_context = resolve_run_context(self.cfg)
+        if run_context.resolved_data_dir is None:
+            raise ValueError(f"Market {run_context.market!r} does not define data.data_dir")
+        abs_data_dir = resolve_data_dir(run_context.resolved_data_dir)
+
         cache = (
             []
             if self.cfg.strategy in STRATEGIES_WITHOUT_PREDICTION_CACHE
-            else self._prediction_cache or self._build_cache()
+            else self._prediction_cache or self._build_cache(run_context)
         )
-
-        from src.config_loader import load_config
-
-        pipeline_cfg = load_config().get("pipeline", {})
-        data_dir = pipeline_cfg.get("data_dir", "../portable_data/vn_stock_ai_dataset_cleaned")
-        from src.env import resolve_data_dir
-
-        abs_data_dir = resolve_data_dir(data_dir)
 
         runner_kwargs: dict[str, Any] = {
             "prediction_cache": cache,
@@ -103,6 +104,33 @@ class Pipeline:
         }
         if self.cfg.signals.exit_model.enabled:
             runner_kwargs["enable_exit_model"] = True
+
+        execution_keys = [
+            "commission",
+            "tax",
+            "slippage",
+            "initial_capital",
+            "pnl_mode",
+            "contract_multiplier",
+            "funding_rate_column",
+            "leverage",
+            "maintenance_margin_rate",
+            "liquidation_fee",
+            "short_enabled",
+            "roll_cost_rate",
+            "expiry_date_column",
+            "roll_rule",
+            "roll_days_before_expiry",
+            "next_volume_column",
+            "next_oi_column",
+        ]
+        runner_kwargs.update(
+            {
+                k: run_context.execution_costs[k]
+                for k in execution_keys
+                if k in run_context.execution_costs
+            }
+        )
 
         allowed_kwargs = set(signature(runner_fn).parameters)
         runner_kwargs = {k: v for k, v in runner_kwargs.items() if k in allowed_kwargs}
@@ -119,9 +147,21 @@ class Pipeline:
             metrics["yearly_consistency"] = round(calc_yearly_consistency(trades_list), 4)
             metrics["composite_score"] = composite_score(metrics, trades_list)
 
+        resolved_feature_set = run_context.feature_set
+        feature_set_label = (
+            "|".join(resolved_feature_set)
+            if isinstance(resolved_feature_set, list)
+            else (resolved_feature_set or self.cfg.feature_set())
+        )
         metadata = {
             "strategy": self.cfg.strategy,
-            "feature_set": self.cfg.feature_set(),
+            "market": run_context.market,
+            "currency": run_context.execution_costs.get("currency", "unknown"),
+            "pnl_mode": run_context.execution_costs.get("pnl_mode", "unknown"),
+            "execution": run_context.execution_costs,
+            "schema": run_context.schema or "unknown",
+            "timeframe": run_context.timeframe,
+            "feature_set": feature_set_label,
             "n_symbols": len(self.symbols),
             "device": self.device,
         }
@@ -137,10 +177,10 @@ class Pipeline:
             metrics=metrics,
         )
 
-    def _build_cache(self) -> list[dict[str, Any]]:
+    def _build_cache(self, run_context=None) -> list[dict[str, Any]]:
         mgr = self._cache_manager
         if mgr is not None and self._use_cache:
-            cached, key = mgr.load(self.cfg, self.symbols)
+            cached, key = mgr.load(self.cfg, self.symbols, run_context)
             if cached is not None:
                 print(f"  [Pipeline] Prediction cache HIT key={key[:8]}")
                 return cached
@@ -151,7 +191,7 @@ class Pipeline:
         result = build_prediction_cache(self.cfg, self.symbols, device=self.device)
 
         if mgr is not None and self._use_cache:
-            saved_key = mgr.save(result, self.cfg, self.symbols)
+            saved_key = mgr.save(result, self.cfg, self.symbols, run_context)
             print(f"  [Pipeline] Prediction cache STORED key={saved_key[:8]}")
 
         return result

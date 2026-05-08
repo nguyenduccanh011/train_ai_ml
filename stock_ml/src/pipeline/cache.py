@@ -108,7 +108,13 @@ class PredictionCacheManager:
         try:
             with open(tmp_fd, "wb") as f:
                 pickle.dump(data, f, protocol=pickle.HIGHEST_PROTOCOL)
-            Path(tmp_path).replace(path)
+            try:
+                Path(tmp_path).replace(path)
+            except PermissionError:
+                if not path.exists():
+                    raise
+                Path(tmp_path).unlink(missing_ok=True)
+                return k
             self._stored += 1
         except Exception:
             Path(tmp_path).unlink(missing_ok=True)

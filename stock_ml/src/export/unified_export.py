@@ -30,6 +30,15 @@ from src.env import get_experiment_dir, get_results_dir
 from src.evaluation.scoring import calc_metrics, composite_score
 
 
+def _format_chart_time(value):
+    ts = pd.Timestamp(value)
+    if pd.isna(ts):
+        return ""
+    if ts.time() == pd.Timestamp(ts.date()).time():
+        return ts.date().isoformat()
+    return ts.isoformat()
+
+
 def make_markers(trades, version_key, color, marker_shape="arrowUp"):
     """Convert trade records into chart marker objects."""
     markers = []
@@ -190,7 +199,7 @@ def export_version(version_key, model_cfg, results_dir, viz_dir):
 
     for c in ("entry_date", "exit_date"):
         if c in df.columns:
-            df[c] = df[c].astype(str).str[:10]
+            df[c] = df[c].map(_format_chart_time)
 
     grouped = {
         sym: g.copy().sort_values(["entry_date", "exit_date"]).reset_index(drop=True)
@@ -248,7 +257,7 @@ def export_version(version_key, model_cfg, results_dir, viz_dir):
         f"{with_trades} with trades, PnL={total_pnl:+.1f}%"
     )
 
-    return {
+    result = {
         "version_key": version_key,
         "name": model_cfg.get("name", version_key),
         "color": color,
@@ -261,6 +270,12 @@ def export_version(version_key, model_cfg, results_dir, viz_dir):
         "active": model_cfg.get("active", True),
         "order": model_cfg.get("order", 99),
     }
+    for key in ("market", "market_family", "schema", "timeframe"):
+        if model_cfg.get(key):
+            result[key] = model_cfg[key]
+    if "market_family" not in result:
+        result["market_family"] = _infer_market_family(result)
+    return result
 
 
 def load_trades_from_viz(version_key, viz_dir):
@@ -314,6 +329,46 @@ def backfill_scores_from_viz(viz_dir, force=False):
     return scores
 
 
+def _infer_market_family(model: dict) -> str:
+    market = str(model.get("market") or "")
+    if market.startswith("vn_derivatives") or str(model.get("matrix_bundle") or "").startswith(
+        "derivatives_"
+    ):
+        return "vn_derivatives"
+    if market:
+        return market
+    return "vn_stock"
+
+
+def _infer_timeframe(model: dict) -> str:
+    timeframe = str(model.get("timeframe") or "")
+    return timeframe or "unknown"
+
+
+def _build_market_groups(models: list[dict], base_data_dirs: dict[str, str]) -> dict[str, dict]:
+    groups: dict[str, dict] = {}
+    labels = {"vn_stock": "VN Stock", "vn_derivatives": "VN Derivatives"}
+    for model in models:
+        family = str(model.get("market_family") or _infer_market_family(model))
+        timeframe = _infer_timeframe(model)
+        model["market_family"] = family
+        group = groups.setdefault(
+            family,
+            {"label": labels.get(family, family), "timeframes": {}},
+        )
+        tf_group = group["timeframes"].setdefault(
+            timeframe,
+            {
+                "models": [],
+                "base_data_dir": base_data_dirs.get(
+                    model.get("market"), base_data_dirs.get(family, "data")
+                ),
+            },
+        )
+        tf_group["models"].append(model["version_key"])
+    return groups
+
+
 def generate_manifest(exported_versions, viz_dir, base_data_dir="data"):
     """Generate manifest.json for the dynamic dashboard.
 
@@ -362,11 +417,20 @@ def generate_manifest(exported_versions, viz_dir, base_data_dir="data"):
             f"  Dropped {len(dropped_keys)} stale model(s) (data dir missing): {', '.join(dropped_keys)}"
         )
 
+    base_data_dirs = {
+        "vn_stock": base_data_dir,
+        "vn_derivatives": "data_derivatives",
+        "vn_derivatives_30m": "data_derivatives_30m",
+        "vn_derivatives_1d": "data_derivatives_1d",
+    }
+    sorted_models = sorted(merged_models, key=lambda x: x.get("order", 99))
     manifest = {
         "generated_at": datetime.now().isoformat(),
         "base_data_dir": base_data_dir,
+        "base_data_dirs": base_data_dirs,
         "base_symbols": base_symbols,
-        "models": sorted(merged_models, key=lambda x: x.get("order", 99)),
+        "models": sorted_models,
+        "market_groups": _build_market_groups(sorted_models, base_data_dirs),
         "exit_abbreviations": get_exit_abbreviations(),
     }
 

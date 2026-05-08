@@ -1,0 +1,71 @@
+name_prefix: deriv_p48_1hnem
+axes:
+  signals.features:
+    - leading
+  signals.entry_model.type:
+    - random_forest
+  signals.target:
+    - {label: e100g040l020, type: early_wave_v2, forward_window: 100, gain_threshold: 0.040, loss_threshold: 0.020}
+  exit_model:
+    - {label: xnone, enabled: false, type: lightgbm, forward_window: 48, loss_threshold: 0.038}
+  fusion:
+    - label: dist_only
+      entry:
+        - name: v19_entry_cascade
+      force_exit:
+        - name: hard_stop_exit
+      active_exit:
+        - name: peak_protect_dist
+      hold: []
+    - label: dist_trail
+      entry:
+        - name: v19_entry_cascade
+      force_exit:
+        - name: hard_stop_exit
+      active_exit:
+        - name: peak_protect_dist
+        - name: adaptive_trailing
+      hold: []
+    - label: dist_trail_hold
+      entry:
+        - name: v19_entry_cascade
+      force_exit:
+        - name: hard_stop_exit
+      active_exit:
+        - name: peak_protect_dist
+        - name: adaptive_trailing
+      hold:
+        - name: v19_signal_hold_guard
+  params:
+    - {label: s0, v19_min_entry_score: 0}
+base:
+  market: vn_derivatives
+  strategy: v22
+  runner: components.runners.run_v22
+  mods:
+    a: true
+    b: true
+    c: false
+    d: false
+    e: true
+    f: true
+    g: true
+    h: true
+    i: true
+    j: true
+  params:
+    signal_exit_enabled: false
+    patch_active_exit_on_raw0: true
+    v22_mode: true
+    v22_fast_exit_skip_strong: true
+    v22_fast_exit_vol_confirm: true
+    v22_fast_exit_threshold_hb: -0.07
+    v22_fast_exit_threshold_std: -0.05
+    v22_adaptive_hard_cap: true
+    v22_hard_cap_mult_hb: 3.0
+    v22_hard_cap_mult_std: 2.5
+    v22_hard_cap_floor: 0.12
+    v22_hard_cap_floor_hb: 0.15
+  split:
+    first_test_year: 2020
+    last_test_year: 2025

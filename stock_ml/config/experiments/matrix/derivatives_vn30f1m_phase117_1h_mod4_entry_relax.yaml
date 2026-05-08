@@ -1,0 +1,67 @@
+name_prefix: deriv_p117_1h_mod4_entry_relax
+# Phase 117: Expand entry relax around current PnL winner (mod4_dp02_bs1 + e102g015l026)
+# Goal: increase trade count in missed trend waves while preserving high PnL quality
+axes:
+  signals.features:
+    - leading
+  signals.entry_model.type:
+    - catboost
+  signals.target:
+    - {label: e102g015l026, type: early_wave_v2, forward_window: 102, gain_threshold: 0.015, loss_threshold: 0.026}
+  exit_model:
+    - {label: x48l0485, enabled: true, type: lightgbm, forward_window: 48, loss_threshold: 0.0485}
+  fusion:
+    - label: dist
+      entry:
+        - name: v19_entry_cascade
+      force_exit:
+        - name: hard_stop_exit
+      active_exit:
+        - name: exit_model
+        - name: peak_protect_dist
+      hold: []
+  params:
+    - {label: base_mod4_dp02_bs1, v19_min_entry_score: 1, patch_relax_prev_pred_strong: true, patch_relax_prev_pred_min_score: 2, patch_relax_dp_floor_strong: true, patch_relax_price_proximity_strong: true, patch_relax_price_proximity_min_score: 3, patch_relax_price_proximity_moderate: true, patch_relax_price_proximity_moderate_min_score: 4, patch_relax_price_proximity_min_dp: 0.02, patch_relax_price_proximity_moderate_min_bs: 1}
+    - {label: s0_dp02_bs1, v19_min_entry_score: 0, patch_relax_prev_pred_strong: true, patch_relax_prev_pred_min_score: 2, patch_relax_dp_floor_strong: true, patch_relax_price_proximity_strong: true, patch_relax_price_proximity_min_score: 3, patch_relax_price_proximity_moderate: true, patch_relax_price_proximity_moderate_min_score: 4, patch_relax_price_proximity_min_dp: 0.02, patch_relax_price_proximity_moderate_min_bs: 1}
+    - {label: prev1_dp02_bs1, v19_min_entry_score: 1, patch_relax_prev_pred_strong: true, patch_relax_prev_pred_min_score: 1, patch_relax_dp_floor_strong: true, patch_relax_price_proximity_strong: true, patch_relax_price_proximity_min_score: 3, patch_relax_price_proximity_moderate: true, patch_relax_price_proximity_moderate_min_score: 4, patch_relax_price_proximity_min_dp: 0.02, patch_relax_price_proximity_moderate_min_bs: 1}
+    - {label: pxr2_dp02_bs1, v19_min_entry_score: 1, patch_relax_prev_pred_strong: true, patch_relax_prev_pred_min_score: 2, patch_relax_dp_floor_strong: true, patch_relax_price_proximity_strong: true, patch_relax_price_proximity_min_score: 2, patch_relax_price_proximity_moderate: true, patch_relax_price_proximity_moderate_min_score: 4, patch_relax_price_proximity_min_dp: 0.02, patch_relax_price_proximity_moderate_min_bs: 1}
+    - {label: mod3_dp02_bs1, v19_min_entry_score: 1, patch_relax_prev_pred_strong: true, patch_relax_prev_pred_min_score: 2, patch_relax_dp_floor_strong: true, patch_relax_price_proximity_strong: true, patch_relax_price_proximity_min_score: 3, patch_relax_price_proximity_moderate: true, patch_relax_price_proximity_moderate_min_score: 3, patch_relax_price_proximity_min_dp: 0.02, patch_relax_price_proximity_moderate_min_bs: 1}
+    - {label: dp015_bs1, v19_min_entry_score: 1, patch_relax_prev_pred_strong: true, patch_relax_prev_pred_min_score: 2, patch_relax_dp_floor_strong: true, patch_relax_price_proximity_strong: true, patch_relax_price_proximity_min_score: 3, patch_relax_price_proximity_moderate: true, patch_relax_price_proximity_moderate_min_score: 4, patch_relax_price_proximity_min_dp: 0.015, patch_relax_price_proximity_moderate_min_bs: 1}
+    - {label: dp01_bs0, v19_min_entry_score: 1, patch_relax_prev_pred_strong: true, patch_relax_prev_pred_min_score: 2, patch_relax_dp_floor_strong: true, patch_relax_price_proximity_strong: true, patch_relax_price_proximity_min_score: 3, patch_relax_price_proximity_moderate: true, patch_relax_price_proximity_moderate_min_score: 4, patch_relax_price_proximity_min_dp: 0.01, patch_relax_price_proximity_moderate_min_bs: 0}
+    - {label: hotret_dp02_bs1, v19_min_entry_score: 1, patch_relax_prev_pred_strong: true, patch_relax_prev_pred_min_score: 2, patch_relax_dp_floor_strong: true, patch_relax_hot_ret5_strong: true, patch_relax_price_proximity_strong: true, patch_relax_price_proximity_min_score: 3, patch_relax_price_proximity_moderate: true, patch_relax_price_proximity_moderate_min_score: 4, patch_relax_price_proximity_min_dp: 0.02, patch_relax_price_proximity_moderate_min_bs: 1}
+    - {label: combo_relax_s0, v19_min_entry_score: 0, patch_relax_prev_pred_strong: true, patch_relax_prev_pred_min_score: 1, patch_relax_dp_floor_strong: true, patch_relax_hot_ret5_strong: true, patch_relax_price_proximity_strong: true, patch_relax_price_proximity_min_score: 2, patch_relax_price_proximity_moderate: true, patch_relax_price_proximity_moderate_min_score: 3, patch_relax_price_proximity_min_dp: 0.015, patch_relax_price_proximity_moderate_min_bs: 0}
+    - {label: combo_relax_s0_atr055, v19_min_entry_score: 0, patch_relax_prev_pred_strong: true, patch_relax_prev_pred_min_score: 1, patch_relax_dp_floor_strong: true, patch_relax_hot_ret5_strong: true, patch_relax_price_proximity_strong: true, patch_relax_price_proximity_min_score: 2, patch_relax_price_proximity_moderate: true, patch_relax_price_proximity_moderate_min_score: 3, patch_relax_price_proximity_min_dp: 0.015, patch_relax_price_proximity_moderate_min_bs: 0, v19_max_atr_ratio: 0.055}
+    - {label: disable_pxr_s1, v19_min_entry_score: 1, patch_relax_prev_pred_strong: true, patch_relax_prev_pred_min_score: 2, patch_relax_dp_floor_strong: true, patch_disable_price_proximity_filter: true, patch_relax_price_proximity_moderate: true, patch_relax_price_proximity_moderate_min_score: 4, patch_relax_price_proximity_min_dp: 0.02, patch_relax_price_proximity_moderate_min_bs: 1}
+    - {label: disable_cd_s1, v19_min_entry_score: 1, patch_disable_cooldown_filter: true, patch_relax_prev_pred_strong: true, patch_relax_prev_pred_min_score: 2, patch_relax_dp_floor_strong: true, patch_relax_price_proximity_strong: true, patch_relax_price_proximity_min_score: 3, patch_relax_price_proximity_moderate: true, patch_relax_price_proximity_moderate_min_score: 4, patch_relax_price_proximity_min_dp: 0.02, patch_relax_price_proximity_moderate_min_bs: 1}
+    - {label: disable_pxr_cd_s0_atr055, v19_min_entry_score: 0, patch_disable_price_proximity_filter: true, patch_disable_cooldown_filter: true, patch_relax_prev_pred_strong: true, patch_relax_prev_pred_min_score: 1, patch_relax_dp_floor_strong: true, patch_relax_hot_ret5_strong: true, v19_max_atr_ratio: 0.055}
+base:
+  market: vn_derivatives
+  strategy: v22
+  runner: components.runners.run_v22
+  mods:
+    a: true
+    b: true
+    c: false
+    d: false
+    e: true
+    f: true
+    g: true
+    h: true
+    i: true
+    j: true
+  params:
+    signal_exit_enabled: false
+    patch_active_exit_on_raw0: true
+    v22_mode: true
+    v22_fast_exit_skip_strong: true
+    v22_fast_exit_vol_confirm: true
+    v22_fast_exit_threshold_hb: -0.07
+    v22_fast_exit_threshold_std: -0.05
+    v22_adaptive_hard_cap: true
+    v22_hard_cap_mult_hb: 3.0
+    v22_hard_cap_mult_std: 2.5
+    v22_hard_cap_floor: 0.12
+    v22_hard_cap_floor_hb: 0.15
+  split:
+    first_test_year: 2020
+    last_test_year: 2025

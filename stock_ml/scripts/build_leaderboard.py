@@ -17,7 +17,17 @@ def cmd_rebuild(args: argparse.Namespace) -> int:
     from src.leaderboard.aggregator import rebuild_leaderboard
 
     rows = rebuild_leaderboard(args.experiments_dir, args.output_dir)
+
+    # Print market breakdown
+    from collections import defaultdict
+
+    by_market = defaultdict(int)
+    for row in rows:
+        by_market[row.market] += 1
+
     print(f"rebuilt {len(rows)} rows -> {args.output_dir}")
+    print(f"  by market: {dict(by_market)}")
+    print(f"  per-market leaderboards: {args.output_dir}/by_market/<market>/")
     return 0
 
 

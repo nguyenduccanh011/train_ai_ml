@@ -22,7 +22,11 @@ class DataLoader:
         optional_columns: list[str] | None = None,
     ):
         self.data_dir = Path(data_dir)
+        # Support both layouts:
+        # 1) data_dir/all_symbols/symbol=XXX/timeframe=.../data.csv
+        # 2) data_dir/symbol=XXX/timeframe=.../data.csv
         self.all_symbols_dir = self.data_dir / "all_symbols"
+        self.symbols_dir = self.all_symbols_dir if self.all_symbols_dir.exists() else self.data_dir
         self.context_dir = self.data_dir / "context_features"
         self.timeframe = timeframe
         self.timestamp_column = timestamp_column
@@ -44,7 +48,7 @@ class DataLoader:
                 self._symbols_cache = sorted(
                     [
                         d.name.replace("symbol=", "")
-                        for d in self.all_symbols_dir.iterdir()
+                        for d in self.symbols_dir.iterdir()
                         if d.is_dir() and d.name.startswith("symbol=")
                     ]
                 )
@@ -56,7 +60,7 @@ class DataLoader:
             return self._data_cache[symbol].copy()
 
         csv_path = (
-            self.all_symbols_dir / f"symbol={symbol}" / f"timeframe={self.timeframe}" / "data.csv"
+            self.symbols_dir / f"symbol={symbol}" / f"timeframe={self.timeframe}" / "data.csv"
         )
 
         if not csv_path.exists():
@@ -123,6 +127,8 @@ class DataLoader:
     def load_all_context(self) -> dict[str, pd.DataFrame]:
         """Load all context features (indices + futures)."""
         result = {}
+        if not self.context_dir.exists():
+            return result
         for d in self.context_dir.iterdir():
             if d.is_dir() and d.name.startswith("symbol="):
                 sym = d.name.replace("symbol=", "")

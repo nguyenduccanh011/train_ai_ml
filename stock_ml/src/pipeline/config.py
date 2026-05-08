@@ -11,6 +11,37 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 from src.backtest.defaults import DEFAULT_TRADING_COST
 from src.market_profile import resolve_market_name
 
+_RUNNER_PREFIX_ALIASES: dict[str, str] = {
+    "components.runners.": "src.components.runners.",
+}
+_FUSION_RULE_ALIASES: dict[str, str] = {
+    "exit_model_exit": "exit_model",
+}
+
+
+def _canonical_runner_path(runner: str) -> str:
+    raw = str(runner or "").strip()
+    for legacy, canonical in _RUNNER_PREFIX_ALIASES.items():
+        if raw.startswith(legacy):
+            return canonical + raw[len(legacy) :]
+    return raw
+
+
+def _canonical_rule_name(name: str) -> str:
+    raw = str(name or "").strip()
+    return _FUSION_RULE_ALIASES.get(raw, raw)
+
+
+def _canonical_rule_names(names: list[str]) -> list[str]:
+    seen: set[str] = set()
+    out: list[str] = []
+    for name in names:
+        canonical = _canonical_rule_name(name)
+        if canonical and canonical not in seen:
+            out.append(canonical)
+            seen.add(canonical)
+    return out
+
 
 class TargetConfig(BaseModel):
     type: str = "trend_regime"
@@ -157,6 +188,8 @@ class ExperimentConfig(BaseModel):
         if "runner" not in values or not values.get("runner"):
             strategy = values.get("strategy", "")
             values["runner"] = f"src.components.runners.{strategy}_runner" if strategy else ""
+        else:
+            values["runner"] = _canonical_runner_path(str(values["runner"]))
 
         has_components = "components" in values and values["components"] is not None
         has_signals = "signals" in values and values["signals"] is not None
@@ -174,6 +207,22 @@ class ExperimentConfig(BaseModel):
 
     @model_validator(mode="after")
     def _fill_v3_sections(self) -> ExperimentConfig:
+        self.runner = _canonical_runner_path(self.runner)
+
+        for group_name in ("entry", "force_exit", "active_exit", "hold"):
+            group = getattr(self.fusion, group_name)
+            seen: set[str] = set()
+            normalized_group: list[FusionItemConfig] = []
+            for item in group:
+                canonical = _canonical_rule_name(item.name)
+                if canonical in seen:
+                    continue
+                if canonical != item.name:
+                    item = item.model_copy(update={"name": canonical})
+                normalized_group.append(item)
+                seen.add(canonical)
+            setattr(self.fusion, group_name, normalized_group)
+
         if self.signals is None:
             self.signals = SignalsConfig(
                 features=self.components.features,
@@ -198,6 +247,16 @@ class ExperimentConfig(BaseModel):
                 active_exit_rules=active_exit_rules,
                 mods=self.mods,
                 params=self.params,
+            )
+        else:
+            self.strategy_v3.entry_rules = _canonical_rule_names(self.strategy_v3.entry_rules)
+            self.strategy_v3.hold_rules = _canonical_rule_names(self.strategy_v3.hold_rules)
+            self.strategy_v3.exit_rules = _canonical_rule_names(self.strategy_v3.exit_rules)
+            self.strategy_v3.force_exit_rules = _canonical_rule_names(
+                self.strategy_v3.force_exit_rules
+            )
+            self.strategy_v3.active_exit_rules = _canonical_rule_names(
+                self.strategy_v3.active_exit_rules
             )
         if self.execution is None:
             self.execution = ExecutionConfig(

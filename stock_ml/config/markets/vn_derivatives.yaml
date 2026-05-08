@@ -2,14 +2,14 @@ name: vn_derivatives
 market_type: futures_contract
 
 data:
-  data_dir: "../portable_data/vn_derivatives_dataset"
-  schema: ohlcv_futures_daily
-  default_timeframe: "1D"
+  data_dir: "../portable_data/derivatives_ai_dataset"
+  schema: ohlcv_futures_1h
+  default_timeframe: "1H"
   benchmark_symbol: null
   timestamp_column: timestamp
   timezone: Asia/Ho_Chi_Minh
   required_columns: [open, high, low, close, volume]
-  optional_columns: [expiry_date, contract_code, open_interest]
+  optional_columns: [exchange, asset_type, data_provider, timeframe, expiry_date, contract_code, open_interest]
   volume_unit: contracts
 
 execution:
@@ -38,9 +38,11 @@ execution:
   next_oi_column: null
 
 symbols:
-  default_group: balanced
-  default_list: []
-  groups: {}
+  default_group: front_month
+  default_list: [VN30F1M, VN30F2M]
+  groups:
+    VN30F1M: front_month
+    VN30F2M: next_month
 
 strategy_overrides: {}
 
@@ -52,5 +54,5 @@ models:
 
 target:
   type: forward_return
-  horizon: 5
+  horizon: 12
   unit: bars

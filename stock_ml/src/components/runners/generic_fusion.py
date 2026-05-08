@@ -124,6 +124,12 @@ V19_TRADE_COLUMNS: list[str] = [
     "quick_reentry",
     "breakout_entry",
     "vshape_entry",
+    "washout_reversal_entry",
+    "pullback_reclaim_entry",
+    "early_pullback_start_entry",
+    "near_sma_continuation_entry",
+    "above_sma_continuation_entry",
+    "deep_bottom_entry",
     "entry_ret_5d",
     "entry_drop20d",
     "entry_dist_sma20",
@@ -157,6 +163,12 @@ V22_TRADE_COLUMNS: list[str] = [
     "quick_reentry",
     "breakout_entry",
     "vshape_entry",
+    "washout_reversal_entry",
+    "pullback_reclaim_entry",
+    "early_pullback_start_entry",
+    "near_sma_continuation_entry",
+    "above_sma_continuation_entry",
+    "deep_bottom_entry",
     "entry_ret_5d",
     "entry_drop20d",
     "entry_dist_sma20",
@@ -620,7 +632,10 @@ def _run_cache_item(
             exit_signal_override=exit_signal_val,
         )
 
-        pending_exit_reason: str | None = "signal" if raw_signal == 0 else None
+        signal_exit_enabled = bool(params.get("signal_exit_enabled", True))
+        pending_exit_reason: str | None = (
+            "signal" if signal_exit_enabled and raw_signal == 0 else None
+        )
         reason = _run_exit_sequence(force_exit_strategies, ctx, counters)
         if reason is not None:
             pending_exit_reason = reason
@@ -764,6 +779,12 @@ def trades_to_v19_3_dataframe(trades: list[Trade]) -> pd.DataFrame:
             "quick_reentry": meta.get("quick_reentry"),
             "breakout_entry": meta.get("breakout_entry"),
             "vshape_entry": meta.get("vshape_entry"),
+            "washout_reversal_entry": meta.get("washout_reversal_entry"),
+            "pullback_reclaim_entry": meta.get("pullback_reclaim_entry"),
+            "early_pullback_start_entry": meta.get("early_pullback_start_entry"),
+            "near_sma_continuation_entry": meta.get("near_sma_continuation_entry"),
+            "above_sma_continuation_entry": meta.get("above_sma_continuation_entry"),
+            "deep_bottom_entry": meta.get("deep_bottom_entry"),
             "entry_ret_5d": meta.get("entry_ret_5d"),
             "entry_drop20d": meta.get("entry_drop20d"),
             "entry_dist_sma20": meta.get("entry_dist_sma20"),
@@ -804,6 +825,12 @@ def trades_to_v22_dataframe(trades: list[Trade]) -> pd.DataFrame:
             "quick_reentry": meta.get("quick_reentry"),
             "breakout_entry": meta.get("breakout_entry"),
             "vshape_entry": meta.get("vshape_entry"),
+            "washout_reversal_entry": meta.get("washout_reversal_entry"),
+            "pullback_reclaim_entry": meta.get("pullback_reclaim_entry"),
+            "early_pullback_start_entry": meta.get("early_pullback_start_entry"),
+            "near_sma_continuation_entry": meta.get("near_sma_continuation_entry"),
+            "above_sma_continuation_entry": meta.get("above_sma_continuation_entry"),
+            "deep_bottom_entry": meta.get("deep_bottom_entry"),
             "entry_ret_5d": meta.get("entry_ret_5d"),
             "entry_drop20d": meta.get("entry_drop20d"),
             "entry_dist_sma20": meta.get("entry_dist_sma20"),

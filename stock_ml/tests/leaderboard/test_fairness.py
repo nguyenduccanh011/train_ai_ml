@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from src.leaderboard.fairness import annotate_rows, load_config, resolve_baseline
+from src.leaderboard.fairness import annotate_rows, load_config, resolve_market_family
 from src.leaderboard.schema import LeaderboardRow
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -14,6 +14,9 @@ def _row(**overrides) -> LeaderboardRow:
         "config_hash": "abc12345def6",
         "generated_at": "2026-05-01T10:00:00",
         "superseded": False,
+        "market": "vn_stock",
+        "market_family": "vn_stock",
+        "timeframe": "1D",
         "strategy": "v22",
         "feature_set": "leading_v2",
         "entry_model": "lightgbm",
@@ -40,6 +43,7 @@ def _row(**overrides) -> LeaderboardRow:
         "n_symbols": 61,
         "first_test_year": 2020,
         "last_test_year": 2025,
+        "backtest_window_key": "2020-2025",
         "cost_profile": {
             "commission": "unknown",
             "tax": "unknown",
@@ -55,21 +59,14 @@ def _row(**overrides) -> LeaderboardRow:
 def test_load_config_reads_repo_config():
     config = load_config(ROOT)
 
-    assert config["baseline"] == {"bundle": "champions_2020_2025_fair", "run_name": "v22"}
-    assert config["fairness_dims"] == ["symbols", "window", "cost_profile", "target"]
-
-
-def test_resolve_baseline_found():
-    rows = [
-        _row(bundle="other", run_name="top", run_id="other/top#abc12345", composite_score=900.0),
-        _row(),
+    assert config["markets"]["vn_derivatives"]["baseline"]
+    assert config["fairness_dims"] == [
+        "market_family",
+        "symbols",
+        "window",
+        "cost_profile",
+        "target",
     ]
-
-    baseline = resolve_baseline(rows, load_config(ROOT))
-
-    assert baseline is not None
-    assert baseline.bundle == "champions_2020_2025_fair"
-    assert baseline.run_name == "v22"
 
 
 def test_annotate_rows_flags():
@@ -92,3 +89,13 @@ def test_annotate_rows_flags():
     assert annotated[1].same_window_as_baseline is False
     assert annotated[1].same_cost_as_baseline is True
     assert annotated[1].same_target_as_baseline is True
+    assert annotated[1].same_timeframe_as_baseline is True
+    assert annotated[1].same_market_family_as_baseline is True
+
+
+def test_resolve_market_family_for_derivatives_timeframes():
+    cfg = load_config(ROOT)
+
+    assert resolve_market_family("vn_derivatives", "1H", cfg) == "vn_derivatives"
+    assert resolve_market_family("vn_derivatives_30m", "30m", cfg) == "vn_derivatives"
+    assert resolve_market_family("vn_derivatives_1d", "1D", cfg) == "vn_derivatives"

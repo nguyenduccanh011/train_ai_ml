@@ -18,6 +18,13 @@ from .indicators import compute_indicators, detect_trend_strength, get_regime_ad
 from .pnl import get_pnl_calculator
 
 
+def _format_trade_time(value):
+    ts = pd.Timestamp(value)
+    if ts.time() == pd.Timestamp(ts.date()).time():
+        return ts.date().isoformat()
+    return ts.isoformat()
+
+
 def _should_roll(
     i,
     position,
@@ -2098,7 +2105,7 @@ def backtest_unified(y_pred, returns, df_test, feature_cols, y_pred_exit=None, *
                     "entry_od": od,
                     "entry_bb": bb,
                     "entry_score": sum([wp < 0.75, dp > 0.02, rs > 0, vs > 1.1, hl >= 2]),
-                    "entry_date": str(dates[i])[:10],
+                    "entry_date": _format_trade_time(dates[i]),
                     "entry_symbol": str(symbols[i]),
                     "position_size": position_size,
                     "entry_trend": trend,
@@ -2142,7 +2149,7 @@ def backtest_unified(y_pred, returns, df_test, feature_cols, y_pred_exit=None, *
                         "pnl_pct": round(pnl_pct, 2),
                         "max_profit_pct": round(max_pnl_pct, 2),
                         "exit_reason": exit_reason,
-                        "exit_date": str(dates[i])[:10],
+                        "exit_date": _format_trade_time(dates[i]),
                         **entry_features,
                     }
                     if v31_enriched_log:
@@ -2216,7 +2223,7 @@ def backtest_unified(y_pred, returns, df_test, feature_cols, y_pred_exit=None, *
                 "holding_days": n - 1 - current_entry_day,
                 "pnl_pct": round(pnl_pct, 2),
                 "exit_reason": "end",
-                "exit_date": str(dates[-1])[:10],
+                "exit_date": _format_trade_time(dates[-1]),
                 **entry_features,
             }
         )

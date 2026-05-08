@@ -1,5 +1,32 @@
 fairness_dims:
+  - market_family
   - symbols
   - window
   - cost_profile
   - target
+
+market_families:
+  vn_derivatives:
+    label: VN Derivatives
+    aligned_backtest:
+      first_test_year: 2020
+      last_test_year: 2025
+      require_same_window: true
+    members:
+      - market: vn_derivatives
+        timeframe: 1H
+      - market: vn_derivatives_30m
+        timeframe: 30m
+      - market: vn_derivatives_1d
+        timeframe: 1D
+
+# Per-market baseline configurations
+markets:
+  vn_stock:
+    baseline:
+      bundle: "v22_exit_ablation_round42"
+      run_name: "v22_exit_ablation_round42_signals_features-leading-signals_entry_model_type-random_forest-signals_target-earlyv2_fw21_g033125_l0165625-exit_model-exit_fw21_l03725-fusion-peak_dist_only"
+  vn_derivatives:
+    baseline:
+      bundle: "derivatives_vn30f1m_phase1_smoke"
+      run_name: "derivatives_vn30f1m_phase1_smoke_signals_features-leading_v2-signals_entry_model_type-random_forest-signals_target-earlyv2_fw21_g033125_l0165625-exit_model-exit_fw21_l03725-fusion-peak_dist_only"

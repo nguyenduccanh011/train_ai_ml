@@ -1,25 +1,25 @@
-"""V19_3 entry cascade: gộp 5 entry sources + 8 filters + sizing thành 1 strategy.
+"""V19_3 entry cascade: gá»™p 5 entry sources + 8 filters + sizing thÃ nh 1 strategy.
 
-Map 1-1 với legacy backtest_v19_3 (src/strategies/legacy.py:2718-2947) để đảm bảo
-parity exact với golden 1910 trades. Logic chia sẻ state (entry_alpha_ok,
-breakout_entry, vshape_entry, strong_breakout_context) khó tách rời nên giữ
-dạng monolithic — đổi lại an toàn parity.
+Map 1-1 vá»›i legacy backtest_v19_3 (src/strategies/legacy.py:2718-2947) Ä‘á»ƒ Ä‘áº£m báº£o
+parity exact vá»›i golden 1910 trades. Logic chia sáº» state (entry_alpha_ok,
+breakout_entry, vshape_entry, strong_breakout_context) khÃ³ tÃ¡ch rá»i nÃªn giá»¯
+dáº¡ng monolithic â€” Ä‘á»•i láº¡i an toÃ n parity.
 
-Đầu vào trong ctx.config:
-  - indicators: dict ndarray từ helpers.compute_v19_indicators
+Äáº§u vÃ o trong ctx.config:
+  - indicators: dict ndarray tá»« helpers.compute_v19_indicators
   - mods: {"a","b","c","d","e","f","g","h","i","j": bool}
   - entry_state: {"cooldown_remaining": int, "last_exit_price": float,
                   "last_exit_reason": str, "last_exit_bar": int,
                   "prev_pred": int}
-  - regime_cfg: dict từ helpers.get_regime_adapter (đã cache theo bar)
+  - regime_cfg: dict tá»« helpers.get_regime_adapter (Ä‘Ã£ cache theo bar)
 
-Đầu ra FusionResult.metadata:
+Äáº§u ra FusionResult.metadata:
   - size: float (position_size sau khi clip)
   - entry_features: dict (entry_wp/dp/rs/vs/bs/hl/od/bb/score/profile/...)
   - flags: {"quick_reentry","breakout_entry","vshape_entry"}
   - counters: dict[str,int] (n_vshape_entries/n_secondary_breakout/
               n_v19_alpha_blocked/n_v18_relaxed_*/n_bear_blocked/n_chop_blocked/
-              n_v19_overheat_entries) — driver cộng dồn vào counters globals.
+              n_v19_overheat_entries) â€” driver cá»™ng dá»“n vÃ o counters globals.
 """
 
 from __future__ import annotations
@@ -27,6 +27,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
+import pandas as pd
 
 from src.components.base import FusionResult
 from src.components.fusion.base import FusionLayer
@@ -51,6 +52,13 @@ def _gf(feat_arrays: dict[str, np.ndarray], name: str, idx: int, n: int) -> floa
     if idx < n:
         return float(feat_arrays[name][idx])
     return _FEATURE_DEFAULTS[name]
+
+
+def _format_date(value: object) -> str:
+    ts = pd.Timestamp(value)
+    if ts.time() == pd.Timestamp(ts.date()).time():
+        return ts.date().isoformat()
+    return ts.isoformat()
 
 
 class V19EntryCascade:
@@ -110,6 +118,26 @@ class V19EntryCascade:
         dp_floor = float(regime_cfg.get("dp_floor", 0.020))
         ret5_hot = float(regime_cfg.get("ret5_hot", 0.060))
         size_mult = float(regime_cfg.get("size_mult", 1.0))
+        relax_prev_pred_strong = bool(params.get("patch_relax_prev_pred_strong", False))
+        relax_prev_pred_min_score = int(params.get("patch_relax_prev_pred_min_score", 3))
+        disable_cooldown_filter = bool(params.get("patch_disable_cooldown_filter", False))
+        disable_price_proximity_filter = bool(
+            params.get("patch_disable_price_proximity_filter", False)
+        )
+        relax_price_proximity_strong = bool(params.get("patch_relax_price_proximity_strong", False))
+        relax_price_proximity_min_score = int(
+            params.get("patch_relax_price_proximity_min_score", 3)
+        )
+        relax_price_proximity_moderate = bool(
+            params.get("patch_relax_price_proximity_moderate", False)
+        )
+        relax_price_proximity_moderate_min_score = int(
+            params.get("patch_relax_price_proximity_moderate_min_score", 4)
+        )
+        relax_price_proximity_min_dp = float(params.get("patch_relax_price_proximity_min_dp", 0.0))
+        relax_price_proximity_moderate_min_bs = float(
+            params.get("patch_relax_price_proximity_moderate_min_bs", 0.0)
+        )
 
         raw_signal = 1 if ctx.entry_signal == 1 else 0
         new_position = raw_signal
@@ -123,6 +151,12 @@ class V19EntryCascade:
         quick_reentry = False
         breakout_entry = False
         vshape_entry = False
+        washout_reversal_entry = False
+        pullback_reclaim_entry = False
+        early_pullback_start_entry = False
+        near_sma_continuation_entry = False
+        above_sma_continuation_entry = False
+        deep_bottom_entry = False
         counters: dict[str, int] = {}
 
         # Quick re-entry after trailing_stop.
@@ -164,27 +198,322 @@ class V19EntryCascade:
                 vshape_entry = True
                 counters["n_vshape_entries"] = counters.get("n_vshape_entries", 0) + 1
 
-        # Cooldown filter (skip quick_reentry/vshape).
-        if new_position == 1 and not quick_reentry and not vshape_entry:
-            if cooldown_remaining > 0:
+        if bool(params.get("patch_washout_reversal_entry", False)) and new_position == 0:
+            washout_drop = float(params.get("patch_washout_drop20", -0.06))
+            washout_dist = float(params.get("patch_washout_dist_sma20", -0.02))
+            washout_max_ret5 = float(params.get("patch_washout_max_ret5", 0.01))
+            washout_min_bounce = float(params.get("patch_washout_min_bounce", 0.003))
+            washout_vol_floor = float(params.get("patch_washout_vol_floor", 0.65))
+            bounced_from_low = not np.isnan(local_low_20[i]) and close[i] >= local_low_20[i] * (
+                1 + washout_min_bounce
+            )
+            close_not_bearish = (
+                close[i] >= opn[i] or close[i] >= close[i - 1] if i > 0 else close[i] >= opn[i]
+            )
+            volume_ok = np.isnan(avg_vol20[i]) or volume[i] >= avg_vol20[i] * washout_vol_floor
+            washout_setup = (
+                drop_from_peak_20[i] <= washout_drop
+                and not np.isnan(sma20[i])
+                and close[i] / sma20[i] - 1 <= washout_dist
+                and ret_5d[i] <= washout_max_ret5
+                and bounced_from_low
+                and close_not_bearish
+                and volume_ok
+            )
+            if washout_setup:
+                new_position = 1
+                washout_reversal_entry = True
+                counters["n_washout_reversal_entries"] = (
+                    counters.get("n_washout_reversal_entries", 0) + 1
+                )
+
+        if bool(params.get("patch_pullback_reclaim_entry", False)) and new_position == 0:
+            pullback_min_drop = float(params.get("patch_pullback_min_drop20", -0.045))
+            pullback_max_drop = float(params.get("patch_pullback_max_drop20", -0.015))
+            pullback_min_ret5 = float(params.get("patch_pullback_min_ret5", -0.015))
+            pullback_max_ret5 = float(params.get("patch_pullback_max_ret5", 0.025))
+            pullback_sma_band = float(params.get("patch_pullback_sma_band", 0.015))
+            pullback_vol_floor = float(params.get("patch_pullback_vol_floor", 0.7))
+            near_sma20_reclaim = (
+                not np.isnan(sma20[i])
+                and close[i] >= sma20[i] * (1 - pullback_sma_band)
+                and close[i] <= sma20[i] * (1 + pullback_sma_band)
+            )
+            momentum_reclaim = rs > 0 or (not np.isnan(macd_hist[i]) and macd_hist[i] > 0)
+            volume_ok = np.isnan(avg_vol20[i]) or volume[i] >= avg_vol20[i] * pullback_vol_floor
+            pullback_setup = (
+                pullback_min_drop <= drop_from_peak_20[i] <= pullback_max_drop
+                and pullback_min_ret5 <= ret_5d[i] <= pullback_max_ret5
+                and near_sma20_reclaim
+                and close[i] >= opn[i]
+                and trend in ("strong", "moderate")
+                and momentum_reclaim
+                and volume_ok
+            )
+            if pullback_setup:
+                new_position = 1
+                pullback_reclaim_entry = True
+                counters["n_pullback_reclaim_entries"] = (
+                    counters.get("n_pullback_reclaim_entries", 0) + 1
+                )
+
+        if bool(params.get("patch_early_pullback_start_entry", False)) and new_position == 0:
+            early_min_drop = float(params.get("patch_early_pullback_min_drop20", -0.085))
+            early_max_drop = float(params.get("patch_early_pullback_max_drop20", -0.035))
+            early_min_ret5 = float(params.get("patch_early_pullback_min_ret5", -0.035))
+            early_max_ret5 = float(params.get("patch_early_pullback_max_ret5", 0.015))
+            early_min_ret20 = float(params.get("patch_early_pullback_min_ret20", -0.080))
+            early_max_ret20 = float(params.get("patch_early_pullback_max_ret20", 0.030))
+            early_sma_low = float(params.get("patch_early_pullback_sma_low", -0.040))
+            early_sma_high = float(params.get("patch_early_pullback_sma_high", 0.015))
+            early_min_bounce = float(params.get("patch_early_pullback_min_bounce", 0.003))
+            early_vol_floor = float(params.get("patch_early_pullback_vol_floor", 0.75))
+            dist_sma20 = close[i] / sma20[i] - 1 if not np.isnan(sma20[i]) else np.nan
+            bounced_from_low = not np.isnan(local_low_20[i]) and close[i] >= local_low_20[i] * (
+                1 + early_min_bounce
+            )
+            close_not_bearish = (
+                close[i] >= opn[i] or close[i] >= close[i - 1] if i > 0 else close[i] >= opn[i]
+            )
+            volume_ok = np.isnan(avg_vol20[i]) or volume[i] >= avg_vol20[i] * early_vol_floor
+            early_setup = (
+                early_min_drop <= drop_from_peak_20[i] <= early_max_drop
+                and early_min_ret5 <= ret_5d[i] <= early_max_ret5
+                and early_min_ret20 <= ret_20d[i] <= early_max_ret20
+                and not np.isnan(dist_sma20)
+                and early_sma_low <= dist_sma20 <= early_sma_high
+                and trend in ("strong", "moderate", "weak")
+                and bounced_from_low
+                and close_not_bearish
+                and volume_ok
+            )
+            if early_setup:
+                new_position = 1
+                early_pullback_start_entry = True
+                counters["n_early_pullback_start_entries"] = (
+                    counters.get("n_early_pullback_start_entries", 0) + 1
+                )
+
+        if bool(params.get("patch_near_sma_continuation_entry", False)) and new_position == 0:
+            near_min_drop = float(params.get("patch_near_sma_min_drop20", -0.045))
+            near_max_drop = float(params.get("patch_near_sma_max_drop20", -0.004))
+            near_min_ret5 = float(params.get("patch_near_sma_min_ret5", -0.018))
+            near_max_ret5 = float(params.get("patch_near_sma_max_ret5", 0.010))
+            near_min_ret20 = float(params.get("patch_near_sma_min_ret20", -0.045))
+            near_max_ret20 = float(params.get("patch_near_sma_max_ret20", 0.016))
+            near_sma_low = float(params.get("patch_near_sma_low", -0.020))
+            near_sma_high = float(params.get("patch_near_sma_high", 0.009))
+            near_min_bounce = float(params.get("patch_near_sma_min_bounce", 0.002))
+            near_vol_floor = float(params.get("patch_near_sma_vol_floor", 0.62))
+            near_require_momentum = bool(params.get("patch_near_sma_require_momentum", True))
+            dist_sma20 = close[i] / sma20[i] - 1 if not np.isnan(sma20[i]) else np.nan
+            bounced_from_low = not np.isnan(local_low_20[i]) and close[i] >= local_low_20[i] * (
+                1 + near_min_bounce
+            )
+            close_not_bearish = (
+                close[i] >= opn[i] or close[i] >= close[i - 1] if i > 0 else close[i] >= opn[i]
+            )
+            momentum_ok = (
+                not near_require_momentum
+                or rs > 0
+                or (not np.isnan(macd_hist[i]) and macd_hist[i] > 0)
+            )
+            volume_ok = np.isnan(avg_vol20[i]) or volume[i] >= avg_vol20[i] * near_vol_floor
+            near_sma_setup = (
+                near_min_drop <= drop_from_peak_20[i] <= near_max_drop
+                and near_min_ret5 <= ret_5d[i] <= near_max_ret5
+                and near_min_ret20 <= ret_20d[i] <= near_max_ret20
+                and not np.isnan(dist_sma20)
+                and near_sma_low <= dist_sma20 <= near_sma_high
+                and trend in ("strong", "moderate", "weak")
+                and bounced_from_low
+                and close_not_bearish
+                and momentum_ok
+                and volume_ok
+            )
+            if near_sma_setup:
+                new_position = 1
+                near_sma_continuation_entry = True
+                counters["n_near_sma_continuation_entries"] = (
+                    counters.get("n_near_sma_continuation_entries", 0) + 1
+                )
+
+        if bool(params.get("patch_above_sma_continuation_entry", False)) and new_position == 0:
+            above_min_drop = float(params.get("patch_above_sma_min_drop20", -0.010))
+            above_max_drop = float(params.get("patch_above_sma_max_drop20", 0.000))
+            above_min_ret5 = float(params.get("patch_above_sma_min_ret5", 0.0045))
+            above_max_ret5 = float(params.get("patch_above_sma_max_ret5", 0.021))
+            above_min_ret20 = float(params.get("patch_above_sma_min_ret20", -0.004))
+            above_max_ret20 = float(params.get("patch_above_sma_max_ret20", 0.026))
+            above_sma_low = float(params.get("patch_above_sma_low", 0.004))
+            above_sma_high = float(params.get("patch_above_sma_high", 0.022))
+            above_min_bounce = float(params.get("patch_above_sma_min_bounce", 0.002))
+            above_vol_floor = float(params.get("patch_above_sma_vol_floor", 0.90))
+            above_require_momentum = bool(params.get("patch_above_sma_require_momentum", True))
+            dist_sma20 = close[i] / sma20[i] - 1 if not np.isnan(sma20[i]) else np.nan
+            bounced_from_low = not np.isnan(local_low_20[i]) and close[i] >= local_low_20[i] * (
+                1 + above_min_bounce
+            )
+            close_not_bearish = (
+                close[i] >= opn[i] or close[i] >= close[i - 1] if i > 0 else close[i] >= opn[i]
+            )
+            momentum_ok = (
+                not above_require_momentum
+                or rs > 0
+                or (not np.isnan(macd_hist[i]) and macd_hist[i] > 0)
+            )
+            volume_ok = np.isnan(avg_vol20[i]) or volume[i] >= avg_vol20[i] * above_vol_floor
+            above_sma_setup = (
+                above_min_drop <= drop_from_peak_20[i] <= above_max_drop
+                and above_min_ret5 <= ret_5d[i] <= above_max_ret5
+                and above_min_ret20 <= ret_20d[i] <= above_max_ret20
+                and not np.isnan(dist_sma20)
+                and above_sma_low <= dist_sma20 <= above_sma_high
+                and trend in ("strong", "moderate", "weak")
+                and bounced_from_low
+                and close_not_bearish
+                and momentum_ok
+                and volume_ok
+            )
+            if above_sma_setup:
+                new_position = 1
+                above_sma_continuation_entry = True
+                counters["n_above_sma_continuation_entries"] = (
+                    counters.get("n_above_sma_continuation_entries", 0) + 1
+                )
+
+        if bool(params.get("patch_deep_bottom_entry", False)) and new_position == 0:
+            deep_min_drop = float(params.get("patch_deep_bottom_min_drop20", -0.080))
+            deep_max_drop = float(params.get("patch_deep_bottom_max_drop20", -0.035))
+            deep_min_ret5 = float(params.get("patch_deep_bottom_min_ret5", -0.020))
+            deep_max_ret5 = float(params.get("patch_deep_bottom_max_ret5", 0.005))
+            deep_sma_low = float(params.get("patch_deep_bottom_sma_low", -0.025))
+            deep_sma_high = float(params.get("patch_deep_bottom_sma_high", 0.005))
+            deep_min_bounce = float(params.get("patch_deep_bottom_min_bounce", 0.003))
+            deep_vol_floor = float(params.get("patch_deep_bottom_vol_floor", 0.60))
+            dist_sma20 = close[i] / sma20[i] - 1 if not np.isnan(sma20[i]) else np.nan
+            bounced_from_low = not np.isnan(local_low_20[i]) and close[i] >= local_low_20[i] * (
+                1 + deep_min_bounce
+            )
+            close_not_bearish = (
+                close[i] >= opn[i] or close[i] >= close[i - 1] if i > 0 else close[i] >= opn[i]
+            )
+            volume_ok = np.isnan(avg_vol20[i]) or volume[i] >= avg_vol20[i] * deep_vol_floor
+            deep_bottom_setup = (
+                deep_min_drop <= drop_from_peak_20[i] <= deep_max_drop
+                and deep_min_ret5 <= ret_5d[i] <= deep_max_ret5
+                and not np.isnan(dist_sma20)
+                and deep_sma_low <= dist_sma20 <= deep_sma_high
+                and trend in ("strong", "moderate", "weak")
+                and bounced_from_low
+                and close_not_bearish
+                and volume_ok
+            )
+            if deep_bottom_setup:
+                new_position = 1
+                deep_bottom_entry = True
+                counters["n_deep_bottom_entries"] = counters.get("n_deep_bottom_entries", 0) + 1
+
+        special_patch_entry = (
+            washout_reversal_entry
+            or pullback_reclaim_entry
+            or early_pullback_start_entry
+            or near_sma_continuation_entry
+            or above_sma_continuation_entry
+            or deep_bottom_entry
+        )
+
+        if (
+            bool(params.get("patch_late_entry_guard", False))
+            and new_position == 1
+            and not special_patch_entry
+        ):
+            late_min_ret5 = float(params.get("patch_late_entry_min_ret5", 0.035))
+            late_min_ret20 = float(params.get("patch_late_entry_min_ret20", 0.060))
+            late_min_dist_sma20 = float(params.get("patch_late_entry_min_dist_sma20", 0.020))
+            late_min_dist_ema8 = float(params.get("patch_late_entry_min_dist_ema8", 0.006))
+            dist_sma20 = close[i] / sma20[i] - 1 if not np.isnan(sma20[i]) else np.nan
+            dist_ema8 = close[i] / ema8[i] - 1 if not np.isnan(ema8[i]) else np.nan
+            late_extended = (
+                ret_5d[i] >= late_min_ret5
+                and ret_20d[i] >= late_min_ret20
+                and not np.isnan(dist_sma20)
+                and dist_sma20 >= late_min_dist_sma20
+                and not np.isnan(dist_ema8)
+                and dist_ema8 >= late_min_dist_ema8
+            )
+            if late_extended:
                 new_position = 0
+                counters["n_late_entry_guard_blocked"] = (
+                    counters.get("n_late_entry_guard_blocked", 0) + 1
+                )
+
+        # Cooldown filter (skip quick_reentry/vshape).
+        if new_position == 1 and not quick_reentry and not vshape_entry and not special_patch_entry:
+            if cooldown_remaining > 0:
+                if disable_cooldown_filter:
+                    counters["n_v19_relaxed_cooldown_entries"] = (
+                        counters.get("n_v19_relaxed_cooldown_entries", 0) + 1
+                    )
+                else:
+                    new_position = 0
 
         # Price proximity filter.
-        if new_position == 1 and not quick_reentry and not vshape_entry:
+        if new_position == 1 and not quick_reentry and not vshape_entry and not special_patch_entry:
             if last_exit_price > 0 and last_exit_reason != "trailing_stop":
                 price_diff = abs(close[i] / last_exit_price - 1)
                 if price_diff < 0.03:
-                    new_position = 0
+                    entry_score_price_prox = sum([wp < 0.75, dp > 0.02, rs > 0, vs > 1.1, hl >= 2])
+                    can_relax_price_prox = (
+                        relax_price_proximity_strong
+                        and trend == "strong"
+                        and entry_score_price_prox >= relax_price_proximity_min_score
+                        and dp >= relax_price_proximity_min_dp
+                    )
+                    can_relax_price_prox_moderate = (
+                        relax_price_proximity_moderate
+                        and trend == "moderate"
+                        and entry_score_price_prox >= relax_price_proximity_moderate_min_score
+                        and dp >= relax_price_proximity_min_dp
+                        and bs >= relax_price_proximity_moderate_min_bs
+                    )
+                    if disable_price_proximity_filter:
+                        counters["n_v19_relaxed_price_prox_entries"] = (
+                            counters.get("n_v19_relaxed_price_prox_entries", 0) + 1
+                        )
+                    elif can_relax_price_prox or can_relax_price_prox_moderate:
+                        counters["n_v19_relaxed_price_prox_entries"] = (
+                            counters.get("n_v19_relaxed_price_prox_entries", 0) + 1
+                        )
+                    else:
+                        new_position = 0
 
         # Prev-signal continuation (skip quick/breakout/vshape).
-        if new_position == 1 and not quick_reentry and not breakout_entry and not vshape_entry:
+        if (
+            new_position == 1
+            and not quick_reentry
+            and not breakout_entry
+            and not vshape_entry
+            and not special_patch_entry
+        ):
             if (bs >= 4 and vs > 1.2) or (trend == "strong" and rs > 0):
                 pass
             elif prev_pred != 1:
-                new_position = 0
+                entry_score_prev = sum([wp < 0.75, dp > 0.02, rs > 0, vs > 1.1, hl >= 2])
+                can_relax_prev_pred = (
+                    relax_prev_pred_strong
+                    and trend == "strong"
+                    and entry_score_prev >= relax_prev_pred_min_score
+                )
+                if can_relax_prev_pred:
+                    counters["n_v19_relaxed_prev_pred_entries"] = (
+                        counters.get("n_v19_relaxed_prev_pred_entries", 0) + 1
+                    )
+                else:
+                    new_position = 0
 
         # SMA-below filter.
-        if new_position == 1 and not quick_reentry and not vshape_entry:
+        if new_position == 1 and not quick_reentry and not vshape_entry and not special_patch_entry:
             if not np.isnan(sma50[i]) and not np.isnan(sma20[i]):
                 if close[i] < sma50[i] and close[i] < sma20[i] and rs <= 0:
                     if bs < 3 and not breakout_entry:
@@ -195,9 +524,10 @@ class V19EntryCascade:
         entry_alpha_ok = True
         relax_dp_floor_strong = bool(params.get("patch_relax_dp_floor_strong", False))
         relax_hot_ret5_strong = bool(params.get("patch_relax_hot_ret5_strong", False))
+        min_entry_score_override = params.get("v19_min_entry_score")
 
         # Entry alpha gate.
-        if new_position == 1 and not quick_reentry and not vshape_entry:
+        if new_position == 1 and not quick_reentry and not vshape_entry and not special_patch_entry:
             near_sma_support = (
                 not np.isnan(sma20[i])
                 and close[i] <= sma20[i] * 1.02
@@ -272,8 +602,9 @@ class V19EntryCascade:
                 )
 
         # Drop from peak gate.
-        if new_position == 1 and not vshape_entry and entry_alpha_ok:
-            if drop_from_peak_20[i] <= -0.15 and not stabilized_sideways[i]:
+        if new_position == 1 and not vshape_entry and not special_patch_entry and entry_alpha_ok:
+            drop_threshold = float(params.get("v19_drop_from_peak_threshold", -0.15))
+            if drop_from_peak_20[i] <= drop_threshold and not stabilized_sideways[i]:
                 entry_alpha_ok = False
 
         # Volume floor.
@@ -283,7 +614,13 @@ class V19EntryCascade:
                 entry_alpha_ok = False
 
         # Bear regime defense (mod_g).
-        if mods.get("g", True) and new_position == 1 and not vshape_entry and entry_alpha_ok:
+        if (
+            mods.get("g", True)
+            and new_position == 1
+            and not vshape_entry
+            and not special_patch_entry
+            and entry_alpha_ok
+        ):
             sma20_below_50 = (
                 not np.isnan(sma20[i]) and not np.isnan(sma50[i]) and sma20[i] < sma50[i]
             )
@@ -299,6 +636,7 @@ class V19EntryCascade:
             and new_position == 1
             and not vshape_entry
             and not breakout_entry
+            and not special_patch_entry
             and entry_alpha_ok
         ):
             ma_flat = (
@@ -317,6 +655,50 @@ class V19EntryCascade:
             new_position = 0
             counters["n_v19_alpha_blocked"] = counters.get("n_v19_alpha_blocked", 0) + 1
 
+        # Global entry_score threshold override (phase15+)
+        if new_position == 1 and min_entry_score_override is not None:
+            if (
+                entry_score < min_entry_score_override
+                and not vshape_entry
+                and not breakout_entry
+                and not special_patch_entry
+            ):
+                new_position = 0
+                counters["n_v19_score_filtered"] = counters.get("n_v19_score_filtered", 0) + 1
+
+        # Entry type filters (phase16+)
+        if new_position == 1 and bool(params.get("v19_block_breakout_only", False)):
+            if breakout_entry and not vshape_entry:
+                new_position = 0
+                counters["n_v19_breakout_filtered"] = counters.get("n_v19_breakout_filtered", 0) + 1
+
+        if new_position == 1 and bool(params.get("v19_block_strong_only", False)):
+            if trend == "strong" and not vshape_entry:
+                new_position = 0
+                counters["n_v19_strong_filtered"] = counters.get("n_v19_strong_filtered", 0) + 1
+
+        # ATR volatility gate (phase17+)
+        max_atr_ratio = params.get("v19_max_atr_ratio")
+        if new_position == 1 and max_atr_ratio is not None:
+            atr_ratio_check = (
+                (atr14[i] / close[i]) if (close[i] > 0 and not np.isnan(atr14[i])) else 0.03
+            )
+            if atr_ratio_check > max_atr_ratio:
+                new_position = 0
+                counters["n_v19_atr_filtered"] = counters.get("n_v19_atr_filtered", 0) + 1
+
+        # Breakout-specific score floor (phase17+): require higher score for breakout entries
+        min_score_breakout = params.get("v19_min_score_breakout")
+        if (
+            new_position == 1
+            and min_score_breakout is not None
+            and breakout_entry
+            and not vshape_entry
+        ):
+            if entry_score < min_score_breakout:
+                new_position = 0
+                counters["n_v19_bo_score_filtered"] = counters.get("n_v19_bo_score_filtered", 0) + 1
+
         if new_position == 0:
             return FusionResult(action="pass", reason="", metadata={"counters": counters})
 
@@ -326,6 +708,16 @@ class V19EntryCascade:
 
         if vshape_entry:
             position_size = 0.50
+        elif washout_reversal_entry:
+            position_size = float(params.get("patch_washout_position_size", 0.35))
+        elif pullback_reclaim_entry:
+            position_size = float(params.get("patch_pullback_position_size", 0.40))
+        elif early_pullback_start_entry:
+            position_size = float(params.get("patch_early_pullback_position_size", 0.40))
+        elif near_sma_continuation_entry:
+            position_size = float(params.get("patch_near_sma_position_size", 0.40))
+        elif deep_bottom_entry:
+            position_size = float(params.get("patch_deep_bottom_position_size", 0.40))
         elif trend == "strong" and entry_score >= 4:
             position_size = 0.95
         elif trend == "strong" and entry_score >= 3:
@@ -347,7 +739,7 @@ class V19EntryCascade:
         elif trend == "moderate":
             position_size = min(position_size, 0.70)
 
-        if close[i] <= opn[i] and not vshape_entry:
+        if close[i] <= opn[i] and not vshape_entry and not special_patch_entry:
             position_size *= 0.75
 
         if ret_5d[i] > ret5_hot:
@@ -355,6 +747,7 @@ class V19EntryCascade:
             counters["n_v19_overheat_entries"] = counters.get("n_v19_overheat_entries", 0) + 1
 
         position_size *= size_mult
+        position_size *= float(params.get("patch_position_size_mult", 1.0))
         position_size = max(0.25, min(position_size, 1.0))
 
         # Build entry_features snapshot for trade record.
@@ -370,13 +763,19 @@ class V19EntryCascade:
             "entry_od": od,
             "entry_bb": bb,
             "entry_score": entry_score,
-            "entry_date": str(dates[i])[:10] if dates is not None else "",
+            "entry_date": _format_date(dates[i]) if dates is not None else "",
             "entry_symbol": str(symbols[i]) if symbols is not None else "",
             "position_size": position_size,
             "entry_trend": trend,
             "quick_reentry": quick_reentry,
             "breakout_entry": breakout_entry,
             "vshape_entry": vshape_entry,
+            "washout_reversal_entry": washout_reversal_entry,
+            "pullback_reclaim_entry": pullback_reclaim_entry,
+            "early_pullback_start_entry": early_pullback_start_entry,
+            "near_sma_continuation_entry": near_sma_continuation_entry,
+            "above_sma_continuation_entry": above_sma_continuation_entry,
+            "deep_bottom_entry": deep_bottom_entry,
             "entry_ret_5d": round(float(ret_5d[i]) * 100, 2),
             "entry_drop20d": round(float(drop_from_peak_20[i]) * 100, 2),
             "entry_dist_sma20": round(float(ind["dist_sma20"][i]) * 100, 2),
@@ -391,6 +790,16 @@ class V19EntryCascade:
             if breakout_entry
             else "quick_reentry"
             if quick_reentry
+            else "washout_reversal"
+            if washout_reversal_entry
+            else "pullback_reclaim"
+            if pullback_reclaim_entry
+            else "early_pullback_start"
+            if early_pullback_start_entry
+            else "near_sma_continuation"
+            if near_sma_continuation_entry
+            else "deep_bottom"
+            if deep_bottom_entry
             else "ml_signal"
         )
 
@@ -404,6 +813,11 @@ class V19EntryCascade:
                     "quick_reentry": quick_reentry,
                     "breakout_entry": breakout_entry,
                     "vshape_entry": vshape_entry,
+                    "washout_reversal_entry": washout_reversal_entry,
+                    "pullback_reclaim_entry": pullback_reclaim_entry,
+                    "early_pullback_start_entry": early_pullback_start_entry,
+                    "near_sma_continuation_entry": near_sma_continuation_entry,
+                    "above_sma_continuation_entry": above_sma_continuation_entry,
                 },
                 "counters": counters,
             },

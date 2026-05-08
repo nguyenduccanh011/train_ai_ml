@@ -215,9 +215,18 @@
   <header class="header">
     <div class="title-row">
       <h1>Backtest Leaderboard</h1>
-      <div class="data-path">../results/leaderboard/leaderboard.json</div>
+      <div class="data-path" id="dataPath">../results/leaderboard/leaderboard.json</div>
     </div>
     <div class="controls">
+      <select id="marketFilter" style="font-weight: 600; background: #2962ff; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer;">
+        <option value="all">All Markets</option>
+        <option value="vn_stock">VN Stock</option>
+        <option value="vn_derivatives_family">VN Derivatives (All TF)</option>
+        <option value="vn_derivatives">VN Derivatives 1H</option>
+        <option value="vn_derivatives_30m">VN Derivatives 30M</option>
+        <option value="vn_derivatives_1d">VN Derivatives 1D</option>
+        <option value="vn_derivatives_15m">VN Derivatives 15M</option>
+      </select>
       <div class="toggle-group" aria-label="Score mode">
         <button class="toggle-btn active" id="globalMode" type="button">Global</button>
         <button class="toggle-btn" id="fairMode" type="button">Fair</button>
@@ -271,6 +280,6 @@
     </table>
   </main>
 
-  <script src="./leaderboard.js"></script>
+  <script src="./leaderboard.js?v=3"></script>
 </body>
 </html>

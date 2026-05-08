@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import tempfile
 from collections.abc import Iterable, Sequence
 from pathlib import Path
 
@@ -129,9 +130,17 @@ class FeatureCacheManager:
         parquet_path, pickle_path, _meta_path = self._resolve_paths(feature_set, cache_key)
 
         if parquet_path.exists():
-            return pd.read_parquet(parquet_path), cache_key
+            try:
+                return pd.read_parquet(parquet_path), cache_key
+            except Exception:
+                parquet_path.unlink(missing_ok=True)
+                return None, cache_key
         if pickle_path.exists():
-            return pd.read_pickle(pickle_path), cache_key
+            try:
+                return pd.read_pickle(pickle_path), cache_key
+            except Exception:
+                pickle_path.unlink(missing_ok=True)
+                return None, cache_key
         return None, cache_key
 
     def save(
@@ -161,9 +170,31 @@ class FeatureCacheManager:
 
         fmt = "parquet"
         try:
-            df.to_parquet(parquet_path, index=False)
+            with tempfile.NamedTemporaryFile(
+                dir=parquet_path.parent,
+                suffix=".parquet",
+                delete=False,
+            ) as tmp:
+                tmp_parquet_path = Path(tmp.name)
+            try:
+                df.to_parquet(tmp_parquet_path, index=False)
+                tmp_parquet_path.replace(parquet_path)
+            except Exception:
+                tmp_parquet_path.unlink(missing_ok=True)
+                raise
         except Exception:
-            df.to_pickle(pickle_path)
+            with tempfile.NamedTemporaryFile(
+                dir=pickle_path.parent,
+                suffix=".pkl",
+                delete=False,
+            ) as tmp:
+                tmp_pickle_path = Path(tmp.name)
+            try:
+                df.to_pickle(tmp_pickle_path)
+                tmp_pickle_path.replace(pickle_path)
+            except Exception:
+                tmp_pickle_path.unlink(missing_ok=True)
+                raise
             fmt = "pickle"
 
         metadata = {

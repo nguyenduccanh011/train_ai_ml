@@ -23,7 +23,9 @@ class ExitModelExit:
         if not ts:
             return FusionResult(action="pass", reason="")
         hold_days = int(ts.get("hold_days", 0))
-        if hold_days < EXIT_MODEL_MIN_HOLD:
+        params = ctx.config.get("params", {})
+        min_hold = int(params.get("exit_model_min_hold", EXIT_MODEL_MIN_HOLD))
+        if hold_days < min_hold:
             return FusionResult(action="pass", reason="")
         if ctx.exit_signal == 1:
             return FusionResult(

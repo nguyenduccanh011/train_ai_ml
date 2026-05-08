@@ -13,6 +13,13 @@ HARD_STOP = 0.08
 ZOMBIE_BARS = 14
 
 
+def _format_trade_time(value: Any) -> str:
+    ts = pd.Timestamp(value)
+    if ts.time() == pd.Timestamp(ts.date()).time():
+        return ts.date().isoformat()
+    return ts.isoformat()
+
+
 @dataclass
 class PositionState:
     symbol: str
@@ -153,7 +160,7 @@ def _trade_record(
         "pnl_pct": round(pnl_pct, 2),
         "max_profit_pct": round(max_profit_pct, 2),
         "exit_reason": exit_reason,
-        "exit_date": str(exit_date)[:10],
+        "exit_date": _format_trade_time(exit_date),
         "entry_date": pos.entry_date,
         "entry_symbol": pos.symbol,
         "position_size": pos.position_size,
@@ -338,7 +345,7 @@ def backtest_portfolio(
                     )
                     pos.entry_close = close_arrays[sym][i]
                     pos.entry_day = i
-                    pos.entry_date = str(date_arrays[sym][i])[:10]
+                    pos.entry_date = _format_trade_time(date_arrays[sym][i])
                     pos.entry_equity = pos.notional / max(leverage, 1.0) - roll_cost
                     pos.max_equity = pos.entry_equity
                     pos.cumulative_pnl = 0.0
@@ -443,7 +450,7 @@ def backtest_portfolio(
                 entry_equity=entry_equity,
                 entry_close=close_arrays[sym][i],
                 entry_day=i,
-                entry_date=str(date_arrays[sym][i])[:10],
+                entry_date=_format_trade_time(date_arrays[sym][i]),
                 notional=notional,
                 max_equity=entry_equity,
                 peak_portfolio_equity=state.total_equity,

@@ -1,0 +1,72 @@
+name_prefix: deriv_p110_30m_cat1h
+axes:
+  signals.features:
+    - leading
+    - volatility
+    - momentum
+    - all_features
+  signals.entry_model.type:
+    - catboost
+    - xgboost
+  signals.target:
+    - {label: e90g012l026, type: early_wave_v2, forward_window: 90, gain_threshold: 0.012, loss_threshold: 0.026}
+    - {label: e96g012l026, type: early_wave_v2, forward_window: 96, gain_threshold: 0.012, loss_threshold: 0.026}
+    - {label: e102g012l026, type: early_wave_v2, forward_window: 102, gain_threshold: 0.012, loss_threshold: 0.026}
+    - {label: e102g015l026, type: early_wave_v2, forward_window: 102, gain_threshold: 0.015, loss_threshold: 0.026}
+    - {label: e102g025l026, type: early_wave_v2, forward_window: 102, gain_threshold: 0.025, loss_threshold: 0.026}
+  exit_model:
+    - {label: x36l021, enabled: true, type: lightgbm, forward_window: 36, loss_threshold: 0.021}
+    - {label: x42l023, enabled: true, type: lightgbm, forward_window: 42, loss_threshold: 0.023}
+    - {label: x48l026, enabled: true, type: lightgbm, forward_window: 48, loss_threshold: 0.026}
+    - {label: x48l0485, enabled: true, type: lightgbm, forward_window: 48, loss_threshold: 0.0485}
+  fusion:
+    - label: dist
+      entry:
+        - name: v19_entry_cascade
+      force_exit:
+        - name: hard_stop_exit
+      active_exit:
+        - name: exit_model
+        - name: peak_protect_dist
+      hold: []
+    - label: exit_only
+      entry:
+        - name: v19_entry_cascade
+      force_exit:
+        - name: hard_stop_exit
+      active_exit:
+        - name: exit_model
+      hold: []
+  params:
+    - {label: h4, v19_min_entry_score: 0, exit_model_min_hold: 4}
+base:
+  market: vn_derivatives_30m
+  strategy: v22
+  runner: components.runners.run_v22
+  mods:
+    a: true
+    b: true
+    c: false
+    d: false
+    e: true
+    f: true
+    g: true
+    h: true
+    i: true
+    j: true
+  params:
+    signal_exit_enabled: false
+    patch_active_exit_on_raw0: true
+    v22_mode: true
+    v22_fast_exit_skip_strong: true
+    v22_fast_exit_vol_confirm: true
+    v22_fast_exit_threshold_hb: -0.07
+    v22_fast_exit_threshold_std: -0.05
+    v22_adaptive_hard_cap: true
+    v22_hard_cap_mult_hb: 3.0
+    v22_hard_cap_mult_std: 2.5
+    v22_hard_cap_floor: 0.12
+    v22_hard_cap_floor_hb: 0.15
+  split:
+    first_test_year: 2020
+    last_test_year: 2025

@@ -17,11 +17,21 @@
   }
   .header-controls {
     display: grid;
-    grid-template-columns: auto minmax(220px, 420px) max-content 1fr;
+    grid-template-columns: minmax(0, 1fr) max-content max-content minmax(180px, 420px) max-content;
+    grid-template-areas:
+      "title market timeframe search sort"
+      "toggle toggle toggle toggle toggle";
     align-items: center;
     gap: 8px;
     min-width: 0;
   }
+  .header-controls > * { min-width: 0; }
+  .header-controls h1 { grid-area: title; }
+  .header-controls .market-selector { grid-area: market; }
+  .header-controls .timeframe-selector { grid-area: timeframe; }
+  .header-controls .symbol-selector { grid-area: search; }
+  .header-controls .sort-controls { grid-area: sort; justify-self: end; }
+  .header-controls .toggle-group { grid-area: toggle; width: 100%; }
   .header h1 {
     font-size: 15px;
     color: #fff;
@@ -57,7 +67,7 @@
     padding: 6px 12px;
     border-radius: 4px;
     font-size: 13px;
-    width: clamp(220px, 28vw, 420px);
+    width: min(100%, 420px);
     max-width: 100%;
     outline: none;
   }
@@ -131,6 +141,19 @@
     border-radius: 3px;
     font-size: 11px;
     cursor: pointer;
+  }
+  .market-selector select, .timeframe-selector select {
+    background: #2a2e39;
+    color: #d1d4dc;
+    border: 1px solid #444;
+    padding: 4px 8px;
+    border-radius: 3px;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  .market-selector label, .timeframe-selector label {
+    font-size: 10px;
+    color: #888;
   }
   .sort-controls button {
     background: #2a2e39;
@@ -273,27 +296,71 @@
   .mgr-btn.danger { border-color: #ef5350; color: #ef5350; }
   .mgr-btn.danger:hover { background: #ef535033; }
 
-  .symbol-dropdown::-webkit-scrollbar { width: 6px; }
-  .symbol-dropdown::-webkit-scrollbar-track { background: #1e222d; }
-  .symbol-dropdown::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
-  .symbol-dropdown::-webkit-scrollbar-thumb:hover { background: #666; }
+  .toggle-group,
+  .header-stats,
+  .symbol-dropdown,
+  .tables-container,
+  .trade-panel {
+    scrollbar-width: thin;
+    scrollbar-color: #4b505c #1e222d;
+  }
 
-  .toggle-group::-webkit-scrollbar, .header-stats::-webkit-scrollbar { height: 6px; }
-  .toggle-group::-webkit-scrollbar-track, .header-stats::-webkit-scrollbar-track { background: #1e222d; }
-  .toggle-group::-webkit-scrollbar-thumb, .header-stats::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
-  .toggle-group::-webkit-scrollbar-thumb:hover, .header-stats::-webkit-scrollbar-thumb:hover { background: #666; }
+  .toggle-group::-webkit-scrollbar,
+  .header-stats::-webkit-scrollbar,
+  .symbol-dropdown::-webkit-scrollbar,
+  .tables-container::-webkit-scrollbar,
+  .trade-panel::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .toggle-group::-webkit-scrollbar-track,
+  .header-stats::-webkit-scrollbar-track,
+  .symbol-dropdown::-webkit-scrollbar-track,
+  .tables-container::-webkit-scrollbar-track,
+  .trade-panel::-webkit-scrollbar-track {
+    background: #1e222d;
+  }
+  .toggle-group::-webkit-scrollbar-thumb,
+  .header-stats::-webkit-scrollbar-thumb,
+  .symbol-dropdown::-webkit-scrollbar-thumb,
+  .tables-container::-webkit-scrollbar-thumb,
+  .trade-panel::-webkit-scrollbar-thumb {
+    background: #4b505c;
+    border-radius: 999px;
+  }
+  .toggle-group::-webkit-scrollbar-thumb:hover,
+  .header-stats::-webkit-scrollbar-thumb:hover,
+  .symbol-dropdown::-webkit-scrollbar-thumb:hover,
+  .tables-container::-webkit-scrollbar-thumb:hover,
+  .trade-panel::-webkit-scrollbar-thumb:hover {
+    background: #666d7c;
+  }
+
+  .market-selector { display: flex; align-items: center; gap: 6px; }
+  .market-selector label { color: #888; font-size: 12px; }
+  .market-selector select {
+    background: #1e222d;
+    color: #d1d4dc;
+    border: 1px solid #363a45;
+    border-radius: 6px;
+    padding: 9px 10px;
+    font-size: 13px;
+  }
 
   @media (max-width: 1320px) {
     .header-controls {
-      grid-template-columns: auto minmax(220px, 1fr) max-content;
-      grid-template-areas:
-        "title search sort"
-        "toggle toggle toggle";
+      grid-template-columns: minmax(0, 1fr) max-content minmax(160px, 1fr) max-content;
     }
-    .header-controls h1 { grid-area: title; }
-    .header-controls .symbol-selector { grid-area: search; }
-    .header-controls .sort-controls { grid-area: sort; justify-self: end; }
-    .header-controls .toggle-group { grid-area: toggle; }
+  }
+
+  @media (max-width: 1080px) {
+    .header-controls {
+      grid-template-columns: 1fr max-content;
+      grid-template-areas:
+        "title market"
+        "search sort"
+        "toggle toggle";
+    }
   }
 
   @media (max-width: 880px) {
@@ -302,6 +369,8 @@
       grid-template-columns: 1fr;
       grid-template-areas:
         "title"
+        "market"
+        "timeframe"
         "search"
         "sort"
         "toggle";
@@ -314,14 +383,28 @@
 <body>
 <div class="header" id="header">
   <div class="header-controls">
-    <h1>📊 Model Comparison Dashboard</h1>
+    <h1>Model Comparison Dashboard</h1>
+    <div class="market-selector">
+      <label>Market:</label>
+      <select id="marketSelect" onchange="switchMarket(this.value)">
+        <option value="all">All Markets</option>
+        <option value="vn_stock">VN Stock</option>
+        <option value="vn_derivatives">VN Derivatives</option>
+      </select>
+    </div>
+    <div class="timeframe-selector">
+      <label>Timeframe:</label>
+      <select id="timeframeSelect" onchange="switchTimeframe(this.value)">
+        <option value="all">All Timeframes</option>
+      </select>
+    </div>
     <div class="symbol-selector">
       <select id="symbolSelect" onchange="loadSymbol(this.value)" style="display:none">
         <option value="">Loading...</option>
       </select>
       <div class="symbol-search-container">
         <input type="text" class="symbol-search-input" id="symbolSearchInput"
-               placeholder="🔍 Tìm mã cổ phiếu... (VD: TCB, FPT, VNM)"
+               placeholder="Tìm mã... (VD: TCB, FPT, VN30F1M)"
                autocomplete="off" />
         <div class="symbol-dropdown" id="symbolDropdown"></div>
       </div>

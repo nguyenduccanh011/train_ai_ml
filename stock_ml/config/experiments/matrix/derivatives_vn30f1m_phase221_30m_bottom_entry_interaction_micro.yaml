@@ -1,0 +1,59 @@
+name_prefix: deriv_p221_30m_bottom_entry_interaction_micro
+axes:
+  signals.features:
+    - all_features
+    - volatility
+    - leading_deriv
+  signals.entry_model.type:
+    - xgboost
+  signals.target:
+    - {label: e106g0122l0260, type: early_wave_v2, forward_window: 106, gain_threshold: 0.0122, loss_threshold: 0.0260}
+    - {label: e106g0122l0265, type: early_wave_v2, forward_window: 106, gain_threshold: 0.0122, loss_threshold: 0.0265}
+  exit_model:
+    - {label: x28l0192, enabled: true, type: lightgbm, forward_window: 28, loss_threshold: 0.0192}
+  fusion:
+    - label: exit_only
+      entry:
+        - name: v19_entry_cascade
+      force_exit:
+        - name: hard_stop_exit
+      active_exit:
+        - name: exit_model
+      hold: []
+  params:
+    - {label: h220_ref, v19_min_entry_score: 0, v19_block_breakout_only: true, exit_model_min_hold: 2, patch_washout_reversal_entry: true, patch_washout_drop20: -0.07, patch_washout_dist_sma20: -0.025, patch_washout_max_ret5: 0.005, patch_washout_min_bounce: 0.004, patch_washout_vol_floor: 0.65, patch_washout_position_size: 0.30, patch_pullback_reclaim_entry: true, patch_pullback_min_drop20: -0.060, patch_pullback_max_drop20: -0.008, patch_pullback_min_ret5: 0.000, patch_pullback_max_ret5: 0.035, patch_pullback_sma_band: 0.025, patch_pullback_vol_floor: 0.65, patch_early_pullback_start_entry: true, patch_early_pullback_min_drop20: -0.082, patch_early_pullback_max_drop20: -0.024, patch_early_pullback_min_ret5: -0.043, patch_early_pullback_max_ret5: 0.019, patch_early_pullback_min_ret20: -0.090, patch_early_pullback_max_ret20: 0.036, patch_early_pullback_sma_low: -0.020, patch_early_pullback_sma_high: 0.012, patch_early_pullback_min_bounce: 0.004, patch_early_pullback_vol_floor: 0.68, patch_near_sma_continuation_entry: true, patch_near_sma_min_drop20: -0.038, patch_near_sma_max_drop20: -0.010, patch_near_sma_min_ret5: -0.014, patch_near_sma_max_ret5: 0.001, patch_near_sma_min_ret20: -0.036, patch_near_sma_max_ret20: 0.006, patch_near_sma_low: -0.022, patch_near_sma_high: 0.000, patch_near_sma_min_bounce: 0.002, patch_near_sma_vol_floor: 0.65, patch_near_sma_require_momentum: true, patch_above_sma_continuation_entry: true, patch_above_sma_min_drop20: -0.010, patch_above_sma_max_drop20: 0.000, patch_above_sma_min_ret5: 0.0045, patch_above_sma_max_ret5: 0.022, patch_above_sma_min_ret20: -0.004, patch_above_sma_max_ret20: 0.028, patch_above_sma_low: 0.004, patch_above_sma_high: 0.022, patch_above_sma_min_bounce: 0.002, patch_above_sma_vol_floor: 0.90, patch_above_sma_require_momentum: true, patch_relax_price_proximity_strong: true, patch_relax_price_proximity_min_score: 2, patch_relax_price_proximity_min_dp: 0.01, patch_relax_price_proximity_moderate: true, patch_relax_price_proximity_moderate_min_score: 3, patch_relax_price_proximity_moderate_min_bs: 2}
+    - {label: ep_sma_high014, v19_min_entry_score: 0, v19_block_breakout_only: true, exit_model_min_hold: 2, patch_washout_reversal_entry: true, patch_washout_drop20: -0.07, patch_washout_dist_sma20: -0.025, patch_washout_max_ret5: 0.005, patch_washout_min_bounce: 0.004, patch_washout_vol_floor: 0.65, patch_washout_position_size: 0.30, patch_pullback_reclaim_entry: true, patch_pullback_min_drop20: -0.060, patch_pullback_max_drop20: -0.008, patch_pullback_min_ret5: 0.000, patch_pullback_max_ret5: 0.035, patch_pullback_sma_band: 0.025, patch_pullback_vol_floor: 0.65, patch_early_pullback_start_entry: true, patch_early_pullback_min_drop20: -0.082, patch_early_pullback_max_drop20: -0.024, patch_early_pullback_min_ret5: -0.043, patch_early_pullback_max_ret5: 0.019, patch_early_pullback_min_ret20: -0.090, patch_early_pullback_max_ret20: 0.036, patch_early_pullback_sma_low: -0.020, patch_early_pullback_sma_high: 0.014, patch_early_pullback_min_bounce: 0.004, patch_early_pullback_vol_floor: 0.68, patch_near_sma_continuation_entry: true, patch_near_sma_min_drop20: -0.038, patch_near_sma_max_drop20: -0.010, patch_near_sma_min_ret5: -0.014, patch_near_sma_max_ret5: 0.001, patch_near_sma_min_ret20: -0.036, patch_near_sma_max_ret20: 0.006, patch_near_sma_low: -0.022, patch_near_sma_high: 0.000, patch_near_sma_min_bounce: 0.002, patch_near_sma_vol_floor: 0.65, patch_near_sma_require_momentum: true, patch_above_sma_continuation_entry: true, patch_above_sma_min_drop20: -0.010, patch_above_sma_max_drop20: 0.000, patch_above_sma_min_ret5: 0.0045, patch_above_sma_max_ret5: 0.022, patch_above_sma_min_ret20: -0.004, patch_above_sma_max_ret20: 0.028, patch_above_sma_low: 0.004, patch_above_sma_high: 0.022, patch_above_sma_min_bounce: 0.002, patch_above_sma_vol_floor: 0.90, patch_above_sma_require_momentum: true, patch_relax_price_proximity_strong: true, patch_relax_price_proximity_min_score: 2, patch_relax_price_proximity_min_dp: 0.01, patch_relax_price_proximity_moderate: true, patch_relax_price_proximity_moderate_min_score: 3, patch_relax_price_proximity_moderate_min_bs: 2}
+    - {label: ep_ret5_max022, v19_min_entry_score: 0, v19_block_breakout_only: true, exit_model_min_hold: 2, patch_washout_reversal_entry: true, patch_washout_drop20: -0.07, patch_washout_dist_sma20: -0.025, patch_washout_max_ret5: 0.005, patch_washout_min_bounce: 0.004, patch_washout_vol_floor: 0.65, patch_washout_position_size: 0.30, patch_pullback_reclaim_entry: true, patch_pullback_min_drop20: -0.060, patch_pullback_max_drop20: -0.008, patch_pullback_min_ret5: 0.000, patch_pullback_max_ret5: 0.035, patch_pullback_sma_band: 0.025, patch_pullback_vol_floor: 0.65, patch_early_pullback_start_entry: true, patch_early_pullback_min_drop20: -0.082, patch_early_pullback_max_drop20: -0.024, patch_early_pullback_min_ret5: -0.043, patch_early_pullback_max_ret5: 0.022, patch_early_pullback_min_ret20: -0.090, patch_early_pullback_max_ret20: 0.036, patch_early_pullback_sma_low: -0.020, patch_early_pullback_sma_high: 0.012, patch_early_pullback_min_bounce: 0.004, patch_early_pullback_vol_floor: 0.68, patch_near_sma_continuation_entry: true, patch_near_sma_min_drop20: -0.038, patch_near_sma_max_drop20: -0.010, patch_near_sma_min_ret5: -0.014, patch_near_sma_max_ret5: 0.001, patch_near_sma_min_ret20: -0.036, patch_near_sma_max_ret20: 0.006, patch_near_sma_low: -0.022, patch_near_sma_high: 0.000, patch_near_sma_min_bounce: 0.002, patch_near_sma_vol_floor: 0.65, patch_near_sma_require_momentum: true, patch_above_sma_continuation_entry: true, patch_above_sma_min_drop20: -0.010, patch_above_sma_max_drop20: 0.000, patch_above_sma_min_ret5: 0.0045, patch_above_sma_max_ret5: 0.022, patch_above_sma_min_ret20: -0.004, patch_above_sma_max_ret20: 0.028, patch_above_sma_low: 0.004, patch_above_sma_high: 0.022, patch_above_sma_min_bounce: 0.002, patch_above_sma_vol_floor: 0.90, patch_above_sma_require_momentum: true, patch_relax_price_proximity_strong: true, patch_relax_price_proximity_min_score: 2, patch_relax_price_proximity_min_dp: 0.01, patch_relax_price_proximity_moderate: true, patch_relax_price_proximity_moderate_min_score: 3, patch_relax_price_proximity_moderate_min_bs: 2}
+    - {label: near_ret5_max003, v19_min_entry_score: 0, v19_block_breakout_only: true, exit_model_min_hold: 2, patch_washout_reversal_entry: true, patch_washout_drop20: -0.07, patch_washout_dist_sma20: -0.025, patch_washout_max_ret5: 0.005, patch_washout_min_bounce: 0.004, patch_washout_vol_floor: 0.65, patch_washout_position_size: 0.30, patch_pullback_reclaim_entry: true, patch_pullback_min_drop20: -0.060, patch_pullback_max_drop20: -0.008, patch_pullback_min_ret5: 0.000, patch_pullback_max_ret5: 0.035, patch_pullback_sma_band: 0.025, patch_pullback_vol_floor: 0.65, patch_early_pullback_start_entry: true, patch_early_pullback_min_drop20: -0.082, patch_early_pullback_max_drop20: -0.024, patch_early_pullback_min_ret5: -0.043, patch_early_pullback_max_ret5: 0.019, patch_early_pullback_min_ret20: -0.090, patch_early_pullback_max_ret20: 0.036, patch_early_pullback_sma_low: -0.020, patch_early_pullback_sma_high: 0.012, patch_early_pullback_min_bounce: 0.004, patch_early_pullback_vol_floor: 0.68, patch_near_sma_continuation_entry: true, patch_near_sma_min_drop20: -0.038, patch_near_sma_max_drop20: -0.010, patch_near_sma_min_ret5: -0.014, patch_near_sma_max_ret5: 0.003, patch_near_sma_min_ret20: -0.036, patch_near_sma_max_ret20: 0.006, patch_near_sma_low: -0.022, patch_near_sma_high: 0.000, patch_near_sma_min_bounce: 0.002, patch_near_sma_vol_floor: 0.65, patch_near_sma_require_momentum: true, patch_above_sma_continuation_entry: true, patch_above_sma_min_drop20: -0.010, patch_above_sma_max_drop20: 0.000, patch_above_sma_min_ret5: 0.0045, patch_above_sma_max_ret5: 0.022, patch_above_sma_min_ret20: -0.004, patch_above_sma_max_ret20: 0.028, patch_above_sma_low: 0.004, patch_above_sma_high: 0.022, patch_above_sma_min_bounce: 0.002, patch_above_sma_vol_floor: 0.90, patch_above_sma_require_momentum: true, patch_relax_price_proximity_strong: true, patch_relax_price_proximity_min_score: 2, patch_relax_price_proximity_min_dp: 0.01, patch_relax_price_proximity_moderate: true, patch_relax_price_proximity_moderate_min_score: 3, patch_relax_price_proximity_moderate_min_bs: 2}
+    - {label: near_sma_high002, v19_min_entry_score: 0, v19_block_breakout_only: true, exit_model_min_hold: 2, patch_washout_reversal_entry: true, patch_washout_drop20: -0.07, patch_washout_dist_sma20: -0.025, patch_washout_max_ret5: 0.005, patch_washout_min_bounce: 0.004, patch_washout_vol_floor: 0.65, patch_washout_position_size: 0.30, patch_pullback_reclaim_entry: true, patch_pullback_min_drop20: -0.060, patch_pullback_max_drop20: -0.008, patch_pullback_min_ret5: 0.000, patch_pullback_max_ret5: 0.035, patch_pullback_sma_band: 0.025, patch_pullback_vol_floor: 0.65, patch_early_pullback_start_entry: true, patch_early_pullback_min_drop20: -0.082, patch_early_pullback_max_drop20: -0.024, patch_early_pullback_min_ret5: -0.043, patch_early_pullback_max_ret5: 0.019, patch_early_pullback_min_ret20: -0.090, patch_early_pullback_max_ret20: 0.036, patch_early_pullback_sma_low: -0.020, patch_early_pullback_sma_high: 0.012, patch_early_pullback_min_bounce: 0.004, patch_early_pullback_vol_floor: 0.68, patch_near_sma_continuation_entry: true, patch_near_sma_min_drop20: -0.038, patch_near_sma_max_drop20: -0.010, patch_near_sma_min_ret5: -0.014, patch_near_sma_max_ret5: 0.001, patch_near_sma_min_ret20: -0.036, patch_near_sma_max_ret20: 0.006, patch_near_sma_low: -0.022, patch_near_sma_high: 0.002, patch_near_sma_min_bounce: 0.002, patch_near_sma_vol_floor: 0.65, patch_near_sma_require_momentum: true, patch_above_sma_continuation_entry: true, patch_above_sma_min_drop20: -0.010, patch_above_sma_max_drop20: 0.000, patch_above_sma_min_ret5: 0.0045, patch_above_sma_max_ret5: 0.022, patch_above_sma_min_ret20: -0.004, patch_above_sma_max_ret20: 0.028, patch_above_sma_low: 0.004, patch_above_sma_high: 0.022, patch_above_sma_min_bounce: 0.002, patch_above_sma_vol_floor: 0.90, patch_above_sma_require_momentum: true, patch_relax_price_proximity_strong: true, patch_relax_price_proximity_min_score: 2, patch_relax_price_proximity_min_dp: 0.01, patch_relax_price_proximity_moderate: true, patch_relax_price_proximity_moderate_min_score: 3, patch_relax_price_proximity_moderate_min_bs: 2}
+base:
+  market: vn_derivatives_30m
+  strategy: v22
+  runner: components.runners.run_v22
+  mods:
+    a: true
+    b: true
+    c: false
+    d: false
+    e: true
+    f: true
+    g: true
+    h: true
+    i: true
+    j: true
+  params:
+    signal_exit_enabled: false
+    patch_active_exit_on_raw0: true
+    v22_mode: true
+    v22_fast_exit_skip_strong: true
+    v22_fast_exit_vol_confirm: true
+    v22_fast_exit_threshold_hb: -0.07
+    v22_fast_exit_threshold_std: -0.05
+    v22_adaptive_hard_cap: true
+    v22_hard_cap_mult_hb: 3.0
+    v22_hard_cap_mult_std: 2.5
+    v22_hard_cap_floor: 0.12
+    v22_hard_cap_floor_hb: 0.15
+  split:
+    first_test_year: 2020
+    last_test_year: 2025

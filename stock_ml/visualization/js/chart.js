@@ -7,7 +7,7 @@ function createChart() {
     layout: { background: { color: '#131722' }, textColor: '#d1d4dc' },
     grid: { vertLines: { color: '#1e222d' }, horzLines: { color: '#1e222d' } },
     crosshair: { mode: 0 },
-    timeScale: { timeVisible: false, borderColor: '#2B2B43' },
+    timeScale: { timeVisible: false, secondsVisible: false, borderColor: '#2B2B43' },
     rightPriceScale: { borderColor: '#2B2B43' },
   });
   candleSeries = chart.addCandlestickSeries({
@@ -29,12 +29,26 @@ function createChart() {
 function getMarkers() {
   let m = [];
   if (!currentData || !manifest) return m;
-  for (const model of manifest.models) {
+  for (const model of getFilteredModels()) {
     const vk = model.version_key;
     if (!modelVisibility[vk]) continue;
+    const idx = modelIndices[vk] || [];
+    if (!idx.some(entry => entry.symbol === currentSymbol)) continue;
     const key = vk + '_markers';
-    if (currentData[key]) m = m.concat(currentData[key]);
+    if (currentData[key]) {
+      m = m.concat(currentData[key].map(marker => ({
+        ...marker,
+        time: normalizeTimeForChart(marker.time),
+      })));
+    }
   }
-  m.sort((a, b) => a.time < b.time ? -1 : a.time > b.time ? 1 : 0);
+  m.sort((a, b) => {
+    const ta = a.time;
+    const tb = b.time;
+    if (typeof ta === 'number' && typeof tb === 'number') return ta - tb;
+    const sa = String(ta);
+    const sb = String(tb);
+    return sa < sb ? -1 : sa > sb ? 1 : 0;
+  });
   return m;
 }

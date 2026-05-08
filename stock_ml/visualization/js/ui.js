@@ -9,6 +9,77 @@ function hexToRgba(hex, alpha) {
   return `rgba(${r},${g},${b},${alpha})`;
 }
 
+function getModelMarket(model) {
+  if (model.market) return model.market;
+  if ((model.matrix_bundle || '').startsWith('derivatives_')) return 'vn_derivatives';
+  return 'vn_stock';
+}
+
+function getModelMarketFamily(model) {
+  if (model.market_family) return model.market_family;
+  const market = getModelMarket(model);
+  if (market && market.startsWith('vn_derivatives')) return 'vn_derivatives';
+  return market || 'vn_stock';
+}
+
+function getModelTimeframe(model) {
+  return model.timeframe || 'unknown';
+}
+
+function getFilteredModels() {
+  if (!manifest || !manifest.models) return [];
+  return manifest.models.filter(model => {
+    const family = getModelMarketFamily(model);
+    const timeframe = getModelTimeframe(model);
+    if (currentMarketFamily !== 'all' && family !== currentMarketFamily) return false;
+    if (currentTimeframe !== 'all' && timeframe !== currentTimeframe) return false;
+    return true;
+  });
+}
+
+function getMarketForSymbol(symbol) {
+  for (const [market, index] of Object.entries(baseIndices)) {
+    if ((index.symbols || []).some(s => s.symbol === symbol)) return market;
+  }
+  for (const model of manifest.models || []) {
+    const idx = modelIndices[model.version_key] || [];
+    if (idx.some(s => s.symbol === symbol)) return getModelMarket(model);
+  }
+  return 'vn_stock';
+}
+
+function getActiveMarketsForBaseData() {
+  const markets = new Set(getFilteredModels().map(getModelMarket).filter(Boolean));
+  if (markets.size > 0) return Array.from(markets);
+  if (currentMarketFamily !== 'all') return [currentMarketFamily];
+  return ['vn_stock'];
+}
+
+function getTimeframesForFamily(family) {
+  if (!manifest || !manifest.models) return [];
+  const frames = new Set();
+  for (const model of manifest.models) {
+    if (family !== 'all' && getModelMarketFamily(model) !== family) continue;
+    frames.add(getModelTimeframe(model));
+  }
+  return Array.from(frames).sort();
+}
+
+function renderTimeframeOptions() {
+  const sel = document.getElementById('timeframeSelect');
+  if (!sel) return;
+  const frames = getTimeframesForFamily(currentMarketFamily);
+  sel.innerHTML = '<option value="all">All Timeframes</option>';
+  for (const frame of frames) {
+    const opt = document.createElement('option');
+    opt.value = frame;
+    opt.textContent = frame;
+    sel.appendChild(opt);
+  }
+  if (currentTimeframe !== 'all' && !frames.includes(currentTimeframe)) currentTimeframe = 'all';
+  sel.value = currentTimeframe;
+}
+
 function maxDrawdownFromTrades(trades) {
   if (!trades || trades.length === 0) return 0;
   let cum = 0, peak = 0, maxDd = 0;
@@ -25,7 +96,7 @@ function maxDrawdownFromTrades(trades) {
 function renderToggleButtons() {
   const group = document.getElementById('toggleGroup');
   group.innerHTML = '';
-  for (const model of manifest.models) {
+  for (const model of getFilteredModels()) {
     const vk = model.version_key;
     const isActive = model.active !== false;
     const btn = document.createElement('button');
@@ -50,7 +121,7 @@ function renderToggleButtons() {
 function renderLegend() {
   const legend = document.getElementById('legendBar');
   let html = '';
-  for (const model of manifest.models) {
+  for (const model of getFilteredModels()) {
     const c = model.color;
     const name = model.name;
     const shape = model.marker_shape === 'circle' ? 'dot' : 'arrow';
@@ -86,11 +157,18 @@ function maxConsecutive(trades, type) {
   return max;
 }
 
+function getModelsForCurrentSymbol() {
+  return getFilteredModels().filter(model => {
+    const idx = modelIndices[model.version_key] || [];
+    return idx.some(entry => entry.symbol === currentSymbol);
+  });
+}
+
 function renderStats() {
   if (!currentData || !manifest) return;
   const bar = document.getElementById('statsBar');
   const allStats = [];
-  for (const model of manifest.models) {
+  for (const model of getModelsForCurrentSymbol()) {
     const vk = model.version_key;
     const s = currentData[vk + '_stats'] || {};
     allStats.push({ vk, model, stats: s, trades: currentData[vk + '_trades'] || [] });
@@ -144,13 +222,13 @@ function renderStats() {
 function renderTradePanels() {
   const container = document.getElementById('tablesContainer');
   container.innerHTML = '';
-  for (const model of manifest.models) {
+  for (const model of getModelsForCurrentSymbol()) {
     const vk = model.version_key;
     const trades = currentData[vk + '_trades'] || [];
     const panel = document.createElement('div');
     panel.className = 'trade-panel';
-    const isRule = model.version_key === 'rule';
-    const cols = isRule
+    const isRuleBased = model.version_key === 'rule' || model.version_key === 'rule_derivatives';
+    const cols = isRuleBased
       ? '<th>#</th><th>Entry</th><th>Exit</th><th>Days</th><th>PnL%</th>'
       : '<th>#</th><th>Entry</th><th>Exit</th><th>Days</th><th>PnL%</th><th>Reason</th><th>Trend</th>';
     panel.innerHTML = `<h3 style="color:${model.color}">${model.name} Trades</h3>
@@ -158,7 +236,7 @@ function renderTradePanels() {
         trades.map((t, i) => {
           const cls = t.pnl_pct >= 0 ? 'positive' : 'negative';
           let row = `<td>${i+1}</td><td>${t.entry_date||''}</td><td>${t.exit_date||''}</td><td>${t.holding_days||0}</td><td class="${cls}">${fmt(t.pnl_pct)}%</td>`;
-          if (!isRule) row += `<td>${t.exit_reason||''}</td><td>${t.entry_trend||''}</td>`;
+          if (!isRuleBased) row += `<td>${t.exit_reason||''}</td><td>${t.entry_trend||''}</td>`;
           return `<tr>${row}</tr>`;
         }).join('')
       }</tbody></table>`;
@@ -170,7 +248,7 @@ function updateStatsVisibility() {
   if (!manifest) return;
   const bar = document.getElementById('statsBar');
   const cards = bar.querySelectorAll('.stat-card');
-  manifest.models.forEach(function(model, idx) {
+  getModelsForCurrentSymbol().forEach(function(model, idx) {
     const card = cards[idx];
     if (!card) return;
     // Keep stats cards fully visible even when a model layer is toggled off.
@@ -187,25 +265,28 @@ function updateStatsVisibility() {
 // ============================================================
 
 function renderSymbolSelector(baseIndex, modelIndices) {
-  // Build set of symbols that appear in at least one model's data
+  const filteredModels = getFilteredModels();
   const modelSymbolSet = new Set();
-  for (const syms of Object.values(modelIndices)) {
+  for (const model of filteredModels) {
+    const syms = modelIndices[model.version_key] || [];
     for (const s of syms) modelSymbolSet.add(s.symbol);
   }
 
-  // Filter base index to only symbols with model data
   const symbolSet = new Set();
   if (baseIndex && baseIndex.symbols) {
     for (const s of baseIndex.symbols) {
       if (modelSymbolSet.has(s.symbol)) symbolSet.add(s.symbol);
     }
   }
+  for (const sym of modelSymbolSet) {
+    symbolSet.add(sym);
+  }
   const symbolList = [...symbolSet].sort();
 
   allSymbolItems = symbolList.map(sym => {
-    const file = baseIndex.symbols.find(s => s.symbol === sym);
+    const baseFile = baseIndex && baseIndex.symbols ? baseIndex.symbols.find(s => s.symbol === sym) : null;
     const pnlData = {};
-    for (const model of manifest.models) {
+    for (const model of filteredModels) {
       const vk = model.version_key;
       const idx = modelIndices[vk];
       if (!idx) continue;
@@ -214,7 +295,7 @@ function renderSymbolSelector(baseIndex, modelIndices) {
     }
     return {
       symbol: sym,
-      file: file ? file.file : sym,
+      file: baseFile ? baseFile.file : sym,
       pnlData: pnlData
     };
   });
@@ -233,7 +314,7 @@ function renderSortModelOptions() {
   const sel = document.getElementById('sortModel');
   if (!sel) return;
   sel.innerHTML = '<option value="">A-Z (Tên)</option>';
-  for (const model of manifest.models) {
+  for (const model of getFilteredModels()) {
     const opt = document.createElement('option');
     opt.value = model.version_key;
     opt.textContent = model.name + ' PnL';
@@ -282,9 +363,9 @@ function renderDropdownItems() {
   // Count header
   const countDiv = document.createElement('div');
   countDiv.className = 'symbol-dropdown-count';
-  countDiv.textContent = `${filteredSymbolItems.length} / ${allSymbolItems.length} mã cổ phiếu`;
+  countDiv.textContent = `${filteredSymbolItems.length} / ${allSymbolItems.length} mã`;
   if (sortByModel) {
-    const modelName = manifest.models.find(m => m.version_key === sortByModel);
+    const modelName = getFilteredModels().find(m => m.version_key === sortByModel);
     countDiv.textContent += ` | Sắp xếp: ${modelName ? modelName.name : sortByModel} PnL ${sortDescending ? '↓' : '↑'}`;
   }
   dropdown.appendChild(countDiv);
@@ -310,7 +391,7 @@ function renderDropdownItems() {
     const pnlSpan = document.createElement('span');
     pnlSpan.className = 'sym-pnl';
     let pnlParts = [];
-    for (const model of manifest.models) {
+    for (const model of getFilteredModels()) {
       const vk = model.version_key;
       const pnl = item.pnlData[vk] || 0;
       const cls = pnl >= 0 ? 'positive' : 'negative';

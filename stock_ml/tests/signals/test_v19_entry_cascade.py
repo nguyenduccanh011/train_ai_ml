@@ -151,3 +151,220 @@ class TestPositionSize:
         if res.action == "enter":
             assert res.metadata["size"] >= 0.25
             assert res.metadata["size"] <= 1.0
+
+
+class TestPrevPredRelaxPatch:
+    def test_relax_prev_pred_strong_allows_entry(self) -> None:
+        df = _df(100, seed=11)
+        bar_idx = 70
+        ctx = _ctx(
+            bar_idx=bar_idx,
+            df=df,
+            entry_signal=1,
+            entry_state={"prev_pred": 0, "trend": "strong"},
+        )
+
+        ind = ctx.config["indicators"]
+        feat = ind["feat_arrays"]
+
+        # Force a high-quality strong-trend setup that only fails at prev_pred gate.
+        feat["range_position_20d"][bar_idx] = 0.60
+        feat["dist_to_resistance"][bar_idx] = 0.03
+        feat["rsi_slope_5d"][
+            bar_idx
+        ] = -0.10  # Keep rs<=0 so default prev_pred bypass does not apply.
+        feat["vol_surge_ratio"][bar_idx] = 1.30
+        feat["breakout_setup_score"][bar_idx] = 2.0
+        feat["higher_lows_count"][bar_idx] = 2.0
+        feat["bb_width_percentile"][bar_idx] = 0.60
+
+        ind["consolidation_breakout"][bar_idx] = False
+        ind["secondary_breakout"][bar_idx] = False
+        ind["vshape_bypass"][bar_idx] = False
+        ind["ret_5d"][bar_idx] = 0.01
+        ind["ret_20d"][bar_idx] = 0.08
+        ind["ret_60d"][bar_idx] = 0.05
+        ind["drop_from_peak_20"][bar_idx] = -0.02
+        ind["avg_vol20"][bar_idx] = 1.0
+        ind["volume"][bar_idx] = 2.0
+        ind["sma20"][bar_idx] = ind["close"][bar_idx] * 0.99
+        ind["sma50"][bar_idx] = ind["close"][bar_idx] * 0.98
+
+        base_res = V19EntryCascade().apply(ctx)
+        assert base_res.action == "pass"
+
+        ctx.config["params"] = {
+            "patch_relax_prev_pred_strong": True,
+            "patch_relax_prev_pred_min_score": 3,
+        }
+        patched_res = V19EntryCascade().apply(ctx)
+
+        assert patched_res.action == "enter"
+        assert patched_res.metadata["counters"]["n_v19_relaxed_prev_pred_entries"] == 1
+
+
+class TestCooldownAndPriceProximityPatch:
+    @staticmethod
+    def _force_entry_setup(ctx: BarContext, bar_idx: int) -> None:
+        ind = ctx.config["indicators"]
+        feat = ind["feat_arrays"]
+
+        feat["range_position_20d"][bar_idx] = 0.60
+        feat["dist_to_resistance"][bar_idx] = 0.03
+        feat["rsi_slope_5d"][bar_idx] = 0.20
+        feat["vol_surge_ratio"][bar_idx] = 1.30
+        feat["breakout_setup_score"][bar_idx] = 2.0
+        feat["higher_lows_count"][bar_idx] = 2.0
+        feat["bb_width_percentile"][bar_idx] = 0.60
+
+        ind["consolidation_breakout"][bar_idx] = False
+        ind["secondary_breakout"][bar_idx] = False
+        ind["vshape_bypass"][bar_idx] = False
+        ind["ret_5d"][bar_idx] = 0.01
+        ind["ret_20d"][bar_idx] = 0.08
+        ind["ret_60d"][bar_idx] = 0.05
+        ind["drop_from_peak_20"][bar_idx] = -0.02
+        ind["avg_vol20"][bar_idx] = 1.0
+        ind["volume"][bar_idx] = 2.0
+        ind["sma20"][bar_idx] = ind["close"][bar_idx] * 0.99
+        ind["sma50"][bar_idx] = ind["close"][bar_idx] * 0.98
+
+    def test_disable_cooldown_filter_allows_entry(self) -> None:
+        df = _df(100, seed=13)
+        bar_idx = 70
+        ctx = _ctx(
+            bar_idx=bar_idx,
+            df=df,
+            entry_signal=1,
+            entry_state={
+                "prev_pred": 1,
+                "trend": "strong",
+                "cooldown_remaining": 2,
+                "last_exit_price": 0.0,
+                "last_exit_reason": "",
+            },
+        )
+        self._force_entry_setup(ctx, bar_idx)
+
+        base_res = V19EntryCascade().apply(ctx)
+        assert base_res.action == "pass"
+
+        ctx.config["params"] = {"patch_disable_cooldown_filter": True}
+        patched_res = V19EntryCascade().apply(ctx)
+        assert patched_res.action == "enter"
+        assert patched_res.metadata["counters"]["n_v19_relaxed_cooldown_entries"] == 1
+
+    def test_disable_price_proximity_filter_allows_entry(self) -> None:
+        df = _df(100, seed=17)
+        bar_idx = 70
+        close = float(df.loc[bar_idx, "close"])
+        ctx = _ctx(
+            bar_idx=bar_idx,
+            df=df,
+            entry_signal=1,
+            entry_state={
+                "prev_pred": 1,
+                "trend": "strong",
+                "cooldown_remaining": 0,
+                "last_exit_price": close * 1.01,  # <3% diff => default block
+                "last_exit_reason": "exit_model",
+            },
+        )
+        self._force_entry_setup(ctx, bar_idx)
+
+        base_res = V19EntryCascade().apply(ctx)
+        assert base_res.action == "pass"
+
+        ctx.config["params"] = {"patch_disable_price_proximity_filter": True}
+        patched_res = V19EntryCascade().apply(ctx)
+        assert patched_res.action == "enter"
+        assert patched_res.metadata["counters"]["n_v19_relaxed_price_prox_entries"] == 1
+
+    def test_relax_price_proximity_strong_allows_entry(self) -> None:
+        df = _df(100, seed=19)
+        bar_idx = 70
+        close = float(df.loc[bar_idx, "close"])
+        ctx = _ctx(
+            bar_idx=bar_idx,
+            df=df,
+            entry_signal=1,
+            entry_state={
+                "prev_pred": 1,
+                "trend": "strong",
+                "cooldown_remaining": 0,
+                "last_exit_price": close * 1.01,  # <3% diff => default block
+                "last_exit_reason": "exit_model",
+            },
+        )
+        self._force_entry_setup(ctx, bar_idx)
+
+        base_res = V19EntryCascade().apply(ctx)
+        assert base_res.action == "pass"
+
+        ctx.config["params"] = {
+            "patch_relax_price_proximity_strong": True,
+            "patch_relax_price_proximity_min_score": 3,
+        }
+        patched_res = V19EntryCascade().apply(ctx)
+        assert patched_res.action == "enter"
+        assert patched_res.metadata["counters"]["n_v19_relaxed_price_prox_entries"] == 1
+
+    def test_relax_price_proximity_moderate_allows_entry(self) -> None:
+        df = _df(100, seed=23)
+        bar_idx = 70
+        close = float(df.loc[bar_idx, "close"])
+        ctx = _ctx(
+            bar_idx=bar_idx,
+            df=df,
+            entry_signal=1,
+            entry_state={
+                "prev_pred": 1,
+                "trend": "moderate",
+                "cooldown_remaining": 0,
+                "last_exit_price": close * 1.01,  # <3% diff => default block
+                "last_exit_reason": "exit_model",
+            },
+        )
+        self._force_entry_setup(ctx, bar_idx)
+
+        base_res = V19EntryCascade().apply(ctx)
+        assert base_res.action == "pass"
+
+        ctx.config["params"] = {
+            "patch_relax_price_proximity_moderate": True,
+            "patch_relax_price_proximity_moderate_min_score": 4,
+        }
+        patched_res = V19EntryCascade().apply(ctx)
+        assert patched_res.action == "enter"
+        assert patched_res.metadata["counters"]["n_v19_relaxed_price_prox_entries"] == 1
+
+    def test_relax_price_proximity_moderate_respects_min_dp_and_bs(self) -> None:
+        df = _df(100, seed=29)
+        bar_idx = 70
+        close = float(df.loc[bar_idx, "close"])
+        ctx = _ctx(
+            bar_idx=bar_idx,
+            df=df,
+            entry_signal=1,
+            entry_state={
+                "prev_pred": 1,
+                "trend": "moderate",
+                "cooldown_remaining": 0,
+                "last_exit_price": close * 1.01,
+                "last_exit_reason": "exit_model",
+            },
+        )
+        self._force_entry_setup(ctx, bar_idx)
+        ind = ctx.config["indicators"]
+        feat = ind["feat_arrays"]
+        feat["dist_to_resistance"][bar_idx] = 0.005
+        feat["breakout_setup_score"][bar_idx] = 0.0
+
+        ctx.config["params"] = {
+            "patch_relax_price_proximity_moderate": True,
+            "patch_relax_price_proximity_moderate_min_score": 4,
+            "patch_relax_price_proximity_min_dp": 0.02,
+            "patch_relax_price_proximity_moderate_min_bs": 1,
+        }
+        patched_res = V19EntryCascade().apply(ctx)
+        assert patched_res.action == "pass"

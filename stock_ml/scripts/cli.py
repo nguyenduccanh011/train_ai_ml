@@ -82,7 +82,12 @@ def _artifact_run_name(name: str) -> str:
 
 
 def _make_matrix_short_name(exp_name: str, row: dict[str, Any], matrix_prefix: str) -> str:
-    feature_map = {"leading_v2": "v2", "leading_v3": "v3", "leading_v4": "v4"}
+    feature_map = {
+        "leading": "ld",
+        "leading_v2": "v2",
+        "leading_v3": "v3",
+        "leading_v4": "v4",
+    }
     entry_map = {
         "random_forest": "rf",
         "gru": "gru",
@@ -90,15 +95,20 @@ def _make_matrix_short_name(exp_name: str, row: dict[str, Any], matrix_prefix: s
         "xgboost": "xgb",
         "catboost": "cat",
     }
+    market_map = {"vn_derivatives": "deriv", "vn_stock": "stock"}
 
+    market = str(row.get("market") or "")
     feature_set = str(row.get("feature_set") or "")
     entry_model = str(row.get("entry_model") or "")
-    feature = feature_map.get(feature_set, feature_set)
-    entry = entry_map.get(entry_model, entry_model)
+    feature = feature_map.get(feature_set, feature_set[:3])
+    entry = entry_map.get(entry_model, entry_model[:3])
+    market_prefix = market_map.get(market, market[:5])
+
+    if market_prefix and feature and entry:
+        return f"{market_prefix}_{feature}_{entry}"
 
     match = re.search(r"-strategy-([A-Za-z0-9_]+)$", exp_name)
     strategy = match.group(1) if match else ""
-
     if feature and entry and strategy:
         return f"{feature}_{entry}_{strategy}"
 
@@ -169,6 +179,18 @@ def _save_artifacts(
     config_dict = cfg.model_dump()
     config_hash = _stable_config_hash(config_dict)
     run_dir.mkdir(parents=True, exist_ok=True)
+    from src.leaderboard.fairness import backtest_window_key, load_config, resolve_market_family
+
+    split_cfg = cfg.split.model_dump()
+    market_family = resolve_market_family(
+        cfg.market,
+        str(result.metadata.get("timeframe", "unknown")),
+        load_config(),
+    )
+    window_key = backtest_window_key(
+        int(split_cfg.get("first_test_year", 0)),
+        int(split_cfg.get("last_test_year", 0)),
+    )
     execution_cfg = {
         **(config_dict.get("execution", {}) or {}),
         **result.metadata.get("execution", {}),
@@ -193,6 +215,7 @@ def _save_artifacts(
     predictions_meta = {
         "config_hash": config_hash,
         "market": cfg.market,
+        "market_family": market_family,
         "currency": execution_cfg.get("currency", "unknown"),
         "pnl_mode": execution_cfg.get("pnl_mode", "equity_spot"),
         "schema": result.metadata.get("schema", "unknown"),
@@ -201,7 +224,8 @@ def _save_artifacts(
         "exit_model_type": cfg.signals.exit_model.type,
         "exit_model_enabled": cfg.signals.exit_model.enabled,
         "feature_set": cfg.feature_set(),
-        "split": cfg.split.model_dump(),
+        "split": split_cfg,
+        "backtest_window_key": window_key,
         "cache_stats": result.metadata.get("cache_stats", {}),
         "created_at": datetime.now().isoformat(),
     }
@@ -226,10 +250,12 @@ def _save_artifacts(
         "per_symbol_coverage": symbol_coverage,
         "config_hash": config_hash,
         "market": predictions_meta["market"],
+        "market_family": predictions_meta["market_family"],
         "currency": predictions_meta["currency"],
         "pnl_mode": predictions_meta["pnl_mode"],
         "schema": predictions_meta["schema"],
         "timeframe": predictions_meta["timeframe"],
+        "backtest_window_key": predictions_meta["backtest_window_key"],
     }
 
     (run_dir / "metrics.json").write_text(
@@ -254,6 +280,7 @@ def _save_artifacts(
 def cmd_run(args: argparse.Namespace) -> int:
     device = args.device or "cpu"
 
+    from src.env import get_results_dir
     from src.pipeline import ExperimentConfig, Pipeline
 
     yaml_path = _resolve_yaml(args.experiment)
@@ -262,7 +289,10 @@ def cmd_run(args: argparse.Namespace) -> int:
         return 1
 
     cfg = ExperimentConfig.from_yaml(yaml_path)
-    symbols = _load_symbols(cfg.market)
+    symbols = _load_symbols(cfg.market, args.symbols_limit)
+    if not symbols:
+        print(f"Error: no symbols resolved for market={cfg.market}", file=sys.stderr)
+        return 1
     pipeline = Pipeline(cfg, symbols=symbols, device=device)
     result = pipeline.run()
 
@@ -272,7 +302,7 @@ def cmd_run(args: argparse.Namespace) -> int:
         _save_result_csv(result.name, result.trades_df, Path(args.output))
     elif getattr(args, "save_results", False):
         if not result.trades_df.empty:
-            results_dir = REPO_ROOT / "results"
+            results_dir = Path(get_results_dir())
             out = results_dir / f"trades_{cfg.strategy}.csv"
             _save_result_csv(result.name, result.trades_df, out)
         _save_experiment_artifacts(cfg, result, skip_leaderboard=args.skip_leaderboard)
@@ -1042,6 +1072,9 @@ def cmd_export_matrix(args: argparse.Namespace) -> int:
                 "marker_shape": "arrowUp",
                 "active": True,
                 "order": index - 1,
+                "market": row.get("market"),
+                "schema": row.get("schema"),
+                "timeframe": row.get("timeframe"),
             }
             result = export_version(short_name, model_cfg, str(tmp_results), str(viz_dir))
             if result:
@@ -1166,6 +1199,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_run = sub.add_parser("run", help="Run a single experiment")
     p_run.add_argument("experiment", help="Path to champion YAML (e.g. champions/v22)")
     p_run.add_argument("--device", default="cpu", help="cpu or gpu")
+    p_run.add_argument("--symbols-limit", type=int, help="Run experiment on the first N symbols")
     p_run.add_argument("--output", help="Save trades CSV to this path")
     p_run.add_argument(
         "--save-results",

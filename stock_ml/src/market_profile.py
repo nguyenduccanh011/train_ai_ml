@@ -44,7 +44,7 @@ def markets_dir() -> Path:
 
 class MarketDataConfig(BaseModel):
     data_dir: str | None = None
-    schema: str | None = None
+    data_schema: str | None = Field(default=None, alias="schema")
     default_timeframe: str = "1D"
     benchmark_symbol: str | None = None
     timestamp_column: str = "timestamp"
@@ -54,6 +54,8 @@ class MarketDataConfig(BaseModel):
     )
     optional_columns: list[str] = Field(default_factory=list)
     volume_unit: str | None = None
+
+    model_config = ConfigDict(populate_by_name=True)
 
 
 class MarketExecutionConfig(BaseModel):
@@ -276,7 +278,7 @@ def resolve_run_context(experiment_cfg: Any | None = None) -> ResolvedRunContext
 
     run_identity = {
         "market": market,
-        "schema": profile.data.schema,
+        "schema": profile.data.data_schema,
         "timeframe": profile.data.default_timeframe,
         "symbols": profile.symbols.default_list,
         "features": feature_set,
@@ -296,7 +298,7 @@ def resolve_run_context(experiment_cfg: Any | None = None) -> ResolvedRunContext
         resolved_symbol_groups=profile.symbols.groups,
         execution_costs=execution,
         timeframe=profile.data.default_timeframe,
-        schema=profile.data.schema,
+        schema=profile.data.data_schema,
         feature_set=feature_set,
         model_stack=model_stack,
         target_config=target_config,

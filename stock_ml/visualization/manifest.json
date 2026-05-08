@@ -1,6 +1,12 @@
 {
-  "generated_at": "2026-05-05T13:39:40.077685",
+  "generated_at": "2026-05-08T13:44:24.253854",
   "base_data_dir": "data",
+  "base_data_dirs": {
+    "vn_stock": "data",
+    "vn_derivatives": "data_derivatives",
+    "vn_derivatives_30m": "data_derivatives_30m",
+    "vn_derivatives_1d": "data_derivatives_1d"
+  },
   "base_symbols": [
     "AAA",
     "AAH",
@@ -501,7 +507,8 @@
       "total_pnl": 7147.2,
       "active": false,
       "order": -51,
-      "composite_score": 453.8
+      "composite_score": 453.8,
+      "market_family": "vn_stock"
     },
     {
       "version_key": "v37a_exit",
@@ -514,7 +521,8 @@
       "total_pnl": 12385.6,
       "active": false,
       "order": -51,
-      "composite_score": 600.1
+      "composite_score": 600.1,
+      "market_family": "vn_stock"
     },
     {
       "version_key": "v38b3",
@@ -527,7 +535,8 @@
       "total_pnl": 7767.5,
       "active": false,
       "order": -50,
-      "composite_score": 533.9
+      "composite_score": 533.9,
+      "market_family": "vn_stock"
     },
     {
       "version_key": "v42_a",
@@ -540,7 +549,8 @@
       "total_pnl": 11141.7,
       "active": false,
       "order": -50,
-      "composite_score": 528.4
+      "composite_score": 528.4,
+      "market_family": "vn_stock"
     },
     {
       "version_key": "v38d2",
@@ -553,7 +563,8 @@
       "total_pnl": 7240.7,
       "active": false,
       "order": -49,
-      "composite_score": 480.1
+      "composite_score": 480.1,
+      "market_family": "vn_stock"
     },
     {
       "version_key": "v42_base",
@@ -566,7 +577,8 @@
       "total_pnl": 8232.8,
       "active": false,
       "order": -49,
-      "composite_score": 530.2
+      "composite_score": 530.2,
+      "market_family": "vn_stock"
     },
     {
       "version_key": "v38c2",
@@ -579,7 +591,8 @@
       "total_pnl": 7681.4,
       "active": false,
       "order": -48,
-      "composite_score": 521.7
+      "composite_score": 521.7,
+      "market_family": "vn_stock"
     },
     {
       "version_key": "v38b2",
@@ -592,7 +605,8 @@
       "total_pnl": 11505.4,
       "active": false,
       "order": -47,
-      "composite_score": 585.2
+      "composite_score": 585.2,
+      "market_family": "vn_stock"
     },
     {
       "version_key": "v38bcd",
@@ -605,7 +619,8 @@
       "total_pnl": 6516.5,
       "active": false,
       "order": -46,
-      "composite_score": 362.4
+      "composite_score": 362.4,
+      "market_family": "vn_stock"
     },
     {
       "version_key": "v38cd",
@@ -618,7 +633,8 @@
       "total_pnl": 6768.7,
       "active": false,
       "order": -45,
-      "composite_score": 408.7
+      "composite_score": 408.7,
+      "market_family": "vn_stock"
     },
     {
       "version_key": "v38bd",
@@ -631,7 +647,8 @@
       "total_pnl": 6771.8,
       "active": false,
       "order": -44,
-      "composite_score": 385.4
+      "composite_score": 385.4,
+      "market_family": "vn_stock"
     },
     {
       "version_key": "v38bc",
@@ -644,7 +661,8 @@
       "total_pnl": 7572.6,
       "active": false,
       "order": -43,
-      "composite_score": 501.5
+      "composite_score": 501.5,
+      "market_family": "vn_stock"
     },
     {
       "version_key": "v38d",
@@ -657,7 +675,8 @@
       "total_pnl": 7161.0,
       "active": false,
       "order": -42,
-      "composite_score": 453.2
+      "composite_score": 453.2,
+      "market_family": "vn_stock"
     },
     {
       "version_key": "v38c",
@@ -670,7 +689,8 @@
       "total_pnl": 7631.6,
       "active": false,
       "order": -41,
-      "composite_score": 516.5
+      "composite_score": 516.5,
+      "market_family": "vn_stock"
     },
     {
       "version_key": "v39g",
@@ -683,7 +703,8 @@
       "total_pnl": 12474.8,
       "active": false,
       "order": -41,
-      "composite_score": 629.0
+      "composite_score": 629.0,
+      "market_family": "vn_stock"
     },
     {
       "version_key": "v38b",
@@ -696,7 +717,8 @@
       "total_pnl": 7540.1,
       "active": false,
       "order": -40,
-      "composite_score": 496.6
+      "composite_score": 496.6,
+      "market_family": "vn_stock"
     },
     {
       "version_key": "v39f",
@@ -709,7 +731,8 @@
       "total_pnl": 12490.9,
       "active": false,
       "order": -40,
-      "composite_score": 630.7
+      "composite_score": 630.7,
+      "market_family": "vn_stock"
     },
     {
       "version_key": "v39d",
@@ -722,7 +745,8 @@
       "total_pnl": 12611.4,
       "active": false,
       "order": -39,
-      "composite_score": 639.4
+      "composite_score": 639.4,
+      "market_family": "vn_stock"
     },
     {
       "version_key": "v39e",
@@ -735,7 +759,8 @@
       "total_pnl": 12611.4,
       "active": false,
       "order": -38,
-      "composite_score": 639.4
+      "composite_score": 639.4,
+      "market_family": "vn_stock"
     },
     {
       "version_key": "v39b",
@@ -748,7 +773,8 @@
       "total_pnl": 12474.8,
       "active": false,
       "order": -37,
-      "composite_score": 629.0
+      "composite_score": 629.0,
+      "market_family": "vn_stock"
     },
     {
       "version_key": "v39a2",
@@ -761,7 +787,8 @@
       "total_pnl": 12490.9,
       "active": false,
       "order": -36,
-      "composite_score": 630.7
+      "composite_score": 630.7,
+      "market_family": "vn_stock"
     },
     {
       "version_key": "v39a",
@@ -774,7 +801,8 @@
       "total_pnl": 12611.4,
       "active": false,
       "order": -35,
-      "composite_score": 639.4
+      "composite_score": 639.4,
+      "market_family": "vn_stock"
     },
     {
       "version_key": "v37d",
@@ -787,7 +815,8 @@
       "total_pnl": 7067.1,
       "active": false,
       "order": -33,
-      "composite_score": 489.0
+      "composite_score": 489.0,
+      "market_family": "vn_stock"
     },
     {
       "version_key": "v37b",
@@ -800,7 +829,8 @@
       "total_pnl": 7974.6,
       "active": false,
       "order": -32,
-      "composite_score": 550.9
+      "composite_score": 550.9,
+      "market_family": "vn_stock"
     },
     {
       "version_key": "v37c",
@@ -813,7 +843,32 @@
       "total_pnl": 7284.9,
       "active": false,
       "order": -31,
-      "composite_score": 524.2
+      "composite_score": 524.2,
+      "market_family": "vn_stock"
+    },
+    {
+      "version_key": "deriv_ld_cat",
+      "name": "Deriv Top1 P114 1H (CatBoost)",
+      "color": "#FF6D00",
+      "marker_shape": "arrowUp",
+      "data_dir": "data_deriv_ld_cat",
+      "total_symbols": 2,
+      "symbols_with_trades": 2,
+      "total_pnl": 607.5999999999999,
+      "composite_score": 181.4,
+      "active": true,
+      "order": -31,
+      "market": "vn_derivatives",
+      "schema": "ohlcv_futures_1h",
+      "timeframe": "1H",
+      "market_family": "vn_derivatives",
+      "matrix_bundle": "derivatives_vn30f1m_phase114_1h_mod4_target_sweep",
+      "source_run_name": "deriv_p114_1h_mod4_target_signals_features-leading-signals_entry_model_type-catboost-signals_target-e102g018l026-exit_model-x48l0485-fusion-dist-params-mod5",
+      "entry_model": "catboost",
+      "exit_model_type": "lightgbm",
+      "feature_set": "leading",
+      "win_rate": 82.35,
+      "sharpe": 0.8367
     },
     {
       "version_key": "v22_exit_ablation_round37_top1",
@@ -827,7 +882,8 @@
       "composite_score": 634.6,
       "active": true,
       "order": -30,
-      "matrix_bundle": "v22_exit_ablation_round37"
+      "matrix_bundle": "v22_exit_ablation_round37",
+      "market_family": "vn_stock"
     },
     {
       "version_key": "v37a",
@@ -840,7 +896,46 @@
       "total_pnl": 12474.8,
       "active": false,
       "order": -30,
-      "composite_score": 629.0
+      "composite_score": 629.0,
+      "market_family": "vn_stock"
+    },
+    {
+      "version_key": "deriv_top1_p14_mh12",
+      "name": "Deriv Top1 P14 MH12",
+      "color": "#00B8D4",
+      "marker_shape": "arrowUp",
+      "data_dir": "data_deriv_top1_p14_mh12",
+      "total_symbols": 2,
+      "symbols_with_trades": 2,
+      "total_pnl": 410.5,
+      "composite_score": 153.1,
+      "active": true,
+      "order": -29,
+      "market": "vn_derivatives",
+      "schema": "ohlcv_futures_1h",
+      "timeframe": "1H",
+      "matrix_bundle": "derivatives_vn30f1m_phase14_exit_calibration",
+      "source_run_name": "deriv_p14_excal_signals_features-leading-signals_entry_model_type-random_forest-signals_target-e75g325l1625-exit_model-x40l038-fusion-dist_minhold-params-mh12",
+      "source_config_hash": "e1dd7f7130d6",
+      "market_family": "vn_derivatives"
+    },
+    {
+      "version_key": "deriv_ld_rf",
+      "name": "Deriv Top1 P62 (1H)",
+      "color": "#00E676",
+      "marker_shape": "arrowUp",
+      "data_dir": "data_deriv_ld_rf",
+      "total_symbols": 2,
+      "symbols_with_trades": 2,
+      "total_pnl": 451.9,
+      "composite_score": 163.6,
+      "active": true,
+      "order": -28,
+      "market": "vn_derivatives",
+      "schema": "ohlcv_futures_1h",
+      "timeframe": "1H",
+      "matrix_bundle": "derivatives_vn30f1m_phase62_1h_cap_sweep",
+      "market_family": "vn_derivatives"
     },
     {
       "version_key": "v36c",
@@ -853,7 +948,8 @@
       "total_pnl": 12497.8,
       "active": false,
       "order": -22,
-      "composite_score": 629.2
+      "composite_score": 629.2,
+      "market_family": "vn_stock"
     },
     {
       "version_key": "v36b",
@@ -866,7 +962,8 @@
       "total_pnl": 12504.0,
       "active": false,
       "order": -21,
-      "composite_score": 630.8
+      "composite_score": 630.8,
+      "market_family": "vn_stock"
     },
     {
       "version_key": "v22_exit_ablation_round34_top1_v21",
@@ -880,7 +977,8 @@
       "composite_score": 766.7,
       "active": true,
       "order": -20,
-      "matrix_bundle": "v22_exit_ablation_round34"
+      "matrix_bundle": "v22_exit_ablation_round34",
+      "market_family": "vn_stock"
     },
     {
       "version_key": "v36a",
@@ -893,7 +991,8 @@
       "total_pnl": 12159.4,
       "active": false,
       "order": -20,
-      "composite_score": 623.5
+      "composite_score": 623.5,
+      "market_family": "vn_stock"
     },
     {
       "version_key": "v35c",
@@ -906,7 +1005,8 @@
       "total_pnl": 8037.6,
       "active": false,
       "order": -12,
-      "composite_score": 538.7
+      "composite_score": 538.7,
+      "market_family": "vn_stock"
     },
     {
       "version_key": "v35b",
@@ -919,7 +1019,8 @@
       "total_pnl": 12524.5,
       "active": false,
       "order": -11,
-      "composite_score": 629.8
+      "composite_score": 629.8,
+      "market_family": "vn_stock"
     },
     {
       "version_key": "v22_exit_ablation_round10_top1",
@@ -933,7 +1034,8 @@
       "composite_score": 766.4,
       "active": true,
       "order": -10,
-      "matrix_bundle": "v22_exit_ablation_round10"
+      "matrix_bundle": "v22_exit_ablation_round10",
+      "market_family": "vn_stock"
     },
     {
       "version_key": "v35a",
@@ -946,7 +1048,8 @@
       "total_pnl": 7046.8,
       "active": false,
       "order": -10,
-      "composite_score": 508.2
+      "composite_score": 508.2,
+      "market_family": "vn_stock"
     },
     {
       "version_key": "v34",
@@ -959,7 +1062,8 @@
       "total_pnl": 12063.8,
       "active": false,
       "order": -6,
-      "composite_score": 624.4
+      "composite_score": 624.4,
+      "market_family": "vn_stock"
     },
     {
       "version_key": "v33",
@@ -972,7 +1076,8 @@
       "total_pnl": 7510.9,
       "active": false,
       "order": -5,
-      "composite_score": 510.1
+      "composite_score": 510.1,
+      "market_family": "vn_stock"
     },
     {
       "version_key": "v32",
@@ -985,7 +1090,8 @@
       "total_pnl": 7510.9,
       "active": false,
       "order": -4,
-      "composite_score": 510.1
+      "composite_score": 510.1,
+      "market_family": "vn_stock"
     },
     {
       "version_key": "v31",
@@ -998,7 +1104,8 @@
       "total_pnl": 7558.4,
       "active": false,
       "order": -3,
-      "composite_score": 514.8
+      "composite_score": 514.8,
+      "market_family": "vn_stock"
     },
     {
       "version_key": "v30",
@@ -1011,7 +1118,8 @@
       "total_pnl": 7526.4,
       "active": false,
       "order": -2,
-      "composite_score": 514.1
+      "composite_score": 514.1,
+      "market_family": "vn_stock"
     },
     {
       "version_key": "v29",
@@ -1024,7 +1132,62 @@
       "total_pnl": 7078.5,
       "active": false,
       "order": -1,
-      "composite_score": 458.3
+      "composite_score": 458.3,
+      "market_family": "vn_stock"
+    },
+    {
+      "version_key": "vn_de_vol_xgb",
+      "name": "vn_de_vol_xgb",
+      "color": "#2196F3",
+      "marker_shape": "arrowUp",
+      "data_dir": "data_vn_de_vol_xgb",
+      "total_symbols": 2,
+      "symbols_with_trades": 2,
+      "total_pnl": 985.7,
+      "composite_score": 250.2,
+      "active": true,
+      "order": 0,
+      "market": "vn_derivatives_30m",
+      "schema": "ohlcv_futures_1h",
+      "timeframe": "30m",
+      "market_family": "vn_derivatives",
+      "matrix_bundle": "derivatives_vn30f1m_phase240_30m_trend_regime_x27_loss_refine_micro"
+    },
+    {
+      "version_key": "deriv_v3_rf",
+      "name": "deriv_v3_rf",
+      "color": "#2196F3",
+      "marker_shape": "arrowUp",
+      "data_dir": "data_deriv_v3_rf",
+      "total_symbols": 2,
+      "symbols_with_trades": 2,
+      "total_pnl": 144.7,
+      "composite_score": 56.9,
+      "active": true,
+      "order": 0,
+      "market": "vn_derivatives",
+      "schema": "ohlcv_futures_1h",
+      "timeframe": "1H",
+      "matrix_bundle": "derivatives_vn30f1m_phase1_smoke",
+      "market_family": "vn_derivatives"
+    },
+    {
+      "version_key": "signals_features_leading_v2_signals_entr",
+      "name": "signals_features_leading_v2_signals_entr",
+      "color": "#2196F3",
+      "marker_shape": "arrowUp",
+      "data_dir": "data_signals_features_leading_v2_signals_entr",
+      "total_symbols": 1,
+      "symbols_with_trades": 1,
+      "total_pnl": 99.4,
+      "composite_score": 56.0,
+      "active": true,
+      "order": 0,
+      "matrix_bundle": "derivatives_vn30f1m_phase1_smoke",
+      "market": "vn_derivatives",
+      "schema": "ohlcv_futures_1h",
+      "timeframe": "1H",
+      "market_family": "vn_derivatives"
     },
     {
       "version_key": "v22_exit_ablation_round4_fusion-peak_ma_only-exit_model-exit_fw22_l04",
@@ -1038,7 +1201,8 @@
       "composite_score": 753.9,
       "active": true,
       "order": 0,
-      "matrix_bundle": "v22_exit_ablation_round4"
+      "matrix_bundle": "v22_exit_ablation_round4",
+      "market_family": "vn_stock"
     },
     {
       "version_key": "v2_rf_v22",
@@ -1052,7 +1216,8 @@
       "composite_score": 742.7,
       "active": false,
       "order": 0,
-      "matrix_bundle": "model_selection"
+      "matrix_bundle": "model_selection",
+      "market_family": "vn_stock"
     },
     {
       "version_key": "v28",
@@ -1065,7 +1230,8 @@
       "total_pnl": 7250.4,
       "active": false,
       "order": 0,
-      "composite_score": 423.2
+      "composite_score": 423.2,
+      "market_family": "vn_stock"
     },
     {
       "version_key": "v27",
@@ -1078,7 +1244,62 @@
       "total_pnl": 7164.4,
       "active": false,
       "order": 0,
-      "composite_score": 409.3
+      "composite_score": 409.3,
+      "market_family": "vn_stock"
+    },
+    {
+      "version_key": "deriv_v2_rf",
+      "name": "deriv_v2_rf",
+      "color": "#FF9800",
+      "marker_shape": "arrowUp",
+      "data_dir": "data_deriv_v2_rf",
+      "total_symbols": 2,
+      "symbols_with_trades": 2,
+      "total_pnl": 140.4,
+      "composite_score": 53.3,
+      "active": true,
+      "order": 1,
+      "market": "vn_derivatives",
+      "schema": "ohlcv_futures_1h",
+      "timeframe": "1H",
+      "matrix_bundle": "derivatives_vn30f1m_phase1_smoke",
+      "market_family": "vn_derivatives"
+    },
+    {
+      "version_key": "deriv_ld_rf_2",
+      "name": "deriv_ld_rf_2",
+      "color": "#FF9800",
+      "marker_shape": "arrowUp",
+      "data_dir": "data_deriv_ld_rf_2",
+      "total_symbols": 2,
+      "symbols_with_trades": 2,
+      "total_pnl": 216.6,
+      "composite_score": 71.4,
+      "active": true,
+      "order": 1,
+      "market": "vn_derivatives",
+      "schema": "ohlcv_futures_1h",
+      "timeframe": "1H",
+      "matrix_bundle": "derivatives_vn30f1m_phase3_derivatives_only",
+      "market_family": "vn_derivatives"
+    },
+    {
+      "version_key": "signals_features_leading_signals_entry_m",
+      "name": "signals_features_leading_signals_entry_m",
+      "color": "#FF9800",
+      "marker_shape": "arrowUp",
+      "data_dir": "data_signals_features_leading_signals_entry_m",
+      "total_symbols": 1,
+      "symbols_with_trades": 1,
+      "total_pnl": 95.0,
+      "composite_score": 43.1,
+      "active": true,
+      "order": 1,
+      "matrix_bundle": "derivatives_vn30f1m_phase1_smoke",
+      "market": "vn_derivatives",
+      "schema": "ohlcv_futures_1h",
+      "timeframe": "1H",
+      "market_family": "vn_derivatives"
     },
     {
       "version_key": "v2_gru_v22",
@@ -1092,7 +1313,8 @@
       "composite_score": 729.6,
       "active": false,
       "order": 1,
-      "matrix_bundle": "model_selection"
+      "matrix_bundle": "model_selection",
+      "market_family": "vn_stock"
     },
     {
       "version_key": "v2_rf_v22_with_exit_model",
@@ -1106,7 +1328,8 @@
       "active": false,
       "order": 1,
       "matrix_bundle": "strategy_sweep_finalists",
-      "composite_score": 742.7
+      "composite_score": 742.7,
+      "market_family": "vn_stock"
     },
     {
       "version_key": "v26",
@@ -1119,7 +1342,44 @@
       "total_pnl": 7136.2,
       "active": false,
       "order": 1,
-      "composite_score": 406.0
+      "composite_score": 406.0,
+      "market_family": "vn_stock"
+    },
+    {
+      "version_key": "deriv_ld_rf_3",
+      "name": "deriv_ld_rf_3",
+      "color": "#9C27B0",
+      "marker_shape": "arrowUp",
+      "data_dir": "data_deriv_ld_rf_3",
+      "total_symbols": 2,
+      "symbols_with_trades": 2,
+      "total_pnl": 216.3,
+      "composite_score": 70.9,
+      "active": true,
+      "order": 2,
+      "market": "vn_derivatives",
+      "schema": "ohlcv_futures_1h",
+      "timeframe": "1H",
+      "matrix_bundle": "derivatives_vn30f1m_phase3_derivatives_only",
+      "market_family": "vn_derivatives"
+    },
+    {
+      "version_key": "signals_features_leading_v3_signals_entr",
+      "name": "signals_features_leading_v3_signals_entr",
+      "color": "#9C27B0",
+      "marker_shape": "arrowUp",
+      "data_dir": "data_signals_features_leading_v3_signals_entr",
+      "total_symbols": 1,
+      "symbols_with_trades": 1,
+      "total_pnl": 61.6,
+      "composite_score": 37.8,
+      "active": true,
+      "order": 2,
+      "matrix_bundle": "derivatives_vn30f1m_phase1_smoke",
+      "market": "vn_derivatives",
+      "schema": "ohlcv_futures_1h",
+      "timeframe": "1H",
+      "market_family": "vn_derivatives"
     },
     {
       "version_key": "v4_rf_v22",
@@ -1133,7 +1393,8 @@
       "composite_score": 728.9,
       "active": false,
       "order": 2,
-      "matrix_bundle": "model_selection"
+      "matrix_bundle": "model_selection",
+      "market_family": "vn_stock"
     },
     {
       "version_key": "v4_gru_v22",
@@ -1147,7 +1408,8 @@
       "composite_score": 726.2,
       "active": false,
       "order": 3,
-      "matrix_bundle": "model_selection"
+      "matrix_bundle": "model_selection",
+      "market_family": "vn_stock"
     },
     {
       "version_key": "v2_gru_v22_with_exit_model",
@@ -1161,7 +1423,8 @@
       "active": false,
       "order": 3,
       "matrix_bundle": "strategy_sweep_finalists",
-      "composite_score": 729.6
+      "composite_score": 729.6,
+      "market_family": "vn_stock"
     },
     {
       "version_key": "v24",
@@ -1174,7 +1437,8 @@
       "total_pnl": 7120.9,
       "active": false,
       "order": 3,
-      "composite_score": 396.6
+      "composite_score": 396.6,
+      "market_family": "vn_stock"
     },
     {
       "version_key": "v2_xgb_v22",
@@ -1188,7 +1452,8 @@
       "composite_score": 639.9,
       "active": false,
       "order": 4,
-      "matrix_bundle": "model_selection"
+      "matrix_bundle": "model_selection",
+      "market_family": "vn_stock"
     },
     {
       "version_key": "v4_rf_v22_with_exit_model",
@@ -1202,7 +1467,8 @@
       "active": false,
       "order": 4,
       "matrix_bundle": "strategy_sweep_finalists",
-      "composite_score": 728.9
+      "composite_score": 728.9,
+      "market_family": "vn_stock"
     },
     {
       "version_key": "v22",
@@ -1215,7 +1481,8 @@
       "total_pnl": 6593.1,
       "active": false,
       "order": 5,
-      "composite_score": 404.8
+      "composite_score": 404.8,
+      "market_family": "vn_stock"
     },
     {
       "version_key": "v19_3",
@@ -1228,7 +1495,93 @@
       "total_pnl": 6775.1,
       "active": false,
       "order": 6,
-      "composite_score": 425.9
+      "composite_score": 425.9,
+      "market_family": "vn_stock"
+    },
+    {
+      "version_key": "deriv_30m_top1_current",
+      "name": "Deriv 30M Top1 Current (P259 Cat)",
+      "color": "#00C853",
+      "marker_shape": "arrowUp",
+      "data_dir": "data_deriv_30m_top1_current",
+      "total_symbols": 2,
+      "symbols_with_trades": 2,
+      "total_pnl": 981.5,
+      "composite_score": 268.2,
+      "active": true,
+      "order": 7,
+      "market": "vn_derivatives_30m",
+      "market_family": "vn_derivatives",
+      "schema": "ohlcv_futures_1h",
+      "timeframe": "30m",
+      "matrix_bundle": "derivatives_vn30f1m_phase259_30m_exit_model_algo_micro",
+      "source_run_name": "deriv_p259_30m_exit_model_algo_micro_signals_features-all_features-signals_entry_model_type-xgboost-signals_target-tr_dual_5_27_c3-exit_model-x27l0188_cat-fusion-exit_only-params-baseline",
+      "entry_model": "xgboost",
+      "exit_model_type": "catboost",
+      "feature_set": "all_features",
+      "win_rate": 69.46,
+      "sharpe": 0.5586
+    },
+    {
+      "version_key": "deriv_30m_p132_top1",
+      "name": "Deriv 30M P132 Top1 (XGB)",
+      "color": "#69FF47",
+      "marker_shape": "arrowUp",
+      "data_dir": "data_deriv_30m_p132_top1",
+      "total_symbols": 2,
+      "symbols_with_trades": 2,
+      "total_pnl": 630.3,
+      "composite_score": 203.4,
+      "active": true,
+      "order": 8,
+      "market": "vn_derivatives_30m",
+      "market_family": "vn_derivatives",
+      "timeframe": "30m",
+      "schema": "ohlcv_futures_30m",
+      "entry_model": "xgboost",
+      "exit_model_type": "lightgbm",
+      "feature_set": "leading_deriv",
+      "win_rate": 68.75,
+      "sharpe": 0.5594
+    },
+    {
+      "version_key": "deriv_30m_p113_top1",
+      "name": "Deriv 30M P113 Top1 (XGB)",
+      "color": "#00E5FF",
+      "marker_shape": "arrowUp",
+      "data_dir": "data_deriv_30m_p113_top1",
+      "total_symbols": 2,
+      "symbols_with_trades": 2,
+      "total_pnl": 422.0,
+      "composite_score": 181.5,
+      "active": true,
+      "order": 9,
+      "market": "vn_derivatives_30m",
+      "market_family": "vn_derivatives",
+      "schema": "ohlcv_futures_30m",
+      "timeframe": "30m",
+      "entry_model": "xgboost",
+      "exit_model_type": "lightgbm",
+      "feature_set": "momentum",
+      "win_rate": 84.89,
+      "sharpe": 0.8925
+    },
+    {
+      "version_key": "deriv_30m_top1",
+      "name": "Deriv 30M Top1 (RF)",
+      "color": "#FF6B35",
+      "marker_shape": "arrowUp",
+      "data_dir": "data_deriv_30m_top1",
+      "total_symbols": 2,
+      "symbols_with_trades": 2,
+      "total_pnl": 170.0,
+      "composite_score": 108.1,
+      "active": true,
+      "order": 10,
+      "market": "vn_derivatives_30m",
+      "market_family": "vn_derivatives",
+      "schema": "ohlcv_futures_30m",
+      "timeframe": "30m"
     },
     {
       "version_key": "rule",
@@ -1241,8 +1594,127 @@
       "total_pnl": 7621.7,
       "active": true,
       "order": 99,
-      "composite_score": 316.4
+      "composite_score": 316.4,
+      "market_family": "vn_stock"
+    },
+    {
+      "version_key": "rule_derivatives",
+      "name": "Rule Derivatives",
+      "color": "#FF9800",
+      "marker_shape": "circle",
+      "data_dir": "data_rule_derivatives",
+      "total_symbols": 2,
+      "symbols_with_trades": 2,
+      "total_pnl": 104.62,
+      "composite_score": 2.9,
+      "active": true,
+      "order": 100,
+      "market": "vn_derivatives",
+      "schema": "ohlcv_futures_1h",
+      "timeframe": "1H",
+      "matrix_bundle": "champions_derivatives_2020_2025",
+      "market_family": "vn_derivatives"
     }
   ],
+  "market_groups": {
+    "vn_stock": {
+      "label": "VN Stock",
+      "timeframes": {
+        "unknown": {
+          "models": [
+            "v38e",
+            "v37a_exit",
+            "v38b3",
+            "v42_a",
+            "v38d2",
+            "v42_base",
+            "v38c2",
+            "v38b2",
+            "v38bcd",
+            "v38cd",
+            "v38bd",
+            "v38bc",
+            "v38d",
+            "v38c",
+            "v39g",
+            "v38b",
+            "v39f",
+            "v39d",
+            "v39e",
+            "v39b",
+            "v39a2",
+            "v39a",
+            "v37d",
+            "v37b",
+            "v37c",
+            "v22_exit_ablation_round37_top1",
+            "v37a",
+            "v36c",
+            "v36b",
+            "v22_exit_ablation_round34_top1_v21",
+            "v36a",
+            "v35c",
+            "v35b",
+            "v22_exit_ablation_round10_top1",
+            "v35a",
+            "v34",
+            "v33",
+            "v32",
+            "v31",
+            "v30",
+            "v29",
+            "v22_exit_ablation_round4_fusion-peak_ma_only-exit_model-exit_fw22_l04",
+            "v2_rf_v22",
+            "v28",
+            "v27",
+            "v2_gru_v22",
+            "v2_rf_v22_with_exit_model",
+            "v26",
+            "v4_rf_v22",
+            "v4_gru_v22",
+            "v2_gru_v22_with_exit_model",
+            "v24",
+            "v2_xgb_v22",
+            "v4_rf_v22_with_exit_model",
+            "v22",
+            "v19_3",
+            "rule"
+          ],
+          "base_data_dir": "data"
+        }
+      }
+    },
+    "vn_derivatives": {
+      "label": "VN Derivatives",
+      "timeframes": {
+        "1H": {
+          "models": [
+            "deriv_ld_cat",
+            "deriv_top1_p14_mh12",
+            "deriv_ld_rf",
+            "deriv_v3_rf",
+            "signals_features_leading_v2_signals_entr",
+            "deriv_v2_rf",
+            "deriv_ld_rf_2",
+            "signals_features_leading_signals_entry_m",
+            "deriv_ld_rf_3",
+            "signals_features_leading_v3_signals_entr",
+            "rule_derivatives"
+          ],
+          "base_data_dir": "data_derivatives"
+        },
+        "30m": {
+          "models": [
+            "vn_de_vol_xgb",
+            "deriv_30m_top1_current",
+            "deriv_30m_p132_top1",
+            "deriv_30m_p113_top1",
+            "deriv_30m_top1"
+          ],
+          "base_data_dir": "data_derivatives_30m"
+        }
+      }
+    }
+  },
   "exit_abbreviations": {}
 }

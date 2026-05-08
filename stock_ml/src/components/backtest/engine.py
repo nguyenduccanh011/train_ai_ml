@@ -22,7 +22,10 @@ def _detect_date_column(df: pd.DataFrame) -> str:
 
 
 def _format_date(value: object) -> str:
-    return str(value)[:10]
+    ts = pd.Timestamp(value)
+    if ts.time() == pd.Timestamp(ts.date()).time():
+        return ts.date().isoformat()
+    return ts.isoformat()
 
 
 class SimpleLongBacktester:

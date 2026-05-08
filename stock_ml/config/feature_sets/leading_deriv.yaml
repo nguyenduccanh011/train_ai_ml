@@ -1,0 +1,14 @@
+name: leading_deriv
+description: Derivative-optimized features - adds market structure, volatility regime, heikin-ashi without cross-sectional RS
+blocks:
+  - ohlcv_basic
+  - moving_averages
+  - momentum
+  - trend
+  - volatility
+  - volume_advanced
+  - leading_signals
+  - market_structure
+  - exhaustion
+  - volatility_regime
+  - heikin_ashi

@@ -89,4 +89,7 @@ class LegacyBacktestAdapter:
     def _date_at(self, date_values: Any, idx: int) -> str:
         if date_values is None:
             return ""
-        return str(date_values[idx])[:10]
+        ts = pd.Timestamp(date_values[idx])
+        if ts.time() == pd.Timestamp(ts.date()).time():
+            return ts.date().isoformat()
+        return ts.isoformat()

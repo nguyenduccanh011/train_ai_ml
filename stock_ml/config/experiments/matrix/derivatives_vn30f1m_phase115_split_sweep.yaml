@@ -1,0 +1,65 @@
+name_prefix: deriv_p115_split
+# Phase 115: Test different training/test split configurations
+# Hypothesis: Including more training data (2019+) may improve model quality
+# Or using 2021 as first test year = more training data
+axes:
+  signals.features:
+    - leading
+  signals.entry_model.type:
+    - catboost
+  signals.target:
+    - {label: e102g015l026, type: early_wave_v2, forward_window: 102, gain_threshold: 0.015, loss_threshold: 0.026}
+  exit_model:
+    - {label: x48l0485, enabled: true, type: lightgbm, forward_window: 48, loss_threshold: 0.0485}
+  fusion:
+    - label: dist
+      entry:
+        - name: v19_entry_cascade
+      force_exit:
+        - name: hard_stop_exit
+      active_exit:
+        - name: exit_model
+        - name: peak_protect_dist
+      hold: []
+  params:
+    - {label: s0, v19_min_entry_score: 0}
+  split:
+    # Current baseline: 2020-2025
+    - {label: "2020_2025", first_test_year: 2020, last_test_year: 2025}
+    # Replica baseline slot (kept for matrix shape consistency)
+    - {label: "2020_2025_alt", first_test_year: 2020, last_test_year: 2025}
+    # Less test data: start from 2021 (more train data per fold)
+    - {label: "2021_2025", first_test_year: 2021, last_test_year: 2025}
+    # Only recent: 2022-2025
+    - {label: "2022_2025", first_test_year: 2022, last_test_year: 2025}
+base:
+  market: vn_derivatives
+  strategy: v22
+  runner: components.runners.run_v22
+  mods:
+    a: true
+    b: true
+    c: false
+    d: false
+    e: true
+    f: true
+    g: true
+    h: true
+    i: true
+    j: true
+  params:
+    signal_exit_enabled: false
+    patch_active_exit_on_raw0: true
+    v22_mode: true
+    v22_fast_exit_skip_strong: true
+    v22_fast_exit_vol_confirm: true
+    v22_fast_exit_threshold_hb: -0.07
+    v22_fast_exit_threshold_std: -0.05
+    v22_adaptive_hard_cap: true
+    v22_hard_cap_mult_hb: 3.0
+    v22_hard_cap_mult_std: 2.5
+    v22_hard_cap_floor: 0.12
+    v22_hard_cap_floor_hb: 0.15
+  split:
+    first_test_year: 2020
+    last_test_year: 2025

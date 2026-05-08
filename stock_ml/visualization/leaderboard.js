@@ -1,6 +1,89 @@
-const DATA_URL = '../results/leaderboard/leaderboard.json';
-const SUMMARY_URL = '../results/leaderboard/summary.json';
+// Market-aware data URLs
+const MARKET_CONFIGS = {
+  all: {
+    dataUrl: '../results/leaderboard/leaderboard.json',
+    summaryUrl: '../results/leaderboard/summary.json',
+    label: 'All Markets'
+  },
+  vn_stock: {
+    dataUrl: '../results/leaderboard/by_market/vn_stock/leaderboard.json',
+    summaryUrl: '../results/leaderboard/by_market/vn_stock/summary.json',
+    label: 'VN Stock',
+    market: 'vn_stock'
+  },
+  vn_derivatives_family: {
+    dataUrl: '../results/leaderboard/by_market_family/vn_derivatives/leaderboard.json',
+    summaryUrl: '../results/leaderboard/by_market_family/vn_derivatives/summary.json',
+    label: 'VN Derivatives (All Timeframes)',
+    marketFamily: 'vn_derivatives'
+  },
+  vn_derivatives: {
+    dataUrl: '../results/leaderboard/by_market/vn_derivatives/leaderboard.json',
+    summaryUrl: '../results/leaderboard/by_market/vn_derivatives/summary.json',
+    label: 'VN Derivatives 1H',
+    market: 'vn_derivatives',
+    timeframe: '1H'
+  },
+  vn_derivatives_30m: {
+    dataUrl: '../results/leaderboard/by_market/vn_derivatives_30m/leaderboard.json',
+    summaryUrl: '../results/leaderboard/by_market/vn_derivatives_30m/summary.json',
+    label: 'VN Derivatives 30M',
+    market: 'vn_derivatives_30m',
+    timeframe: '30m'
+  },
+  vn_derivatives_1d: {
+    dataUrl: '../results/leaderboard/by_market/vn_derivatives_1d/leaderboard.json',
+    summaryUrl: '../results/leaderboard/by_market/vn_derivatives_1d/summary.json',
+    label: 'VN Derivatives 1D',
+    market: 'vn_derivatives_1d',
+    timeframe: '1D'
+  },
+  vn_derivatives_15m: {
+    dataUrl: '../results/leaderboard/by_market/vn_derivatives_15m/leaderboard.json',
+    summaryUrl: '../results/leaderboard/by_market/vn_derivatives_15m/summary.json',
+    label: 'VN Derivatives 15M',
+    market: 'vn_derivatives_15m',
+    timeframe: '15m'
+  }
+};
 
+const MARKET_STORAGE_KEY = 'leaderboard.market';
+
+function isValidMarket(value) {
+  return Object.prototype.hasOwnProperty.call(MARKET_CONFIGS, value);
+}
+
+function getInitialMarket() {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const marketFromQuery = params.get('market');
+    if (isValidMarket(marketFromQuery)) return marketFromQuery;
+  } catch (_) {}
+
+  try {
+    const marketFromStorage = window.localStorage.getItem(MARKET_STORAGE_KEY);
+    if (isValidMarket(marketFromStorage)) return marketFromStorage;
+  } catch (_) {}
+
+  return 'all';
+}
+
+function persistMarketSelection(market) {
+  if (!isValidMarket(market)) return;
+
+  try {
+    window.localStorage.setItem(MARKET_STORAGE_KEY, market);
+  } catch (_) {}
+
+  try {
+    const url = new URL(window.location.href);
+    if (market === 'all') url.searchParams.delete('market');
+    else url.searchParams.set('market', market);
+    window.history.replaceState({}, '', url.toString());
+  } catch (_) {}
+}
+
+let currentMarket = getInitialMarket();
 let allRows = [];
 let summary = {};
 let filteredRows = [];
@@ -32,7 +115,13 @@ const els = {
   featureFilter: document.getElementById('featureFilter'),
   modelFilter: document.getElementById('modelFilter'),
   yearFilter: document.getElementById('yearFilter'),
+  marketFilter: document.getElementById('marketFilter'),
+  dataPath: document.getElementById('dataPath'),
 };
+
+if (els.marketFilter) {
+  els.marketFilter.value = isValidMarket(currentMarket) ? currentMarket : 'all';
+}
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -98,6 +187,24 @@ function getFairBaselineGroup(rows) {
   const activeRows = rows.filter((row) => !row.superseded);
   const candidates = activeRows.length ? activeRows : rows;
   return [...candidates].sort((a, b) => Number(b.composite_score) - Number(a.composite_score))[0]?.fairness_group_key || '';
+}
+
+function rowMarketFamily(row) {
+  if (row.market_family) return row.market_family;
+  if (String(row.market || '').startsWith('vn_derivatives')) return 'vn_derivatives';
+  return row.market || 'unknown';
+}
+
+function rowMatchesMarketConfig(row, cfg) {
+  if (cfg.market && row.market !== cfg.market) return false;
+  if (cfg.timeframe && row.timeframe !== cfg.timeframe) return false;
+  if (cfg.marketFamily && rowMarketFamily(row) !== cfg.marketFamily) return false;
+  return true;
+}
+
+function applyMarketConfigFilter(rows, cfg) {
+  if (!cfg.market && !cfg.timeframe && !cfg.marketFamily) return rows;
+  return rows.filter((row) => rowMatchesMarketConfig(row, cfg));
 }
 
 function applyFilters() {
@@ -230,11 +337,52 @@ function renderFilters() {
   fillSelect(els.yearFilter, [...new Set(allRows.map(windowKey))].sort(), 'All windows');
 }
 
+function resetFilters() {
+  filters = { bundle: '', strategy: '', feature_set: '', entry_model: '', year: '' };
+  searchQuery = '';
+  els.searchInput.value = '';
+  els.bundleFilter.value = '';
+  els.strategyFilter.value = '';
+  els.featureFilter.value = '';
+  els.modelFilter.value = '';
+  els.yearFilter.value = '';
+}
+
 function setScoreMode(nextMode) {
   scoreMode = nextMode;
   els.globalMode.classList.toggle('active', scoreMode === 'global');
   els.fairMode.classList.toggle('active', scoreMode === 'fair');
   applyFilters();
+}
+
+async function loadData(market) {
+  const cfg = MARKET_CONFIGS[market];
+  if (!cfg) {
+    allRows = [];
+    summary = {};
+    els.body.innerHTML = tableMessageRow(`Unknown leaderboard selection: ${escapeHtml(market)}`, 'error');
+    return;
+  }
+  if (els.dataPath) els.dataPath.textContent = cfg.dataUrl;
+  els.body.innerHTML = tableMessageRow(`Loading ${cfg.label}...`, 'empty');
+
+  try {
+    const [dataResponse, summaryResponse] = await Promise.all([
+      fetch(cfg.dataUrl, { cache: 'no-store' }),
+      fetch(cfg.summaryUrl, { cache: 'no-store' }),
+    ]);
+    if (!dataResponse.ok) throw new Error(`${dataResponse.status} ${dataResponse.statusText}`);
+    allRows = applyMarketConfigFilter(await dataResponse.json(), cfg);
+    summary = summaryResponse.ok ? await summaryResponse.json() : {};
+    resetFilters();
+    renderFilters();
+    applyFilters();
+  } catch (error) {
+    const msg = market !== 'all'
+      ? `${cfg.label} leaderboard not found. Run experiments then rebuild: python -m stock_ml.scripts.build_leaderboard rebuild`
+      : `Failed to load ${cfg.dataUrl}: ${escapeHtml(error.message)}`;
+    els.body.innerHTML = tableMessageRow(msg, 'error');
+  }
 }
 
 function bindEvents() {
@@ -247,6 +395,14 @@ function bindEvents() {
   els.showSuperseded.addEventListener('change', (event) => {
     showSuperseded = event.target.checked;
     applyFilters();
+  });
+  els.marketFilter.addEventListener('change', (event) => {
+    currentMarket = event.target.value;
+    persistMarketSelection(currentMarket);
+    scoreMode = 'global';
+    els.globalMode.classList.add('active');
+    els.fairMode.classList.remove('active');
+    loadData(currentMarket);
   });
 
   [
@@ -275,21 +431,6 @@ function bindEvents() {
   });
 }
 
-async function loadData() {
-  try {
-    const [dataResponse, summaryResponse] = await Promise.all([
-      fetch(DATA_URL, { cache: 'no-store' }),
-      fetch(SUMMARY_URL, { cache: 'no-store' }),
-    ]);
-    if (!dataResponse.ok) throw new Error(`${dataResponse.status} ${dataResponse.statusText}`);
-    allRows = await dataResponse.json();
-    summary = summaryResponse.ok ? await summaryResponse.json() : {};
-    renderFilters();
-    applyFilters();
-  } catch (error) {
-    els.body.innerHTML = tableMessageRow(`Failed to load ${DATA_URL}: ${escapeHtml(error.message)}`, 'error');
-  }
-}
-
 bindEvents();
-loadData();
+persistMarketSelection(currentMarket);
+loadData(currentMarket);

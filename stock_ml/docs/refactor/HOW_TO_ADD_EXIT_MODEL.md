@@ -88,12 +88,12 @@ components:
 strategy_v3:
   exit_rules:
     - hard_stop_exit
-    - exit_model_exit
+    - exit_model
 ```
 
 ## Bước 4 — Wire strategy rule
 
-Nếu model chỉ tạo `y_pred_exit`, runner cần một exit rule đọc tín hiệu đó. Rule hiện có là `exit_model_exit` trong `src/components/fusion/strategies/core/exit_model_exit.py`.
+Nếu model chỉ tạo `y_pred_exit`, runner cần một exit rule đọc tín hiệu đó. Rule chuẩn hiện tại là `exit_model` trong `src/components/fusion/strategies/core/exit_model_exit.py` (alias cũ `exit_model_exit` vẫn được hỗ trợ để tương thích ngược).
 
 Thêm rule vào `strategy_v3.exit_rules`, hoặc vào section legacy `fusion.force_exit` / `fusion.active_exit` tùy runner đang dùng.
 

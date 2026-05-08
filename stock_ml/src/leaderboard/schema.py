@@ -42,6 +42,7 @@ class LeaderboardRow(BaseModel):
 
     # Strategy / model identity
     market: str = "unknown"
+    market_family: str = "unknown"
     currency: str = "unknown"
     pnl_mode: str = "unknown"
     schema: str = "unknown"
@@ -75,6 +76,7 @@ class LeaderboardRow(BaseModel):
     n_symbols: int
     first_test_year: int
     last_test_year: int
+    backtest_window_key: str = "unknown"
     cost_profile: CostProfile = Field(default_factory=CostProfile)
     fairness_group_key: str = Field(
         description="sha1 of {market, currency, schema, symbols_set, window, cost_profile, target}"
@@ -84,6 +86,8 @@ class LeaderboardRow(BaseModel):
     same_window_as_baseline: bool | None = None
     same_cost_as_baseline: bool | None = None
     same_target_as_baseline: bool | None = None
+    same_timeframe_as_baseline: bool | None = None
+    same_market_family_as_baseline: bool | None = None
 
     # Diagnostics
     warnings: list[str] = Field(default_factory=list)

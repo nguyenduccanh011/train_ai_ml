@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import pandas as pd
 from src.leaderboard.loader import (
     COST_PROFILE_UNKNOWN_WARNING,
     MISSING_TRADES_WARNING,
@@ -25,6 +26,7 @@ def test_loader_rule_run():
     assert row.target.type == "early_wave"
     assert row.first_test_year == 2020
     assert row.last_test_year == 2025
+    assert row.backtest_window_key == "2020-2025"
     assert row.cost_profile.commission == 0.0015
     assert row.cost_profile.tax == 0.001
     assert row.cost_profile.slippage == 0.0
@@ -68,3 +70,165 @@ def test_loader_fairness_group_key_stable():
 
     assert row_a.fairness_group_key == row_b.fairness_group_key
     assert len(row_a.fairness_group_key) == 40
+
+
+def test_loader_resolves_derivatives_30m_market_family(tmp_path: Path):
+    run_dir = tmp_path / "run"
+    run_dir.mkdir(parents=True)
+    pd.DataFrame(
+        [
+            {
+                "symbol": "VN30F1M",
+                "entry_date": "2020-01-01 09:00:00",
+                "exit_date": "2020-01-01 10:00:00",
+                "pnl_pct": 1.0,
+                "pnl": 100.0,
+                "holding_days": 0.04,
+            }
+        ]
+    ).to_csv(run_dir / "trades.csv", index=False)
+    (run_dir / "predictions_meta.json").write_text(
+        """
+{
+  "config_hash": "abc12345def0",
+  "market": "vn_derivatives_30m",
+  "currency": "VND",
+  "pnl_mode": "futures_contract",
+  "schema": "ohlcv_futures_1h",
+  "timeframe": "30m",
+  "entry_model": "random_forest",
+  "exit_model_type": "lightgbm",
+  "exit_model_enabled": true,
+  "feature_set": "leading",
+  "split": {"first_test_year": 2020, "last_test_year": 2025},
+  "created_at": "2026-05-06T10:00:00"
+}
+""".strip(),
+        encoding="utf-8",
+    )
+    (run_dir / "ranking_row.json").write_text(
+        """
+{
+  "name": "sample_30m",
+  "feature_set": "leading",
+  "entry_model": "random_forest",
+  "exit_model_type": "lightgbm",
+  "exit_model_enabled": true
+}
+""".strip(),
+        encoding="utf-8",
+    )
+    (run_dir / "metrics.json").write_text("{}", encoding="utf-8")
+    (run_dir / "config.resolved.yaml").write_text(
+        """
+name: sample_30m
+strategy: v22
+market: vn_derivatives_30m
+signals:
+  features: leading
+  target:
+    type: early_wave_v2
+    forward_window: 10
+    gain_threshold: 0.008
+    loss_threshold: 0.003
+execution:
+  currency: VND
+  pnl_mode: futures_contract
+split:
+  first_test_year: 2020
+  last_test_year: 2025
+""".strip(),
+        encoding="utf-8",
+    )
+
+    row = run_dir_to_row(run_dir, bundle="tmp_bundle")
+
+    assert row.market == "vn_derivatives_30m"
+    assert row.market_family == "vn_derivatives"
+    assert row.timeframe == "30m"
+    assert row.backtest_window_key == "2020-2025"
+
+
+def test_loader_prefers_holding_days_column_over_date_delta(tmp_path: Path):
+    run_dir = tmp_path / "run"
+    run_dir.mkdir(parents=True)
+
+    trades = pd.DataFrame(
+        [
+            {
+                "symbol": "AAA",
+                "entry_date": "2020-01-01",
+                "exit_date": "2020-03-01",
+                "pnl_pct": 10.0,
+                "pnl": 100.0,
+                "holding_days": 5,
+            },
+            {
+                "symbol": "BBB",
+                "entry_date": "2020-01-01",
+                "exit_date": "2020-04-01",
+                "pnl_pct": -5.0,
+                "pnl": -50.0,
+                "holding_days": 7,
+            },
+        ]
+    )
+    trades.to_csv(run_dir / "trades.csv", index=False)
+    (run_dir / "predictions_meta.json").write_text(
+        """
+{
+  "config_hash": "abc12345def0",
+  "market": "vn_stock",
+  "currency": "VND",
+  "pnl_mode": "equity_spot",
+  "schema": "ohlcv_daily",
+  "timeframe": "1D",
+  "entry_model": "random_forest",
+  "exit_model_type": "lightgbm",
+  "exit_model_enabled": true,
+  "feature_set": "leading",
+  "split": {"first_test_year": 2020, "last_test_year": 2025},
+  "created_at": "2026-05-06T10:00:00"
+}
+""".strip(),
+        encoding="utf-8",
+    )
+    (run_dir / "ranking_row.json").write_text(
+        """
+{
+  "name": "sample_run",
+  "feature_set": "leading",
+  "entry_model": "random_forest",
+  "exit_model_type": "lightgbm",
+  "exit_model_enabled": true
+}
+""".strip(),
+        encoding="utf-8",
+    )
+    (run_dir / "metrics.json").write_text("{}", encoding="utf-8")
+    (run_dir / "config.resolved.yaml").write_text(
+        """
+name: sample_run
+strategy: v22
+market: vn_stock
+signals:
+  features: leading
+  target:
+    type: early_wave_v2
+    forward_window: 21
+    gain_threshold: 0.03
+    loss_threshold: 0.015
+execution:
+  currency: VND
+  pnl_mode: equity_spot
+split:
+  first_test_year: 2020
+  last_test_year: 2025
+""".strip(),
+        encoding="utf-8",
+    )
+
+    row = run_dir_to_row(run_dir, bundle="tmp_bundle")
+
+    # Date delta would be much larger (~75 days avg); loader should honor holding_days from CSV.
+    assert row.avg_hold == 6.0

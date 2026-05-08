@@ -28,6 +28,8 @@ register_strategy("v19_entry_cascade", "entry", V19EntryCascade)
 register_strategy("v19_signal_hold_guard", "hold", V19SignalHoldGuard)
 register_strategy("hard_stop_exit", "exit_override", HardStopExit, always_on=True)
 register_strategy("exit_model", "exit_override", ExitModelExit)
+# Backward-compatible alias kept for old YAML/docs.
+register_strategy("exit_model_exit", "exit_override", ExitModelExit)
 register_strategy("signal_hard_cap", "exit_override", SignalHardCapExit)
 register_strategy("fast_exit_loss", "exit_override", FastExitLossLegacy)
 register_strategy("early_loss_cut", "exit_override", EarlyLossCutExit)

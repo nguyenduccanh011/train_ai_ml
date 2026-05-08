@@ -4,13 +4,17 @@ from collections import Counter
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
+import pandas as pd
 
 if TYPE_CHECKING:
     from src.components.base import FusionResult
 
 
 def format_date(value: object) -> str:
-    return str(value)[:10]
+    ts = pd.Timestamp(value)
+    if ts.time() == pd.Timestamp(ts.date()).time():
+        return ts.date().isoformat()
+    return ts.isoformat()
 
 
 def track_result(res: FusionResult, counters: Counter[str]) -> None:

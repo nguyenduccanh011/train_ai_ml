@@ -143,26 +143,50 @@ python -m stock_ml benchmark --versions v22,v34,v37a
 
 ### Flow bắt đầu mô hình phái sinh
 
-1. Chuẩn hóa dataset theo `config/markets/vn_derivatives.yaml`: OHLCV, `date`, `volume`, `expiry_date` nếu dùng rollover, và các cột spread như `next_volume`/`next_oi` nếu dùng smart roll.
+1. Chuẩn hóa dataset theo `config/markets/vn_derivatives.yaml`: OHLCV, `timestamp`, `volume`, `expiry_date` nếu dùng rollover, và các cột spread như `next_volume`/`next_oi` nếu dùng smart roll.
+   Hỗ trợ cả 2 layout dữ liệu: `all_symbols/symbol=.../timeframe=.../data.csv` và `symbol=.../timeframe=.../data.csv`.
 2. Tạo experiment YAML riêng với `market: vn_derivatives`, chọn feature set/model/target giống matrix hiện có hoặc override theo market.
 3. Validate trước khi chạy:
 
 ```bash
-python -m stock_ml validate experiments/my_vn_derivatives_exp
+python -m stock_ml validate my_vn_derivatives_exp
 ```
 
-4. Chạy smoke test ít symbol/hợp đồng trước:
+4. Chạy smoke test 1 symbol/hợp đồng chỉ để kiểm tra pipeline/config không lỗi:
 
 ```bash
-python -m stock_ml run experiments/my_vn_derivatives_exp --symbols-limit 3 --save-results
+python -m stock_ml run my_vn_derivatives_exp --symbols-limit 1 --save-results
 ```
 
-5. Khi smoke test ổn, mở rộng bằng matrix hoặc full run:
+5. Khi smoke test ổn, chạy score chính thức theo đầy đủ danh sách symbol trong `config/markets/vn_derivatives.yaml` (không dùng `--symbols-limit`):
 
 ```bash
 python -m stock_ml run-matrix matrix/my_vn_derivatives_matrix --resume
 python -m stock_ml compare-matrix results/experiments/my_vn_derivatives_matrix --top 10
 ```
+
+## Visualization / Leaderboard
+
+Serve từ thư mục `stock_ml/` (không phải `visualization/`):
+
+```bash
+cd stock_ml
+python -m http.server 8181
+```
+
+Mở browser:
+- **Dashboard:** http://localhost:8181/visualization/dashboard.html
+- **Leaderboard:** http://localhost:8181/visualization/leaderboard.html
+
+> **Lưu ý:** Phải serve từ `stock_ml/` để browser có thể truy cập `results/leaderboard/` đúng path. Nếu serve từ `visualization/` thì path `../results/` sẽ không hoạt động.
+
+Nếu port 8181 bị chiếm, dùng port khác:
+
+```bash
+python -m http.server 8080
+```
+
+Sau khi rebuild leaderboard, nhớ hard refresh browser (`Ctrl+F5`) để xóa cache JS cũ.
 
 ## Kiến trúc v2 — Component Pipeline + MarketProfile
 

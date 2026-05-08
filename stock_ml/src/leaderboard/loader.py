@@ -18,6 +18,7 @@ from src.evaluation.scoring import (
     calc_yearly_consistency,
     composite_score,
 )
+from src.leaderboard.fairness import backtest_window_key, load_config, resolve_market_family
 from src.leaderboard.schema import CostProfile, LeaderboardRow, TargetConfig
 
 MISSING_TRADES_WARNING = "trades.csv missing → metrics from cache"
@@ -64,6 +65,11 @@ def run_dir_to_row(run_dir: str | Path, *, bundle: str | None = None) -> Leaderb
     target = _target_config(resolved_config)
     cost_profile = _cost_profile(resolved_config, warnings)
     first_year, last_year = _test_window(resolved_config, predictions_meta, trades)
+    window_key = str(
+        predictions_meta.get("backtest_window_key")
+        or ranking_row.get("backtest_window_key")
+        or backtest_window_key(first_year, last_year)
+    )
     symbols = sorted({str(t["symbol"]) for t in trades})
     n_symbols = len(symbols) or int(
         metrics_cache.get("symbol_coverage", {}).get(
@@ -82,6 +88,26 @@ def run_dir_to_row(run_dir: str | Path, *, bundle: str | None = None) -> Leaderb
         or _mtime_iso(trades_path if trades_path.exists() else run_path)
     )
 
+    market = str(
+        predictions_meta.get("market")
+        or resolved_config.get("market")
+        or ranking_row.get("market")
+        or "unknown"
+    )
+    timeframe = str(predictions_meta.get("timeframe") or ranking_row.get("timeframe") or "unknown")
+    schema = str(predictions_meta.get("schema") or ranking_row.get("schema") or "unknown")
+    currency = str(
+        predictions_meta.get("currency")
+        or resolved_config.get("execution", {}).get("currency")
+        or ranking_row.get("currency")
+        or "unknown"
+    )
+    market_family = str(
+        predictions_meta.get("market_family")
+        or ranking_row.get("market_family")
+        or resolve_market_family(market, timeframe, load_config())
+    )
+
     return LeaderboardRow(
         run_id=f"{bundle_name}/{run_name}#{config_hash[:8]}",
         bundle=bundle_name,
@@ -89,28 +115,17 @@ def run_dir_to_row(run_dir: str | Path, *, bundle: str | None = None) -> Leaderb
         config_hash=config_hash,
         generated_at=generated_at,
         superseded=False,
-        market=str(
-            predictions_meta.get("market")
-            or resolved_config.get("market")
-            or ranking_row.get("market")
-            or "unknown"
-        ),
-        currency=str(
-            predictions_meta.get("currency")
-            or resolved_config.get("execution", {}).get("currency")
-            or ranking_row.get("currency")
-            or "unknown"
-        ),
+        market=market,
+        market_family=market_family,
+        currency=currency,
         pnl_mode=str(
             predictions_meta.get("pnl_mode")
             or resolved_config.get("execution", {}).get("pnl_mode")
             or ranking_row.get("pnl_mode")
             or "unknown"
         ),
-        schema=str(predictions_meta.get("schema") or ranking_row.get("schema") or "unknown"),
-        timeframe=str(
-            predictions_meta.get("timeframe") or ranking_row.get("timeframe") or "unknown"
-        ),
+        schema=schema,
+        timeframe=timeframe,
         strategy=str(resolved_config.get("strategy") or run_name),
         feature_set=str(
             predictions_meta.get("feature_set")
@@ -145,6 +160,7 @@ def run_dir_to_row(run_dir: str | Path, *, bundle: str | None = None) -> Leaderb
         n_symbols=n_symbols,
         first_test_year=first_year,
         last_test_year=last_year,
+        backtest_window_key=window_key,
         cost_profile=cost_profile,
         fairness_group_key=_fairness_group_key(
             symbols,
@@ -152,19 +168,9 @@ def run_dir_to_row(run_dir: str | Path, *, bundle: str | None = None) -> Leaderb
             last_year,
             cost_profile,
             target,
-            str(
-                predictions_meta.get("market")
-                or resolved_config.get("market")
-                or ranking_row.get("market")
-                or "unknown"
-            ),
-            str(
-                predictions_meta.get("currency")
-                or resolved_config.get("execution", {}).get("currency")
-                or ranking_row.get("currency")
-                or "unknown"
-            ),
-            str(predictions_meta.get("schema") or ranking_row.get("schema") or "unknown"),
+            market_family,
+            currency,
+            schema,
         ),
         warnings=warnings,
     )
@@ -190,6 +196,7 @@ def _read_trades(path: Path) -> list[dict[str, Any]]:
         for row in csv.DictReader(f):
             entry_date = row.get("entry_date", "")
             exit_date = row.get("exit_date", "")
+            holding_days_raw = row.get("holding_days")
             trades.append(
                 {
                     "symbol": row.get("symbol", "_"),
@@ -197,10 +204,21 @@ def _read_trades(path: Path) -> list[dict[str, Any]]:
                     "exit_date": exit_date,
                     "pnl_pct": float(row.get("pnl_pct") or 0.0),
                     "pnl": float(row.get("pnl") or 0.0),
-                    "holding_days": _holding_days(entry_date, exit_date),
+                    "holding_days": _parse_holding_days(
+                        holding_days_raw, entry_date=entry_date, exit_date=exit_date
+                    ),
                 }
             )
     return trades
+
+
+def _parse_holding_days(raw_value: str | None, *, entry_date: str, exit_date: str) -> float:
+    if raw_value is not None and str(raw_value).strip():
+        try:
+            return float(raw_value)
+        except ValueError:
+            pass
+    return float(_holding_days(entry_date, exit_date))
 
 
 def _holding_days(entry_date: str, exit_date: str) -> int:
@@ -277,12 +295,12 @@ def _fairness_group_key(
     last_year: int,
     cost_profile: CostProfile,
     target: TargetConfig,
-    market: str,
+    market_family: str,
     currency: str,
     schema: str,
 ) -> str:
     key_obj = {
-        "market": market,
+        "market_family": market_family,
         "currency": currency,
         "schema": schema,
         "symbols": symbols,

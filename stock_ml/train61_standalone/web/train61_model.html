@@ -1,0 +1,374 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Train61 Multi Model - Realtime Signals</title>
+  <script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #0f131a;
+      color: #d1d4dc;
+      font-family: Arial, sans-serif;
+      height: 100vh;
+      overflow: hidden;
+    }
+    .app {
+      display: grid;
+      grid-template-columns: 320px minmax(0, 1fr);
+      grid-template-rows: minmax(0, 1fr);
+      height: 100vh;
+      overflow: hidden;
+    }
+    .sidebar {
+      border-right: 1px solid #252b36;
+      background: #131722;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      min-height: 0;
+    }
+    .brand { padding: 16px; border-bottom: 1px solid #252b36; }
+    .brand h1 { margin: 0 0 4px; font-size: 18px; color: #FFD700; display: flex; align-items: center; gap: 6px; }
+    .brand .subtitle { font-size: 11px; color: #888; margin-bottom: 8px; }
+    .brand .meta { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px; color: #9aa4b2; }
+    .model-selector { grid-column: 1 / -1; margin-top: 8px; }
+    .metric { background: #1b2130; border-radius: 6px; padding: 8px; }
+    .metric.highlight { background: linear-gradient(135deg, #1b2130 0%, #2a1f1f 100%); border: 1px solid #FFD70033; }
+    .metric strong { display: block; color: #fff; font-size: 14px; margin-top: 3px; }
+    .metric.highlight strong { color: #FFD700; }
+    .search { padding: 12px 16px; border-bottom: 1px solid #252b36; }
+    input {
+      width: 100%; padding: 10px 12px; border: 1px solid #30384a; border-radius: 6px;
+      background: #0f131a; color: #d1d4dc; outline: none;
+    }
+    .symbols { overflow: auto; flex: 1; min-height: 0; }
+    .symbol-row {
+      display: grid; grid-template-columns: 1fr auto; gap: 8px; padding: 10px 16px;
+      border-bottom: 1px solid #1e2532; cursor: pointer;
+    }
+    .symbol-row:hover, .symbol-row.active { background: #1f2938; }
+    .symbol-row .name { font-weight: 700; color: #fff; }
+    .symbol-row .sub { font-size: 12px; color: #8f9bad; margin-top: 4px; }
+    .symbol-row .pnl { text-align: right; color: #4caf50; font-weight: 700; }
+    .symbol-row .pnl.zero { color: #8f9bad; }
+    .symbol-row .badge { font-size: 11px; color: #ffca28; }
+    .main {
+      display: grid;
+      grid-template-rows: 54px minmax(0, 1fr) 260px;
+      min-width: 0;
+      min-height: 0;
+    }
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+      padding: 0 18px; border-bottom: 1px solid #252b36; background: #131722;
+    }
+    .title { font-size: 18px; color: #fff; font-weight: 700; }
+    .status { color: #9aa4b2; font-size: 13px; }
+    #chart { min-height: 0; position: relative; }
+    .overlay {
+      display: none; position: absolute; inset: 0; background: rgba(15, 19, 26, 0.72);
+      align-items: center; justify-content: center; z-index: 5; color: #fff; font-size: 15px;
+    }
+    .overlay.show { display: flex; }
+    .panel { border-top: 1px solid #252b36; background: #131722; display: grid; grid-template-columns: 300px 1fr; min-height: 0; }
+    .stats { padding: 14px 16px; border-right: 1px solid #252b36; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-content: start; }
+    .stats .box { background: #1b2130; border-radius: 6px; padding: 9px; }
+    .stats .label { color: #8f9bad; font-size: 11px; }
+    .stats .value { color: #fff; font-size: 16px; margin-top: 4px; }
+    .trades { overflow: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th, td { padding: 8px 10px; border-bottom: 1px solid #252b36; text-align: left; white-space: nowrap; }
+    th { color: #9aa4b2; position: sticky; top: 0; background: #131722; }
+    .win { color: #4caf50; }
+    .loss { color: #f44336; }
+    @media (max-width: 900px) {
+      .app { grid-template-columns: 1fr; }
+      .sidebar { display: none; }
+      .panel { grid-template-columns: 1fr; }
+      .stats { grid-template-columns: repeat(4, 1fr); border-right: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <h1><span>⚡</span> Train61 Models</h1>
+        <div class="subtitle">So sánh pooled/on-demand trên cùng symbol</div>
+        <div class="meta">
+          <div class="metric">Symbols<strong id="symbolCount">-</strong></div>
+          <div class="metric">Cached<strong id="cachedCount">-</strong></div>
+          <div class="metric highlight">Mode<strong>Multi</strong></div>
+          <div class="metric highlight">Scope<strong>61+ symbols</strong></div>
+          <div class="model-selector">
+            <label for="modelSelect" style="font-size: 11px; color: #888;">Model:</label>
+            <select id="modelSelect" style="width: 100%; margin-top: 4px; padding: 6px; background: #0f131a; color: #d1d4dc; border: 1px solid #30384a; border-radius: 4px;">
+              <option value="">Loading...</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="search"><input id="search" placeholder="Tìm mã..." /></div>
+      <div id="symbols" class="symbols"></div>
+    </aside>
+    <main class="main">
+      <div class="topbar">
+        <div class="title" id="currentSymbol">Chọn mã</div>
+        <div class="status" id="status">Đang tải danh sách...</div>
+      </div>
+      <div id="chart"><div id="overlay" class="overlay">Đang sinh tín hiệu...</div></div>
+      <section class="panel">
+        <div id="stats" class="stats"></div>
+        <div class="trades"><table><thead><tr><th>Entry</th><th>Exit</th><th>PnL</th><th>Hold</th><th>Reason</th><th>Size</th></tr></thead><tbody id="trades"></tbody></table></div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    let chart, candleSeries, volumeSeries;
+    let allSymbols = [];
+    let allModels = [];
+    let selectedSymbol = '';
+    let selectedModel = 'v5_top1_fold_chain_no_context_2026';
+
+    function modelVersionKey() {
+      return selectedModel;
+    }
+
+    function fmt(n, d = 1) {
+      const v = Number(n || 0);
+      return Number.isFinite(v) ? v.toFixed(d) : '-';
+    }
+
+    function _isObject(v) {
+      return v !== null && typeof v === 'object' && !Array.isArray(v);
+    }
+
+    function _safeArray(v) {
+      return Array.isArray(v) ? v : [];
+    }
+
+    function _resolveSignalVersionKey(signal, preferredModelId = selectedModel) {
+      const suffixes = ['_trades', '_stats', '_markers'];
+      const candidates = [];
+
+      if (signal && typeof signal.model_id === 'string' && signal.model_id.trim()) {
+        candidates.push(signal.model_id.trim());
+      }
+      if (typeof preferredModelId === 'string' && preferredModelId.trim()) {
+        candidates.push(preferredModelId.trim());
+      }
+      if (_isObject(signal)) {
+        const key = Object.keys(signal).find(k => suffixes.some(s => k.endsWith(s)));
+        if (key) {
+          const suffix = suffixes.find(s => key.endsWith(s));
+          if (suffix) candidates.push(key.slice(0, -suffix.length));
+        }
+      }
+
+      for (const candidate of candidates) {
+        if (_isObject(signal) && (signal[candidate + '_trades'] || signal[candidate + '_stats'] || signal[candidate + '_markers'])) {
+          return candidate;
+        }
+      }
+      return typeof preferredModelId === 'string' && preferredModelId.trim() ? preferredModelId.trim() : '';
+    }
+
+    function _signalBundle(signal, preferredModelId = selectedModel) {
+      if (!_isObject(signal)) {
+        return { versionKey: preferredModelId, markers: [], trades: [], stats: {} };
+      }
+      const versionKey = _resolveSignalVersionKey(signal, preferredModelId);
+      const markers = _safeArray(signal[versionKey + '_markers']);
+      const trades = _safeArray(signal[versionKey + '_trades']);
+      const stats = _isObject(signal[versionKey + '_stats']) ? signal[versionKey + '_stats'] : {};
+      return { versionKey, markers, trades, stats };
+    }
+
+    function setStatus(text) { document.getElementById('status').textContent = text; }
+    function showOverlay(show) { document.getElementById('overlay').classList.toggle('show', show); }
+
+    function createChart() {
+      const el = document.getElementById('chart');
+      chart = LightweightCharts.createChart(el, {
+        width: el.clientWidth,
+        height: el.clientHeight,
+        layout: { background: { color: '#0f131a' }, textColor: '#d1d4dc' },
+        grid: { vertLines: { color: '#1e222d' }, horzLines: { color: '#1e222d' } },
+        crosshair: { mode: 0 },
+        timeScale: { timeVisible: false, borderColor: '#2B2B43' },
+        rightPriceScale: { borderColor: '#2B2B43' },
+      });
+      candleSeries = chart.addCandlestickSeries({
+        upColor: '#26a69a', downColor: '#ef5350',
+        borderUpColor: '#26a69a', borderDownColor: '#ef5350',
+        wickUpColor: '#26a69a', wickDownColor: '#ef5350',
+      });
+      volumeSeries = chart.addHistogramSeries({
+        priceFormat: { type: 'volume' }, priceScaleId: 'vol',
+        scaleMargins: { top: 0.85, bottom: 0 },
+      });
+      chart.priceScale('vol').applyOptions({ scaleMargins: { top: 0.85, bottom: 0 } });
+      window.addEventListener('resize', () => chart.resize(el.clientWidth, el.clientHeight));
+    }
+
+    async function fetchJson(url) {
+      const res = await fetch(url, { cache: 'no-store' });
+      const data = await res.json();
+      if (!res.ok && !data.status) throw new Error(data.error || res.statusText);
+      return data;
+    }
+
+    function renderSymbols() {
+      const q = document.getElementById('search').value.trim().toUpperCase();
+      const box = document.getElementById('symbols');
+      const rows = allSymbols.filter(row => row.symbol.includes(q));
+      const versionKey = modelVersionKey();
+      box.innerHTML = rows.map(row => {
+        const pnl = Number(row[versionKey + '_pnl'] || 0);
+        const trades = Number(row[versionKey + '_trades'] || 0);
+        const wr = fmt(row[versionKey + '_wr']);
+        return `<div class="symbol-row ${row.symbol === selectedSymbol ? 'active' : ''}" data-symbol="${row.symbol}">
+          <div><div class="name">${row.symbol}</div><div class="sub">${trades} historical trades · WR ${wr}% ${row.has_historical_export ? '' : '<span class="badge"> · new</span>'}</div></div>
+          <div class="pnl ${pnl === 0 ? 'zero' : ''}">${pnl > 0 ? '+' : ''}${fmt(pnl)}</div>
+        </div>`;
+      }).join('');
+      box.querySelectorAll('.symbol-row').forEach(el => el.addEventListener('click', () => loadSymbol(el.dataset.symbol)));
+    }
+
+    function renderStats(stats) {
+      const items = [
+        ['Trades', stats.total_trades], ['Win rate', fmt(stats.win_rate) + '%'],
+        ['Total PnL', fmt(stats.total_pnl_pct) + '%'], ['Avg PnL', fmt(stats.avg_pnl_pct, 2) + '%'],
+        ['PF', fmt(stats.pf, 2)], ['Avg hold', fmt(stats.avg_hold, 1)],
+        ['Max win', fmt(stats.max_win_pct) + '%'], ['Max loss', fmt(stats.max_loss_pct) + '%'],
+      ];
+      document.getElementById('stats').innerHTML = items.map(([label, value]) => `<div class="box"><div class="label">${label}</div><div class="value">${value}</div></div>`).join('');
+    }
+
+    function renderTrades(trades) {
+      document.getElementById('trades').innerHTML = trades.map(t => {
+        const pnl = Number(t.pnl_pct || 0);
+        return `<tr><td>${t.entry_date || ''}</td><td>${t.exit_date || ''}</td><td class="${pnl >= 0 ? 'win' : 'loss'}">${pnl > 0 ? '+' : ''}${fmt(pnl, 2)}%</td><td>${t.holding_days || ''}</td><td>${t.exit_reason || ''}</td><td>${fmt(t.position_size, 3)}</td></tr>`;
+      }).join('') || '<tr><td colspan="6">Chưa có trade</td></tr>';
+    }
+
+    function renderChart(ohlcv, signal) {
+      const bundle = _signalBundle(signal, selectedModel);
+      const candles = ohlcv.ohlcv.map(row => ({ time: row.time, open: row.open, high: row.high, low: row.low, close: row.close }));
+      const volumes = ohlcv.ohlcv.map(row => ({ time: row.time, value: row.volume, color: row.close >= row.open ? '#26a69a55' : '#ef535055' }));
+      candleSeries.setData(candles);
+      volumeSeries.setData(volumes);
+      const markers = bundle.markers
+        .filter(m => _isObject(m) && typeof m.time === 'string')
+        .sort((a, b) => a.time.localeCompare(b.time));
+      try {
+        if (typeof candleSeries.setMarkers === 'function') {
+          candleSeries.setMarkers(markers);
+        } else if (window.LightweightCharts && typeof window.LightweightCharts.createSeriesMarkers === 'function') {
+          window.LightweightCharts.createSeriesMarkers(candleSeries, markers);
+        }
+      } catch (err) {
+        console.warn('Failed to render markers:', err);
+      }
+      chart.timeScale().fitContent();
+      renderStats(bundle.stats);
+      renderTrades(bundle.trades);
+    }
+
+    async function waitForSignal(modelId, symbol) {
+      showOverlay(true);
+      setStatus(`${symbol}: đang chạy model ${modelId} on-demand...`);
+      while (true) {
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        const status = await fetchJson(`/api/signal/${modelId}/${symbol}/status`);
+        if (status.status === 'done') return fetchJson(`/api/signal/${modelId}/${symbol}`);
+        if (status.status === 'error') throw new Error(status.error || 'Generate signal failed');
+      }
+    }
+
+    async function loadSymbol(symbol) {
+      if (!symbol) return;
+      if (!allSymbols.some(row => row.symbol === symbol) && allSymbols.length > 0) {
+        symbol = allSymbols[0].symbol;
+      }
+
+      selectedSymbol = symbol;
+      document.getElementById('currentSymbol').textContent = symbol;
+      renderSymbols();
+      showOverlay(false);
+      setStatus(`${symbol}: đang tải dữ liệu...`);
+      try {
+        const signalUrl = `/api/signal/${selectedModel}/${symbol}`;
+        const [ohlcv, signalRes] = await Promise.all([fetchJson(`/api/ohlcv/${symbol}`), fetch(signalUrl, { cache: 'no-store' })]);
+        let signal = await signalRes.json();
+        if (signalRes.status === 202 || signal.status === 'generating' || signal.status === 'running') {
+          signal = await waitForSignal(selectedModel, symbol);
+          await loadSymbols(false);
+        }
+        if (!signalRes.ok && (!signal || !signal.status)) {
+          throw new Error(signal?.error || `Signal API failed (${signalRes.status})`);
+        }
+        renderChart(ohlcv, signal);
+        const bundle = _signalBundle(signal, selectedModel);
+        const openPos = signal.open_position || null;
+        const openTag = openPos ? ` · OPEN từ ${openPos.entry_date || ''} (${fmt(openPos.unrealized_pnl_pct, 2)}%)` : '';
+        setStatus(`${symbol}: ${bundle.trades.length || 0} trades · ${signal.source || 'cached'}${openTag}`);
+      } catch (err) {
+        setStatus(`${symbol}: ${err.message}`);
+      } finally {
+        showOverlay(false);
+      }
+    }
+
+    async function loadModels() {
+      allModels = await fetchJson('/api/models');
+      if (!Array.isArray(allModels) || allModels.length === 0) {
+        throw new Error('No models available');
+      }
+
+      const select = document.getElementById('modelSelect');
+      select.innerHTML = allModels.map(model => `<option value="${model.id}">${model.label || model.id}</option>`).join('');
+      const defaultModel = (allModels.find(model => model.is_default) || allModels[0]).id;
+      if (!allModels.some(model => model.id === selectedModel)) {
+        selectedModel = defaultModel;
+      }
+      select.value = selectedModel;
+      select.addEventListener('change', async () => {
+        selectedModel = select.value;
+        await loadSymbols(false);
+        if (selectedSymbol) {
+          await loadSymbol(selectedSymbol);
+        } else if (allSymbols.length > 0) {
+          await loadSymbol(allSymbols[0].symbol);
+        }
+      });
+    }
+
+    async function loadSymbols(selectFirst = true) {
+      allSymbols = await fetchJson(`/api/symbols?model_id=${encodeURIComponent(selectedModel)}`);
+      document.getElementById('symbolCount').textContent = allSymbols.length;
+      document.getElementById('cachedCount').textContent = allSymbols.filter(row => row.has_historical_export).length;
+      if (selectedSymbol && !allSymbols.some(row => row.symbol === selectedSymbol)) {
+        selectedSymbol = '';
+      }
+      renderSymbols();
+      if (selectFirst && allSymbols.length) loadSymbol(allSymbols[0].symbol);
+    }
+
+    document.getElementById('search').addEventListener('input', renderSymbols);
+    createChart();
+    (async () => {
+      try {
+        await loadModels();
+        await loadSymbols();
+      } catch (err) {
+        setStatus(err.message);
+      }
+    })();
+  </script>
+</body>
+</html>

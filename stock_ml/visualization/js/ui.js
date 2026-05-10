@@ -80,6 +80,221 @@ function renderTimeframeOptions() {
   sel.value = currentTimeframe;
 }
 
+function getAvailableYearsForCurrentSymbol() {
+  const years = new Set();
+  const data = currentRawData || currentData || {};
+
+  for (const candle of data.ohlcv || []) {
+    const y = getYearFromDateLike(candle && candle.time);
+    if (y) years.add(String(y));
+  }
+
+  for (const [key, value] of Object.entries(data)) {
+    if (!key.endsWith('_trades') || !Array.isArray(value)) continue;
+    for (const trade of value) {
+      const entryYear = getYearFromDateLike(trade && trade.entry_date);
+      const exitYear = getYearFromDateLike(trade && trade.exit_date);
+      if (entryYear) years.add(String(entryYear));
+      if (exitYear) years.add(String(exitYear));
+    }
+  }
+
+  if (years.size === 0) {
+    for (const [key, value] of Object.entries(data)) {
+      if (!key.endsWith('_markers') || !Array.isArray(value)) continue;
+      for (const marker of value) {
+        const y = getYearFromDateLike(marker && marker.time);
+        if (y) years.add(String(y));
+      }
+    }
+  }
+
+  return Array.from(years).sort((a, b) => Number(b) - Number(a));
+}
+
+function renderYearOptions() {
+  const sel = document.getElementById('yearSelect');
+  if (!sel) return;
+  const years = getAvailableYearsForCurrentSymbol();
+  sel.innerHTML = '<option value="all">All Years</option>';
+  for (const year of years) {
+    const opt = document.createElement('option');
+    opt.value = year;
+    opt.textContent = year;
+    sel.appendChild(opt);
+  }
+  if (currentYear !== 'all' && years.length > 0 && !years.includes(currentYear)) currentYear = 'all';
+  sel.value = currentYear;
+}
+
+function roundStat(value, digits) {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return 0;
+  const factor = 10 ** digits;
+  return Math.round(num * factor) / factor;
+}
+
+function computeMedian(values) {
+  if (!values || values.length === 0) return 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  if (sorted.length % 2 === 1) return sorted[mid];
+  return (sorted[mid - 1] + sorted[mid]) / 2;
+}
+
+function buildStatsFromTrades(trades, versionHint) {
+  const tradeList = Array.isArray(trades) ? trades : [];
+  const pnls = tradeList
+    .map(t => Number(t && t.pnl_pct))
+    .filter(Number.isFinite);
+  const holdDays = tradeList
+    .map(t => Number(t && t.holding_days))
+    .filter(Number.isFinite);
+
+  if (pnls.length === 0) {
+    return {
+      total_trades: 0,
+      wins: 0,
+      losses: 0,
+      win_rate: 0,
+      total_pnl_pct: 0,
+      avg_pnl_pct: 0,
+      median_pnl_pct: 0,
+      std_pnl_pct: 0,
+      avg_win_pct: 0,
+      avg_loss_pct: 0,
+      payoff_ratio: 0,
+      max_win_pct: 0,
+      max_loss_pct: 0,
+      avg_hold: 0,
+      pf: 0,
+      version: versionHint || '',
+    };
+  }
+
+  const wins = pnls.filter(v => v >= 0);
+  const losses = pnls.filter(v => v < 0);
+  const totalPnl = pnls.reduce((acc, v) => acc + v, 0);
+  const avgPnl = totalPnl / pnls.length;
+  const avgWin = wins.length ? wins.reduce((acc, v) => acc + v, 0) / wins.length : 0;
+  const avgLoss = losses.length ? losses.reduce((acc, v) => acc + v, 0) / losses.length : 0;
+  const variance = pnls.reduce((acc, v) => acc + (v - avgPnl) ** 2, 0) / pnls.length;
+  const grossWin = wins.reduce((acc, v) => acc + v, 0);
+  const grossLoss = Math.abs(losses.reduce((acc, v) => acc + v, 0));
+  const pf = grossLoss > 0 ? (grossWin / grossLoss) : 0;
+  const payoff = avgLoss !== 0 ? Math.abs(avgWin / avgLoss) : 0;
+  const avgHold = holdDays.length ? holdDays.reduce((acc, v) => acc + v, 0) / holdDays.length : 0;
+
+  return {
+    total_trades: pnls.length,
+    wins: wins.length,
+    losses: losses.length,
+    win_rate: roundStat((wins.length * 100) / pnls.length, 1),
+    total_pnl_pct: roundStat(totalPnl, 2),
+    avg_pnl_pct: roundStat(avgPnl, 2),
+    median_pnl_pct: roundStat(computeMedian(pnls), 2),
+    std_pnl_pct: roundStat(Math.sqrt(variance), 2),
+    avg_win_pct: roundStat(avgWin, 2),
+    avg_loss_pct: roundStat(avgLoss, 2),
+    payoff_ratio: roundStat(payoff, 2),
+    max_win_pct: roundStat(wins.length ? Math.max(...wins) : 0, 2),
+    max_loss_pct: roundStat(losses.length ? Math.min(...losses) : 0, 2),
+    avg_hold: roundStat(avgHold, 1),
+    pf: roundStat(pf, 2),
+    version: versionHint || '',
+  };
+}
+
+function timeKeyForLookup(value) {
+  const normalized = normalizeTimeForChart(value);
+  if (typeof normalized === 'number' && Number.isFinite(normalized)) return `n:${normalized}`;
+  if (typeof normalized === 'string' && normalized) return `s:${normalized}`;
+  return '';
+}
+
+function buildCloseLookup(ohlcv) {
+  const lookup = new Map();
+  for (const row of ohlcv || []) {
+    const key = timeKeyForLookup(row && row.time);
+    const close = Number(row && row.close);
+    if (!key || !Number.isFinite(close)) continue;
+    lookup.set(key, close);
+  }
+  return lookup;
+}
+
+function getTradePrice(trade, priceField, dateField, closeLookup) {
+  const direct = Number(trade && trade[priceField]);
+  if (Number.isFinite(direct)) return direct;
+  const key = timeKeyForLookup(trade && trade[dateField]);
+  if (!key || !closeLookup.has(key)) return null;
+  const mapped = Number(closeLookup.get(key));
+  return Number.isFinite(mapped) ? mapped : null;
+}
+
+function getTradePoints(trade, closeLookup) {
+  const pnlPct = Number(trade && trade.pnl_pct);
+  if (!Number.isFinite(pnlPct)) return null;
+
+  const entryPrice = getTradePrice(trade, 'entry_price', 'entry_date', closeLookup);
+  const exitPrice = getTradePrice(trade, 'exit_price', 'exit_date', closeLookup);
+  const side = String(trade && (trade.side || trade.position_side || '')).toLowerCase();
+
+  if (Number.isFinite(entryPrice) && Number.isFinite(exitPrice)) {
+    if (side.includes('short')) return entryPrice - exitPrice;
+    if (side.includes('long')) return exitPrice - entryPrice;
+
+    const delta = exitPrice - entryPrice;
+    if (delta === 0 || pnlPct === 0) return delta;
+    return Math.sign(delta) === Math.sign(pnlPct) ? delta : -delta;
+  }
+
+  if (Number.isFinite(entryPrice)) {
+    return entryPrice * (pnlPct / 100);
+  }
+
+  if (Number.isFinite(exitPrice)) {
+    const denom = 1 + (pnlPct / 100);
+    if (denom === 0) return null;
+    const impliedEntry = exitPrice / denom;
+    return exitPrice - impliedEntry;
+  }
+
+  return null;
+}
+
+function maxDrawdownFromValues(values) {
+  if (!values || values.length === 0) return 0;
+  let cum = 0;
+  let peak = 0;
+  let maxDd = 0;
+  for (const v of values) {
+    const value = Number(v);
+    if (!Number.isFinite(value)) continue;
+    cum += value;
+    peak = Math.max(peak, cum);
+    maxDd = Math.max(maxDd, peak - cum);
+  }
+  return -roundStat(maxDd, 2);
+}
+
+function summarizeTradePoints(trades, ohlcv) {
+  const closeLookup = buildCloseLookup(ohlcv);
+  const points = [];
+  for (const trade of trades || []) {
+    const pt = getTradePoints(trade, closeLookup);
+    if (Number.isFinite(pt)) points.push(pt);
+  }
+
+  const total = roundStat(points.reduce((acc, v) => acc + v, 0), 2);
+  const maxDd = maxDrawdownFromValues(points);
+  return {
+    total_points: total,
+    max_drawdown_points: maxDd,
+    count: points.length,
+  };
+}
+
 function maxDrawdownFromTrades(trades) {
   if (!trades || trades.length === 0) return 0;
   let cum = 0, peak = 0, maxDd = 0;
@@ -167,11 +382,15 @@ function getModelsForCurrentSymbol() {
 function renderStats() {
   if (!currentData || !manifest) return;
   const bar = document.getElementById('statsBar');
+  const baseOhlcvForPoints = (currentRawData && currentRawData.ohlcv) || currentData.ohlcv || [];
   const allStats = [];
   for (const model of getModelsForCurrentSymbol()) {
     const vk = model.version_key;
-    const s = currentData[vk + '_stats'] || {};
-    allStats.push({ vk, model, stats: s, trades: currentData[vk + '_trades'] || [] });
+    const trades = currentData[vk + '_trades'] || [];
+    const s = currentData[vk + '_stats'] || buildStatsFromTrades(trades, vk);
+    const isDerivatives = getModelMarketFamily(model) === 'vn_derivatives';
+    const pointStats = isDerivatives ? summarizeTradePoints(trades, baseOhlcvForPoints) : null;
+    allStats.push({ vk, model, stats: s, trades, pointStats });
   }
   const totals = allStats.map(x => x.stats.total_pnl_pct || 0);
   const wrs = allStats.map(x => x.stats.win_rate || 0);
@@ -201,12 +420,19 @@ function renderStats() {
     const losses = s.losses || 0;
     const maxConsecWin = maxConsecutive(item.trades, 'win');
     const maxConsecLoss = maxConsecutive(item.trades, 'loss');
+    const totalPtsRow = item.pointStats
+      ? `<div class="stat-row"><span class="lbl">Total (pts):</span><span class="${pnlCls(item.pointStats.total_points)}">${fmt(item.pointStats.total_points)} pt</span></div>`
+      : '';
+    const maxDdPtsRow = item.pointStats
+      ? `<div class="stat-row"><span class="lbl">MaxDD (pts):</span><span class="${pnlCls(item.pointStats.max_drawdown_points)}">${fmt(item.pointStats.max_drawdown_points)} pt</span></div>`
+      : '';
     html += `<div class="stat-card" style="background:${hexToRgba(c,0.1)};border:1px solid ${hexToRgba(c,0.3)};transition:opacity 0.2s">
       <div class="stat-title" style="color:${c}">${item.model.name}</div>
       <div class="stat-row"><span class="lbl">Trades:</span><span>${s.total_trades||0} <span style="color:#888;font-size:9px">(${wins}W/${losses}L)</span></span></div>
       <div class="stat-row"><span class="lbl">WR:</span><span>${s.win_rate||0}%${bestW}</span></div>
       <div class="stat-row"><span class="lbl">Avg:</span><span class="${pnlCls(s.avg_pnl_pct)}">${fmt(s.avg_pnl_pct||0)}%${bestA}</span></div>
       <div class="stat-row"><span class="lbl">Total:</span><span class="${pnlCls(s.total_pnl_pct)}">${fmt(s.total_pnl_pct||0)}%${bestT}</span></div>
+      ${totalPtsRow}
       <div class="stat-row"><span class="lbl">AvgW/L:</span><span><span class="positive">${fmt(avgWin)}%</span> / <span class="negative">${fmt(avgLoss)}%</span></span></div>
       <div class="stat-row"><span class="lbl">MaxW/L:</span><span><span class="positive">${fmt(maxWin)}%</span> / <span class="negative">${fmt(maxLoss)}%</span></span></div>
       <div class="stat-row"><span class="lbl">Streak:</span><span><span class="positive">${maxConsecWin}W</span> / <span class="negative">${maxConsecLoss}L</span></span></div>
@@ -214,6 +440,7 @@ function renderStats() {
       <div class="stat-row"><span class="lbl">PF:</span><span>${s.pf||0}${bestPf}</span></div>
       <div class="stat-row"><span class="lbl">Median:</span><span class="${pnlCls(s.median_pnl_pct||0)}">${fmt(s.median_pnl_pct||0)}%</span></div>
       <div class="stat-row"><span class="lbl">MaxDD:</span><span class="${pnlCls(maxDd)}">${fmt(maxDd)}%</span></div>
+      ${maxDdPtsRow}
     </div>`;
   });
   bar.innerHTML = html;

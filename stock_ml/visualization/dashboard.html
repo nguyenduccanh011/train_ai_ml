@@ -17,10 +17,10 @@
   }
   .header-controls {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) max-content max-content minmax(180px, 420px) max-content;
+    grid-template-columns: minmax(0, 1fr) max-content max-content max-content minmax(180px, 420px) max-content;
     grid-template-areas:
-      "title market timeframe search sort"
-      "toggle toggle toggle toggle toggle";
+      "title market timeframe year search sort"
+      "toggle toggle toggle toggle toggle toggle";
     align-items: center;
     gap: 8px;
     min-width: 0;
@@ -29,6 +29,7 @@
   .header-controls h1 { grid-area: title; }
   .header-controls .market-selector { grid-area: market; }
   .header-controls .timeframe-selector { grid-area: timeframe; }
+  .header-controls .year-selector { grid-area: year; }
   .header-controls .symbol-selector { grid-area: search; }
   .header-controls .sort-controls { grid-area: sort; justify-self: end; }
   .header-controls .toggle-group { grid-area: toggle; width: 100%; }
@@ -142,7 +143,7 @@
     font-size: 11px;
     cursor: pointer;
   }
-  .market-selector select, .timeframe-selector select {
+  .market-selector select, .timeframe-selector select, .year-selector select {
     background: #2a2e39;
     color: #d1d4dc;
     border: 1px solid #444;
@@ -151,7 +152,7 @@
     font-size: 12px;
     cursor: pointer;
   }
-  .market-selector label, .timeframe-selector label {
+  .market-selector label, .timeframe-selector label, .year-selector label {
     font-size: 10px;
     color: #888;
   }
@@ -336,9 +337,22 @@
     background: #666d7c;
   }
 
-  .market-selector { display: flex; align-items: center; gap: 6px; }
-  .market-selector label { color: #888; font-size: 12px; }
-  .market-selector select {
+  .market-selector,
+  .timeframe-selector,
+  .year-selector {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .market-selector label,
+  .timeframe-selector label,
+  .year-selector label {
+    color: #888;
+    font-size: 12px;
+  }
+  .market-selector select,
+  .timeframe-selector select,
+  .year-selector select {
     background: #1e222d;
     color: #d1d4dc;
     border: 1px solid #363a45;
@@ -349,17 +363,17 @@
 
   @media (max-width: 1320px) {
     .header-controls {
-      grid-template-columns: minmax(0, 1fr) max-content minmax(160px, 1fr) max-content;
+      grid-template-columns: minmax(0, 1fr) max-content max-content max-content minmax(160px, 1fr) max-content;
     }
   }
 
   @media (max-width: 1080px) {
     .header-controls {
-      grid-template-columns: 1fr max-content;
+      grid-template-columns: 1fr max-content max-content;
       grid-template-areas:
-        "title market"
-        "search sort"
-        "toggle toggle";
+        "title market timeframe"
+        "year search sort"
+        "toggle toggle toggle";
     }
   }
 
@@ -371,6 +385,7 @@
         "title"
         "market"
         "timeframe"
+        "year"
         "search"
         "sort"
         "toggle";
@@ -396,6 +411,12 @@
       <label>Timeframe:</label>
       <select id="timeframeSelect" onchange="switchTimeframe(this.value)">
         <option value="all">All Timeframes</option>
+      </select>
+    </div>
+    <div class="year-selector">
+      <label>Year:</label>
+      <select id="yearSelect" onchange="switchYear(this.value)">
+        <option value="all">All Years</option>
       </select>
     </div>
     <div class="symbol-selector">

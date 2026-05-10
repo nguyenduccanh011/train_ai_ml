@@ -1,0 +1,55 @@
+name: crypto_perp
+market_type: linear_usdt_perp
+
+data:
+  data_dir: "../portable_data/crypto_perp_dataset"
+  schema: ohlcv_funding_1h
+  default_timeframe: "1h"
+  benchmark_symbol: null
+  timestamp_column: timestamp
+  timezone: UTC
+  required_columns: [open, high, low, close, volume]
+  optional_columns: [funding_rate]
+  volume_unit: base_asset
+
+execution:
+  instrument_type: perp
+  pnl_mode: linear_usdt_perp
+  commission: 0.0004
+  tax: 0.0
+  slippage: 0.0005
+  initial_capital: 10000
+  currency: USDT
+  contract_multiplier: 1
+  funding_rate_column: funding_rate
+  borrow_rate_column: null
+  borrow_available_column: null
+  margin_mode: cross
+  leverage: 1
+  maintenance_margin_rate: 0.005
+  liquidation_fee: 0.0
+  short_enabled: true
+  short_position_size: null
+  short_hard_cap: null
+  short_squeeze_exit: true
+  short_squeeze_vol_mult: 3.0
+  short_squeeze_price_pct: 0.03
+  max_short_notional: null
+
+symbols:
+  default_group: balanced
+  default_list: []
+  groups: {}
+
+strategy_overrides: {}
+
+features:
+  enabled_blocks: null
+
+models:
+  default_stack: null
+
+target:
+  type: forward_return
+  horizon: 12
+  unit: bars

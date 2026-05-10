@@ -56,3 +56,10 @@ stock_ml/docs/refactor/*PLAN*.md
 
 # Claude
 .claude/
+
+# train61_standalone artifacts
+stock_ml/train61_standalone/data/
+stock_ml/train61_standalone/**/__pycache__/
+stock_ml/train61_standalone/results/
+stock_ml/train61_standalone/models/
+stock_ml/train61_standalone/cache/

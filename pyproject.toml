@@ -34,6 +34,20 @@ ignore = [
 "stock_ml/colab_setup.py" = ["F841"]
 "stock_ml/compare_rule_vs_model.py" = ["B007"]
 "stock_ml/model_manager.py" = ["B007"]
+# Utility scripts: ignore E402 (imports after sys.path), B007 (unused loop vars), F841 (unused vars)
+"stock_ml/scripts/**" = ["E402", "B007", "F841", "E722"]
+"stock_ml/stock_ml/scripts/**" = ["E402", "B007", "F841", "E722"]
+# train61_standalone: ignore style warnings for legacy backtest engine and feature code
+"stock_ml/train61_standalone/app/**" = ["E402", "I"]
+"stock_ml/train61_standalone/tools/**" = ["E402"]
+"stock_ml/train61_standalone/src/backtest/**" = ["SIM", "E741", "F841"]
+"stock_ml/train61_standalone/src/data/**" = ["SIM"]
+"stock_ml/train61_standalone/src/features/**" = ["E741", "SIM", "F841"]
+"stock_ml/train61_standalone/src/components/features/**" = ["E741", "SIM"]
+"stock_ml/train61_standalone/src/components/fusion/**" = ["SIM"]
+"stock_ml/train61_standalone/src/pipeline/**" = ["N814", "B905"]
+"stock_ml/train61_standalone/src/strategies/**" = ["SIM", "F841"]
+"stock_ml/train61_standalone/**" = ["B007"]
 
 [tool.mypy]
 python_version = "3.11"

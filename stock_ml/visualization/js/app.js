@@ -16,6 +16,10 @@ function normalizeTimeframe(timeframe) {
   return typeof timeframe === 'string' && timeframe.trim() ? timeframe.trim() : 'all';
 }
 
+function normalizeYear(year) {
+  return normalizeYearSelection(year);
+}
+
 function normalizeSymbol(symbol) {
   return typeof symbol === 'string' ? symbol.trim() : '';
 }
@@ -37,6 +41,7 @@ function readSelectionFromQuery() {
     return {
       market: params.get('market'),
       timeframe: params.get('timeframe'),
+      year: params.get('year'),
       symbol: params.get('symbol'),
     };
   } catch (_) {
@@ -50,6 +55,7 @@ function getInitialSelection() {
   return {
     market: normalizeMarket(query.market || stored.market || 'all'),
     timeframe: normalizeTimeframe(query.timeframe || stored.timeframe || 'all'),
+    year: normalizeYear(query.year || stored.year || 'all'),
     symbol: normalizeSymbol(query.symbol || stored.symbol || ''),
   };
 }
@@ -58,6 +64,7 @@ function persistSelection() {
   const selection = {
     market: normalizeMarket(currentMarketFamily),
     timeframe: normalizeTimeframe(currentTimeframe),
+    year: normalizeYear(currentYear),
     symbol: normalizeSymbol(currentSymbol),
   };
 
@@ -71,6 +78,8 @@ function persistSelection() {
     else url.searchParams.set('market', selection.market);
     if (selection.timeframe === 'all') url.searchParams.delete('timeframe');
     else url.searchParams.set('timeframe', selection.timeframe);
+    if (selection.year === 'all') url.searchParams.delete('year');
+    else url.searchParams.set('year', selection.year);
     if (selection.symbol) url.searchParams.set('symbol', selection.symbol);
     else url.searchParams.delete('symbol');
     window.history.replaceState({}, '', url.toString());
@@ -103,6 +112,13 @@ function syncTimeframeSelect() {
   if (timeframeSelect.value !== currentTimeframe) timeframeSelect.value = currentTimeframe;
 }
 
+function syncYearSelect() {
+  const yearSelect = document.getElementById('yearSelect');
+  if (!yearSelect) return;
+  renderYearOptions();
+  if (yearSelect.value !== currentYear) yearSelect.value = currentYear;
+}
+
 function findSymbolItem(symbol) {
   const target = normalizeSymbol(symbol).toUpperCase();
   if (!target) return null;
@@ -113,6 +129,7 @@ let initialSelection = getInitialSelection();
 currentMarketFamily = initialSelection.market;
 currentMarket = initialSelection.market;
 currentTimeframe = initialSelection.timeframe;
+currentYear = initialSelection.year;
 syncMarketSelect();
 
 window.toggleLayer = function(vk) {
@@ -172,41 +189,88 @@ function applyTimeScaleOptions(ohlcv) {
   });
 }
 
-window.loadSymbol = async function(file) {
-  if (!file) return;
-  const isJsonFile = file.endsWith && file.endsWith('.json');
-  try {
-    if (isJsonFile) {
-      const resp = await fetch(file);
-      currentData = await resp.json();
-    } else {
-      currentData = { symbol: file, ohlcv: [] };
-    }
-  } catch (_) {
-    currentData = { symbol: file.split('/').pop().replace('.json', ''), ohlcv: [] };
-  }
-  currentSymbol = currentData.symbol;
-  persistSelection();
+function isSelectedYear(year) {
+  if (currentYear === 'all') return true;
+  return String(year) === currentYear;
+}
 
-  const symbolModels = getFilteredModels().filter(model => {
-    const idx = modelIndices[model.version_key] || [];
-    return idx.some(entry => entry.symbol === currentSymbol);
+function isTradeInSelectedYear(trade) {
+  if (currentYear === 'all') return true;
+  const entryYear = getYearFromDateLike(trade && trade.entry_date);
+  const exitYear = getYearFromDateLike(trade && trade.exit_date);
+  return isSelectedYear(entryYear) || isSelectedYear(exitYear);
+}
+
+function filterOhlcvBySelectedYear(ohlcv) {
+  if (currentYear === 'all') return ohlcv || [];
+  return (ohlcv || []).filter(row => {
+    const year = getYearFromDateLike(row && row.time);
+    return isSelectedYear(year);
   });
-  for (const model of symbolModels) {
-    const payload = await loadModelPayload(model.data_dir, currentSymbol);
-    for (const key of Object.keys(payload)) {
-      if (key === 'symbol') continue;
-      if (key.endsWith('_markers') && Array.isArray(payload[key])) {
-        currentData[key] = normalizeMarkersForChart(payload[key]);
-      } else {
-        currentData[key] = payload[key];
-      }
-    }
+}
+
+function filterMarkersBySelectedYear(markers) {
+  if (currentYear === 'all') return markers || [];
+  return (markers || []).filter(marker => {
+    const year = getYearFromDateLike(marker && marker.time);
+    return isSelectedYear(year);
+  });
+}
+
+function filterTradesBySelectedYear(trades) {
+  if (currentYear === 'all') return trades || [];
+  return (trades || []).filter(isTradeInSelectedYear);
+}
+
+function buildCurrentDataFromRaw() {
+  if (!currentRawData) {
+    currentData = null;
+    return null;
   }
 
+  const filtered = {
+    symbol: currentRawData.symbol,
+    ohlcv: normalizeOhlcvForChart(filterOhlcvBySelectedYear(currentRawData.ohlcv || [])),
+  };
+
+  for (const [key, value] of Object.entries(currentRawData)) {
+    if (key === 'symbol' || key === 'ohlcv') continue;
+
+    if (key.endsWith('_markers') && Array.isArray(value)) {
+      filtered[key] = normalizeMarkersForChart(filterMarkersBySelectedYear(value));
+      continue;
+    }
+
+    if (key.endsWith('_trades') && Array.isArray(value)) {
+      const filteredTrades = filterTradesBySelectedYear(value);
+      filtered[key] = filteredTrades;
+      const versionKey = key.slice(0, -('_trades'.length));
+      if (currentYear === 'all') {
+        filtered[versionKey + '_stats'] = currentRawData[versionKey + '_stats'] || buildStatsFromTrades(filteredTrades, versionKey);
+      } else {
+        filtered[versionKey + '_stats'] = buildStatsFromTrades(filteredTrades, versionKey);
+      }
+      continue;
+    }
+
+    if (key.endsWith('_stats')) {
+      if (!(key in filtered)) filtered[key] = value;
+      continue;
+    }
+
+    filtered[key] = value;
+  }
+
+  currentData = filtered;
+  return filtered;
+}
+
+function applyCurrentView() {
+  const data = buildCurrentDataFromRaw();
+  if (!data) return;
   if (!chart) createChart();
-  const ohlcv = normalizeOhlcvForChart(currentData.ohlcv || []);
-  currentData.ohlcv = ohlcv;
+
+  const ohlcv = data.ohlcv || [];
   applyTimeScaleOptions(ohlcv);
   candleSeries.setData(ohlcv);
   volumeSeries.setData(ohlcv.map(d => ({
@@ -219,6 +283,41 @@ window.loadSymbol = async function(file) {
   updateStatsVisibility();
   renderTradePanels();
   updateSearchInputDisplay();
+  persistSelection();
+}
+
+window.loadSymbol = async function(file) {
+  if (!file) return;
+  const isJsonFile = file.endsWith && file.endsWith('.json');
+  let symbolData = null;
+  try {
+    if (isJsonFile) {
+      const resp = await fetch(file);
+      symbolData = await resp.json();
+    } else {
+      symbolData = { symbol: file, ohlcv: [] };
+    }
+  } catch (_) {
+    symbolData = { symbol: file.split('/').pop().replace('.json', ''), ohlcv: [] };
+  }
+  currentRawData = symbolData;
+  currentSymbol = symbolData.symbol;
+  persistSelection();
+
+  const symbolModels = getFilteredModels().filter(model => {
+    const idx = modelIndices[model.version_key] || [];
+    return idx.some(entry => entry.symbol === currentSymbol);
+  });
+  for (const model of symbolModels) {
+    const payload = await loadModelPayload(model.data_dir, currentSymbol);
+    for (const key of Object.keys(payload)) {
+      if (key === 'symbol') continue;
+      currentRawData[key] = payload[key];
+    }
+  }
+
+  syncYearSelect();
+  applyCurrentView();
 };
 
 function getBaseDirForMarket(market) {
@@ -262,6 +361,7 @@ async function refreshDashboardSelection(preferredSymbol) {
   modelVisibility = {};
   syncMarketSelect();
   syncTimeframeSelect();
+  syncYearSelect();
   persistSelection();
   renderToggleButtons();
   renderLegend();
@@ -277,9 +377,12 @@ async function refreshDashboardSelection(preferredSymbol) {
     return;
   }
 
+  currentRawData = null;
+  currentData = null;
   currentSymbol = null;
   const searchInput = document.getElementById('symbolSearchInput');
   if (searchInput && !searchInput.matches(':focus')) searchInput.value = '';
+  syncYearSelect();
   persistSelection();
 }
 
@@ -295,6 +398,13 @@ window.switchTimeframe = async function(timeframe, preferredSymbol) {
   await refreshDashboardSelection(preferredSymbol);
 };
 
+window.switchYear = function(year) {
+  currentYear = normalizeYear(year);
+  syncYearSelect();
+  persistSelection();
+  applyCurrentView();
+};
+
 async function init() {
   try {
     // Load manifest
@@ -305,6 +415,7 @@ async function init() {
     currentMarketFamily = initialSelection.market;
     currentMarket = initialSelection.market;
     currentTimeframe = initialSelection.timeframe;
+    currentYear = initialSelection.year;
 
     for (const market of new Set((manifest.models || []).map(getModelMarket).filter(Boolean))) {
       await loadBaseIndex(market);
@@ -323,6 +434,7 @@ async function init() {
 
     syncMarketSelect();
     syncTimeframeSelect();
+    syncYearSelect();
     await refreshDashboardSelection(initialSelection.symbol);
   } catch (e) {
     console.error('Init error:', e);

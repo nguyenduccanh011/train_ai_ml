@@ -14,6 +14,8 @@ from paths import (
     TOP1_BACKTEST_CONFIG,
     TOP1_FOLD_CHAIN_MODEL_PATH,
     TOP1_POOLED_GLOBAL_NO_RS_CONFIG,
+    TOP1_POOLED_GLOBAL_RS_WEIGHTED_298_NO_BEAR_CONFIG,
+    TOP1_POOLED_GLOBAL_RS_WEIGHTED_298_NO_BEAR_NO_CHOP_CONFIG,
     TOP1_POOLED_GLOBAL_RS_WEIGHTED_CONFIG,
     TOP1_POOLED_GLOBAL_RS_WEIGHTED_65_NO_BEAR_CONFIG,
     TOP1_POOLED_GLOBAL_RS_WEIGHTED_65_NO_BEAR_NO_CHOP_CONFIG,
@@ -112,6 +114,24 @@ MODELS: dict[str, dict[str, Any]] = {
         "requires": ["config", "dataset", "symbols"],
         "color": "#EF5350",
         "label": "Top1 Pooled Global - RS Weighted (298)",
+    },
+    "top1_pooled_global_rs_weighted_298_no_bear_no_chop": {
+        "type": "pooled_global_rerun",
+        "config": TOP1_POOLED_GLOBAL_RS_WEIGHTED_298_NO_BEAR_NO_CHOP_CONFIG,
+        "dataset": FULL_DATASET_DIR,
+        "symbols": LIQUIDITY_1B_SYMBOLS_PATH,
+        "requires": ["config", "dataset", "symbols"],
+        "color": "#D81B60",
+        "label": "Top1 Pooled Global - RS Weighted (298 No Bear/No Chop)",
+    },
+    "top1_pooled_global_rs_weighted_298_no_bear": {
+        "type": "pooled_global_rerun",
+        "config": TOP1_POOLED_GLOBAL_RS_WEIGHTED_298_NO_BEAR_CONFIG,
+        "dataset": FULL_DATASET_DIR,
+        "symbols": LIQUIDITY_1B_SYMBOLS_PATH,
+        "requires": ["config", "dataset", "symbols"],
+        "color": "#EC407A",
+        "label": "Top1 Pooled Global - RS Weighted (298 No Bear)",
     },
 }
 DEFAULT_MODEL = str(

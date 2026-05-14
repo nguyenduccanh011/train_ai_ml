@@ -34,3 +34,9 @@ TOP1_POOLED_GLOBAL_RS_WEIGHTED_65_NO_BEAR_CONFIG = (
 TOP1_POOLED_GLOBAL_RS_WEIGHTED_65_NO_BEAR_NO_CHOP_CONFIG = (
     ROOT / "config" / "top1_pooled_global_rs_weighted_65_no_bear_no_chop.resolved.yaml"
 )
+TOP1_POOLED_GLOBAL_RS_WEIGHTED_298_NO_BEAR_CONFIG = (
+    ROOT / "config" / "top1_pooled_global_rs_weighted_298_no_bear.resolved.yaml"
+)
+TOP1_POOLED_GLOBAL_RS_WEIGHTED_298_NO_BEAR_NO_CHOP_CONFIG = (
+    ROOT / "config" / "top1_pooled_global_rs_weighted_298_no_bear_no_chop.resolved.yaml"
+)

@@ -15,6 +15,10 @@ if TYPE_CHECKING:
     from src.pipeline.config import ExperimentConfig
 
 
+def _finite_matrix(values: Any) -> np.ndarray:
+    return np.nan_to_num(values, nan=0.0, posinf=0.0, neginf=0.0)
+
+
 def build_prediction_cache(
     cfg: ExperimentConfig,
     symbols: list[str],
@@ -157,7 +161,7 @@ def build_prediction_cache(
 
     for _window, train_df, test_df in splitter.split(df):
         model = get_model(effective_model_type, device=device, **entry_model_extras)
-        X_train = np.nan_to_num(train_df[feature_cols].values)
+        X_train = _finite_matrix(train_df[feature_cols].values)
         y_train = train_df["target"].values.astype(int)
         model.fit(X_train, y_train)
 
@@ -173,7 +177,7 @@ def build_prediction_cache(
             sym_test = test_df[test_df["symbol"] == sym].reset_index(drop=True)
             if len(sym_test) < 10:
                 continue
-            X_sym = np.nan_to_num(sym_test[feature_cols].values)
+            X_sym = _finite_matrix(sym_test[feature_cols].values)
             y_pred_raw = model.predict(X_sym)
             y_pred = canonicalize_predictions(y_pred_raw, target_cfg_dict)
             rets = sym_test["return_1d"].values

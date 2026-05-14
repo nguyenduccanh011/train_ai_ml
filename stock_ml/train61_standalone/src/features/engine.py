@@ -47,7 +47,13 @@ class FeatureEngine:
         if self.feature_set == "full":
             df = self._regime_features(df)
 
-        if self.feature_set in ("leading", "full_v2", "leading_v2"):
+        if self.feature_set in (
+            "leading",
+            "full_v2",
+            "leading_v2",
+            "leading_rs",
+            "leading_rs_weighted",
+        ):
             df = self._price_action(df)
             df = self._volume_features(df)
             df = self._moving_averages(df)
@@ -105,12 +111,15 @@ class FeatureEngine:
             parts.append(group)
         result = pd.concat(parts, ignore_index=True)
 
-        if "E" in self.extra_groups:
-            result = self._relative_strength(result)
+        if "E" in self.extra_groups or self.feature_set == "leading_rs":
+            result = self._relative_strength(result, mode="old")
+
+        if self.feature_set == "leading_rs_weighted":
+            result = self._relative_strength(result, mode="weighted")
 
         # leading_v3 always includes relative strength (cross-sectional)
         if self.feature_set == "leading_v3" and "E" not in self.extra_groups:
-            result = self._relative_strength(result)
+            result = self._relative_strength(result, mode="old")
 
         return result
 
@@ -738,37 +747,49 @@ class FeatureEngine:
 
     # ── Group E: Relative Strength (cross-sectional) ─────────────────
 
-    def _relative_strength(self, df: pd.DataFrame) -> pd.DataFrame:
+    def _relative_strength(self, df: pd.DataFrame, mode: str = "old") -> pd.DataFrame:
         """Cross-sectional RS features. Must be called on pooled DataFrame."""
-        for period in [20, 60]:
+        periods = [20, 60, 120] if mode == "weighted" else [20, 60]
+        for period in periods:
             col = f"_ret_{period}d"
             df[col] = df.groupby("symbol")["close"].pct_change(period)
 
         for ts, ts_group in df.groupby("timestamp"):
             pass  # just force the groupby to work
 
-        df["rs_vs_market_20d"] = np.nan
-        df["rs_vs_market_60d"] = np.nan
-        df["rs_rank_20d"] = np.nan
-        df["rs_divergence"] = np.nan
+        if mode == "weighted":
+            df["rs_rank_weighted"] = np.nan
+        else:
+            df["rs_vs_market_20d"] = np.nan
+            df["rs_vs_market_60d"] = np.nan
+            df["rs_rank_20d"] = np.nan
+            df["rs_divergence"] = np.nan
 
         for ts in df["timestamp"].unique():
             mask = df["timestamp"] == ts
             ret20 = df.loc[mask, "_ret_20d"]
             ret60 = df.loc[mask, "_ret_60d"]
-            market_mean_20 = ret20.mean()
-            market_mean_60 = ret60.mean()
-            df.loc[mask, "rs_vs_market_20d"] = ret20 - market_mean_20
-            df.loc[mask, "rs_vs_market_60d"] = ret60 - market_mean_60
-            df.loc[mask, "rs_rank_20d"] = ret20.rank(pct=True)
+            if mode == "weighted":
+                ret120 = df.loc[mask, "_ret_120d"]
+                df.loc[mask, "rs_rank_weighted"] = (
+                    0.5 * ret20.rank(pct=True)
+                    + 0.3 * ret60.rank(pct=True)
+                    + 0.2 * ret120.rank(pct=True)
+                )
+            else:
+                market_mean_20 = ret20.mean()
+                market_mean_60 = ret60.mean()
+                df.loc[mask, "rs_vs_market_20d"] = ret20 - market_mean_20
+                df.loc[mask, "rs_vs_market_60d"] = ret60 - market_mean_60
+                df.loc[mask, "rs_rank_20d"] = ret20.rank(pct=True)
 
-        close_chg5 = df.groupby("symbol")["close"].pct_change(5)
-        close_chg20 = df.groupby("symbol")["close"].pct_change(20)
-        price_flat = (close_chg20.abs() < 0.03).astype(float)
-        rs_rising = (df["rs_vs_market_20d"] > 0).astype(float)
-        df["rs_divergence"] = price_flat * rs_rising
+        if mode != "weighted":
+            close_chg20 = df.groupby("symbol")["close"].pct_change(20)
+            price_flat = (close_chg20.abs() < 0.03).astype(float)
+            rs_rising = (df["rs_vs_market_20d"] > 0).astype(float)
+            df["rs_divergence"] = price_flat * rs_rising
 
-        df.drop(columns=["_ret_20d", "_ret_60d"], inplace=True)
+        df.drop(columns=[f"_ret_{period}d" for period in periods], inplace=True)
         return df
 
     # ── Group F: Liquidity/Execution Reality ─────────────────────────

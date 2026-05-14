@@ -1,0 +1,8 @@
+{
+  "symbols": ["VN30F1M", "VN30F2M"],
+  "market": "vn_derivatives_30m",
+  "timeframe": "30m",
+  "window": {
+    "cutoff_date": null
+  }
+}

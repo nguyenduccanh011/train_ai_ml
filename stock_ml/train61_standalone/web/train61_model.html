@@ -73,11 +73,18 @@
       align-items: center; justify-content: center; z-index: 5; color: #fff; font-size: 15px;
     }
     .overlay.show { display: flex; }
-    .panel { border-top: 1px solid #252b36; background: #131722; display: grid; grid-template-columns: 300px 1fr; min-height: 0; }
+    .panel { border-top: 1px solid #252b36; background: #131722; display: grid; grid-template-columns: 300px minmax(0, 1fr) minmax(0, 1fr); min-height: 0; }
     .stats { padding: 14px 16px; border-right: 1px solid #252b36; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-content: start; }
     .stats .box { background: #1b2130; border-radius: 6px; padding: 9px; }
     .stats .label { color: #8f9bad; font-size: 11px; }
     .stats .value { color: #fff; font-size: 16px; margin-top: 4px; }
+    .equity-curve { border-right: 1px solid #252b36; display: flex; flex-direction: column; min-height: 0; }
+    .equity-curve .header { padding: 12px 16px; border-bottom: 1px solid #252b36; display: flex; justify-content: space-between; align-items: center; }
+    .equity-curve .header h3 { margin: 0; font-size: 13px; color: #9aa4b2; font-weight: 600; }
+    .equity-curve .toggle { display: flex; gap: 4px; background: #1b2130; border-radius: 4px; padding: 2px; }
+    .equity-curve .toggle button { padding: 4px 10px; border: none; background: transparent; color: #8f9bad; cursor: pointer; font-size: 11px; border-radius: 3px; transition: all 0.2s; }
+    .equity-curve .toggle button.active { background: #FFD700; color: #0f131a; font-weight: 600; }
+    .equity-curve .chart-container { flex: 1; min-height: 0; position: relative; }
     .trades { overflow: auto; }
     table { width: 100%; border-collapse: collapse; font-size: 12px; }
     th, td { padding: 8px 10px; border-bottom: 1px solid #252b36; text-align: left; white-space: nowrap; }
@@ -89,6 +96,8 @@
       .sidebar { display: none; }
       .panel { grid-template-columns: 1fr; }
       .stats { grid-template-columns: repeat(4, 1fr); border-right: 0; }
+      .equity-curve { border-right: 0; }
+      .equity-curve .chart-container { min-height: 200px; }
     }
   </style>
 </head>
@@ -122,6 +131,16 @@
       <div id="chart"><div id="overlay" class="overlay">Đang sinh tín hiệu...</div></div>
       <section class="panel">
         <div id="stats" class="stats"></div>
+        <div class="equity-curve">
+          <div class="header">
+            <h3>Đường cong lợi nhuận</h3>
+            <div class="toggle">
+              <button id="equityTogglePct" class="active">%</button>
+              <button id="equityToggleMoney">Tiền</button>
+            </div>
+          </div>
+          <div class="chart-container" id="equityChartContainer"></div>
+        </div>
         <div class="trades"><table><thead><tr><th>Entry</th><th>Exit</th><th>PnL</th><th>Hold</th><th>Reason</th><th>Size</th></tr></thead><tbody id="trades"></tbody></table></div>
       </section>
     </main>
@@ -129,10 +148,14 @@
 
   <script>
     let chart, candleSeries, volumeSeries;
+    let equityChart, equityLineSeries, equityAreaSeries;
+    let equityBaselinePriceLine = null;
     let allSymbols = [];
     let allModels = [];
     let selectedSymbol = '';
     let selectedModel = 'v5_top1_fold_chain_no_context_2026';
+    let equityMode = 'pct';
+    let currentTrades = [];
 
     function modelVersionKey() {
       return selectedModel;
@@ -149,6 +172,16 @@
 
     function _safeArray(v) {
       return Array.isArray(v) ? v : [];
+    }
+
+    function _validTime(value) {
+      return typeof value === 'string' && value.trim().length > 0 && !Number.isNaN(Date.parse(value));
+    }
+
+    function _toChartTime(value) {
+      if (!_validTime(value)) return null;
+      const sec = Math.floor(Date.parse(value) / 1000);
+      return Number.isFinite(sec) ? sec : null;
     }
 
     function _resolveSignalVersionKey(signal, preferredModelId = selectedModel) {
@@ -215,6 +248,36 @@
       window.addEventListener('resize', () => chart.resize(el.clientWidth, el.clientHeight));
     }
 
+    function createEquityChart() {
+      const el = document.getElementById('equityChartContainer');
+      equityChart = LightweightCharts.createChart(el, {
+        width: el.clientWidth,
+        height: el.clientHeight,
+        layout: { background: { color: '#0f131a' }, textColor: '#d1d4dc' },
+        grid: { vertLines: { color: '#1e222d' }, horzLines: { color: '#1e222d' } },
+        crosshair: { mode: 0 },
+        timeScale: { timeVisible: true, secondsVisible: false, borderColor: '#2B2B43' },
+        rightPriceScale: { borderColor: '#2B2B43', autoScale: true },
+      });
+      equityLineSeries = equityChart.addLineSeries({
+        color: '#FFD700',
+        lineWidth: 2,
+        priceFormat: { type: 'custom', formatter: price => equityMode === 'pct' ? `${fmt(price, 2)}%` : `${fmt(price, 0)}` },
+        lastValueVisible: true,
+        priceLineVisible: false,
+      });
+      equityAreaSeries = equityChart.addAreaSeries({
+        topColor: 'rgba(255, 215, 0, 0.4)',
+        bottomColor: 'rgba(255, 215, 0, 0.0)',
+        lineColor: 'rgba(255, 215, 0, 0)',
+        lineWidth: 0,
+        priceFormat: { type: 'custom', formatter: price => equityMode === 'pct' ? `${fmt(price, 2)}%` : `${fmt(price, 0)}` },
+        lastValueVisible: false,
+        priceLineVisible: false,
+      });
+      window.addEventListener('resize', () => equityChart.resize(el.clientWidth, el.clientHeight));
+    }
+
     async function fetchJson(url) {
       const res = await fetch(url, { cache: 'no-store' });
       const data = await res.json();
@@ -256,6 +319,42 @@
       }).join('') || '<tr><td colspan="6">Chưa có trade</td></tr>';
     }
 
+    function renderEquityCurve(trades) {
+      if (!equityChart || !equityLineSeries || !equityAreaSeries) return;
+      const initialCapital = 10000;
+      const sortedTrades = _safeArray(trades)
+        .filter(trade => _isObject(trade) && _validTime(trade.exit_date) && Number.isFinite(Number(trade.pnl_pct)))
+        .sort((a, b) => a.exit_date.localeCompare(b.exit_date));
+      const equityData = [];
+      let equityMultiplier = 1;
+
+      if (sortedTrades.length > 0 && _validTime(sortedTrades[0].entry_date)) {
+        const startTime = _toChartTime(sortedTrades[0].entry_date);
+        if (startTime !== null) equityData.push({ time: startTime, value: equityMode === 'pct' ? 0 : initialCapital });
+      }
+
+      sortedTrades.forEach(trade => {
+        equityMultiplier *= 1 + Number(trade.pnl_pct) / 100;
+        const value = equityMode === 'pct' ? (equityMultiplier - 1) * 100 : initialCapital * equityMultiplier;
+        const time = _toChartTime(trade.exit_date);
+        if (time !== null && Number.isFinite(value)) equityData.push({ time, value });
+      });
+
+      equityLineSeries.setData(equityData);
+      equityAreaSeries.setData(equityData);
+      if (equityBaselinePriceLine) equityLineSeries.removePriceLine(equityBaselinePriceLine);
+      equityBaselinePriceLine = equityLineSeries.createPriceLine({
+        price: equityMode === 'pct' ? 0 : initialCapital,
+        color: '#4a4a4a',
+        lineWidth: 1,
+        lineStyle: 2,
+        axisLabelVisible: true,
+        title: equityMode === 'pct' ? '0%' : fmt(initialCapital, 0),
+      });
+      equityChart.timeScale().fitContent();
+      equityChart.priceScale('right').applyOptions({ autoScale: true });
+    }
+
     function renderChart(ohlcv, signal) {
       const bundle = _signalBundle(signal, selectedModel);
       const candles = ohlcv.ohlcv.map(row => ({ time: row.time, open: row.open, high: row.high, low: row.low, close: row.close }));
@@ -275,8 +374,10 @@
         console.warn('Failed to render markers:', err);
       }
       chart.timeScale().fitContent();
+      currentTrades = bundle.trades;
       renderStats(bundle.stats);
-      renderTrades(bundle.trades);
+      renderTrades(currentTrades);
+      renderEquityCurve(currentTrades);
     }
 
     async function waitForSignal(modelId, symbol) {
@@ -303,7 +404,8 @@
       setStatus(`${symbol}: đang tải dữ liệu...`);
       try {
         const signalUrl = `/api/signal/${selectedModel}/${symbol}`;
-        const [ohlcv, signalRes] = await Promise.all([fetchJson(`/api/ohlcv/${symbol}`), fetch(signalUrl, { cache: 'no-store' })]);
+        const ohlcvUrl = `/api/ohlcv/${symbol}?model_id=${encodeURIComponent(selectedModel)}`;
+        const [ohlcv, signalRes] = await Promise.all([fetchJson(ohlcvUrl), fetch(signalUrl, { cache: 'no-store' })]);
         let signal = await signalRes.json();
         if (signalRes.status === 202 || signal.status === 'generating' || signal.status === 'running') {
           signal = await waitForSignal(selectedModel, symbol);
@@ -360,7 +462,20 @@
     }
 
     document.getElementById('search').addEventListener('input', renderSymbols);
+    document.getElementById('equityTogglePct').addEventListener('click', () => {
+      equityMode = 'pct';
+      document.getElementById('equityTogglePct').classList.add('active');
+      document.getElementById('equityToggleMoney').classList.remove('active');
+      renderEquityCurve(currentTrades);
+    });
+    document.getElementById('equityToggleMoney').addEventListener('click', () => {
+      equityMode = 'money';
+      document.getElementById('equityToggleMoney').classList.add('active');
+      document.getElementById('equityTogglePct').classList.remove('active');
+      renderEquityCurve(currentTrades);
+    });
     createChart();
+    createEquityChart();
     (async () => {
       try {
         await loadModels();

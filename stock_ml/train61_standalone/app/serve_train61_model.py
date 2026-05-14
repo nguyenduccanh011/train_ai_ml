@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import pickle
 import sys
 import threading
@@ -80,6 +81,30 @@ def _write_json(path: Path, payload: Any) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
 
 
+def _dataset_dir_for_model(model_cfg: dict[str, Any] | None = None) -> Path:
+    if model_cfg and model_cfg.get("dataset"):
+        return Path(model_cfg["dataset"])
+    return STANDALONE_DATASET_DIR
+
+
+def _symbols_path_for_model(model_cfg: dict[str, Any] | None = None) -> Path:
+    if model_cfg and model_cfg.get("symbols"):
+        return Path(model_cfg["symbols"])
+    return TRAIN61_SYMBOLS_PATH
+
+
+def _load_symbols_from_path(path: Path) -> list[str]:
+    payload = _read_json(path)
+    symbols = [str(s).upper() for s in payload.get("symbols", []) if str(s).strip()]
+    if not symbols:
+        raise ValueError(f"No symbols found in {path}")
+    return sorted(set(symbols))
+
+
+def _load_symbols_for_model(model_cfg: dict[str, Any] | None = None) -> list[str]:
+    return _load_symbols_from_path(_symbols_path_for_model(model_cfg))
+
+
 def _symbol_file_name(symbol: str) -> str:
     return f"{symbol.upper()}.json"
 
@@ -137,16 +162,17 @@ def _base_ohlcv_path(symbol: str) -> Path:
     return BASE_DATA_DIR / _symbol_file_name(symbol)
 
 
-def _data_loader() -> DataLoader:
+def _data_loader(data_dir: Path | None = None) -> DataLoader:
     # DataLoader requires parquet/csv dataset layout:
     #   symbol=XXX/timeframe=1D/data.csv
-    if not STANDALONE_DATASET_DIR.exists():
+    resolved_data_dir = data_dir or STANDALONE_DATASET_DIR
+    if not resolved_data_dir.exists():
         raise FileNotFoundError(
             "Missing standalone dataset directory. "
-            f"Expected: {STANDALONE_DATASET_DIR}. "
+            f"Expected: {resolved_data_dir}. "
             "This standalone runtime only reads local data inside train61_standalone/data."
         )
-    abs_data_dir = str(STANDALONE_DATASET_DIR)
+    abs_data_dir = str(resolved_data_dir)
     return DataLoader(abs_data_dir)
 
 
@@ -177,10 +203,10 @@ def _load_cfg(model_id: str, model_cfg: dict[str, Any] | None = None) -> Experim
     return cfg
 
 
-def _latest_data_year_for_symbols(symbols: list[str]) -> int | None:
+def _latest_data_year_for_symbols(symbols: list[str], data_dir: Path | None = None) -> int | None:
     if not symbols:
         return None
-    loader = _data_loader()
+    loader = _data_loader(data_dir)
     raw_df = loader.load_all(symbols=symbols)
     if raw_df is None or raw_df.empty:
         return None
@@ -192,9 +218,9 @@ def _latest_data_year_for_symbols(symbols: list[str]) -> int | None:
 
 
 def _align_cfg_last_test_year_to_data(
-    cfg: ExperimentConfig, symbols: list[str]
+    cfg: ExperimentConfig, symbols: list[str], data_dir: Path | None = None
 ) -> ExperimentConfig:
-    latest_year = _latest_data_year_for_symbols(symbols)
+    latest_year = _latest_data_year_for_symbols(symbols, data_dir)
     if latest_year is None:
         return cfg
 
@@ -260,20 +286,16 @@ def _load_model_artifact(model_id: str, model_cfg: dict[str, Any] | None = None)
 
 
 def _load_train61_symbols() -> list[str]:
-    payload = _read_json(TRAIN61_SYMBOLS_PATH)
-    symbols = [str(s).upper() for s in payload.get("symbols", []) if str(s).strip()]
-    if not symbols:
-        raise ValueError(f"No symbols found in {TRAIN61_SYMBOLS_PATH}")
-    return sorted(set(symbols))
+    return _load_symbols_from_path(TRAIN61_SYMBOLS_PATH)
 
 
-def _load_ohlcv(symbol: str) -> dict[str, Any]:
+def _load_ohlcv(symbol: str, model_cfg: dict[str, Any] | None = None) -> dict[str, Any]:
     symbol = symbol.upper()
     path = _base_ohlcv_path(symbol)
     if path.exists():
         return _read_json(path)
 
-    loader = _data_loader()
+    loader = _data_loader(_dataset_dir_for_model(model_cfg))
     df = loader.load_symbol(symbol)
     ohlcv = []
     for row in df.to_dict("records"):
@@ -295,14 +317,14 @@ def _load_ohlcv(symbol: str) -> dict[str, Any]:
     return payload
 
 
-def _load_all_symbols() -> list[str]:
+def _load_all_symbols(model_cfg: dict[str, Any] | None = None) -> list[str]:
     symbols = {
         path.stem.upper()
         for path in BASE_DATA_DIR.glob("*.json")
         if path.stem.lower() != "index" and path.stem.strip()
     }
     try:
-        loader = _data_loader()
+        loader = _data_loader(_dataset_dir_for_model(model_cfg))
         symbols.update(str(s).upper() for s in loader.symbols)
     except Exception:
         pass
@@ -1068,10 +1090,19 @@ def _build_pooled_global_payloads(
     if cached is not None:
         return cached
 
-    symbols = _load_train61_symbols()
+    symbols = _load_symbols_for_model(model_cfg)
+    data_dir = _dataset_dir_for_model(model_cfg)
     cfg = _load_cfg(model_id, model_cfg=model_cfg)
-    cfg = _align_cfg_last_test_year_to_data(cfg, symbols)
-    result = Pipeline(cfg, symbols=symbols, device="cpu").run()
+    cfg = _align_cfg_last_test_year_to_data(cfg, symbols, data_dir)
+    previous_data_dir = os.environ.get("STOCK_DATA_DIR")
+    os.environ["STOCK_DATA_DIR"] = str(data_dir.resolve())
+    try:
+        result = Pipeline(cfg, symbols=symbols, device="cpu").run()
+    finally:
+        if previous_data_dir is None:
+            os.environ.pop("STOCK_DATA_DIR", None)
+        else:
+            os.environ["STOCK_DATA_DIR"] = previous_data_dir
     trades_df = result.trades_df.copy()
     fold_boundary_end_dates: list[str] = []
     if isinstance(trades_df, pd.DataFrame) and not trades_df.empty:
@@ -1094,7 +1125,7 @@ def _build_pooled_global_payloads(
     version_key = _version_key_for_model(model_id)
     model_color = _marker_color_for_model(model_id)
     for sym in symbols:
-        ohlcv = _load_ohlcv(sym)
+        ohlcv = _load_ohlcv(sym, model_cfg=model_cfg)
         latest_bar_date = ""
         latest_close = None
         rows = ohlcv.get("ohlcv", []) if isinstance(ohlcv, dict) else []
@@ -1135,7 +1166,7 @@ def _generate_signal_pooled_global_rerun(
             version_key=_version_key_for_model(model_id),
             model_color=_marker_color_for_model(model_id),
             source="pooled_global_rerun",
-            realtime={"mode": "pooled_global_rerun", "warning": "symbol_not_in_train61"},
+            realtime={"mode": "pooled_global_rerun", "warning": "symbol_not_in_model_universe"},
         )
     return payloads[symbol]
 
@@ -1162,7 +1193,8 @@ def _generate_signal_threaded(model_id: str, symbol: str) -> None:
         with jobs_lock:
             jobs.setdefault(cache_key, JobState())
 
-        _load_ohlcv(symbol)
+        model_cfg = _get_model_cfg(model_id)
+        _load_ohlcv(symbol, model_cfg=model_cfg)
         payload = _generate_signal_for_model(model_id, symbol)
         _write_json(_signal_cache_path(symbol, model_id), payload)
 
@@ -1234,6 +1266,9 @@ def api_model_info():
             "model_id": model_id,
             "type": model_type,
             "config_path": str(model_cfg.get("config", "")),
+            "dataset_path": str(_dataset_dir_for_model(model_cfg)),
+            "symbols_path": str(_symbols_path_for_model(model_cfg)),
+            "symbol_count": len(_load_symbols_for_model(model_cfg)),
         }
     )
 
@@ -1251,6 +1286,8 @@ def api_models():
                 "color": str(model_cfg.get("color", "#00E5FF")),
                 "path": str(model_cfg.get("path", "")),
                 "config": str(model_cfg.get("config", "")),
+                "dataset": str(model_cfg.get("dataset", "")),
+                "symbols": str(model_cfg.get("symbols", "")),
                 "is_default": model_id == DEFAULT_MODEL,
                 "available": bool(availability["available"]),
                 "missing": availability["missing"],
@@ -1263,20 +1300,19 @@ def api_models():
 def api_symbols():
     model_id = str(request.args.get("model_id", DEFAULT_MODEL) or DEFAULT_MODEL).strip()
     try:
-        _get_model_cfg(model_id)
+        model_cfg = _get_model_cfg(model_id)
     except ValueError as exc:
         return _json_response({"error": str(exc), "model_id": model_id}), 400
 
     version_key = _version_key_for_model(model_id)
-    train61_set: set[str] = set()
+    model_symbols_set: set[str] = set()
     try:
-        artifact = _load_model_artifact(DEFAULT_MODEL)
-        train61_set = {str(s).upper() for s in artifact.get("train_symbols", [])}
+        model_symbols_set = set(_load_symbols_for_model(model_cfg))
     except Exception:
-        train61_set = set()
+        model_symbols_set = set()
 
     rows = []
-    for symbol in _load_all_symbols():
+    for symbol in _load_all_symbols(model_cfg):
         cache_key = _cache_key(model_id, symbol)
         disk_cache = _signal_cache_path(symbol, model_id)
         legacy_cache = _legacy_signal_cache_path(symbol)
@@ -1307,7 +1343,8 @@ def api_symbols():
                 f"{version_key}_trades": trades,
                 f"{version_key}_pnl": pnl,
                 f"{version_key}_wr": wr,
-                "is_train61": symbol in train61_set,
+                "is_train61": symbol in model_symbols_set,
+                "is_model_symbol": symbol in model_symbols_set,
                 "cached": payload is not None,
                 "has_historical_export": disk_cache.exists() or has_legacy_cache,
             }
@@ -1319,7 +1356,12 @@ def api_symbols():
 @app.get("/api/ohlcv/<symbol>")
 def api_ohlcv(symbol: str):
     try:
-        return _json_response(_load_ohlcv(symbol))
+        model_id = str(request.args.get("model_id", DEFAULT_MODEL) or DEFAULT_MODEL).strip()
+        try:
+            model_cfg = _get_model_cfg(model_id)
+        except ValueError:
+            model_cfg = None
+        return _json_response(_load_ohlcv(symbol, model_cfg=model_cfg))
     except Exception as exc:
         return _json_response({"error": str(exc), "symbol": symbol.upper()}), 404
 

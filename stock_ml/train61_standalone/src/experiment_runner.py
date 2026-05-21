@@ -153,12 +153,10 @@ def run_test(
     else:
         print(f"    Feature cache: HIT ({feature_set}) key={cache_key[:8]}")
 
-    df = target_gen.generate_for_all_symbols(df)
+    df = target_gen.generate_for_all_symbols(df, drop_na=False)
     feature_cols = engine.get_feature_columns(df)
-    drop_cols = feature_cols + ["target"]
-    if "target_sell" in df.columns:
-        drop_cols.append("target_sell")
-    df = df.dropna(subset=drop_cols)
+    has_exit_label = "target_sell" in df.columns
+    train_label_cols = ["target"] + (["target_sell"] if has_exit_label else [])
 
     backtest_cfg = _build_backtest_config(
         run_context,
@@ -176,16 +174,19 @@ def run_test(
 
     all_trades = []
     for _, train_df, test_df in splitter.split(df):
+        train_fit_df = train_df.dropna(subset=train_label_cols)
+        if train_fit_df.empty:
+            continue
         model = build_model("lightgbm", device=device)
-        X_train = np.nan_to_num(train_df[feature_cols].values)
-        y_train = train_df["target"].values.astype(int)
+        X_train = np.nan_to_num(train_fit_df[feature_cols].values)
+        y_train = train_fit_df["target"].values.astype(int)
         model.fit(X_train, y_train)
 
-        has_exit = train_exit_model and "target_sell" in train_df.columns
+        has_exit = train_exit_model and "target_sell" in train_fit_df.columns
         model_exit = None
         if has_exit:
             model_exit = build_model("lightgbm", device=device)
-            model_exit.fit(X_train, train_df["target_sell"].values.astype(int))
+            model_exit.fit(X_train, train_fit_df["target_sell"].values.astype(int))
 
         split_predictions = {}
         split_returns = {}

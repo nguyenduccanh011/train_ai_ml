@@ -78,7 +78,7 @@ def get_backtest_function(strategy_key):
         "v37d": ("src.components.runners.lineage_backtests", "backtest_v37d"),
         "v39d": ("src.components.runners.lineage_backtests", "backtest_v39d"),
         "v42_a": ("src.components.runners.lineage_backtests", "backtest_v42"),
-        "rule": ("compare_rule_vs_model", "backtest_rule"),
+        "rule": ("archive.compare_rule_vs_model", "backtest_rule"),
     }
 
     if strategy_key not in strategy_map:
@@ -207,7 +207,7 @@ def _run_rule_backtest_fair(symbols_list):
     and would incorrectly drop open positions at fold boundaries.
     """
     import pandas as pd
-    from compare_rule_vs_model import backtest_rule
+    from archive.compare_rule_vs_model import backtest_rule
     from src.data.loader import DataLoader
 
     pipeline_cfg = load_config().get("pipeline", {})
@@ -528,7 +528,7 @@ def _run_matrix(
             print(f"\n{'─' * 100}")
             print(f"  COMPARISON — {experiment_key}")
             print(f"{'─' * 100}")
-            from model_manager import cmd_compare
+            from archive.model_manager import cmd_compare
 
             cmd_compare(
                 argparse.Namespace(
@@ -1003,7 +1003,7 @@ def main():
         print("\n" + "=" * 100)
         print("COMPARISON")
         print("=" * 100)
-        from model_manager import cmd_compare
+        from archive.model_manager import cmd_compare
 
         cmd_compare(argparse.Namespace(versions=",".join(all_versions)))
 

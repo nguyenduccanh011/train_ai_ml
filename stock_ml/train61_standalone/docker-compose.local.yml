@@ -1,0 +1,142 @@
+services:
+  db:
+    image: timescale/timescaledb:latest-pg16
+    container_name: train61-db-local
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-train61}
+      POSTGRES_USER: ${POSTGRES_USER:-train61}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-train61_local_password}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - train61_pgdata:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-train61} -d ${POSTGRES_DB:-train61}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: train61-redis-local
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - train61_redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    profiles:
+      - api
+    build:
+      context: .
+    container_name: train61-api-local
+    environment:
+      TRAIN61_HOST: 0.0.0.0
+      TRAIN61_PORT: 5012
+      TRAIN61_DATA_SOURCE: ${TRAIN61_DATA_SOURCE:-db}
+      TRAIN61_ALLOW_CSV_FALLBACK: ${TRAIN61_ALLOW_CSV_FALLBACK:-0}
+      TRAIN61_API_GENERATE_ON_REQUEST: ${TRAIN61_API_GENERATE_ON_REQUEST:-0}
+      DATA_PROVIDER: ${DATA_PROVIDER:-sieutinhieu}
+      DEFAULT_TIMEFRAME: ${DEFAULT_TIMEFRAME:-1D}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-train61}:${POSTGRES_PASSWORD:-train61_local_password}@db:5432/${POSTGRES_DB:-train61}
+      REDIS_URL: redis://redis:6379/0
+    ports:
+      - "${TRAIN61_PORT:-5012}:5012"
+    volumes:
+      - ./app:/app/app
+      - ./src:/app/src
+      - ./tools:/app/tools
+      - ./web:/app/web
+      - ./config:/app/config
+      - ./models:/app/models
+      - ./data:/app/data
+      - ./cache:/app/cache
+      - ./results:/app/results
+      - ./reports:/app/reports
+      - ./db:/app/db
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:5012/health', timeout=5).read()\""]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  worker:
+    profiles:
+      - worker
+    build:
+      context: .
+    container_name: train61-worker-local
+    command: python tools/worker.py compute-universe-signals --model-id ${TRAIN61_DEFAULT_MODEL:-train61_pooled}
+    environment:
+      TRAIN61_DATA_SOURCE: ${TRAIN61_DATA_SOURCE:-db}
+      TRAIN61_ALLOW_CSV_FALLBACK: ${TRAIN61_ALLOW_CSV_FALLBACK:-0}
+      TRAIN61_DEFAULT_MODEL: ${TRAIN61_DEFAULT_MODEL:-train61_pooled}
+      DATA_PROVIDER: ${DATA_PROVIDER:-sieutinhieu}
+      DEFAULT_TIMEFRAME: ${DEFAULT_TIMEFRAME:-1D}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-train61}:${POSTGRES_PASSWORD:-train61_local_password}@db:5432/${POSTGRES_DB:-train61}
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      - ./app:/app/app
+      - ./src:/app/src
+      - ./tools:/app/tools
+      - ./web:/app/web
+      - ./config:/app/config
+      - ./models:/app/models
+      - ./data:/app/data
+      - ./cache:/app/cache
+      - ./results:/app/results
+      - ./reports:/app/reports
+      - ./db:/app/db
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  scheduler:
+    profiles:
+      - scheduler
+    build:
+      context: .
+    container_name: train61-scheduler-local
+    command: python tools/scheduler.py --interval-seconds ${SCHEDULER_INTERVAL_SECONDS:-86400}
+    environment:
+      TRAIN61_DATA_SOURCE: ${TRAIN61_DATA_SOURCE:-db}
+      TRAIN61_ALLOW_CSV_FALLBACK: ${TRAIN61_ALLOW_CSV_FALLBACK:-0}
+      TRAIN61_DEFAULT_MODEL: ${TRAIN61_DEFAULT_MODEL:-train61_pooled}
+      DATA_PROVIDER: ${DATA_PROVIDER:-sieutinhieu}
+      DEFAULT_TIMEFRAME: ${DEFAULT_TIMEFRAME:-1D}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-train61}:${POSTGRES_PASSWORD:-train61_local_password}@db:5432/${POSTGRES_DB:-train61}
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      - ./app:/app/app
+      - ./src:/app/src
+      - ./tools:/app/tools
+      - ./web:/app/web
+      - ./config:/app/config
+      - ./models:/app/models
+      - ./data:/app/data
+      - ./cache:/app/cache
+      - ./results:/app/results
+      - ./reports:/app/reports
+      - ./db:/app/db
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+volumes:
+  train61_pgdata:
+  train61_redisdata:

@@ -275,7 +275,8 @@ class TargetGenerator:
             else:
                 targets[i] = 0.0
 
-        df["target"] = targets
+        # Shift by -1: target[i] predicts "early wave at i+1" to avoid leakage
+        df["target"] = pd.Series(targets, index=df.index).shift(-1)
         return df
 
     def _early_wave_v2(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -363,7 +364,8 @@ class TargetGenerator:
             else:
                 targets[i] = 0.0
 
-        df["target"] = targets
+        # Shift by -1: target[i] predicts "early wave at i+1" to avoid leakage
+        df["target"] = pd.Series(targets, index=df.index).shift(-1)
         return df
 
     def _early_exit_signal(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -372,6 +374,9 @@ class TargetGenerator:
         target_sell=1 if within forward_window N bars the price drops by
         >= loss_threshold from current close (forward drawdown). Else 0.
         Used by V37b dual-head ML to give an early exit signal.
+
+        Shifted by -1 so target_sell[i] predicts "should exit at i+1",
+        matching the convention used by target_buy (entry).
         """
         close = df["close"].values
         n = len(close)
@@ -389,22 +394,32 @@ class TargetGenerator:
             max_drawdown = (np.min(future) - close[i]) / close[i]
             if max_drawdown <= -loss_thresh:
                 sell[i] = 1.0
-        df["target_sell"] = sell
+        # Shift by -1: target_sell[i] predicts "should exit at i+1"
+        df["target_sell"] = pd.Series(sell, index=df.index).shift(-1)
         return df
 
-    def generate_for_all_symbols(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Apply target generation per symbol in a pooled DataFrame."""
+    def generate_for_all_symbols(
+        self,
+        df: pd.DataFrame,
+        *,
+        drop_na: bool = True,
+    ) -> pd.DataFrame:
+        """Apply target generation per symbol in a pooled DataFrame.
+
+        When drop_na is False, keep tail rows with NaN labels so inference can
+        still score the latest available bar.
+        """
         parts = []
         for symbol, group in df.groupby("symbol"):
             group = self.generate(group)
             parts.append(group)
 
         result = pd.concat(parts, ignore_index=True)
-        # Drop rows with NaN target
-        drop_cols = ["target"]
-        if "target_sell" in result.columns:
-            drop_cols.append("target_sell")
-        result = result.dropna(subset=drop_cols)
+        if drop_na:
+            drop_cols = ["target"]
+            if "target_sell" in result.columns:
+                drop_cols.append("target_sell")
+            result = result.dropna(subset=drop_cols)
         return result
 
     @classmethod
@@ -413,12 +428,14 @@ class TargetGenerator:
         df: pd.DataFrame,
         forward_window: int = 15,
         loss_threshold: float = 0.05,
+        *,
+        drop_na: bool = True,
     ) -> pd.DataFrame:
         """Generate target_sell column independently from entry target type.
 
         Can be called on any DataFrame that already has a 'close' column,
         regardless of the primary target type. Does not require early_wave_dual.
-        Operates per symbol and drops NaN rows from target_sell.
+        Operates per symbol and can keep NaN tail rows when drop_na is False.
         """
         gen = cls(forward_window=forward_window, loss_threshold=loss_threshold)
         parts = []
@@ -426,7 +443,7 @@ class TargetGenerator:
             group = gen._early_exit_signal(group.copy())
             parts.append(group)
         result = pd.concat(parts, ignore_index=True)
-        return result.dropna(subset=["target_sell"])
+        return result.dropna(subset=["target_sell"]) if drop_na else result
 
     @classmethod
     def from_config(cls, config: dict[str, Any]) -> "TargetGenerator":

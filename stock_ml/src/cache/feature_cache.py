@@ -9,6 +9,7 @@ Cache layout:
 
 from __future__ import annotations
 
+import csv
 import hashlib
 import json
 import tempfile
@@ -21,7 +22,7 @@ import pandas as pd
 class FeatureCacheManager:
     """Manage on-disk caches for expensive feature engineering output."""
 
-    CACHE_SCHEMA_VERSION = 1
+    CACHE_SCHEMA_VERSION = 2
 
     def __init__(self, cache_root: str):
         self.cache_root = Path(cache_root)
@@ -44,7 +45,23 @@ class FeatureCacheManager:
                 rows.append((sym, "missing", 0, 0))
                 continue
             stat = csv_path.stat()
-            rows.append((sym, "ok", stat.st_size, stat.st_mtime_ns))
+            latest_ts = ""
+            try:
+                with csv_path.open("rb") as fh:
+                    fh.seek(0, 2)
+                    end = fh.tell()
+                    size = min(end, 8192)
+                    fh.seek(end - size)
+                    tail = fh.read(size).decode("utf-8", errors="ignore")
+                lines = [line for line in tail.splitlines() if line.strip()]
+                if lines:
+                    last_line = lines[-1]
+                    parsed = next(csv.reader([last_line]), [])
+                    if parsed:
+                        latest_ts = parsed[0].strip()
+            except Exception:
+                latest_ts = ""
+            rows.append((sym, "ok", stat.st_size, stat.st_mtime_ns, latest_ts))
 
         payload = json.dumps(rows, separators=(",", ":"), ensure_ascii=True)
         return hashlib.sha1(payload.encode("utf-8")).hexdigest()

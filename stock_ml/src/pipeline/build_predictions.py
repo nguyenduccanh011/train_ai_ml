@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from src.config_loader import load_config
 from src.env import get_results_dir, resolve_data_dir
-from src.signal_adapter import canonicalize_predictions
 
 
 def _build_predictions(
@@ -27,8 +26,6 @@ def _build_predictions(
             {symbol, y_pred, y_pred_exit, returns, sym_test_df, feature_cols}
     """
     from pathlib import Path
-
-    import numpy as np
 
     import src.data.target as target_module
     import src.features.engine as feature_engine_module
@@ -119,7 +116,7 @@ def _build_predictions(
     else:
         print(f"    Feature cache: HIT ({feature_set}) key={cache_key[:8]}")
 
-    df = target_gen.generate_for_all_symbols(df)
+    df = target_gen.generate_for_all_symbols(df, drop_na=False)
 
     # Generate exit labels independently if exit_model_cfg provided
     if exit_model_cfg:
@@ -129,62 +126,23 @@ def _build_predictions(
             df,
             forward_window=exit_model_cfg.get("forward_window", 15),
             loss_threshold=exit_model_cfg.get("loss_threshold", 0.05),
+            drop_na=False,
         )
 
     feature_cols = engine.get_feature_columns(df)
-    drop_cols = feature_cols + ["target"]
     has_exit = "target_sell" in df.columns
-    if has_exit:
-        drop_cols.append("target_sell")
-    df = df.dropna(subset=drop_cols)
 
-    results = []
-    for window, train_df, test_df in splitter.split(df):
-        model = get_model(effective_model_type, device=device, **model_extras)
-        X_train = np.nan_to_num(train_df[feature_cols].values)
-        y_train = train_df["target"].values.astype(int)
-        model.fit(X_train, y_train)
+    from src.pipeline._train_loop import train_predict_walk_forward
 
-        sell_model = None
-        if has_exit:
-            sell_model = get_model(effective_model_type, device=device, **model_extras)
-            sell_model.fit(X_train, train_df["target_sell"].values.astype(int))
-
-        for sym in test_df["symbol"].unique():
-            if sym not in symbols_list:
-                continue
-            sym_test = test_df[test_df["symbol"] == sym].reset_index(drop=True)
-            if len(sym_test) < 10:
-                continue
-            X_sym = np.nan_to_num(sym_test[feature_cols].values)
-            y_pred_raw = model.predict(X_sym)
-            y_pred = canonicalize_predictions(y_pred_raw, config["target"])
-            rets = sym_test["return_1d"].values
-
-            # V37c: capture proba + class mapping for per-profile threshold tuning
-            y_proba = None
-            classes = None
-            try:
-                if hasattr(model, "predict_proba"):
-                    y_proba = model.predict_proba(X_sym)
-                    final_est = model.steps[-1][1] if hasattr(model, "steps") else model
-                    classes = list(final_est.classes_)
-            except Exception:
-                y_proba = None
-
-            results.append(
-                {
-                    "symbol": sym,
-                    "y_pred": y_pred,
-                    "y_pred_exit": (
-                        sell_model.predict(X_sym).astype(int) if sell_model is not None else None
-                    ),
-                    "y_proba": y_proba,
-                    "classes": classes,
-                    "returns": rets,
-                    "sym_test_df": sym_test,
-                    "feature_cols": feature_cols,
-                }
-            )
-
-    return results
+    return train_predict_walk_forward(
+        df=df,
+        splitter=splitter,
+        symbols=symbols_list,
+        feature_cols=feature_cols,
+        target_cfg=config["target"],
+        entry_model_factory=lambda: get_model(effective_model_type, device=device, **model_extras),
+        exit_model_factory=(lambda: get_model(effective_model_type, device=device, **model_extras))
+        if has_exit
+        else None,
+        has_exit=has_exit,
+    )

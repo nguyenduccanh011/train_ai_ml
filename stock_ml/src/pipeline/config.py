@@ -111,7 +111,7 @@ class SplitConfig(BaseModel):
     method: str = "walk_forward"
     train_years: int = 4
     test_years: int = 1
-    gap_days: int = 0
+    gap_days: int = 25
     first_test_year: int = 2020
     last_test_year: int = 2025
 

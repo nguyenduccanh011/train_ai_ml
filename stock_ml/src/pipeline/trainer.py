@@ -9,8 +9,6 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
-import numpy as np
-
 if TYPE_CHECKING:
     from src.pipeline.config import ExperimentConfig
 
@@ -38,7 +36,6 @@ def build_prediction_cache(
     from src.features.engine import FeatureEngine
     from src.market_profile import resolve_run_context
     from src.models.registry import detect_device
-    from src.signal_adapter import canonicalize_predictions
 
     run_context = resolve_run_context(cfg)
     if run_context.resolved_data_dir is None:
@@ -134,7 +131,7 @@ def build_prediction_cache(
     else:
         print(f"    Feature cache: HIT ({feature_set_key}) key={cache_key[:8]}")
 
-    df = target_gen.generate_for_all_symbols(df)
+    df = target_gen.generate_for_all_symbols(df, drop_na=False)
 
     if exit_model_dict:
         from src.data.target import TargetGenerator as _TG
@@ -143,64 +140,29 @@ def build_prediction_cache(
             df,
             forward_window=exit_model_dict.get("forward_window", 15),
             loss_threshold=exit_model_dict.get("loss_threshold", 0.05),
+            drop_na=False,
         )
 
     feature_cols = engine.get_feature_columns(df)
-    drop_cols = feature_cols + ["target"]
     has_exit = "target_sell" in df.columns
-    if has_exit:
-        drop_cols.append("target_sell")
-    df = df.dropna(subset=drop_cols)
 
-    results: list[dict[str, Any]] = []
-    target_cfg_dict = target_config
+    from src.pipeline._train_loop import train_predict_walk_forward
 
-    for _window, train_df, test_df in splitter.split(df):
-        model = get_model(effective_model_type, device=device, **entry_model_extras)
-        X_train = np.nan_to_num(train_df[feature_cols].values)
-        y_train = train_df["target"].values.astype(int)
-        model.fit(X_train, y_train)
+    exit_model_cfg = cfg.signals.exit_model
 
-        sell_model = None
-        if has_exit:
-            exit_model_cfg = cfg.signals.exit_model
-            sell_model = get_exit_model(exit_model_cfg.type, device=device, **exit_model_cfg.extras)
-            sell_model.fit(X_train, train_df["target_sell"].values.astype(int))
-
-        for sym in test_df["symbol"].unique():
-            if sym not in symbols:
-                continue
-            sym_test = test_df[test_df["symbol"] == sym].reset_index(drop=True)
-            if len(sym_test) < 10:
-                continue
-            X_sym = np.nan_to_num(sym_test[feature_cols].values)
-            y_pred_raw = model.predict(X_sym)
-            y_pred = canonicalize_predictions(y_pred_raw, target_cfg_dict)
-            rets = sym_test["return_1d"].values
-
-            y_proba = None
-            classes = None
-            try:
-                if hasattr(model, "predict_proba"):
-                    y_proba = model.predict_proba(X_sym)
-                    final_est = model.steps[-1][1] if hasattr(model, "steps") else model
-                    classes = list(final_est.classes_)
-            except Exception:
-                y_proba = None
-
-            results.append(
-                {
-                    "symbol": sym,
-                    "y_pred": y_pred,
-                    "y_pred_exit": (
-                        sell_model.predict(X_sym).astype(int) if sell_model is not None else None
-                    ),
-                    "y_proba": y_proba,
-                    "classes": classes,
-                    "returns": rets,
-                    "sym_test_df": sym_test,
-                    "feature_cols": feature_cols,
-                }
-            )
-
-    return results
+    return train_predict_walk_forward(
+        df=df,
+        splitter=splitter,
+        symbols=symbols,
+        feature_cols=feature_cols,
+        target_cfg=target_config,
+        entry_model_factory=lambda: get_model(
+            effective_model_type, device=device, **entry_model_extras
+        ),
+        exit_model_factory=(
+            lambda: get_exit_model(exit_model_cfg.type, device=device, **exit_model_cfg.extras)
+        )
+        if has_exit
+        else None,
+        has_exit=has_exit,
+    )

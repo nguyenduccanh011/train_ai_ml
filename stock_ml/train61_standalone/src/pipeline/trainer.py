@@ -138,7 +138,7 @@ def build_prediction_cache(
     else:
         print(f"    Feature cache: HIT ({feature_set_key}) key={cache_key[:8]}")
 
-    df = target_gen.generate_for_all_symbols(df)
+    df = target_gen.generate_for_all_symbols(df, drop_na=False)
 
     if exit_model_dict:
         from src.data.target import TargetGenerator as _TG
@@ -147,29 +147,30 @@ def build_prediction_cache(
             df,
             forward_window=exit_model_dict.get("forward_window", 15),
             loss_threshold=exit_model_dict.get("loss_threshold", 0.05),
+            drop_na=False,
         )
 
     feature_cols = engine.get_feature_columns(df)
-    drop_cols = feature_cols + ["target"]
     has_exit = "target_sell" in df.columns
-    if has_exit:
-        drop_cols.append("target_sell")
-    df = df.dropna(subset=drop_cols)
+    train_label_cols = ["target"] + (["target_sell"] if has_exit else [])
 
     results: list[dict[str, Any]] = []
     target_cfg_dict = target_config
 
     for _window, train_df, test_df in splitter.split(df):
+        train_fit_df = train_df.dropna(subset=train_label_cols)
+        if train_fit_df.empty:
+            continue
         model = get_model(effective_model_type, device=device, **entry_model_extras)
-        X_train = _finite_matrix(train_df[feature_cols].values)
-        y_train = train_df["target"].values.astype(int)
+        X_train = _finite_matrix(train_fit_df[feature_cols].values)
+        y_train = train_fit_df["target"].values.astype(int)
         model.fit(X_train, y_train)
 
         sell_model = None
         if has_exit:
             exit_model_cfg = cfg.signals.exit_model
             sell_model = get_exit_model(exit_model_cfg.type, device=device, **exit_model_cfg.extras)
-            sell_model.fit(X_train, train_df["target_sell"].values.astype(int))
+            sell_model.fit(X_train, train_fit_df["target_sell"].values.astype(int))
 
         for sym in test_df["symbol"].unique():
             if sym not in symbols:

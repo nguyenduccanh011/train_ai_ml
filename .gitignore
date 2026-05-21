@@ -48,8 +48,16 @@ stock_ml/results/experiments/
 catboost_info/
 **/catboost_info/
 
-# Generated visualization exports
+# Generated visualization exports (per-version model trade overlays)
+stock_ml/visualization/data/data_*/
 stock_ml/visualization/data_*/
+stock_ml/visualization/results/
+
+# train61_standalone runtime reports (regenerated daily)
+stock_ml/train61_standalone/reports/
+
+# Logs
+**/*.log
 
 # Temporary implementation notes
 stock_ml/docs/refactor/*PLAN*.md
@@ -57,9 +65,15 @@ stock_ml/docs/refactor/*PLAN*.md
 # Claude
 .claude/
 
-# train61_standalone artifacts
+# Standalone packages artifacts (FROZEN snapshots — regenerate on deploy)
 stock_ml/train61_standalone/data/
 stock_ml/train61_standalone/**/__pycache__/
 stock_ml/train61_standalone/results/
 stock_ml/train61_standalone/models/
 stock_ml/train61_standalone/cache/
+stock_ml/derivatives30m_standalone/data/
+stock_ml/derivatives30m_standalone/**/__pycache__/
+stock_ml/derivatives30m_standalone/results/
+stock_ml/derivatives30m_standalone/models/
+stock_ml/derivatives30m_standalone/cache/
+stock_ml/derivatives30m_standalone/db/

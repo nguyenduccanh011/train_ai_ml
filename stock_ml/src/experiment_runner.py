@@ -6,7 +6,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from compare_rule_vs_model import backtest_rule
+from archive.compare_rule_vs_model import backtest_rule
 
 import src.data.target as target_module
 import src.features.engine as feature_engine_module
@@ -21,6 +21,11 @@ from src.features.engine import FeatureEngine
 from src.market_profile import resolve_run_context
 from src.models.registry import build_model, detect_device
 from src.signal_adapter import canonicalize_predictions
+
+
+def _finite_matrix(values):
+
+    return np.nan_to_num(values, nan=0.0, posinf=0.0, neginf=0.0)
 
 
 def _build_backtest_config(run_context, **overrides):
@@ -153,12 +158,8 @@ def run_test(
     else:
         print(f"    Feature cache: HIT ({feature_set}) key={cache_key[:8]}")
 
-    df = target_gen.generate_for_all_symbols(df)
+    df = target_gen.generate_for_all_symbols(df, drop_na=False)
     feature_cols = engine.get_feature_columns(df)
-    drop_cols = feature_cols + ["target"]
-    if "target_sell" in df.columns:
-        drop_cols.append("target_sell")
-    df = df.dropna(subset=drop_cols)
 
     backtest_cfg = _build_backtest_config(
         run_context,
@@ -176,16 +177,20 @@ def run_test(
 
     all_trades = []
     for _, train_df, test_df in splitter.split(df):
+        train_label_cols = ["target"] + (["target_sell"] if train_exit_model else [])
+        train_fit_df = train_df.dropna(subset=train_label_cols)
+        if train_fit_df.empty:
+            continue
         model = build_model("lightgbm", device=device)
-        X_train = np.nan_to_num(train_df[feature_cols].values)
-        y_train = train_df["target"].values.astype(int)
+        X_train = _finite_matrix(train_fit_df[feature_cols].values)
+        y_train = train_fit_df["target"].values.astype(int)
         model.fit(X_train, y_train)
 
-        has_exit = train_exit_model and "target_sell" in train_df.columns
+        has_exit = train_exit_model and "target_sell" in train_fit_df.columns
         model_exit = None
         if has_exit:
             model_exit = build_model("lightgbm", device=device)
-            model_exit.fit(X_train, train_df["target_sell"].values.astype(int))
+            model_exit.fit(X_train, train_fit_df["target_sell"].values.astype(int))
 
         split_predictions = {}
         split_returns = {}
@@ -197,7 +202,7 @@ def run_test(
             sym_test = test_df[test_df["symbol"] == sym].reset_index(drop=True)
             if len(sym_test) < 10:
                 continue
-            X_sym = np.nan_to_num(sym_test[feature_cols].values)
+            X_sym = _finite_matrix(sym_test[feature_cols].values)
             y_pred = model.predict(X_sym)
             y_pred = canonicalize_predictions(y_pred, config["target"])
             split_predictions[sym] = y_pred

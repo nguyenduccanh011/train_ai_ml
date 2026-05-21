@@ -50,3 +50,9 @@ Press CTRL+C to quit
 127.0.0.1 - - [14/May/2026 15:58:39] "GET /api/signal/derivatives30m_top1/VN30F1M HTTP/1.1" 200 -
 127.0.0.1 - - [14/May/2026 20:44:07] "GET /api/signal/derivatives30m_top1/VN30F1M HTTP/1.1" 200 -
 127.0.0.1 - - [14/May/2026 20:44:07] "GET /api/ohlcv/VN30F1M HTTP/1.1" 200 -
+127.0.0.1 - - [14/May/2026 22:32:43] "GET /api/models HTTP/1.1" 200 -
+127.0.0.1 - - [14/May/2026 22:58:19] "GET /api/signal/derivatives30m_top1/VN30F1M HTTP/1.1" 200 -
+127.0.0.1 - - [14/May/2026 22:58:20] "GET /favicon.ico HTTP/1.1" 404 -
+127.0.0.1 - - [14/May/2026 22:58:20] "GET /api/ohlcv/VN30F1M HTTP/1.1" 200 -
+127.0.0.1 - - [16/May/2026 18:53:13] "GET /favicon.ico HTTP/1.1" 404 -
+127.0.0.1 - - [18/May/2026 13:13:39] "GET /favicon.ico HTTP/1.1" 404 -

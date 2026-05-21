@@ -43,7 +43,7 @@ class WalkForwardSplitter:
         method: str = "walk_forward",
         train_years: int = 4,
         test_years: int = 1,
-        gap_days: int = 0,
+        gap_days: int = 25,
         first_test_year: int = 2019,
         last_test_year: int = 2025,
     ):
@@ -132,7 +132,7 @@ class WalkForwardSplitter:
             method=split_cfg.get("method", "walk_forward"),
             train_years=split_cfg.get("train_years", 4),
             test_years=split_cfg.get("test_years", 1),
-            gap_days=split_cfg.get("gap_days", 0),
+            gap_days=split_cfg.get("gap_days", 25),
             first_test_year=split_cfg.get("first_test_year", 2019),
             last_test_year=split_cfg.get("last_test_year", 2025),
         )

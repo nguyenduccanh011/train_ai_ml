@@ -1,7 +1,7 @@
 {
   "version": "v22",
-  "generated_at": "2026-04-26T17:17:44",
-  "generator": "run_pipeline.py",
+  "generated_at": "2026-05-21T20:35:06",
+  "generator": "scripts/regen_v22_golden.py",
   "symbols": [
     "AAS",
     "AAV",
@@ -77,7 +77,7 @@
     "classes": 3
   },
   "target_fingerprint": "{\"classes\":3,\"long_window\":20,\"short_window\":5,\"trend_method\":\"dual_ma\",\"type\":\"trend_regime\"}",
-  "n_trades": 1784,
+  "n_trades": 2272,
   "exit_model_config": {
     "enabled": true,
     "forward_window": 15,

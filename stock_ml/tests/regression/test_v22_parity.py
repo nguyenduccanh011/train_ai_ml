@@ -42,6 +42,7 @@ def test_v22_matches_golden() -> None:
         symbols=symbols,
         data_dir=str(data_dir),
         prediction_cache=prediction_cache,
+        enable_exit_model=True,
     )
     df_raw = trades_to_v22_dataframe(trades).reset_index(drop=True)
     df_new = pd.read_csv(io.StringIO(df_raw.to_csv(index=False))).reset_index(drop=True)

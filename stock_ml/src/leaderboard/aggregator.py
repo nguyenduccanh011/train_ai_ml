@@ -168,6 +168,9 @@ def _write_csv(rows: list[LeaderboardRow], path: Path) -> None:
         "config_hash",
         "generated_at",
         "superseded",
+        "state",
+        "cache_key_features",
+        "cache_key_predictions",
         "market",
         "market_family",
         "currency",
@@ -226,6 +229,8 @@ def _flatten_row(row: LeaderboardRow) -> dict[str, object]:
     target = data.pop("target")
     cost = data.pop("cost_profile")
     warnings = data.pop("warnings")
+    cache_keys = data.pop("cache_keys")
+    data.pop("artifacts")
     data.update(
         {
             "target_type": target["type"],
@@ -235,6 +240,8 @@ def _flatten_row(row: LeaderboardRow) -> dict[str, object]:
             "cost_commission": cost["commission"],
             "cost_tax": cost["tax"],
             "cost_slippage": cost["slippage"],
+            "cache_key_features": cache_keys["features"],
+            "cache_key_predictions": cache_keys["predictions"],
             "warnings": " | ".join(warnings),
         }
     )

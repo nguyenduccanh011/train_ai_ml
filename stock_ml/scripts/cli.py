@@ -227,6 +227,7 @@ def _save_artifacts(
         "split": split_cfg,
         "backtest_window_key": window_key,
         "cache_stats": result.metadata.get("cache_stats", {}),
+        "cache_keys": result.metadata.get("cache_keys", {"features": "", "predictions": ""}),
         "created_at": datetime.now().isoformat(),
     }
     if run_meta:

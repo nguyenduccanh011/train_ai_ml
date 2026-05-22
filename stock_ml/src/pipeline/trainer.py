@@ -18,11 +18,15 @@ def build_prediction_cache(
     symbols: list[str],
     *,
     device: str = "cpu",
+    out_meta: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]]:
     """Train walk-forward models and return per-(fold, symbol) prediction cache.
 
     Returns list of dicts compatible with legacy runner format:
         {symbol, y_pred, y_pred_exit, y_proba, classes, returns, sym_test_df, feature_cols}
+
+    If out_meta is provided, populates out_meta["feature_cache_key"] with the
+    FeatureCacheManager key used for this run (for cache GC attribution).
     """
     import src.data.target as target_module
     import src.features.engine as feature_engine_module
@@ -130,6 +134,10 @@ def build_prediction_cache(
         )
     else:
         print(f"    Feature cache: HIT ({feature_set_key}) key={cache_key[:8]}")
+
+    if out_meta is not None:
+        out_meta["feature_cache_key"] = cache_key
+        out_meta["feature_set_key"] = feature_set_key
 
     df = target_gen.generate_for_all_symbols(df, drop_na=False)
 

@@ -7,8 +7,42 @@ Export JSON Schema via LeaderboardRow.model_json_schema().
 from __future__ import annotations
 
 import json
+from enum import StrEnum
 
 from pydantic import BaseModel, Field, field_validator
+
+
+class LifecycleState(StrEnum):
+    """Model lifecycle state, single source of truth for dashboard visibility.
+
+    - trained: backtested, metrics on leaderboard, not shown on dashboard
+    - pinned: promoted to dashboard with buy/sell signal overlays
+    - retired: kept on leaderboard for history, caches/artifacts may be purged
+    """
+
+    trained = "trained"
+    pinned = "pinned"
+    retired = "retired"
+
+
+class CacheKeys(BaseModel):
+    """Cache keys owned by this run, used by the GC to attribute cache files.
+
+    features: FeatureCacheManager key (results/cache/features/<feature_set>/<key>)
+    predictions: PredictionCacheManager key (results/cache/predictions/<key>.pkl)
+    Empty string means unknown (legacy run; GC recomputes prediction key from config).
+    """
+
+    features: str = ""
+    predictions: str = ""
+
+
+class Artifacts(BaseModel):
+    """Relative paths (from results/) to this run's on-disk artifacts."""
+
+    trades_csv: str = ""
+    meta_json: str = ""
+    model_pkl: str = ""
 
 
 class TargetConfig(BaseModel):
@@ -39,6 +73,11 @@ class LeaderboardRow(BaseModel):
     config_hash: str
     generated_at: str = Field(description="ISO-8601 timestamp")
     superseded: bool = False
+
+    # Lifecycle (Model Lifecycle UI — single source of truth for dashboard)
+    state: LifecycleState = LifecycleState.trained
+    cache_keys: CacheKeys = Field(default_factory=CacheKeys)
+    artifacts: Artifacts = Field(default_factory=Artifacts)
 
     # Strategy / model identity
     market: str = "unknown"

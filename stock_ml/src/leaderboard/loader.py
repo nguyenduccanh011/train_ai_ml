@@ -19,7 +19,14 @@ from src.evaluation.scoring import (
     composite_score,
 )
 from src.leaderboard.fairness import backtest_window_key, load_config, resolve_market_family
-from src.leaderboard.schema import CostProfile, LeaderboardRow, TargetConfig
+from src.leaderboard.schema import (
+    Artifacts,
+    CacheKeys,
+    CostProfile,
+    LeaderboardRow,
+    LifecycleState,
+    TargetConfig,
+)
 
 MISSING_TRADES_WARNING = "trades.csv missing → metrics from cache"
 COST_PROFILE_UNKNOWN_WARNING = "cost_profile=unknown"
@@ -30,6 +37,7 @@ def run_dir_to_row(run_dir: str | Path, *, bundle: str | None = None) -> Leaderb
     predictions_meta = _read_json(run_path / "predictions_meta.json")
     ranking_row = _read_json(run_path / "ranking_row.json")
     metrics_cache = _read_json(run_path / "metrics.json")
+    lifecycle = _read_json(run_path / "lifecycle.json")
     resolved_config = _read_yaml(run_path / "config.resolved.yaml")
     warnings: list[str] = []
 
@@ -108,6 +116,10 @@ def run_dir_to_row(run_dir: str | Path, *, bundle: str | None = None) -> Leaderb
         or resolve_market_family(market, timeframe, load_config())
     )
 
+    cache_keys = _cache_keys(predictions_meta)
+    artifacts = _artifacts(run_path)
+    state = _lifecycle_state(lifecycle)
+
     return LeaderboardRow(
         run_id=f"{bundle_name}/{run_name}#{config_hash[:8]}",
         bundle=bundle_name,
@@ -115,6 +127,9 @@ def run_dir_to_row(run_dir: str | Path, *, bundle: str | None = None) -> Leaderb
         config_hash=config_hash,
         generated_at=generated_at,
         superseded=False,
+        state=state,
+        cache_keys=cache_keys,
+        artifacts=artifacts,
         market=market,
         market_family=market_family,
         currency=currency,
@@ -181,6 +196,43 @@ def _read_json(path: Path) -> dict[str, Any]:
         return {}
     with path.open("r", encoding="utf-8") as f:
         return json.load(f)
+
+
+def _cache_keys(predictions_meta: dict[str, Any]) -> CacheKeys:
+    raw = predictions_meta.get("cache_keys") or {}
+    return CacheKeys(
+        features=str(raw.get("features", "")),
+        predictions=str(raw.get("predictions", "")),
+    )
+
+
+def _artifacts(run_path: Path) -> Artifacts:
+    """Record run artifact paths relative to results/ (or absolute if outside)."""
+
+    def rel(p: Path) -> str:
+        if not p.exists():
+            return ""
+        try:
+            from src.env import get_results_dir
+
+            return p.resolve().relative_to(Path(get_results_dir()).resolve()).as_posix()
+        except (ValueError, Exception):
+            return p.as_posix()
+
+    model_pkl = run_path / "model.pkl"
+    return Artifacts(
+        trades_csv=rel(run_path / "trades.csv"),
+        meta_json=rel(run_path / "predictions_meta.json"),
+        model_pkl=rel(model_pkl) if model_pkl.exists() else "",
+    )
+
+
+def _lifecycle_state(lifecycle: dict[str, Any]) -> LifecycleState:
+    raw = str(lifecycle.get("state", "trained")).lower()
+    try:
+        return LifecycleState(raw)
+    except ValueError:
+        return LifecycleState.trained
 
 
 def _read_yaml(path: Path) -> dict[str, Any]:

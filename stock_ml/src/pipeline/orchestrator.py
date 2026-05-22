@@ -75,6 +75,7 @@ class Pipeline:
         self._prediction_cache = prediction_cache
         self._cache_manager = cache_manager
         self._use_cache = use_cache
+        self._cache_keys: dict[str, str] = {"features": "", "predictions": ""}
 
     def run(self) -> PipelineResult:
         print(f"  [Pipeline] Running experiment: {self.cfg.name}")
@@ -167,6 +168,7 @@ class Pipeline:
         }
         if self._cache_manager is not None:
             metadata["cache_stats"] = self._cache_manager.stats()
+        metadata["cache_keys"] = dict(self._cache_keys)
 
         return PipelineResult(
             name=self.cfg.name,
@@ -181,6 +183,7 @@ class Pipeline:
         mgr = self._cache_manager
         if mgr is not None and self._use_cache:
             cached, key = mgr.load(self.cfg, self.symbols, run_context)
+            self._cache_keys["predictions"] = key
             if cached is not None:
                 print(f"  [Pipeline] Prediction cache HIT key={key[:8]}")
                 return cached
@@ -188,10 +191,15 @@ class Pipeline:
         else:
             print(f"  [Pipeline] Building prediction cache for {self.cfg.feature_set()}...")
 
-        result = build_prediction_cache(self.cfg, self.symbols, device=self.device)
+        train_meta: dict[str, Any] = {}
+        result = build_prediction_cache(
+            self.cfg, self.symbols, device=self.device, out_meta=train_meta
+        )
+        self._cache_keys["features"] = train_meta.get("feature_cache_key", "")
 
         if mgr is not None and self._use_cache:
             saved_key = mgr.save(result, self.cfg, self.symbols, run_context)
+            self._cache_keys["predictions"] = saved_key
             print(f"  [Pipeline] Prediction cache STORED key={saved_key[:8]}")
 
         return result

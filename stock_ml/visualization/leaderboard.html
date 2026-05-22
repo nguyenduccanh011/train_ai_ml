@@ -194,6 +194,56 @@
     .badge.fair-ok { background: #144f47; border-color: #26a69a; }
     .badge.exit-on { background: #144f47; border-color: #26a69a; }
     .badge.exit-off { background: #4f1c1c; border-color: #ef5350; }
+    .badge.state-pinned { background: #1d3f7a; border-color: #2962ff; color: #fff; }
+    .badge.state-trained { background: #2a2e39; border-color: #444; }
+    .badge.state-retired { background: #3a2e1c; border-color: #9a6a00; }
+
+    .actions { display: flex; gap: 4px; white-space: nowrap; }
+    .act-btn {
+      border: 1px solid #444;
+      background: #2a2e39;
+      color: #d1d4dc;
+      border-radius: 4px;
+      padding: 3px 7px;
+      font-size: 11px;
+      cursor: pointer;
+    }
+    .act-btn:hover { border-color: #2962ff; color: #fff; }
+    .act-btn.pin { border-color: #2962ff; }
+    .act-btn.danger:hover { border-color: #ef5350; color: #ef5350; }
+    .act-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .api-banner {
+      padding: 6px 20px;
+      font-size: 12px;
+      background: #2a2410;
+      color: #d6b656;
+      border-bottom: 1px solid #4a3f15;
+    }
+    .api-banner.ok { background: #112a1f; color: #4fbf8b; border-color: #1d4a35; }
+
+    #toasts {
+      position: fixed;
+      right: 16px;
+      bottom: 16px;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .toast {
+      background: #1e222d;
+      border: 1px solid #2B2B43;
+      border-left: 3px solid #2962ff;
+      border-radius: 6px;
+      padding: 10px 14px;
+      color: #d1d4dc;
+      font-size: 13px;
+      max-width: 360px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    }
+    .toast.success { border-left-color: #26a69a; }
+    .toast.error { border-left-color: #ef5350; }
 
     .empty, .error {
       padding: 28px;
@@ -237,9 +287,17 @@
       <select id="featureFilter"><option value="">All feature sets</option></select>
       <select id="modelFilter"><option value="">All entry models</option></select>
       <select id="yearFilter"><option value="">All windows</option></select>
+      <select id="stateFilter">
+        <option value="">All states</option>
+        <option value="pinned">Pinned</option>
+        <option value="trained">Trained</option>
+        <option value="retired">Retired</option>
+      </select>
       <label class="checkbox"><input id="showSuperseded" type="checkbox"> Show superseded</label>
     </div>
   </header>
+
+  <div class="api-banner" id="apiBanner">Read-only mode — start the API server for actions: <code>python -m stock_ml.scripts.api_server</code></div>
 
   <section class="stats-bar">
     <div class="stat-card"><div class="stat-title">Visible rows</div><div class="stat-value" id="visibleCount">—</div></div>
@@ -253,6 +311,7 @@
       <thead>
         <tr>
           <th data-sort="rank">Rank</th>
+          <th data-sort="state">State</th>
           <th data-sort="composite_score" class="num">Score</th>
           <th data-sort="run_name">Run</th>
           <th data-sort="bundle">Bundle</th>
@@ -272,14 +331,17 @@
           <th data-sort="first_test_year">Window</th>
           <th data-sort="warnings">Warnings</th>
           <th data-sort="fairness_group_key">Fair group</th>
+          <th>Actions</th>
         </tr>
       </thead>
       <tbody id="leaderboardBody">
-        <tr><td colspan="20" class="empty">Loading leaderboard...</td></tr>
+        <tr><td colspan="22" class="empty">Loading leaderboard...</td></tr>
       </tbody>
     </table>
   </main>
 
-  <script src="./leaderboard.js?v=3"></script>
+  <div id="toasts"></div>
+
+  <script src="./leaderboard.js?v=4"></script>
 </body>
 </html>

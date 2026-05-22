@@ -38,6 +38,13 @@ def _results_dir() -> Path:
     return Path(get_results_dir())
 
 
+def _viz_dir() -> Path:
+    """Visualization dir; STOCK_VIZ_DIR overrides for tests."""
+    import os
+
+    return Path(os.environ.get("STOCK_VIZ_DIR") or (ROOT / "visualization"))
+
+
 def _leaderboard_path() -> Path:
     return _results_dir() / "leaderboard" / "leaderboard.json"
 
@@ -163,7 +170,72 @@ def _delete_run(run_dir: Path, row: dict[str, Any]) -> dict[str, Any]:
     moved = _quarantine_run_cache(row)
     shutil.rmtree(run_dir, ignore_errors=True)
     _rebuild_leaderboard()
+    _rebuild_pinned_manifest()
     return {"deleted_run_dir": str(run_dir), "quarantined_cache": moved}
+
+
+# ---------------------------------------------------------------------------
+# Dashboard export for pinned models
+# ---------------------------------------------------------------------------
+
+
+def _version_key_for(row: dict[str, Any]) -> str:
+    """Stable, filesystem-safe dashboard key for a run (config_hash based)."""
+    ch = str(row.get("config_hash") or "").strip() or "nohash"
+    return f"pin_{ch[:8]}"
+
+
+def _export_run_to_dashboard(run_dir: Path, row: dict[str, Any]) -> dict[str, Any] | None:
+    """Export a pinned run's trades.csv to visualization/data_<key>/ for dashboard overlays."""
+    from src.export.unified_export import export_version
+
+    trades_csv = run_dir / "trades.csv"
+    if not trades_csv.exists():
+        return None
+    version_key = _version_key_for(row)
+    model_cfg = {
+        "name": row.get("run_name", version_key),
+        "color": "#2962ff",
+        "marker_shape": "arrowUp",
+        "market": row.get("market"),
+        "market_family": row.get("market_family"),
+        "timeframe": row.get("timeframe"),
+        "schema": row.get("schema"),
+    }
+    return export_version(
+        version_key,
+        model_cfg,
+        str(_results_dir()),
+        str(_viz_dir()),
+        trades_csv=str(trades_csv),
+    )
+
+
+def _rebuild_pinned_manifest() -> dict[str, Any]:
+    """Rebuild visualization/manifest.json to contain exactly the pinned runs."""
+    import shutil
+
+    from src.export.unified_export import generate_manifest
+
+    pinned = [r for r in _read_rows() if r.get("state") == "pinned"]
+    pinned_keys = {_version_key_for(r) for r in pinned}
+
+    # Drop stale pinned data dirs no longer pinned
+    for d in _viz_dir().glob("data_pin_*"):
+        if d.is_dir() and d.name[len("data_") :] not in pinned_keys:
+            shutil.rmtree(d, ignore_errors=True)
+
+    exported: list[dict[str, Any]] = []
+    for row in pinned:
+        run_dir = _run_dir_for(row)
+        if run_dir is None:
+            continue
+        model = _export_run_to_dashboard(run_dir, row)
+        if model is not None:
+            exported.append(model)
+
+    generate_manifest(exported, str(_viz_dir()), merge=False)
+    return {"pinned": len(exported)}
 
 
 # ---------------------------------------------------------------------------
@@ -206,7 +278,8 @@ def create_app():
         _row, run_dir = _resolve(run_id)
         _set_state(run_dir, state)
         _rebuild_leaderboard()
-        return {"run_id": run_id, "state": state}
+        manifest_info = _rebuild_pinned_manifest()
+        return {"run_id": run_id, "state": state, "dashboard": manifest_info}
 
     @app.post("/api/runs/retrain")
     def retrain(run_id: str, payload: dict = Body(default={})) -> dict:

@@ -15,7 +15,9 @@ def results_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     (results / "experiments").mkdir(parents=True)
     (results / "cache" / "features" / "leading").mkdir(parents=True)
     (results / "cache" / "predictions").mkdir(parents=True)
+    (tmp_path / "viz").mkdir()
     monkeypatch.setenv("STOCK_RESULTS_DIR", str(results))
+    monkeypatch.setenv("STOCK_VIZ_DIR", str(tmp_path / "viz"))
     return results
 
 
@@ -84,6 +86,25 @@ def test_patch_state_to_pinned(client) -> None:
     assert json.loads(lc.read_text())["state"] == "pinned"
     # reflected in list
     assert c.get("/api/runs").json()[0]["state"] == "pinned"
+
+
+def test_pin_exports_to_dashboard_manifest(client, tmp_path: Path) -> None:
+    c, _results = client
+    viz = tmp_path / "viz"
+    run_id = c.get("/api/runs").json()[0]["run_id"]
+    c.patch("/api/runs", params={"run_id": run_id}, json={"state": "pinned"})
+    # manifest contains exactly the pinned model
+    manifest = json.loads((viz / "manifest.json").read_text())
+    assert len(manifest["models"]) == 1
+    vk = manifest["models"][0]["version_key"]
+    assert vk.startswith("pin_")
+    # per-symbol export dir created
+    assert (viz / f"data_{vk}").is_dir()
+    # unpin removes it from manifest and drops the data dir
+    c.patch("/api/runs", params={"run_id": run_id}, json={"state": "trained"})
+    manifest2 = json.loads((viz / "manifest.json").read_text())
+    assert manifest2["models"] == []
+    assert not (viz / f"data_{vk}").exists()
 
 
 def test_patch_invalid_state_rejected(client) -> None:

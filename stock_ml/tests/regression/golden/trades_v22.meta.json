@@ -1,7 +1,7 @@
 {
   "version": "v22",
-  "generated_at": "2026-05-21T20:35:06",
-  "generator": "scripts/regen_v22_golden.py",
+  "generated_at": "2026-05-21T21:30:01",
+  "generator": "scripts/regen_champion_goldens.py",
   "symbols": [
     "AAS",
     "AAV",

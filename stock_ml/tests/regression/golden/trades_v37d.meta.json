@@ -1,7 +1,7 @@
 {
   "version": "v37d",
-  "generated_at": "2026-05-02T00:15:58",
-  "generator": "run_pipeline.py",
+  "generated_at": "2026-05-21T21:40:53",
+  "generator": "scripts/regen_champion_goldens.py",
   "symbols": [
     "AAS",
     "AAV",
@@ -79,7 +79,7 @@
     "classes": 3
   },
   "target_fingerprint": "{\"classes\":3,\"forward_window\":8,\"gain_threshold\":0.06,\"long_window\":20,\"loss_threshold\":0.03,\"short_window\":8,\"type\":\"early_wave\"}",
-  "n_trades": 1404,
+  "n_trades": 1422,
   "exit_model_config": {
     "enabled": true,
     "forward_window": 15,

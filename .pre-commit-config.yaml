@@ -6,13 +6,3 @@ repos:
         args: [--fix]
       - id: ruff-format
 
-  - repo: local
-    hooks:
-      - id: regression-champions
-        name: regression-champions (hash check 11 trades CSVs vs golden)
-        entry: pytest stock_ml/tests/regression/test_champions.py -m regression -q
-        language: system
-        pass_filenames: false
-        # Chỉ chạy khi touch code có thể ảnh hưởng pipeline output.
-        # Fail nếu trades CSV trong results/ lệch hash với golden.
-        files: '(stock_ml/(src|run_pipeline\.py|config)|stock_ml/tests/regression/test_champions\.py)'

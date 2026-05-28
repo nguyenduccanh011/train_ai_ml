@@ -29,7 +29,7 @@ def test_loader_rule_run():
     assert row.backtest_window_key == "2020-2025"
     assert row.cost_profile.commission == 0.0015
     assert row.cost_profile.tax == 0.001
-    assert row.cost_profile.slippage == 0.0
+    assert row.cost_profile.slippage == 0.001
     assert COST_PROFILE_UNKNOWN_WARNING not in row.warnings
 
 

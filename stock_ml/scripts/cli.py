@@ -898,51 +898,6 @@ def cmd_validate(args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_list_components(args: argparse.Namespace) -> int:
-    from src.components.exit_models.registry import list_exit_models
-    from src.components.features.registry import _BLOCK_REGISTRY
-    from src.components.fusion.registry import list_strategies
-    from src.components.models.registry import list_models
-    from src.components.runners.runner_registry import list_runners
-    from src.components.targets.registry import list_targets
-
-    component_type = args.type
-
-    if component_type in (None, "features"):
-        print("=== Feature Blocks ===")
-        for name in sorted(_BLOCK_REGISTRY):
-            print(f"  {name}")
-
-    if component_type in (None, "models"):
-        print("=== Entry Models ===")
-        for name in list_models():
-            print(f"  {name}")
-
-    if component_type in (None, "exit_models"):
-        print("=== Exit Models ===")
-        for name in list_exit_models():
-            print(f"  {name}")
-
-    if component_type in (None, "targets"):
-        print("=== Target Generators ===")
-        for name in list_targets():
-            print(f"  {name}")
-
-    if component_type in (None, "fusion"):
-        import src.components.fusion.strategies  # noqa: F401 — trigger strategy registration
-
-        print("=== Fusion Strategies ===")
-        for name in list_strategies():
-            print(f"  {name}")
-
-    if component_type in (None, "runners"):
-        print("=== Strategy Runners ===")
-        for name, source in sorted(list_runners().items()):
-            print(f"  {name} ({source})")
-
-    return 0
-
-
 def _export_to_dashboard(version_key: str, trades_df: Any) -> None:
     """Export trades_df to visualization JSON for dashboard consumption."""
     import pandas as pd
@@ -1118,24 +1073,6 @@ def cmd_score_models(args: argparse.Namespace) -> int:
         total_pnl = row.get("total_pnl", 0)
         print(f"{version_key:<28} {score:>7.1f} {total_pnl:>11.1f}")
     print(f"\nUpdated {manifest_path}")
-    return 0
-
-
-def cmd_benchmark(args: argparse.Namespace) -> int:
-    from scripts.benchmark import _print_table, run_benchmark
-
-    versions = [v.strip() for v in args.versions.split(",") if v.strip()]
-    try:
-        results = run_benchmark(versions, device=args.device, symbols_limit=args.symbols_limit)
-    except RuntimeError as e:
-        print(f"Error: {e}", file=sys.stderr)
-        return 1
-    _print_table(results)
-    if args.output:
-        import json
-
-        Path(args.output).write_text(json.dumps(results, indent=2))
-        print(f"\nResults written to {args.output}")
     return 0
 
 
@@ -1340,14 +1277,6 @@ def build_parser() -> argparse.ArgumentParser:
     p_val.add_argument("--strict", action="store_true", help="Enable research strict validation")
     p_val.set_defaults(func=cmd_validate)
 
-    # list-components
-    p_lc = sub.add_parser("list-components", help="List registered components")
-    p_lc.add_argument(
-        "--type",
-        choices=["features", "models", "exit_models", "targets", "fusion", "runners"],
-    )
-    p_lc.set_defaults(func=cmd_list_components)
-
     # list-experiments
     p_le = sub.add_parser("list-experiments", help="List available experiment configs")
     p_le.set_defaults(func=cmd_list_experiments)
@@ -1418,24 +1347,6 @@ def build_parser() -> argparse.ArgumentParser:
         help="Recompute score even for models that already have composite_score",
     )
     p_score.set_defaults(func=cmd_score_models)
-
-    # benchmark
-    p_bm = sub.add_parser("benchmark", help="Benchmark pipeline runtime")
-    p_bm.add_argument(
-        "--versions",
-        default="v22,v34,v37a,v32",
-        help="Comma-separated versions to benchmark (default: v22,v34,v37a,v32)",
-    )
-    p_bm.add_argument("--device", default="cpu", choices=["cpu", "gpu"])
-    p_bm.add_argument(
-        "--symbols-limit",
-        type=int,
-        default=None,
-        dest="symbols_limit",
-        help="Limit symbols per version (for quick test)",
-    )
-    p_bm.add_argument("--output", default=None, help="Save results JSON to this path")
-    p_bm.set_defaults(func=cmd_benchmark)
 
     return parser
 

@@ -23,10 +23,13 @@ def _normalize_symbols(value: Any, none_value: Any) -> Any:
 def _registered_strategy_names() -> set[str]:
     global _STRATEGY_NAMES
     if _STRATEGY_NAMES is None:
-        import src.components.fusion.strategies  # noqa: F401
-        from src.components.fusion.registry import list_strategies
+        try:
+            import src.components.fusion.strategies  # noqa: F401
+            from src.components.fusion.registry import list_strategies
 
-        _STRATEGY_NAMES = set(list_strategies())
+            _STRATEGY_NAMES = set(list_strategies())
+        except (ImportError, ModuleNotFoundError):
+            _STRATEGY_NAMES = set()
     return _STRATEGY_NAMES
 
 
@@ -170,7 +173,10 @@ class MarketProfile(BaseModel):
     def _validate_strategy_overrides(self) -> MarketProfile:
         if not self.strategy_overrides:
             return self
-        unknown = sorted(set(self.strategy_overrides) - _registered_strategy_names())
+        registered = _registered_strategy_names()
+        if not registered:
+            return self
+        unknown = sorted(set(self.strategy_overrides) - registered)
         if unknown:
             raise ValueError(f"unknown strategy_overrides for market {self.name!r}: {unknown}")
         return self

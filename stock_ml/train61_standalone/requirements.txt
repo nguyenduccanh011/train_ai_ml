@@ -1,9 +1,0 @@
-flask
-numpy
-pandas
-pyyaml
-pydantic
-scikit-learn
-lightgbm
-xgboost
-catboost

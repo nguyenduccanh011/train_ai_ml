@@ -1,6 +1,6 @@
 # Implementation Roadmap: Research-Grade Trading Model System
 
-**Status**: Phase 1a complete · Phase 0 + 1b in progress
+**Status**: Phase 0 complete · Phase 1a complete · Phase 1b in progress
 **Last Updated**: 2026-05-29
 **Owner**: Architecture Team
 
@@ -34,58 +34,68 @@ Refactor `stock_ml` from monolithic single-model pipeline to a **research-grade,
 
 ---
 
-## Phase 0: Foundation Infrastructure (Week 0–1)
+## Phase 0: Foundation Infrastructure (✅ COMPLETE)
 
 Setup before any research work. None of these require alpha — they protect you from wasting time later.
 
-### 0.1 Experiment tracking
-- **Tool**: MLflow (local file backend) or Aim.
-- **Track per run**: config YAML, git commit hash, data fingerprint, all metrics, output artifacts.
-- **Deliverable**: `src/tracking/mlflow_logger.py` + integration in `run_experiment()`.
+**Status**: ✅ DONE (2026-05-29)
+- `src/tracking/mlflow_logger.py` — MLflow tracking with config, metrics, artifacts
+- `src/seed.py` — global seed propagation (numpy, random, lightgbm, xgboost, sklearn, tf)
+- `src/pipeline/run.py` — integrated reproducibility + structured logging
+- `stock_ml/scripts/run_v2.py` — `--seed` CLI argument added
+- `tests/test_phase0_smoke.py` — smoke tests for all Phase 0 components
 
-### 0.2 Reproducibility primitives
-- **Data fingerprint**: `sha256(sorted(symbols) + date_range + last_modified_ts)` written to every summary JSON.
-- **Code version**: auto-log `git rev-parse HEAD` and dirty flag.
-- **Seed propagation**: centralized `set_global_seed(seed)` covering numpy, random, lightgbm, xgboost, sklearn, tf. Replace hardcoded `random_state=0` in model wrappers.
+### 0.1 Experiment tracking ✅
+- **Tool**: MLflow (local file backend).
+- **Implementation**: `src/tracking/mlflow_logger.py::MLFlowLogger` context manager.
+- **Tracks per run**: config dict, git commit, data fingerprint, all scalar metrics, output artifacts (trades.csv, signals.csv, summary.json).
+- **MLflow store**: `results/{experiment_name}/mlruns/`
 
-### 0.3 Structured logging
-- Replace `print(...)` with loguru / std logging.
-- Format: `[{run_id}] [{exp_name}] [{level}] message`.
-- Required when running parallel experiments.
+### 0.2 Reproducibility primitives ✅
+- **Data fingerprint**: `sha256(sorted(symbols) + start_date + end_date)` → 16-char hex. Computed once per run, stored in summary JSON + MLflow param.
+- **Code version**: `git rev-parse HEAD` (40-char) + dirty flag via MLflow params.
+- **Seed propagation**: `src/seed.py::set_global_seed(seed)` covers numpy, random, LightGBM, XGBoost, sklearn, TensorFlow. Called at run start to ensure determinism.
+- **Result**: identical run (same seed + same data) → byte-identical metrics.
 
-### 0.4 Feature cache (mini feature store)
+### 0.3 Structured logging ✅
+- **Tool**: loguru.
+- **Format**: `[timestamp] [LEVEL] [module:function:line] message`.
+- **Replacement**: All `print(...)` → `logger.info()`, `logger.warning()`, `logger.debug()`, `logger.error()`.
+- **Benefit**: Log levels controllable; structured output for parsing; `run_id` automatically included by MLflow context.
+
+### 0.4 Feature cache (DEFERRED)
 - **Path**: `cache/features/{feature_set}/{data_hash}.parquet`.
-- **Key**: `(feature_set_name, data_fingerprint)`.
-- **Behavior**: compute once, reuse across experiments using the same data + feature set.
+- **Status**: Design complete, implementation deferred (not blocking Phase 1b). Can skip if run time acceptable.
 
-### 0.5 Output layout standardization
+### 0.5 Output layout standardization ✅
 ```
 results/
 └── {experiment_name}/
-    └── {run_id}/                # = {YYYYMMDD-HHMMSS}-{git_short_hash}
-        ├── config.yaml          # frozen copy of input config
-        ├── data_fingerprint.txt
+    └── {run_id}/                # = {YYYYMMDD-HHMMSS}-{git_short_hash[:8]}
+        ├── config.yaml          # (optional; currently JSON in summary)
+        ├── data_fingerprint.txt # {fingerprint}\n{git_commit}\n
         ├── trades.csv
         ├── signals.csv
-        ├── stats/
-        │   ├── aggregate.json
-        │   ├── daily.csv
-        │   ├── yearly.csv
-        │   └── symbol.csv
-        ├── audit.json           # leakage audit (machine-readable)
-        ├── metrics.json         # all metrics with CIs
-        └── mlflow_run_id.txt
+        ├── daily_stats.csv
+        ├── yearly_stats.csv
+        ├── symbol_stats.csv
+        ├── summary.json         # master summary with all metadata
+        └── mlruns/              # MLflow tracking (per experiment_name)
 ```
+- **Feature**: Prevents overwrites. Second run → different run_id → separate output directory.
+- **Summary JSON fields**: `run_id`, `data_fingerprint`, `git_commit`, `mlflow_run_id`, metrics, audit report, config, timestamps.
 
-### 0.6 Golden + leakage regression tests
-- **Golden test**: fixed input data + fixed config → assert exact `trades.csv` hash. Catches accidental behavior changes.
-- **Leakage regression test**: inject a future-looking feature → audit must flag it (`fail=True`). Catches silent leakage regressions.
+### 0.6 Golden + leakage regression tests (DEFERRED)
+- **Golden test**: fixed input data + fixed config → assert exact `trades.csv` hash.
+- **Leakage regression test**: inject future feature → audit must flag it.
+- **Status**: Design complete, tests deferred (can add after Phase 1b).
 
-### Phase 0 verification
-- Two runs of same config + same data → identical metrics.
-- MLflow logs created on every run.
-- Feature cache hit on 2nd run of same `(feature_set, data)`.
-- Golden test passes; leakage regression fails as expected when future-feature injected.
+### Phase 0 verification ✅
+- ✅ Two runs of same config + same data + same seed → identical metrics (verified with test_phase0_smoke.py).
+- ✅ MLflow logs created on every run (run_id, config, metrics, params).
+- ✅ Output structure enforced (run_id directory with all files).
+- ✅ Data fingerprint stable across runs.
+- ✅ Seed propagation working (all RNG systems seeded).
 
 ---
 
@@ -386,27 +396,43 @@ Only start after Phase 3 confirms a deployable strategy.
 
 ---
 
+## Phase 0 Completion Summary
+
+**What was done (2026-05-29)**:
+- ✅ MLflow tracking infrastructure (config, metrics, artifacts logging)
+- ✅ Reproducibility: data fingerprint + git commit + global seed propagation
+- ✅ Structured logging (loguru replacing print)
+- ✅ Output layout with run_id directories (prevents overwrites)
+- ✅ Smoke tests validating reproducibility (same seed → identical metrics)
+
+**Next steps**:
+1. **Phase 1b (BLOCKER)** — Fix label semantics, vectorize signal generation, unify run.py ↔ experiment.py
+2. **Phase 1.5** — Add Purged KFold, DSR, PBO, bootstrap CI for research-grade validation
+3. **Alpha Gate** — Run decisive experiment on 200+ symbols × 5y OOS with proper methodology
+
+---
+
 ## Flow Issues in Current Codebase (Tracked)
 
-These are concrete code-level problems found during review. Issues #1–#3 are blockers for Phase 1.5; the rest are scheduled into Phase 0 / 1b.
+These are concrete code-level problems found during review. Issues #1–#3 are blockers for Phase 1b; the rest are addressed or deferred.
 
-| # | Issue | File / Reference | Phase |
-|---|-------|------------------|-------|
-| 1 | Duplicate logic in `run.py` and `experiment.py` | `src/pipeline/{run,experiment}.py` | 1b.4 |
-| 2 | `train_fold` calls `exit_model.predict` per row in a Python loop | `experiment.py:126-135` | 1b.2 |
-| 3 | Label conversion `(target==1)` mixes neutral + sell into negative class | `experiment.py:109,115` | 1b.1 |
-| 4 | Features recomputed on every run | `pipeline/experiment.py:178` | 0.4 |
-| 5 | Hardcoded `first_test_year=2020, last_test_year=2025` | `run.py:42-43` | 1b.7 |
-| 6 | No data fingerprint in summary | `experiment.py:258-294` | 0.2 |
-| 7 | Backtest discards model `predict_proba` | `experiment.py:124-138` | 1b.3 |
-| 8 | LightGBM `random_state=0` ignores `cfg.seed` | `models/registry.py:73` | 0.2 |
-| 9 | `print(...)` everywhere; no run_id in logs | many files | 0.3 |
-| 10 | Smoke tests don't assert metrics, no golden / leakage regression tests | `tests/` | 0.6 |
-| 11 | `audit_report` failures don't abort the run | `experiment.py:242-243` | 1b.9 |
-| 12 | Output path overwrites on second run with same name | `experiment.py:245-256` | 0.5 / 1b.8 |
-| 13 | YAML queue lacks per-file locking | `scripts/run_experiments.py` | 1b.10 |
-| 14 | No mid-fold resume on crash | `experiment.py:198-218` | 1b.11 |
-| 15 | live_sim and backtest signal paths diverge | `live_sim/signals.py` vs `backtest/engine.py` | 1b.5 |
+| # | Issue | File / Reference | Phase | Status |
+|---|-------|------------------|-------|--------|
+| 1 | Duplicate logic in `run.py` and `experiment.py` | `src/pipeline/{run,experiment}.py` | 1b.4 | ⏳ TODO |
+| 2 | `train_fold` calls `exit_model.predict` per row in a Python loop | `experiment.py:126-135` | 1b.2 | ⏳ TODO (BLOCKER) |
+| 3 | Label conversion `(target==1)` mixes neutral + sell into negative class | `experiment.py:109,115` | 1b.1 | ⏳ TODO (BLOCKER) |
+| 4 | Features recomputed on every run | `pipeline/experiment.py:178` | 0.4 | ⏳ DEFERRED |
+| 5 | Hardcoded `first_test_year=2020, last_test_year=2025` | `run.py:42-43` | 1b.7 | ⏳ TODO |
+| 6 | No data fingerprint in summary | `experiment.py:258-294` | 0.2 | ✅ FIXED (Phase 0) |
+| 7 | Backtest discards model `predict_proba` | `experiment.py:124-138` | 1b.3 | ⏳ TODO |
+| 8 | LightGBM `random_state=0` ignores `cfg.seed` | `models/registry.py:73` | 0.2 | ✅ FIXED (Phase 0: seed propagation) |
+| 9 | `print(...)` everywhere; no run_id in logs | many files | 0.3 | ✅ FIXED (Phase 0: loguru) |
+| 10 | Smoke tests don't assert metrics, no golden / leakage regression tests | `tests/` | 0.6 | ✅ PARTIAL (smoke tests added; golden/leakage deferred) |
+| 11 | `audit_report` failures don't abort the run | `experiment.py:242-243` | 1b.9 | ⏳ TODO |
+| 12 | Output path overwrites on second run with same name | `experiment.py:245-256` | 0.5 | ✅ FIXED (Phase 0: run_id layout) |
+| 13 | YAML queue lacks per-file locking | `scripts/run_experiments.py` | 1b.10 | ⏳ TODO |
+| 14 | No mid-fold resume on crash | `experiment.py:198-218` | 1b.11 | ⏳ TODO |
+| 15 | live_sim and backtest signal paths diverge | `live_sim/signals.py` vs `backtest/engine.py` | 1b.5 | ⏳ TODO |
 
 ---
 
@@ -481,16 +507,24 @@ stock_ml/
 
 | Phase | Duration | Status | Exit criteria |
 |-------|----------|--------|---------------|
-| Phase 0 | 1 week | 🔨 IN PROGRESS | Infra smoke tests pass |
+| Phase 0 | 1 week | ✅ DONE (2026-05-29) | MLflow + seed + logging + output layout |
 | Phase 1a | done | ✅ DONE | Registries import + instantiate |
-| Phase 1b | 1–2 weeks | ⏳ NEXT | Deterministic E2E + unified signal path |
-| Phase 1.5 | 2 weeks | ⏳ PLANNED | Methodology smoke tests |
-| **Alpha Gate** | 1 week | ⏳ PLANNED | DSR > 0.5, PBO < 30% |
+| Phase 1b | 1–2 weeks | 🔨 IN PROGRESS | Label semantic + vectorize signals + unify paths |
+| Phase 1.5 | 2 weeks | ⏳ NEXT | Purged CV + DSR + PBO + bootstrap CI |
+| **Alpha Gate** | 1 week | ⏳ PLANNED | DSR > 0.5, PBO < 30%, annual return > 12% |
 | Phase 2 | 2 weeks | ⏳ CONDITIONAL on gate | Exit + portfolio rules A/B-validated |
 | Phase 3 | 2 weeks | ⏳ CONDITIONAL | Sizing improves Sharpe; leaderboard ranks |
 | Phase 4 | 4+ weeks | ⏳ CONDITIONAL | 3-month shadow PnL within CI |
 
-Total to live trading (assuming gate passes first attempt): **~13 weeks**. Original roadmap estimated 7+ weeks but skipped methodology and alpha validation, which are the highest-risk steps.
+**Total to live trading** (assuming gate passes first attempt): **~13 weeks**
+- Phase 0 (foundation): 1 week ✅ DONE
+- Phase 1a (registries): done ✅ DONE
+- Phase 1b (pipeline): 1–2 weeks 🔨 IN PROGRESS
+- Phase 1.5 (methodology): 2 weeks (critical for alpha validation)
+- Alpha gate: 1 week (go/no-go decision)
+- Phase 2–4 (conditional): 8 weeks if gate passes
+
+Original roadmap estimated 7 weeks but skipped Phase 1.5 (methodology) and alpha gate, which are highest-risk. Doing them properly adds ~3 weeks but prevents costly mistakes.
 
 ---
 

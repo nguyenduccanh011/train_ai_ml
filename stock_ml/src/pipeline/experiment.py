@@ -26,12 +26,17 @@ from src.data.loader import DataLoader
 from src.data.splitter import YearSplitter
 from src.features.registry import apply_features, get_feature_cols
 from src.models.registry import build_entry_model, build_exit_model, build_regression_model
+from src.signals.core import generate_signals_from_predictions
 from src.targets.registry import build_target
 
 
 @dataclass
 class ExperimentConfig:
-    """Configuration for an experiment — maps cleanly from YAML."""
+    """Configuration for an experiment — maps cleanly from YAML.
+
+    Phase 1b.6: Canonical nested schema validation.
+    Supports full YAML structure with components, split, engine, validation.
+    """
 
     name: str
     strategy: str
@@ -44,10 +49,13 @@ class ExperimentConfig:
     engine: dict
     seed: int = 42
     signal_threshold: float = 0.0
+    hypothesis: str = ""
+    validation: dict | None = None
+    strict_audit: bool = True
 
     @classmethod
     def from_yaml(cls, path: str | Path) -> ExperimentConfig:
-        """Load experiment config from YAML file.
+        """Load experiment config from YAML file with strict validation.
 
         Args:
             path: path to YAML file
@@ -57,29 +65,66 @@ class ExperimentConfig:
 
         Raises:
             FileNotFoundError: if file not found
-            ValueError: if required fields missing
+            ValueError: if required fields missing or schema invalid
         """
         with open(path, encoding="utf-8") as f:
             raw = yaml.safe_load(f) or {}
 
-        required = ["name", "strategy", "market", "components", "split", "engine"]
-        missing = [k for k in required if k not in raw]
+        required_top = ["name", "strategy", "market", "components", "split", "engine"]
+        missing = [k for k in required_top if k not in raw]
         if missing:
             raise ValueError(f"YAML missing required keys: {missing}")
 
         comp = raw.get("components", {})
+        required_comp = ["features", "target", "entry_model"]
+        missing_comp = [k for k in required_comp if k not in comp]
+        if missing_comp:
+            raise ValueError(f"components missing required keys: {missing_comp}")
+
+        target_cfg = comp["target"]
+        if "type" not in target_cfg:
+            raise ValueError("components.target missing required 'type' field")
+        if target_cfg["type"] not in [
+            "forward_return",
+            "forward_return_regression",
+            "trend_regime",
+        ]:
+            raise ValueError(f"Unknown target type: {target_cfg['type']}")
+
+        entry_model_cfg = comp["entry_model"]
+        if "type" not in entry_model_cfg:
+            raise ValueError("components.entry_model missing required 'type' field")
+
+        split_cfg = raw.get("split", {})
+        if "type" not in split_cfg:
+            raise ValueError("split missing required 'type' field")
+        valid_split_types = ["walk_forward_year", "purged_kfold"]
+        if split_cfg["type"] not in valid_split_types:
+            raise ValueError(f"Unknown split type: {split_cfg['type']}")
+
+        engine_cfg = raw.get("engine", {})
+        if not isinstance(engine_cfg, dict):
+            raise ValueError("engine must be a dict")
+
+        validation_cfg = raw.get("validation")
+        if validation_cfg is not None and not isinstance(validation_cfg, dict):
+            raise ValueError("validation must be a dict or null")
+
         return cls(
             name=raw["name"],
             strategy=raw["strategy"],
             market=raw["market"],
             feature_set=comp.get("features", "basic_v1"),
-            target=comp.get("target", {"type": "forward_return", "horizon": 5}),
-            entry_model=comp.get("entry_model", {"type": "lightgbm", "params": {}}),
+            target=target_cfg,
+            entry_model=entry_model_cfg,
             exit_model=comp.get("exit_model", {"type": "none", "enabled": False, "params": {}}),
-            split=raw.get("split", {}),
-            engine=raw.get("engine", {}),
+            split=split_cfg,
+            engine=engine_cfg,
             seed=raw.get("seed", 42),
             signal_threshold=raw.get("signal_threshold", 0.0),
+            hypothesis=raw.get("hypothesis", ""),
+            validation=validation_cfg,
+            strict_audit=raw.get("strict_audit", True),
         )
 
 
@@ -150,12 +195,12 @@ def train_fold(
 
         pred_returns = entry_model.predict(X_test)
 
-        signals = np.where(
-            pred_returns > cfg.signal_threshold,
-            1,
-            np.where(pred_returns < -cfg.signal_threshold, -1, 0),
+        signals_df = generate_signals_from_predictions(
+            predictions=pred_returns,
+            test_df=test_use,
+            signal_threshold=cfg.signal_threshold,
+            is_regression=True,
         )
-        scores = pred_returns
 
     else:
         y_full = y_full.astype(np.int8)
@@ -169,30 +214,17 @@ def train_fold(
             exit_model = build_exit_model(cfg.exit_model["type"], cfg.exit_model.get("params", {}))
             exit_model.fit(X_train, y_exit)
 
-        entry_pred = entry_model.predict(X_test)
-        entry_proba = (
-            entry_model.predict_proba(X_test)[:, 1]
-            if hasattr(entry_model, "predict_proba")
-            else np.zeros(len(entry_pred))
+        signals_df = generate_signals_from_predictions(
+            predictions=None,
+            test_df=test_use,
+            signal_threshold=cfg.signal_threshold,
+            is_regression=False,
+            entry_model=entry_model,
+            exit_model=exit_model,
+            X_test=X_test,
         )
 
-        signals = []
-        for idx in range(len(entry_pred)):
-            sig = 0
-            if entry_pred[idx] == 1:
-                sig = 1
-            elif exit_model is not None:
-                exit_pred = exit_model.predict(X_test[idx : idx + 1])
-                if exit_pred[0] == 1:
-                    sig = -1
-            signals.append(sig)
-
-        signals = np.array(signals, dtype=np.int8)
-        scores = entry_proba
-
-    test_use["signal"] = signals
-    test_use["score"] = scores.astype(np.float32)
-    return entry_model, exit_model, test_use[["symbol", "date", "signal", "score"]]
+    return entry_model, exit_model, signals_df
 
 
 def run_experiment(
@@ -200,20 +232,30 @@ def run_experiment(
     data_root: str,
     symbols: list[str],
     out_dir: str,
+    run_id: str | None = None,
 ) -> dict:
     """Run full experiment — load, train, backtest, report.
+
+    Phase 1b.11: Resumable runs via fold checkpointing.
 
     Args:
         cfg: ExperimentConfig
         data_root: path to OHLCV data directory
         symbols: list of symbols to use
         out_dir: output directory for results CSVs + JSON
+        run_id: optional run_id for fold checkpointing; if provided, saves folds to
+                {out_dir}/{run_id}/folds/{fold_label}.parquet for resumability
 
     Returns:
         summary dict with metrics and file paths
     """
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
+
+    fold_cache_dir = None
+    if run_id:
+        fold_cache_dir = out / run_id / "folds"
+        fold_cache_dir.mkdir(parents=True, exist_ok=True)
 
     print(f"[{cfg.name}] loading {len(symbols)} symbols from {data_root}")
 
@@ -242,19 +284,55 @@ def run_experiment(
     print(f"[{cfg.name}] dataset: {len(ohlcv)} bars across {ohlcv['symbol'].nunique()} symbols")
 
     split_cfg = cfg.split.copy()
-    splitter = YearSplitter(
-        train_years=split_cfg.get("train_years", 4),
-        test_years=split_cfg.get("test_years", 1),
-        gap_days=split_cfg.get("gap_days", 25),
-        first_test_year=split_cfg.get("first_test_year", 2020),
-        last_test_year=split_cfg.get("last_test_year", 2025),
-    )
+    split_type = split_cfg.get("type", "walk_forward_year")
+
+    if split_type == "walk_forward_year":
+        train_years = split_cfg.get("train_years", 4)
+        test_years = split_cfg.get("test_years", 1)
+        gap_days = split_cfg.get("gap_days", 25)
+
+        if "first_test_year" in split_cfg and "last_test_year" in split_cfg:
+            splitter = YearSplitter(
+                train_years=train_years,
+                test_years=test_years,
+                gap_days=gap_days,
+                first_test_year=split_cfg["first_test_year"],
+                last_test_year=split_cfg["last_test_year"],
+            )
+            print(
+                f"  [split] year range: {split_cfg['first_test_year']}-{split_cfg['last_test_year']} (explicit)"
+            )
+        else:
+            splitter = YearSplitter.from_data(
+                feat,
+                train_years=train_years,
+                test_years=test_years,
+                gap_days=gap_days,
+            )
+            print(
+                f"  [split] year range: {splitter.first_test_year}-{splitter.last_test_year} (auto-detected)"
+            )
+    else:
+        raise NotImplementedError(f"split type '{split_type}' not yet implemented")
+
     windows = splitter.windows()
 
     signal_frames: list[pd.DataFrame] = []
     for w, train_df, test_df in splitter.split(feat):
         if train_df.empty or test_df.empty:
             print(f"  [fold {w.label}] empty — skipped")
+            continue
+
+        fold_cache_path = fold_cache_dir / f"{w.label}.parquet" if fold_cache_dir else None
+
+        if fold_cache_path and fold_cache_path.exists():
+            signals = pd.read_parquet(fold_cache_path)
+            n_buys = (signals["signal"] > 0).sum()
+            n_sells = (signals["signal"] < 0).sum()
+            print(
+                f"  [fold {w.label}] restored from checkpoint  buys={n_buys:>5}  sells={n_sells:>5}"
+            )
+            signal_frames.append(signals)
             continue
 
         try:
@@ -269,6 +347,10 @@ def run_experiment(
                 f"  [fold {w.label}] train={len(train_df.dropna(subset=['target', *feat_cols])):>6}  "
                 f"test={len(signals):>6}  buys={n_buys:>5}  sells={n_sells:>5}"
             )
+
+            if fold_cache_path:
+                signals.to_parquet(fold_cache_path, index=False, compression="snappy")
+
             signal_frames.append(signals)
         except Exception as e:
             print(f"  [fold {w.label}] error: {e} — skipped")
@@ -300,6 +382,9 @@ def run_experiment(
     required_gap = max(cfg.target.get("horizon", 5) * 2 + 5, 7)
     report = audit_report(trades_df, signals_all, windows=windows, min_gap_days=required_gap)
     print_report(report)
+
+    if cfg.strict_audit and report["overall"] == "FAIL":
+        raise ValueError(f"[{cfg.name}] Strict audit failed: {report['n_fail']} check(s) failed")
 
     trades_path = out / f"trades_{cfg.name}.csv"
     signals_path = out / f"signals_{cfg.name}.csv"

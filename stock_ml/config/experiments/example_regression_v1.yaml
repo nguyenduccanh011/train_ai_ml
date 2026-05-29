@@ -45,3 +45,11 @@ engine:
     slippage: 0.001
 
 signal_threshold: 0.0
+
+validation:
+  n_seeds: 20
+  bootstrap_iterations: 1000
+  compute_dsr: true
+  compute_pbo: true
+
+strict_audit: true

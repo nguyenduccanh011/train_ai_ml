@@ -6,12 +6,12 @@ import hashlib
 import json
 from dataclasses import dataclass
 
-import numpy as np
 import pandas as pd
 
 from src.features.basic import FEATURE_COLS
 from src.live_sim.config import LiveSimConfig
 from src.models.baseline import BaselineModel
+from src.signals.core import generate_signals_from_features
 
 
 @dataclass(frozen=True)
@@ -52,6 +52,8 @@ class SignalGenerator:
     ) -> FrozenSignalSet:
         """Generate and freeze signals for today's execution.
 
+        Uses unified signal generation from src.signals.core to ensure backtest/live consistency.
+
         Args:
             yesterday: T-1 date (signal generation date)
             today: T date (execution date)
@@ -74,34 +76,15 @@ class SignalGenerator:
                 f"lookahead detected: history_feat has date {max_date} > yesterday {yesterday}"
             )
 
-        raw_signals = {}
-        for sym in self.config.symbols:
-            sym_feat = history_feat[history_feat["symbol"] == sym]
-            if sym_feat.empty:
-                raw_signals[sym] = 0
-                continue
-
-            last_row = sym_feat.iloc[-1]
-            last_row_date = pd.Timestamp(last_row["date"]).normalize().date()
-            if last_row_date != yesterday.normalize().date():
-                raise ValueError(
-                    f"symbol {sym} missing data at {yesterday}: last row is {last_row['date']}"
-                )
-
-            feat_cols_present = [c for c in FEATURE_COLS if c in sym_feat.columns]
-            if not feat_cols_present:
-                raise ValueError(f"symbol {sym} has no feature columns")
-
-            if sym_feat[feat_cols_present].iloc[-1].isna().any():
-                raise ValueError(
-                    f"symbol {sym} has NaN features at {yesterday}: {feat_cols_present}"
-                )
-
-            X = sym_feat[feat_cols_present].iloc[-1:].to_numpy(dtype=np.float32)
-            sig = int(self.model.predict(X)[0])
-            raw_signals[sym] = sig
-
-        filtered = self._apply_filters(raw_signals, history_feat, yesterday)
+        # Use unified signal generation
+        filtered = generate_signals_from_features(
+            model=self.model,
+            history_feat=history_feat,
+            symbols=self.config.symbols,
+            feature_cols=FEATURE_COLS,
+            signal_threshold=getattr(self.config, "signal_threshold", 0.0),
+            filter_fn=self._apply_filters_fn(),
+        )
 
         n_buy = sum(1 for s in filtered.values() if s == 1)
         n_sell = sum(1 for s in filtered.values() if s == -1)
@@ -120,24 +103,28 @@ class SignalGenerator:
             integrity_hash=integrity_hash,
         )
 
-    def _apply_filters(
-        self,
-        raw_signals: dict[str, int],
-        history_feat: pd.DataFrame,
-        yesterday: pd.Timestamp,
-    ) -> dict[str, int]:
-        """Apply all filters at T-1 time (no lookahead allowed)."""
-        filtered = dict(raw_signals)
+    def _apply_filters_fn(self):
+        """Return a filter function compatible with generate_signals_from_features."""
 
-        if self.config.min_volume_filter > 0:
-            for sym in filtered:
-                sym_feat = history_feat[history_feat["symbol"] == sym]
-                if not sym_feat.empty and "volume" in sym_feat.columns:
-                    avg_vol_20 = sym_feat["volume"].tail(20).mean()
-                    if avg_vol_20 < self.config.min_volume_filter:
-                        filtered[sym] = 0  # neutralize
+        def apply_filters(
+            raw_signals: dict[str, int],
+            history_feat: pd.DataFrame,
+            eval_date: pd.Timestamp,
+        ) -> dict[str, int]:
+            """Apply all filters at T-1 time (no lookahead allowed)."""
+            filtered = dict(raw_signals)
 
-        return filtered
+            if self.config.min_volume_filter > 0:
+                for sym in filtered:
+                    sym_feat = history_feat[history_feat["symbol"] == sym]
+                    if not sym_feat.empty and "volume" in sym_feat.columns:
+                        avg_vol_20 = sym_feat["volume"].tail(20).mean()
+                        if avg_vol_20 < self.config.min_volume_filter:
+                            filtered[sym] = 0  # neutralize
+
+            return filtered
+
+        return apply_filters
 
     @staticmethod
     def _compute_hash(date: pd.Timestamp, signals: dict[str, int]) -> str:

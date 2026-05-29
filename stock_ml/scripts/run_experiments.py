@@ -23,6 +23,34 @@ from pathlib import Path
 from src.pipeline.experiment import ExperimentConfig, run_experiment
 
 
+def try_acquire_lock(yaml_path: Path, timeout_sec: float = 5.0) -> bool:
+    """Phase 1b.10: Try to acquire per-file lock with timeout.
+
+    Uses atomic rename to avoid race conditions. If lock file already exists,
+    another worker is processing this YAML — skip it.
+
+    Args:
+        yaml_path: path to YAML file
+        timeout_sec: timeout in seconds (not strictly enforced; just skip if locked)
+
+    Returns:
+        True if lock acquired, False if already locked
+    """
+    lock_path = yaml_path.with_suffix(yaml_path.suffix + ".lock")
+    try:
+        lock_path.touch(exist_ok=False)
+        return True
+    except FileExistsError:
+        return False
+
+
+def release_lock(yaml_path: Path) -> None:
+    """Release per-file lock."""
+    lock_path = yaml_path.with_suffix(yaml_path.suffix + ".lock")
+    if lock_path.exists():
+        lock_path.unlink()
+
+
 def run_one_experiment(
     yaml_path: Path,
     done_dir: Path,
@@ -32,6 +60,8 @@ def run_one_experiment(
     out_dir: str,
 ) -> tuple[Path, bool, str]:
     """Run a single experiment and move YAML to done/failed.
+
+    Phase 1b.10: Atomic YAML queue with per-file locking.
 
     Args:
         yaml_path: path to YAML config file
@@ -44,6 +74,11 @@ def run_one_experiment(
     Returns:
         (yaml_path, success: bool, message: str)
     """
+    if not try_acquire_lock(yaml_path):
+        msg = "Skipped — already being processed by another worker"
+        print(f"\n⊘ {yaml_path.name}: {msg}")
+        return yaml_path, False, msg
+
     try:
         print(f"\n{'=' * 60}")
         print(f"Running: {yaml_path.name}")
@@ -70,6 +105,9 @@ def run_one_experiment(
         msg = f"FAILED — see {error_log_path.name}"
         print(f"\n✗ {yaml_path.name}: {msg}")
         return yaml_path, False, str(e)
+
+    finally:
+        release_lock(yaml_path)
 
 
 def main():

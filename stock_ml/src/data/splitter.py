@@ -49,6 +49,57 @@ class YearSplitter:
         if self.first_test_year > self.last_test_year:
             raise ValueError("first_test_year must be <= last_test_year")
 
+    @classmethod
+    def from_data(
+        cls,
+        df: pd.DataFrame,
+        train_years: int = 4,
+        test_years: int = 1,
+        gap_days: int = 25,
+        date_col: str = "date",
+    ) -> YearSplitter:
+        """Auto-detect year range from DataFrame.
+
+        Phase 1b.7: Auto-detect first_test_year and last_test_year from data.
+        Ensures first_test_year has at least train_years of prior data.
+
+        Args:
+            df: DataFrame with date column
+            train_years: number of years to train on
+            test_years: number of years per test fold
+            gap_days: gap between train and test
+            date_col: name of date column
+
+        Returns:
+            YearSplitter instance with auto-detected year range
+
+        Raises:
+            ValueError: if date column missing or insufficient data
+        """
+        if date_col not in df.columns:
+            raise ValueError(f"DataFrame missing '{date_col}' column")
+
+        dates = pd.to_datetime(df[date_col])
+        min_year = dates.dt.year.min()
+        max_year = dates.dt.year.max()
+
+        first_test_year = min_year + train_years
+        last_test_year = max_year - test_years
+
+        if first_test_year > last_test_year:
+            raise ValueError(
+                f"Insufficient data for {train_years}-year training: "
+                f"year range {min_year}-{max_year} too short"
+            )
+
+        return cls(
+            train_years=train_years,
+            test_years=test_years,
+            gap_days=gap_days,
+            first_test_year=first_test_year,
+            last_test_year=last_test_year,
+        )
+
     def windows(self) -> list[SplitWindow]:
         out: list[SplitWindow] = []
         for y in range(self.first_test_year, self.last_test_year + 1, self.test_years):

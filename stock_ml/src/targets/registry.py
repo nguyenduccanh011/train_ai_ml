@@ -10,6 +10,7 @@ from typing import Protocol
 import pandas as pd
 
 from src.targets.forward import ForwardReturnTarget
+from src.targets.forward_regression import ForwardReturnRegressionTarget
 
 
 class TargetProtocol(Protocol):
@@ -71,6 +72,7 @@ class TrendRegimeTarget:
 
 _REGISTRY: dict[str, type] = {
     "forward_return": ForwardReturnTarget,
+    "forward_return_regression": ForwardReturnRegressionTarget,
     "trend_regime": TrendRegimeTarget,
 }
 

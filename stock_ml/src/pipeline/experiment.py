@@ -25,7 +25,7 @@ from src.backtest.stats import (
 from src.data.loader import DataLoader
 from src.data.splitter import YearSplitter
 from src.features.registry import apply_features, get_feature_cols
-from src.models.registry import build_entry_model, build_exit_model
+from src.models.registry import build_entry_model, build_exit_model, build_regression_model
 from src.targets.registry import build_target
 
 
@@ -43,6 +43,7 @@ class ExperimentConfig:
     split: dict
     engine: dict
     seed: int = 42
+    signal_threshold: float = 0.0
 
     @classmethod
     def from_yaml(cls, path: str | Path) -> ExperimentConfig:
@@ -78,6 +79,7 @@ class ExperimentConfig:
             split=raw.get("split", {}),
             engine=raw.get("engine", {}),
             seed=raw.get("seed", 42),
+            signal_threshold=raw.get("signal_threshold", 0.0),
         )
 
 
@@ -89,53 +91,108 @@ def train_fold(
 ) -> tuple[Any, Any | None, pd.DataFrame]:
     """Train entry/exit models on fold and generate test signals.
 
+    **PHASE 1b.1 DECISION: Regression approach (professional standard)**
+
+    Supports both regression (float targets) and classification ({-1, 0, 1} targets).
+    Auto-detects based on target dtype.
+
+    **Regression (RECOMMENDED for Phase 1b+):**
+    - Single entry model predicts forward return as float ∈ ℝ
+    - Signal via threshold (cfg.signal_threshold, default 0):
+      * if pred_return > +threshold → buy (1)
+      * if pred_return < -threshold → sell (-1)
+      * else → hold (0)
+    - No separate exit model (exit signal from return magnitude)
+    - Uses full training data (no row dropping, no semantic mixing)
+    - Aligns with professional quant methodology (Two Sigma, Man AHL, de Prado)
+    - Enables Phase 3 sizing via return magnitude (Kelly fractional ready)
+
+    **Classification (Legacy, not recommended):**
+    - Separate entry/exit models for binary classification
+    - Entry: buy (1) vs not-buy (0)
+    - Exit: sell (1) vs not-sell (0)
+    - Note: Phase 1b.1 blocker was semantic issue (negative class mixin {neutral, sell})
+
     Args:
         train_df: training DataFrame with [symbol, date, target, *feat_cols]
+                  target dtype determines mode: float64 → regression, int8 → classification
         test_df: test DataFrame with [symbol, date, *feat_cols]
         feat_cols: list of feature column names to use for training
-        cfg: ExperimentConfig with model types and params
+        cfg: ExperimentConfig with model types, params, and signal_threshold
 
     Returns:
         (entry_model, exit_model_or_none, signals_df)
-        signals_df has [symbol, date, signal] with signal in {-1, 0, 1}
+        signals_df has [symbol, date, signal, score] where:
+          - signal ∈ {-1, 0, 1}
+          - score = predicted return (regression) or predict_proba (classification)
     """
     train_clean = train_df.dropna(subset=["target", *feat_cols])
     if train_clean.empty:
         raise ValueError("No clean training data after dropna")
 
     X_train = train_clean[feat_cols].to_numpy(dtype=np.float32)
-    y_full = train_clean["target"].to_numpy(dtype=np.int8)
-
-    y_entry = (y_full == 1).astype(np.int8)
-    entry_model = build_entry_model(cfg.entry_model["type"], cfg.entry_model.get("params", {}))
-    entry_model.fit(X_train, y_entry)
-
-    exit_model = None
-    if cfg.exit_model.get("enabled", False):
-        y_exit = (y_full == -1).astype(np.int8)
-        exit_model = build_exit_model(cfg.exit_model["type"], cfg.exit_model.get("params", {}))
-        exit_model.fit(X_train, y_exit)
+    y_full = train_clean["target"].to_numpy()
 
     test_use = test_df.dropna(subset=feat_cols).copy()
     if test_use.empty:
-        return entry_model, exit_model, pd.DataFrame(columns=["symbol", "date", "signal"])
+        return None, None, pd.DataFrame(columns=["symbol", "date", "signal", "score"])
 
     X_test = test_use[feat_cols].to_numpy(dtype=np.float32)
-    entry_pred = entry_model.predict(X_test)
 
-    signals = []
-    for idx, (_, row) in enumerate(test_use.iterrows()):
-        sig = 0
-        if entry_pred[idx] == 1:
-            sig = 1
-        elif exit_model is not None:
-            exit_pred = exit_model.predict(X_test[idx : idx + 1])
-            if exit_pred[0] == 1:
-                sig = -1
-        signals.append(sig)
+    is_regression = y_full.dtype.kind == "f"
 
-    test_use["signal"] = np.array(signals, dtype=np.int8)
-    return entry_model, exit_model, test_use[["symbol", "date", "signal"]]
+    if is_regression:
+        entry_model = build_regression_model(
+            cfg.entry_model["type"], cfg.entry_model.get("params", {})
+        )
+        entry_model.fit(X_train, y_full)
+        exit_model = None
+
+        pred_returns = entry_model.predict(X_test)
+
+        signals = np.where(
+            pred_returns > cfg.signal_threshold,
+            1,
+            np.where(pred_returns < -cfg.signal_threshold, -1, 0),
+        )
+        scores = pred_returns
+
+    else:
+        y_full = y_full.astype(np.int8)
+        y_entry = (y_full == 1).astype(np.int8)
+        entry_model = build_entry_model(cfg.entry_model["type"], cfg.entry_model.get("params", {}))
+        entry_model.fit(X_train, y_entry)
+
+        exit_model = None
+        if cfg.exit_model.get("enabled", False):
+            y_exit = (y_full == -1).astype(np.int8)
+            exit_model = build_exit_model(cfg.exit_model["type"], cfg.exit_model.get("params", {}))
+            exit_model.fit(X_train, y_exit)
+
+        entry_pred = entry_model.predict(X_test)
+        entry_proba = (
+            entry_model.predict_proba(X_test)[:, 1]
+            if hasattr(entry_model, "predict_proba")
+            else np.zeros(len(entry_pred))
+        )
+
+        signals = []
+        for idx in range(len(entry_pred)):
+            sig = 0
+            if entry_pred[idx] == 1:
+                sig = 1
+            elif exit_model is not None:
+                exit_pred = exit_model.predict(X_test[idx : idx + 1])
+                if exit_pred[0] == 1:
+                    sig = -1
+            signals.append(sig)
+
+        signals = np.array(signals, dtype=np.int8)
+        scores = entry_proba
+
+    test_use["signal"] = signals
+    test_use["score"] = scores.astype(np.float32)
+    return entry_model, exit_model, test_use[["symbol", "date", "signal", "score"]]
 
 
 def run_experiment(

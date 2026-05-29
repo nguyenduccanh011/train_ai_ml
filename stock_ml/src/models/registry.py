@@ -2,6 +2,8 @@
 
 Supported types: lightgbm, xgboost, random_forest, mlp, lstm, rule
 Each trains on binary labels {0, 1}.
+
+For regression (forward return prediction), use regression module.
 """
 
 from __future__ import annotations
@@ -10,6 +12,12 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Protocol
 
 import numpy as np
+
+from src.models.regression import (
+    LGBMRegressionModel,
+    RandomForestRegressionModel,
+    XGBRegressionModel,
+)
 
 if TYPE_CHECKING:
     from typing import Self
@@ -468,4 +476,32 @@ def build_exit_model(model_type: str, params: dict | None = None) -> ExitModelPr
             f"Unknown exit model type: {model_type}. Available: {sorted(_EXIT_REGISTRY.keys())}"
         )
     model_class = _EXIT_REGISTRY[model_type]
+    return model_class(params=params or {})
+
+
+_REGRESSION_REGISTRY: dict[str, type] = {
+    "lightgbm": LGBMRegressionModel,
+    "xgboost": XGBRegressionModel,
+    "random_forest": RandomForestRegressionModel,
+}
+
+
+def build_regression_model(model_type: str, params: dict | None = None):
+    """Build a regression model for forward-return prediction.
+
+    Args:
+        model_type: one of {lightgbm, xgboost, random_forest}
+        params: dict of model-specific hyperparameters
+
+    Returns:
+        Regression model instance
+
+    Raises:
+        KeyError: if model_type not in registry
+    """
+    if model_type not in _REGRESSION_REGISTRY:
+        raise KeyError(
+            f"Unknown regression model type: {model_type}. Available: {sorted(_REGRESSION_REGISTRY.keys())}"
+        )
+    model_class = _REGRESSION_REGISTRY[model_type]
     return model_class(params=params or {})

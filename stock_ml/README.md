@@ -1,6 +1,19 @@
-# Stock ML Trading System v2
+# Stock ML Trading System — Research-Grade Architecture
 
-Hệ thống ML giao dịch đa thị trường (VN stock, crypto spot/perp, VN derivatives), sử dụng walk-forward validation với kiến trúc component-based composable và MarketProfile để tách cấu hình market khỏi core pipeline.
+Hệ thống ML giao dịch chuyên nghiệp (Two Sigma / AHL / de Prado methodology), hiện đang refactor thành modular research platform với proper validation, reproducibility, và alpha gate.
+
+## Status (2026-05-29)
+
+**Phase 0 + Phase 1b.1-3**: ✅ Complete
+- ✅ Foundation infrastructure (MLflow tracking, reproducibility, logging, output layout)
+- ✅ Model/feature/target registries
+- ✅ **Regression approach** for entry model (single professional model predicts forward return)
+- ✅ Vectorized signal generation (threshold-based, O(n))
+- ✅ Score column for confidence-weighted sizing (Phase 3)
+
+**In Progress**: Phase 1b.4-11 (unify paths, YAML schema, strict audit, others)
+
+See `IMPLEMENTATION_ROADMAP.md` for detailed progress and next phases.
 
 ## Cài đặt
 

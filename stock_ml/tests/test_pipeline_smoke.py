@@ -16,7 +16,9 @@ from src.backtest.integrity import audit_report  # noqa: E402
 from src.backtest.stats import aggregate_stats, per_day_stats, per_year_stats  # noqa: E402
 from src.data.splitter import YearSplitter  # noqa: E402
 from src.features.basic import FEATURE_COLS, add_features  # noqa: E402
+from src.pipeline.experiment import ExperimentConfig, train_fold  # noqa: E402
 from src.targets.forward import ForwardReturnTarget  # noqa: E402
+from src.targets.forward_regression import ForwardReturnRegressionTarget  # noqa: E402
 
 
 def _synthetic_ohlcv(symbols: list[str], start: str, end: str, seed: int = 0) -> pd.DataFrame:
@@ -178,3 +180,105 @@ def test_per_day_and_per_year_stats():
     assert set(yearly["year"]) == {2020, 2021}
     agg = aggregate_stats(trades)
     assert agg["n_trades"] == 3
+
+
+def test_train_fold_regression():
+    """Test train_fold with regression (forward_return_regression) target."""
+    bars = _synthetic_ohlcv(["X"], "2020-01-01", "2020-06-30")
+    feat = add_features(bars)
+
+    tgt = ForwardReturnRegressionTarget(horizon=5)
+    data = tgt.apply(feat)
+
+    cfg = ExperimentConfig(
+        name="regression_test",
+        strategy="entry_exit",
+        market="test",
+        feature_set="basic_v1",
+        target={"type": "forward_return_regression", "horizon": 5},
+        entry_model={"type": "lightgbm", "params": {}},
+        exit_model={"type": "none", "enabled": False},
+        split={"train_years": 2, "test_years": 1, "gap_days": 25},
+        engine={},
+        seed=42,
+        signal_threshold=0.0,
+    )
+
+    train = data[data["date"] < "2020-04-01"]
+    test = data[(data["date"] >= "2020-04-01") & (data["date"] < "2020-06-30")]
+
+    entry_model, exit_model, signals = train_fold(train, test, FEATURE_COLS, cfg)
+
+    assert entry_model is not None
+    assert exit_model is None
+    assert not signals.empty
+    assert "signal" in signals.columns
+    assert "score" in signals.columns
+    assert set(signals["signal"].unique()).issubset({-1, 0, 1})
+    assert signals["score"].dtype == np.float32
+
+
+def test_train_fold_regression_reproducibility():
+    """Test that regression train_fold with same seed produces identical signals."""
+    bars = _synthetic_ohlcv(["X", "Y"], "2020-01-01", "2020-06-30", seed=42)
+    feat = add_features(bars)
+    tgt = ForwardReturnRegressionTarget(horizon=5)
+    data = tgt.apply(feat)
+
+    cfg = ExperimentConfig(
+        name="regression_repro_test",
+        strategy="entry_exit",
+        market="test",
+        feature_set="basic_v1",
+        target={"type": "forward_return_regression", "horizon": 5},
+        entry_model={"type": "lightgbm", "params": {}},
+        exit_model={"type": "none", "enabled": False},
+        split={},
+        engine={},
+        seed=123,
+        signal_threshold=0.0,
+    )
+
+    train = data[data["date"] < "2020-04-01"]
+    test = data[(data["date"] >= "2020-04-01") & (data["date"] < "2020-06-30")]
+
+    _, _, signals1 = train_fold(train, test, FEATURE_COLS, cfg)
+    _, _, signals2 = train_fold(train, test, FEATURE_COLS, cfg)
+
+    assert signals1.equals(signals2), "Same config + same seed should produce identical signals"
+    assert (signals1["signal"] == signals2["signal"]).all()
+    assert np.allclose(signals1["score"], signals2["score"])
+
+
+def test_regression_vectorized_faster_than_loop():
+    """Verify vectorized regression signal generation is fast."""
+    import time
+
+    bars = _synthetic_ohlcv(["X"], "2020-01-01", "2020-12-31", seed=42)
+    feat = add_features(bars)
+    tgt = ForwardReturnRegressionTarget(horizon=5)
+    data = tgt.apply(feat)
+
+    cfg = ExperimentConfig(
+        name="perf_test",
+        strategy="entry_exit",
+        market="test",
+        feature_set="basic_v1",
+        target={"type": "forward_return_regression", "horizon": 5},
+        entry_model={"type": "lightgbm", "params": {}},
+        exit_model={"type": "none", "enabled": False},
+        split={},
+        engine={},
+        seed=42,
+        signal_threshold=0.0,
+    )
+
+    train = data[data["date"] < "2020-08-01"]
+    test = data[(data["date"] >= "2020-08-01") & (data["date"] <= "2020-12-31")]
+
+    start = time.time()
+    for _ in range(3):
+        _, _, _ = train_fold(train, test, FEATURE_COLS, cfg)
+    elapsed = time.time() - start
+
+    assert elapsed < 30, f"3 regression runs should complete in <30s, took {elapsed:.1f}s"

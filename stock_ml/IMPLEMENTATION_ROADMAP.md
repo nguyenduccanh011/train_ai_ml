@@ -1,7 +1,7 @@
 # Implementation Roadmap: Research-Grade Trading Model System
 
-**Status**: Phase 0 ✅ · Phase 1a ✅ · Phase 1b ✅ · Phase 1.5 ✅ (all complete 2026-05-29) · Next: Alpha Gate
-**Last Updated**: 2026-05-29 (Phase 1b.6-11 + Phase 1.5.1-5 complete)
+**Status**: Phase 0 ✅ · Phase 1a ✅ · Phase 1b ✅ · Phase 1.5 ✅ · **Alpha Gate Prep ✅** (2026-05-29) · Next: Full Alpha Gate Run
+**Last Updated**: 2026-05-29 (Alpha Gate Prep: leading_v2 impl, purged_kfold integration, test run complete)
 **Owner**: Architecture Team
 
 ---
@@ -38,7 +38,7 @@ Refactor `stock_ml` from monolithic single-model pipeline to a **research-grade,
 
 Setup before any research work. None of these require alpha — they protect you from wasting time later.
 
-**Status**: ✅ DONE (2026-05-29)
+**Status**: Phase 0 ✅ · Phase 1a ✅ · Phase 1b ✅ · Phase 1.5 ✅ · **Alpha Gate Prep ✅** (2026-05-29) · Next: Full Alpha Gate Run
 - `src/tracking/mlflow_logger.py` — MLflow tracking with config, metrics, artifacts
 - `src/seed.py` — global seed propagation (numpy, random, lightgbm, xgboost, sklearn, tf)
 - `src/pipeline/run.py` — integrated reproducibility + structured logging
@@ -331,6 +331,84 @@ This is the **most important phase** and the one missing from the original roadm
 
 ---
 
+## Alpha Gate Prep ✅ COMPLETE (2026-05-29)
+
+Preparation infrastructure for the Alpha Validation Gate. All components built and tested.
+
+### Implementation Summary
+
+**1. leading_v2 Feature Set (36 per-symbol features)**
+
+Created `src/features/leading_v2.py` with 9 blocks:
+- **ohlcv_basic** (5): ret_1d/5d/10d/20d, close_to_open
+- **moving_averages** (5): sma_5/20/50 ratios, ema_10_ratio, sma5_cross_sma20  
+- **momentum** (5): rsi_14/7, macd_line/hist, roc_10
+- **trend** (3): adx_14, plus_di_14, minus_di_14
+- **volatility** (4): atr_14_ratio, bb_width/pct_20, realized_vol_10
+- **volume_advanced** (4): volume_ratio_5/20, obv_slope_10, mfi_14
+- **market_structure** (3): dist_52w_high/low, high_low_pct_5d
+- **exhaustion** (4): upper/lower_wick_ratio, body_ratio, high_low_pct
+- **volatility_regime** (3): atr_regime, bb_squeeze, vol_percentile_60
+
+All leakage-safe (per-symbol groupby, no lookahead). Warmup NaNs only.
+
+**2. PurgedKFoldSplitter Integration**
+
+Added support in `src/pipeline/experiment.py` for purged_kfold split type:
+- Imports PurgedKFoldSplitter from src.data.splitter
+- Handles n_splits, embargo_days, label_horizon parameters
+- Collects windows during split() loop for audit
+- Modified audit_report() to gracefully handle PurgedFoldWindow (skip year-based checks)
+
+Reference: de Prado *Advances in Financial ML*, Ch. 7.
+
+**3. Alpha Gate YAML Config**
+
+Created `config/experiments/pending/alpha_gate_v1.yaml`:
+```yaml
+name: alpha_gate_v1
+components:
+  features: leading_v2
+  target: {type: forward_return_regression, horizon: 5}
+  entry_model: {type: lightgbm, params: {n_estimators: 300, learning_rate: 0.05}}
+split: {type: purged_kfold, n_splits: 6, embargo_days: 10, label_horizon: 5}
+costs: {commission: 0.0025, tax: 0.001, slippage: 0.0015}  # pessimistic
+validation: {n_seeds: 20, bootstrap_iterations: 1000, compute_dsr: true, compute_pbo: true}
+signal_threshold: 0.005
+strict_audit: true
+```
+
+**4. Fixes Applied**
+
+- Fixed `scripts/run_experiments.py` sys.path setup (added REPO_ROOT, matching run_v2.py pattern)
+- Fixed cost extraction to handle nested `engine.costs` dict from YAML
+- Fixed slippage_model parameter handling (not used by CostModel, gracefully dropped)
+- Fixed audit_report to work with both SplitWindow and PurgedFoldWindow types
+
+### Test Run Results (10 VN symbols, 6 folds)
+
+```
+[alpha_gate_v1] dataset: 27,696 bars across 10 symbols
+[split] purged_kfold: 6 splits, embargo_days=10, label_horizon=5
+  [fold fold_0] train=2,331  test=217   buys=140  sells=27
+  [fold fold_1] train=2,073  test=469   buys=336  sells=76
+  [fold fold_2] train=2,071  test=469   buys=279  sells=110
+  [fold fold_3] train=2,076  test=464   buys=140  sells=191
+  [fold fold_4] train=2,069  test=469   buys=189  sells=172
+  [fold fold_5] train=2,082  test=471   buys=227  sells=115
+[backtesting] 2,559 signals → 182 trades
+
+Results:
+- Win rate: 42.3%
+- Profit factor: 0.76
+- Audit: PASS (no leakage detected)
+- Output: results/alpha_gate/{trades,signals,daily_stats,yearly_stats,symbol_stats}_alpha_gate_v1.csv
+```
+
+✓ Pipeline end-to-end verified: features → split → training → backtesting → audit
+
+---
+
 ## 🚦 Alpha Validation Gate (Week 4–5)
 
 Run a **single decisive experiment** before continuing the roadmap:
@@ -553,7 +631,7 @@ These are concrete code-level problems found during review. Issues #1–#3 are b
 stock_ml/
 ├── src/
 │   ├── data/                  loader, splitter (+ PurgedKFold in 1.5)
-│   ├── features/              basic, registry, cache
+│   ├── features/              basic_v1 (8 feat), leading_v2 (36 feat), registry, cache
 │   ├── targets/               forward, trend_regime, registry
 │   ├── models/                registry (lgbm, xgb, rf, mlp)
 │   ├── signals/               core.py (unified signal-gen, 1b.5)
@@ -603,7 +681,8 @@ stock_ml/
 | Phase 1a | done | ✅ DONE | Registries import + instantiate |
 | Phase 1b | 1–2 weeks | ✅ DONE (2026-05-29) | 1b.1-11: regression, vectorization, unified pipeline, YAML schema, strict audit, atomic queue, resumable |
 | Phase 1.5 | 2 weeks | ✅ DONE (2026-05-29) | Purged KFold, DSR, PBO, bootstrap CI, multi-seed (all 5 items complete) |
-| **Alpha Gate** | 1 week | ⏳ NEXT | DSR > 0.5, PBO < 30%, return > 12%, maxDD < 25%, Sharpe std < 0.5×mean |
+| **Alpha Gate Prep** | done | ✅ DONE (2026-05-29) | leading_v2 (36 features), purged_kfold, YAML config, test run verified |
+| **Alpha Gate Run** | 1–2 weeks | ⏳ NEXT | 200+ symbols, 20 seeds, DSR > 0.5, PBO < 30%, return > 12%, maxDD < 25% |
 | Phase 2 | 2 weeks | ⏳ CONDITIONAL on gate | Exit + portfolio rules A/B-validated |
 | Phase 3 | 2 weeks | ⏳ CONDITIONAL | Sizing improves Sharpe; leaderboard ranks |
 | Phase 4 | 4+ weeks | ⏳ CONDITIONAL | 3-month shadow PnL within CI |
@@ -646,8 +725,13 @@ Original roadmap estimated 7 weeks but skipped Phase 1.5 (methodology) and alpha
   - 1.5.3: Deflated Sharpe Ratio (multiple-testing correction)
   - 1.5.4: Probability of Backtest Overfitting (Combinatorially Symmetric CV)
   - 1.5.5: Multi-seed variance runner (mean ± std reporting)
-- ✅ Reproducibility verified (same seed → identical signals, all 89 tests pass)
-- **Next**: Alpha Validation Gate (decisive experiment on 200+ symbols, 5y OOS, Purged KFold)
+- ✅ **Alpha Gate Prep** (DONE 2026-05-29):
+  - leading_v2: 36 per-symbol features (9 blocks: ohlcv, MA, momentum, trend, vol, volume, structure, exhaustion, regime)
+  - purged_kfold: integrated into experiment.py with embargo support
+  - YAML config: alpha_gate_v1.yaml with pessimistic costs, 20-seed validation
+  - Test run: 10 symbols × 6 folds, end-to-end pipeline verified, audit PASS
+- ✅ Reproducibility verified (same seed → identical signals, all 89+ tests pass)
+- **Next**: Alpha Gate Run (200+ symbols, 20 seeds, gate criteria validation)
 
 ---
 

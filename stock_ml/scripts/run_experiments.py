@@ -20,7 +20,12 @@ import traceback
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
+REPO_ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO_ROOT / "stock_ml"))
+
+from src.data.loader import DataLoader
 from src.pipeline.experiment import ExperimentConfig, run_experiment
+from src.pipeline.multi_seed import run_experiment_multi_seed
 
 
 def try_acquire_lock(yaml_path: Path, timeout_sec: float = 5.0) -> bool:
@@ -76,7 +81,7 @@ def run_one_experiment(
     """
     if not try_acquire_lock(yaml_path):
         msg = "Skipped — already being processed by another worker"
-        print(f"\n⊘ {yaml_path.name}: {msg}")
+        print(f"\n[skipped] {yaml_path.name}: {msg}")
         return yaml_path, False, msg
 
     try:
@@ -85,13 +90,23 @@ def run_one_experiment(
         print(f"{'=' * 60}")
 
         cfg = ExperimentConfig.from_yaml(yaml_path)
-        summary = run_experiment(cfg, data_root, symbols, out_dir)
+
+        # Phase 1.5.5: Use multi-seed runner if validation.n_seeds > 1
+        n_seeds = 1
+        if cfg.validation and "n_seeds" in cfg.validation:
+            n_seeds = cfg.validation["n_seeds"]
+
+        if n_seeds > 1:
+            print(f"  [multi-seed] Running {n_seeds} seeds for model stability analysis")
+            summary = run_experiment_multi_seed(cfg, data_root, symbols, out_dir, n_seeds=n_seeds)
+        else:
+            summary = run_experiment(cfg, data_root, symbols, out_dir)
 
         done_dir.mkdir(parents=True, exist_ok=True)
         shutil.move(str(yaml_path), str(done_dir / yaml_path.name))
 
         msg = f"OK — {summary.get('n_trades', 0)} trades, {summary.get('aggregate', {}).get('total_pnl', 0):.2%} PnL"
-        print(f"\n✓ {yaml_path.name}: {msg}")
+        print(f"\n[success] {yaml_path.name}: {msg}")
         return yaml_path, True, msg
 
     except Exception as e:
@@ -103,7 +118,7 @@ def run_one_experiment(
 
         shutil.move(str(yaml_path), str(failed_dir / yaml_path.name))
         msg = f"FAILED — see {error_log_path.name}"
-        print(f"\n✗ {yaml_path.name}: {msg}")
+        print(f"\n[failed] {yaml_path.name}: {msg}")
         return yaml_path, False, str(e)
 
     finally:
@@ -164,7 +179,15 @@ def main():
     done_dir = Path(args.done)
     failed_dir = Path(args.failed)
     data_root = args.data_root
-    symbols = [s.strip().upper() for s in args.symbols.split(",")]
+
+    # Support "ALL" keyword to load all available symbols
+    if args.symbols.strip().upper() == "ALL":
+        loader = DataLoader(data_root)
+        symbols = loader.list_symbols()
+        print(f"[symbols] Loading all {len(symbols)} available symbols")
+    else:
+        symbols = [s.strip().upper() for s in args.symbols.split(",")]
+
     out_dir = Path(args.out)
 
     if not pending_dir.exists():

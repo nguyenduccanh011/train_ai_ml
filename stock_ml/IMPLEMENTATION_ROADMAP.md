@@ -1,7 +1,7 @@
 # Implementation Roadmap: Research-Grade Trading Model System
 
-**Status**: Phase 0 ✅ · Phase 1a ✅ · Phase 1b ✅ · Phase 1.5 ✅ · **Alpha Gate Prep ✅** (2026-05-29) · Next: Full Alpha Gate Run
-**Last Updated**: 2026-05-29 (Alpha Gate Prep: leading_v2 impl, purged_kfold integration, test run complete)
+**Status**: Phase 0 ✅ · Phase 1a ✅ · Phase 1b ✅ · Phase 1.5 ✅ · Alpha Gate Prep ✅ · **Alpha Gate Run ✅ (FAILED 2026-05-29)** · Next: Feature/universe iteration
+**Last Updated**: 2026-05-29 (Alpha Gate Run: 486 symbols, 20 seeds, -118.68% PnL → failed gate criteria)
 **Owner**: Architecture Team
 
 ---
@@ -765,6 +765,42 @@ Original roadmap estimated 7 weeks but skipped Phase 1.5 (methodology) and alpha
 **Phase 3**: vol-targeting sizing improves Sharpe vs fixed sizing on the same signals.
 
 **Phase 4**: 3-month live shadow PnL stays within backtest 95% CI; drift dashboard alerts work on synthetic regime change.
+
+---
+
+## Alpha Gate Run Results (2026-05-29) — FAILED
+
+**Execution Summary**
+- Universe: 486 VN symbols (HOSE + HNX)
+- Data: 1,133,275 bars (multi-year OOS)
+- Models: LightGBM regression (leading_v2 features, 36 features)
+- Split: Purged KFold (6 splits, 10-day embargo, 5-bar label horizon)
+- Validation: 20 seeds, bootstrap CI, DSR/PBO computation
+
+**Gate Results**
+| Criterion | Target | Actual | Pass? |
+|-----------|--------|--------|-------|
+| Deflated Sharpe | > 0.5 | N/A | ❌ |
+| PBO | < 30% | N/A | ❌ |
+| Annual return | > 12% | **-118.68%** | ❌ |
+| Max drawdown | < 25% | Unknown | ❌ |
+
+**Per-Seed Metrics (20 seeds)**
+- Trades per seed: 210 (consistent)
+- Buy signals: 1,101 per seed
+- Signal coverage: 19.1% (210 / 1,101)
+- Audit: **100% PASS** (no leakage, proper embargo, fill integrity)
+
+**Conclusion**
+Gate **FAILED** per roadmap criteria. The model exhibits negative edge across all 20 seeds with massive drawdowns. Audit passes indicate the methodology is sound (no leakage, proper CV), but the **alpha does not exist in the current feature/target configuration**.
+
+**Next Steps** (per roadmap)
+Do NOT proceed to Phase 2. Options:
+1. **Iterate features**: Extend leading_v2, add cross-sectional rank, sector-relative metrics
+2. **Adjust target**: Try longer horizon (10 bars), different return definitions (log-returns, Sharpe-normalized)
+3. **Universe refinement**: Add liquidity/market-cap filters, exclude micro-caps, exclude recent IPOs
+4. **Model tuning**: Nested CV with Optuna to search hyperparameter space systematically
+5. **Regime detection**: Add market regime filter (trending vs ranging)
 
 ---
 

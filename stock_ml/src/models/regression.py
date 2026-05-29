@@ -54,7 +54,9 @@ class LGBMRegressionModel:
             "bagging_freq": 5,
             "verbose": -1,
         }
-        merged = {**defaults, **self.params}
+        # Remove None values from params to avoid "multiple values for keyword" errors
+        clean_params = {k: v for k, v in self.params.items() if v is not None}
+        merged = {**defaults, **clean_params}
         self._reg = LGBMRegressor(**merged, random_state=0)
         self._reg.fit(X, y)
         return self
@@ -89,7 +91,9 @@ class XGBRegressionModel:
             "subsample": 0.8,
             "colsample_bytree": 0.8,
         }
-        merged = {**defaults, **self.params}
+        # Remove None values from params to avoid "multiple values for keyword" errors
+        clean_params = {k: v for k, v in self.params.items() if v is not None}
+        merged = {**defaults, **clean_params}
         self._reg = XGBRegressor(**merged, random_state=0, verbosity=0)
         self._reg.fit(X, y)
         return self
@@ -121,7 +125,9 @@ class RandomForestRegressionModel:
             "min_samples_leaf": 10,
             "max_features": "sqrt",
         }
-        merged = {**defaults, **self.params}
+        # Remove None values from params to avoid "multiple values for keyword" errors
+        clean_params = {k: v for k, v in self.params.items() if v is not None}
+        merged = {**defaults, **clean_params}
         self._reg = RandomForestRegressor(**merged, random_state=0, n_jobs=-1)
         self._reg.fit(X, y)
         return self

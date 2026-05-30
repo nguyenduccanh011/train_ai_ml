@@ -1,0 +1,58 @@
+{
+  "generated_at": "2026-05-30T12:00:00.000000",
+  "models": [
+    {
+      "rank": 1,
+      "name": "Technical Rules (MACD+MA20)",
+      "composite_score": -35.4,
+      "market": "vn_stock",
+      "timeframe": "1D",
+      "year": 2026,
+      "model_type": "rule_based",
+      "n_trades": 74,
+      "pnl_pct": -41.2,
+      "win_rate": 0.405,
+      "profit_factor": 0.833,
+      "avg_pnl": -0.00557,
+      "max_win": 0.2198,
+      "max_loss": -0.1155,
+      "avg_hold_days": 15.7,
+      "max_drawdown": 0.412,
+      "sharpe": -0.5,
+      "notes": "65% better than ML but still negative. Simpler rules, fewer false signals.",
+      "audit_status": "PASS",
+      "date_run": "2026-05-30"
+    },
+    {
+      "rank": 2,
+      "name": "ML Regression (LightGBM)",
+      "composite_score": -95.8,
+      "market": "vn_stock",
+      "timeframe": "1D",
+      "year": 2026,
+      "model_type": "lightgbm",
+      "n_trades": 210,
+      "pnl_pct": -118.68,
+      "win_rate": 0.0,
+      "profit_factor": 0.0,
+      "avg_pnl": -0.565,
+      "max_win": 0.0,
+      "max_loss": -5.0,
+      "avg_hold_days": 14.2,
+      "max_drawdown": 1.1868,
+      "sharpe": -8.5,
+      "notes": "20 seeds, leading_v2 features (36), purged KFold validation. Overfitting detected.",
+      "audit_status": "PASS",
+      "date_run": "2026-05-29"
+    }
+  ],
+  "summary": {
+    "total_models": 2,
+    "markets": ["vn_stock"],
+    "best_model": "Technical Rules (MACD+MA20)",
+    "best_pnl": -41.2,
+    "worst_pnl": -118.68,
+    "avg_pnl": -79.94,
+    "note": "Official system formula (Sharpe 18%, AvgPnL 28%, PF 26%, MDD -12%, YrCV -5%, Hold -1%). Both negative edge. Rules: -35.4, ML: -95.8."
+  }
+}

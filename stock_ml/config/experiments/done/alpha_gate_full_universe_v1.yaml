@@ -1,0 +1,59 @@
+﻿name: alpha_gate_full_universe_v1
+
+hypothesis: |
+  Extended feature set (leading_v2, 36 features) predicts forward return 5 bars ahead
+  with pessimistic costs (commission 0.25%, tax 0.1%, slippage 0.15%).
+  Purged K-Fold with embargo prevents label leakage on forward-return targets.
+  Multi-seed (20 runs) measures model stability and reduces luck.
+  DSR/PBO detect overfitting. Gate criteria: DSR > 0.5, PBO < 30%.
+  Full universe: 486 VN symbols (HOSE + HNX), 5+ years historical data.
+
+strategy: entry_exit_regression
+market: vn_stock
+seed: 42
+
+components:
+  features: leading_v2
+  target:
+    type: forward_return_regression
+    horizon: 5
+
+  entry_model:
+    type: lightgbm
+    params:
+      n_estimators: 300
+      learning_rate: 0.05
+      num_leaves: 31
+      max_depth: 7
+      min_child_samples: 20
+      random_state: null
+
+  exit_model:
+    type: none
+    enabled: false
+
+split:
+  type: purged_kfold
+  n_splits: 6
+  embargo_days: 10
+  label_horizon: 5
+
+engine:
+  max_hold_bars: 20
+  min_hold_bars: 1
+  hard_stop_pct: -0.08
+  costs:
+    commission: 0.0025
+    tax: 0.001
+    slippage_model: fixed
+    slippage: 0.0015
+
+signal_threshold: 0.005
+
+validation:
+  n_seeds: 20
+  bootstrap_iterations: 1000
+  compute_dsr: true
+  compute_pbo: true
+
+strict_audit: true

@@ -131,6 +131,48 @@ def generate_signals_dict(
     return signals
 
 
+def generate_signals_from_technical_rules(
+    test_df: pd.DataFrame,
+) -> pd.DataFrame:
+    """Generate signals from technical indicator rules (rule-based, no ML).
+
+    Rules:
+    - BUY (1): macd_line > 0 AND sma_20_ratio > 0 AND C > O
+    - SELL (-1): macd_line < 0 AND sma_20_ratio < 0 AND C < O
+    - HOLD (0): otherwise
+
+    Args:
+        test_df: DataFrame with [symbol, date, macd_line, sma_20_ratio, open, close]
+
+    Returns:
+        DataFrame with columns [symbol, date, signal, score]
+    """
+    test_use = test_df.copy()
+
+    required_cols = ["macd_line", "sma_20_ratio", "open", "close"]
+    missing = [c for c in required_cols if c not in test_use.columns]
+    if missing:
+        raise ValueError(f"Missing required columns for technical rules: {missing}")
+
+    buy_signal = (
+        (test_use["macd_line"] > 0)
+        & (test_use["sma_20_ratio"] > 0)
+        & (test_use["close"] > test_use["open"])
+    )
+    sell_signal = (
+        (test_use["macd_line"] < 0)
+        & (test_use["sma_20_ratio"] < 0)
+        & (test_use["close"] < test_use["open"])
+    )
+
+    signals = np.where(buy_signal, 1, np.where(sell_signal, -1, 0))
+    scores = test_use["macd_line"].astype(np.float32)
+
+    test_use["signal"] = signals
+    test_use["score"] = scores
+    return test_use[["symbol", "date", "signal", "score"]]
+
+
 def generate_signals_from_features(
     model: Any,
     history_feat: pd.DataFrame,

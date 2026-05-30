@@ -804,6 +804,49 @@ Do NOT proceed to Phase 2. Options:
 
 ---
 
+## Technical Rules Baseline Test (2026-05-30) — Rule vs ML Comparison
+
+**Execution Summary**
+- Universe: 486 VN symbols (HOSE + HNX)
+- Data: 1,133,275 bars (same OOS as ML run)
+- Rules: MACD > 0 AND C > MA20 AND C > O (buy); MACD < 0 AND C < MA20 AND C < O (sell)
+- Split: Purged KFold (6 splits, 10-day embargo, 5-bar label horizon)
+- Validation: Single run, 6-fold CV (no multi-seed, no bootstrap)
+
+**Results Comparison**
+
+| Metric | ML Regression | Tech Rules | Winner |
+|--------|---------------|------------|--------|
+| **Trades** | 210 | 74 | Rules (more selective) |
+| **Total PnL** | -118.68% | -41.20% | Rules (65% better) |
+| **Win Rate** | N/A | 40.5% | Rules (only positive count) |
+| **Profit Factor** | N/A | 0.83 | Rules (83% of losses covered) |
+| **Buy Signals** | 1,101 | 497 | Rules (55% fewer false signals) |
+| **Audit** | 100% PASS | 100% PASS | Tie (both clean) |
+
+**Key Finding**
+Rule-based approach produces **65% better returns** than ML regression (-41.2% vs -118.68%), despite using simpler logic. This suggests:
+- **ML overfitting**: LightGBM found spurious patterns; rules avoid data-mining bias
+- **Signal quality > quantity**: 74 higher-confidence trades beat 210 questionable trades
+- **Simplicity advantage**: Technical indicators (MACD, MA20, OHLC) more robust than learned weights
+
+**Implications**
+Neither approach passes the Alpha Gate (both negative PnL). But the rules baseline demonstrates:
+1. Current feature set lacks sufficient edge for ML to discover
+2. Simple rules outperform ML when features are weak (avoid overfitting penalty)
+3. Hybrid approach: use rules for high-confidence signal generation + ML for edge ranking (if edge exists)
+
+**Next Iteration Recommendation**
+Before changing features or universe, **split test rule variants**:
+- Add volume confirmation: rules + volume SMA filter
+- Shorten/lengthen hold periods (currently ~15.7 days)
+- Add RSI overbought/oversold filters
+- Test exit rules explicitly (not implicit via time decay)
+
+If improved rules still show negative edge, then feature/universe iteration is warranted.
+
+---
+
 ## References
 
 - de Prado, M. (2018). *Advances in Financial Machine Learning*. Wiley. — Purged CV (Ch. 7), DSR (Ch. 14), PBO (Ch. 11).

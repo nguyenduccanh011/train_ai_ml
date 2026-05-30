@@ -12,6 +12,8 @@ import pandas as pd
 
 from src.features.basic import FEATURE_COLS as BASIC_COLS
 from src.features.basic import add_features as add_basic_features
+from src.features.leading_v2 import FEATURE_COLS as LEADING_V2_COLS
+from src.features.leading_v2 import add_features as add_leading_v2_features
 
 
 @dataclass
@@ -74,17 +76,14 @@ def apply_features(df: pd.DataFrame, feature_set: str) -> pd.DataFrame:
     return fs.builder(df)
 
 
-def _build_leading_v2_stub(df: pd.DataFrame) -> pd.DataFrame:
-    """Placeholder for leading_v2 feature set."""
-    raise NotImplementedError(
-        "leading_v2 feature set builder not yet implemented. "
-        "Use 'basic_v1' for now or implement leading_v2 builder."
-    )
+def _build_leading_v2(df: pd.DataFrame) -> pd.DataFrame:
+    """Builder for leading_v2 feature set."""
+    return add_leading_v2_features(df)
 
 
 register_feature_set("basic_v1", BASIC_COLS, _build_basic_v1)
 register_feature_set(
     "leading_v2",
-    [],
-    _build_leading_v2_stub,
+    LEADING_V2_COLS,
+    _build_leading_v2,
 )

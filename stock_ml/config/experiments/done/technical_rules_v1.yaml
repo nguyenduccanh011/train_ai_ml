@@ -1,0 +1,51 @@
+name: technical_rules_v1
+
+hypothesis: |
+  Rule-based trading signals using technical indicators:
+  - BUY: MACD > 0 AND C > MA20 AND C > O
+  - SELL: MACD < 0 AND C < MA20 AND C < O
+  Test against full universe (486 VN symbols) with pessimistic costs.
+  Baseline for comparing ML regression approach.
+
+strategy: entry_exit_regression
+market: vn_stock
+seed: 42
+
+components:
+  features: leading_v2
+  target:
+    type: forward_return_regression
+    horizon: 5
+
+  entry_model:
+    type: technical_rules
+
+  exit_model:
+    type: none
+    enabled: false
+
+split:
+  type: purged_kfold
+  n_splits: 6
+  embargo_days: 10
+  label_horizon: 5
+
+engine:
+  max_hold_bars: 20
+  min_hold_bars: 1
+  hard_stop_pct: -0.08
+  costs:
+    commission: 0.0025
+    tax: 0.001
+    slippage_model: fixed
+    slippage: 0.0015
+
+signal_threshold: 0.0
+
+validation:
+  n_seeds: 1
+  bootstrap_iterations: 0
+  compute_dsr: false
+  compute_pbo: false
+
+strict_audit: true

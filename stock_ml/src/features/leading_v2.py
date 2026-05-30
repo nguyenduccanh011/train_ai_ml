@@ -86,7 +86,9 @@ def _atr(high: pd.Series, low: pd.Series, close: pd.Series, period: int = 14) ->
     return tr.ewm(alpha=1.0 / period, adjust=False, min_periods=period).mean()
 
 
-def _adx(high: pd.Series, low: pd.Series, close: pd.Series, period: int = 14) -> tuple[pd.Series, pd.Series, pd.Series]:
+def _adx(
+    high: pd.Series, low: pd.Series, close: pd.Series, period: int = 14
+) -> tuple[pd.Series, pd.Series, pd.Series]:
     """ADX and directional indicators (+DI, -DI)."""
     prev_high = high.shift(1)
     prev_low = low.shift(1)
@@ -103,8 +105,16 @@ def _adx(high: pd.Series, low: pd.Series, close: pd.Series, period: int = 14) ->
     ).max(axis=1)
 
     atr = tr.ewm(alpha=1.0 / period, adjust=False, min_periods=period).mean()
-    plus_di = 100 * pd.Series(plus_dm).ewm(alpha=1.0 / period, adjust=False, min_periods=period).mean() / (atr + 1e-8)
-    minus_di = 100 * pd.Series(minus_dm).ewm(alpha=1.0 / period, adjust=False, min_periods=period).mean() / (atr + 1e-8)
+    plus_di = (
+        100
+        * pd.Series(plus_dm).ewm(alpha=1.0 / period, adjust=False, min_periods=period).mean()
+        / (atr + 1e-8)
+    )
+    minus_di = (
+        100
+        * pd.Series(minus_dm).ewm(alpha=1.0 / period, adjust=False, min_periods=period).mean()
+        / (atr + 1e-8)
+    )
 
     di_diff = (plus_di - minus_di).abs()
     di_sum = plus_di + minus_di
@@ -114,7 +124,9 @@ def _adx(high: pd.Series, low: pd.Series, close: pd.Series, period: int = 14) ->
     return adx, plus_di, minus_di
 
 
-def _macd(close: pd.Series, fast: int = 12, slow: int = 26, signal: int = 9) -> tuple[pd.Series, pd.Series]:
+def _macd(
+    close: pd.Series, fast: int = 12, slow: int = 26, signal: int = 9
+) -> tuple[pd.Series, pd.Series]:
     """MACD line and histogram."""
     ema_fast = close.ewm(span=fast, adjust=False).mean()
     ema_slow = close.ewm(span=slow, adjust=False).mean()
@@ -130,7 +142,9 @@ def _obv(close: pd.Series, volume: pd.Series) -> pd.Series:
     return obv
 
 
-def _mfi(high: pd.Series, low: pd.Series, close: pd.Series, volume: pd.Series, period: int = 14) -> pd.Series:
+def _mfi(
+    high: pd.Series, low: pd.Series, close: pd.Series, volume: pd.Series, period: int = 14
+) -> pd.Series:
     """Money Flow Index."""
     tp = (high + low + close) / 3.0
     mf = tp * volume
@@ -217,8 +231,12 @@ def _features_one(g: pd.DataFrame) -> pd.DataFrame:
 
     # exhaustion (includes high_low_pct from basic_v1)
     range_hl = high - low
-    g["upper_wick_ratio"] = (high - pd.concat([open_, close], axis=1).max(axis=1)) / range_hl.replace(0.0, np.nan)
-    g["lower_wick_ratio"] = (pd.concat([open_, close], axis=1).min(axis=1) - low) / range_hl.replace(0.0, np.nan)
+    g["upper_wick_ratio"] = (
+        high - pd.concat([open_, close], axis=1).max(axis=1)
+    ) / range_hl.replace(0.0, np.nan)
+    g["lower_wick_ratio"] = (
+        pd.concat([open_, close], axis=1).min(axis=1) - low
+    ) / range_hl.replace(0.0, np.nan)
     g["body_ratio"] = (open_ - close).abs() / range_hl.replace(0.0, np.nan)
     g["high_low_pct"] = (high - low) / close.replace(0.0, np.nan)
 

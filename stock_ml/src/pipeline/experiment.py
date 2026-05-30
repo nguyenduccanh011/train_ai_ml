@@ -23,10 +23,13 @@ from src.backtest.stats import (
     per_year_stats,
 )
 from src.data.loader import DataLoader
-from src.data.splitter import YearSplitter
+from src.data.splitter import PurgedKFoldSplitter, YearSplitter
 from src.features.registry import apply_features, get_feature_cols
 from src.models.registry import build_entry_model, build_exit_model, build_regression_model
-from src.signals.core import generate_signals_from_predictions
+from src.signals.core import (
+    generate_signals_from_predictions,
+    generate_signals_from_technical_rules,
+)
 from src.targets.registry import build_target
 
 
@@ -184,6 +187,10 @@ def train_fold(
 
     X_test = test_use[feat_cols].to_numpy(dtype=np.float32)
 
+    # Rule-based technical indicators (no ML model)
+    if cfg.entry_model["type"] == "technical_rules":
+        return None, None, generate_signals_from_technical_rules(test_use)
+
     is_regression = y_full.dtype.kind == "f"
 
     if is_regression:
@@ -312,13 +319,32 @@ def run_experiment(
             print(
                 f"  [split] year range: {splitter.first_test_year}-{splitter.last_test_year} (auto-detected)"
             )
+    elif split_type == "purged_kfold":
+        n_splits = split_cfg.get("n_splits", 5)
+        embargo_days = split_cfg.get("embargo_days", 0)
+        label_horizon = split_cfg.get("label_horizon", 5)
+
+        splitter = PurgedKFoldSplitter(
+            n_splits=n_splits,
+            embargo_days=embargo_days,
+            label_horizon=label_horizon,
+        )
+        print(
+            f"  [split] purged_kfold: {n_splits} splits, embargo_days={embargo_days}, label_horizon={label_horizon}"
+        )
+        windows = None  # Will be collected during split loop
     else:
         raise NotImplementedError(f"split type '{split_type}' not yet implemented")
 
-    windows = splitter.windows()
+    if split_type == "walk_forward_year":
+        windows = splitter.windows()
+    else:
+        windows = None  # For purged_kfold, windows are collected during split()
 
     signal_frames: list[pd.DataFrame] = []
+    windows_list = []  # Collect windows during split for purged_kfold
     for w, train_df, test_df in splitter.split(feat):
+        windows_list.append(w)
         if train_df.empty or test_df.empty:
             print(f"  [fold {w.label}] empty — skipped")
             continue
@@ -364,9 +390,18 @@ def run_experiment(
     signals_all = signals_all.sort_values(["symbol", "date"]).reset_index(drop=True)
 
     engine_cfg = cfg.engine.copy()
-    cost_kw = {
-        k: engine_cfg.pop(k) for k in list(engine_cfg) if k in {"commission", "tax", "slippage"}
-    }
+    # Handle nested costs dict from YAML (costs: {commission: 0.0025, tax: 0.001, ...})
+    costs_dict = engine_cfg.pop("costs", {})
+    # Also handle flat keys for backward compatibility
+    cost_kw = costs_dict.copy() if costs_dict else {}
+    # Remove slippage_model if present (not used by CostModel, but may be in YAML for doc)
+    cost_kw.pop("slippage_model", None)
+    # Also allow flat-level cost keys
+    for k in ["commission", "tax", "slippage"]:
+        if k in engine_cfg:
+            cost_kw[k] = engine_cfg.pop(k)
+    # Remove slippage_model from engine_cfg if present
+    engine_cfg.pop("slippage_model", None)
     cost = CostModel(**cost_kw) if cost_kw else CostModel()
     engine = EngineConfig(cost=cost, **engine_cfg)
 
@@ -380,7 +415,11 @@ def run_experiment(
     by_sym = per_symbol_stats(trades_df)
 
     required_gap = max(cfg.target.get("horizon", 5) * 2 + 5, 7)
-    report = audit_report(trades_df, signals_all, windows=windows, min_gap_days=required_gap)
+    # Use collected windows for purged_kfold, pre-computed for walk_forward_year
+    audit_windows = (
+        windows if windows is not None else windows_list if "windows_list" in locals() else None
+    )
+    report = audit_report(trades_df, signals_all, windows=audit_windows, min_gap_days=required_gap)
     print_report(report)
 
     if cfg.strict_audit and report["overall"] == "FAIL":

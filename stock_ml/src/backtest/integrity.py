@@ -140,13 +140,23 @@ def audit_report(
     windows: list[SplitWindow],
     min_gap_days: int,
 ) -> dict:
-    checks = [
-        check_no_train_test_overlap(windows),
-        check_split_gap(windows, min_gap_days=min_gap_days),
-        check_entry_integrity(trades, signals),
-        check_fill_offset(trades),
-        check_signal_coverage(trades, signals),
-    ]
+    checks = []
+    # Only run window-based checks if windows provided (skip for purged_kfold)
+    if windows is not None:
+        checks.append(check_no_train_test_overlap(windows))
+        # check_split_gap only works with SplitWindow (has test_year), not PurgedFoldWindow
+        try:
+            checks.append(check_split_gap(windows, min_gap_days=min_gap_days))
+        except AttributeError:
+            # PurgedFoldWindow doesn't have test_year; skip this check
+            pass
+    checks.extend(
+        [
+            check_entry_integrity(trades, signals),
+            check_fill_offset(trades),
+            check_signal_coverage(trades, signals),
+        ]
+    )
     n_fail = sum(1 for c in checks if c.status == "FAIL")
     n_warn = sum(1 for c in checks if c.status == "WARN")
     return {

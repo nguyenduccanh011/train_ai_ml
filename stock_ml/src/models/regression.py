@@ -32,6 +32,7 @@ class LGBMRegressionModel:
     """LightGBM regression model for forward returns."""
 
     params: dict = None
+    seed: int = 42
 
     def __post_init__(self):
         if self.params is None:
@@ -57,7 +58,7 @@ class LGBMRegressionModel:
         # Remove None values from params to avoid "multiple values for keyword" errors
         clean_params = {k: v for k, v in self.params.items() if v is not None}
         merged = {**defaults, **clean_params}
-        self._reg = LGBMRegressor(**merged, random_state=0)
+        self._reg = LGBMRegressor(**merged, random_state=self.seed)
         self._reg.fit(X, y)
         return self
 
@@ -72,6 +73,7 @@ class XGBRegressionModel:
     """XGBoost regression model for forward returns."""
 
     params: dict = None
+    seed: int = 42
 
     def __post_init__(self):
         if self.params is None:
@@ -94,7 +96,7 @@ class XGBRegressionModel:
         # Remove None values from params to avoid "multiple values for keyword" errors
         clean_params = {k: v for k, v in self.params.items() if v is not None}
         merged = {**defaults, **clean_params}
-        self._reg = XGBRegressor(**merged, random_state=0, verbosity=0)
+        self._reg = XGBRegressor(**merged, random_state=self.seed, verbosity=0)
         self._reg.fit(X, y)
         return self
 
@@ -109,6 +111,7 @@ class RandomForestRegressionModel:
     """Random Forest regression model for forward returns."""
 
     params: dict = None
+    seed: int = 42
 
     def __post_init__(self):
         if self.params is None:
@@ -128,7 +131,7 @@ class RandomForestRegressionModel:
         # Remove None values from params to avoid "multiple values for keyword" errors
         clean_params = {k: v for k, v in self.params.items() if v is not None}
         merged = {**defaults, **clean_params}
-        self._reg = RandomForestRegressor(**merged, random_state=0, n_jobs=-1)
+        self._reg = RandomForestRegressor(**merged, random_state=self.seed, n_jobs=-1)
         self._reg.fit(X, y)
         return self
 

@@ -18,6 +18,7 @@ from src.models.regression import (
     RandomForestRegressionModel,
     XGBRegressionModel,
 )
+from src.models.rules import RuleModel
 
 if TYPE_CHECKING:
     from typing import Self
@@ -56,6 +57,7 @@ class LGBMEntryModel:
     """LightGBM entry model wrapper."""
 
     params: dict = None
+    seed: int = 42
 
     def __post_init__(self):
         if self.params is None:
@@ -78,7 +80,7 @@ class LGBMEntryModel:
             "verbose": -1,
         }
         merged = {**defaults, **self.params}
-        self._clf = LGBMClassifier(**merged, random_state=0)
+        self._clf = LGBMClassifier(**merged, random_state=self.seed)
         self._clf.fit(X, y)
         return self
 
@@ -98,6 +100,7 @@ class LGBMExitModel:
     """LightGBM exit model wrapper."""
 
     params: dict = None
+    seed: int = 42
 
     def __post_init__(self):
         if self.params is None:
@@ -120,7 +123,7 @@ class LGBMExitModel:
             "verbose": -1,
         }
         merged = {**defaults, **self.params}
-        self._clf = LGBMClassifier(**merged, random_state=0)
+        self._clf = LGBMClassifier(**merged, random_state=self.seed)
         self._clf.fit(X, y)
         return self
 
@@ -135,6 +138,7 @@ class XGBEntryModel:
     """XGBoost entry model wrapper."""
 
     params: dict = None
+    seed: int = 42
 
     def __post_init__(self):
         if self.params is None:
@@ -154,7 +158,7 @@ class XGBEntryModel:
             "colsample_bytree": 0.8,
         }
         merged = {**defaults, **self.params}
-        self._clf = XGBClassifier(**merged, random_state=0, verbosity=0)
+        self._clf = XGBClassifier(**merged, random_state=self.seed, verbosity=0)
         self._clf.fit(X, y)
         return self
 
@@ -174,6 +178,7 @@ class XGBExitModel:
     """XGBoost exit model wrapper."""
 
     params: dict = None
+    seed: int = 42
 
     def __post_init__(self):
         if self.params is None:
@@ -193,7 +198,7 @@ class XGBExitModel:
             "colsample_bytree": 0.8,
         }
         merged = {**defaults, **self.params}
-        self._clf = XGBClassifier(**merged, random_state=0, verbosity=0)
+        self._clf = XGBClassifier(**merged, random_state=self.seed, verbosity=0)
         self._clf.fit(X, y)
         return self
 
@@ -208,6 +213,7 @@ class RandomForestEntryModel:
     """Random Forest entry model wrapper."""
 
     params: dict = None
+    seed: int = 42
 
     def __post_init__(self):
         if self.params is None:
@@ -225,7 +231,7 @@ class RandomForestEntryModel:
             "max_features": "sqrt",
         }
         merged = {**defaults, **self.params}
-        self._clf = RandomForestClassifier(**merged, random_state=0, n_jobs=-1)
+        self._clf = RandomForestClassifier(**merged, random_state=self.seed, n_jobs=-1)
         self._clf.fit(X, y)
         return self
 
@@ -245,6 +251,7 @@ class RandomForestExitModel:
     """Random Forest exit model wrapper."""
 
     params: dict = None
+    seed: int = 42
 
     def __post_init__(self):
         if self.params is None:
@@ -262,7 +269,7 @@ class RandomForestExitModel:
             "max_features": "sqrt",
         }
         merged = {**defaults, **self.params}
-        self._clf = RandomForestClassifier(**merged, random_state=0, n_jobs=-1)
+        self._clf = RandomForestClassifier(**merged, random_state=self.seed, n_jobs=-1)
         self._clf.fit(X, y)
         return self
 
@@ -277,6 +284,7 @@ class MLPEntryModel:
     """MLP (sklearn) entry model wrapper."""
 
     params: dict = None
+    seed: int = 42
 
     def __post_init__(self):
         if self.params is None:
@@ -295,7 +303,7 @@ class MLPEntryModel:
             "learning_rate_init": 0.001,
         }
         merged = {**defaults, **self.params}
-        self._clf = MLPClassifier(**merged, random_state=0, early_stopping=True)
+        self._clf = MLPClassifier(**merged, random_state=self.seed, early_stopping=True)
         self._clf.fit(X, y)
         return self
 
@@ -315,6 +323,7 @@ class MLPExitModel:
     """MLP (sklearn) exit model wrapper."""
 
     params: dict = None
+    seed: int = 42
 
     def __post_init__(self):
         if self.params is None:
@@ -333,7 +342,7 @@ class MLPExitModel:
             "learning_rate_init": 0.001,
         }
         merged = {**defaults, **self.params}
-        self._clf = MLPClassifier(**merged, random_state=0, early_stopping=True)
+        self._clf = MLPClassifier(**merged, random_state=self.seed, early_stopping=True)
         self._clf.fit(X, y)
         return self
 
@@ -384,47 +393,13 @@ class LSTMExitModel:
         raise NotImplementedError("LSTM not yet implemented")
 
 
-@dataclass
-class RuleEntryModel:
-    """Rule-based entry model — threshold on features."""
-
-    params: dict = None
-
-    def __post_init__(self):
-        if self.params is None:
-            self.params = {}
-
-    def fit(self, X: np.ndarray, y: np.ndarray) -> RuleEntryModel:
-        return self
-
-    def predict(self, X: np.ndarray) -> np.ndarray:
-        raise NotImplementedError("Rule entry model not yet implemented")
-
-
-@dataclass
-class RuleExitModel:
-    """Rule-based exit model — threshold on features."""
-
-    params: dict = None
-
-    def __post_init__(self):
-        if self.params is None:
-            self.params = {}
-
-    def fit(self, X: np.ndarray, y: np.ndarray) -> RuleExitModel:
-        return self
-
-    def predict(self, X: np.ndarray) -> np.ndarray:
-        raise NotImplementedError("Rule exit model not yet implemented")
-
-
 _ENTRY_REGISTRY: dict[str, type] = {
     "lightgbm": LGBMEntryModel,
     "xgboost": XGBEntryModel,
     "random_forest": RandomForestEntryModel,
     "mlp": MLPEntryModel,
     "lstm": LSTMEntryModel,
-    "rule": RuleEntryModel,
+    "rule": RuleModel,
 }
 
 _EXIT_REGISTRY: dict[str, type] = {
@@ -433,16 +408,19 @@ _EXIT_REGISTRY: dict[str, type] = {
     "random_forest": RandomForestExitModel,
     "mlp": MLPExitModel,
     "lstm": LSTMExitModel,
-    "rule": RuleExitModel,
+    "rule": RuleModel,
 }
 
 
-def build_entry_model(model_type: str, params: dict | None = None) -> EntryModelProtocol:
+def build_entry_model(
+    model_type: str, params: dict | None = None, seed: int = 42
+) -> EntryModelProtocol:
     """Build an entry model by type.
 
     Args:
         model_type: one of {lightgbm, xgboost, random_forest, mlp, lstm, rule}
         params: dict of model-specific hyperparameters
+        seed: random seed for reproducibility
 
     Returns:
         Fitted or unfitted model instance implementing EntryModelProtocol
@@ -455,15 +433,18 @@ def build_entry_model(model_type: str, params: dict | None = None) -> EntryModel
             f"Unknown entry model type: {model_type}. Available: {sorted(_ENTRY_REGISTRY.keys())}"
         )
     model_class = _ENTRY_REGISTRY[model_type]
-    return model_class(params=params or {})
+    return model_class(params=params or {}, seed=seed)
 
 
-def build_exit_model(model_type: str, params: dict | None = None) -> ExitModelProtocol:
+def build_exit_model(
+    model_type: str, params: dict | None = None, seed: int = 42
+) -> ExitModelProtocol:
     """Build an exit model by type.
 
     Args:
         model_type: one of {lightgbm, xgboost, random_forest, mlp, lstm, rule}
         params: dict of model-specific hyperparameters
+        seed: random seed for reproducibility
 
     Returns:
         Fitted or unfitted model instance implementing ExitModelProtocol
@@ -476,7 +457,7 @@ def build_exit_model(model_type: str, params: dict | None = None) -> ExitModelPr
             f"Unknown exit model type: {model_type}. Available: {sorted(_EXIT_REGISTRY.keys())}"
         )
     model_class = _EXIT_REGISTRY[model_type]
-    return model_class(params=params or {})
+    return model_class(params=params or {}, seed=seed)
 
 
 _REGRESSION_REGISTRY: dict[str, type] = {
@@ -486,12 +467,13 @@ _REGRESSION_REGISTRY: dict[str, type] = {
 }
 
 
-def build_regression_model(model_type: str, params: dict | None = None):
+def build_regression_model(model_type: str, params: dict | None = None, seed: int = 42):
     """Build a regression model for forward-return prediction.
 
     Args:
         model_type: one of {lightgbm, xgboost, random_forest}
         params: dict of model-specific hyperparameters
+        seed: random seed for reproducibility
 
     Returns:
         Regression model instance
@@ -504,4 +486,4 @@ def build_regression_model(model_type: str, params: dict | None = None):
             f"Unknown regression model type: {model_type}. Available: {sorted(_REGRESSION_REGISTRY.keys())}"
         )
     model_class = _REGRESSION_REGISTRY[model_type]
-    return model_class(params=params or {})
+    return model_class(params=params or {}, seed=seed)

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     JSON,
@@ -18,6 +19,10 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from stock_ml.db.base import Base, TimestampMixin
+
+if TYPE_CHECKING:
+    from stock_ml.db.models.config import ExperimentConfigModel
+    from stock_ml.db.models.trade import RunTradeModel
 
 
 class LeaderboardRunModel(Base, TimestampMixin):
@@ -66,6 +71,10 @@ class LeaderboardRunModel(Base, TimestampMixin):
     entry_model: Mapped[str] = mapped_column(String(64), nullable=False)
     exit_model_type: Mapped[str] = mapped_column(String(64), nullable=False)
     exit_model_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    model_mode: Mapped[str] = mapped_column(String(32), default="ml_only", nullable=False)
+    signal_mode: Mapped[str] = mapped_column(String(32), default="entry_first", nullable=False)
+    regime_model_type: Mapped[str] = mapped_column(String(64), default="none", nullable=False)
+    size_model_type: Mapped[str] = mapped_column(String(64), default="none", nullable=False)
 
     # --- Target (flat) ---
     target_type: Mapped[str] = mapped_column(String(64), default="unknown", nullable=False)

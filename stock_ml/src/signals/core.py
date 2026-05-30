@@ -20,6 +20,7 @@ def generate_signals_from_predictions(
     entry_model: Any = None,
     exit_model: Any = None,
     X_test: np.ndarray | None = None,
+    signal_mode: str = "entry_first",
 ) -> pd.DataFrame:
     """Generate signals from model predictions.
 
@@ -77,12 +78,25 @@ def generate_signals_from_predictions(
         signals = []
         for idx in range(len(entry_pred)):
             sig = 0
-            if entry_pred[idx] == 1:
-                sig = 1
-            elif exit_model is not None:
-                exit_pred = exit_model.predict(X_test[idx : idx + 1])
-                if exit_pred[0] == 1:
+            entry_is_1 = entry_pred[idx] == 1
+            exit_is_1 = exit_model is not None and exit_model.predict(X_test[idx : idx + 1])[0] == 1
+
+            if signal_mode == "entry_first":
+                if entry_is_1:
+                    sig = 1
+                elif exit_is_1:
                     sig = -1
+            elif signal_mode == "exit_first":
+                if exit_is_1:
+                    sig = -1
+                elif entry_is_1:
+                    sig = 1
+            elif signal_mode == "independent":
+                if exit_is_1:
+                    sig = -1
+                elif entry_is_1:
+                    sig = 1
+
             signals.append(sig)
 
         signals = np.array(signals, dtype=np.int8)

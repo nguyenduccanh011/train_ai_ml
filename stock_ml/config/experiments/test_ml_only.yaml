@@ -1,0 +1,40 @@
+name: test_ml_only
+hypothesis: |
+  Test pure ML regression mode with forward-return prediction.
+  model_mode should auto-detect as ml_only.
+strategy: ml_only_regression
+market: vn_stock
+seed: 42
+
+components:
+  features: leading_v2
+  target:
+    type: forward_return_regression
+    horizon: 5
+
+  entry_model:
+    type: lightgbm
+    params:
+      n_estimators: 100
+      learning_rate: 0.05
+      num_leaves: 31
+
+  exit_model:
+    type: none
+    enabled: false
+
+split:
+  type: walk_forward_year
+  train_years: 2
+  test_years: 1
+  gap_days: 25
+  first_test_year: 2020
+  last_test_year: 2021
+
+engine:
+  max_hold_bars: 20
+  min_hold_bars: 1
+  hard_stop_pct: -0.08
+
+signal_threshold: 0.0
+strict_audit: true

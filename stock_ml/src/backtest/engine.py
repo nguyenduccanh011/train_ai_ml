@@ -46,6 +46,9 @@ class EngineConfig:
     min_hold_bars: int = 1
     hard_stop_pct: float | None = -0.08  # close trade if mark-to-market drops below this
     signal_exit_enabled: bool = True  # whether to use model's sell signal (-1) as exit trigger
+    exit_priority: list[str] = field(
+        default_factory=lambda: ["hard_stop", "signal", "max_hold"]
+    )  # order of exit conditions to check
     cost: CostModel = field(default_factory=CostModel)
 
 
@@ -118,25 +121,27 @@ def _run_symbol(
             i += 1
             continue
 
-        # In position. Check exit conditions in priority: hard_stop > signal > max_hold.
+        # In position. Check exit conditions in configured priority order.
         hold_bars = i - entry_idx
         reason: str | None = None
 
-        if cfg.hard_stop_pct is not None and hold_bars >= cfg.min_hold_bars:
-            mtm_low = lows[i] / entry_fill - 1.0
-            if mtm_low <= cfg.hard_stop_pct:
-                reason = "hard_stop"
+        for exit_rule in cfg.exit_priority:
+            if exit_rule == "hard_stop":
+                if cfg.hard_stop_pct is not None and hold_bars >= cfg.min_hold_bars:
+                    mtm_low = lows[i] / entry_fill - 1.0
+                    if mtm_low <= cfg.hard_stop_pct:
+                        reason = "hard_stop"
+                        break
 
-        if (
-            reason is None
-            and cfg.signal_exit_enabled
-            and sig < 0
-            and hold_bars >= cfg.min_hold_bars
-        ):
-            reason = "signal"
+            elif exit_rule == "signal":
+                if cfg.signal_exit_enabled and sig < 0 and hold_bars >= cfg.min_hold_bars:
+                    reason = "signal"
+                    break
 
-        if reason is None and hold_bars >= cfg.max_hold_bars:
-            reason = "max_hold"
+            elif exit_rule == "max_hold":
+                if hold_bars >= cfg.max_hold_bars:
+                    reason = "max_hold"
+                    break
 
         if reason is not None:
             exit_idx = min(i + 1, n - 1)

@@ -16,6 +16,32 @@ from src.features.leading_v2 import FEATURE_COLS as LEADING_V2_COLS
 from src.features.leading_v2 import add_features as add_leading_v2_features
 from src.features.leading_v3 import leading_v3_features
 
+LEADING_V3_COLS: list[str] = LEADING_V2_COLS + [
+    # Group A: Cross-sectional rank (5)
+    "momentum_rank",
+    "volatility_rank",
+    "volume_rank",
+    "rsi_rank",
+    "price_strength_rank",
+    # Group B: Sector-relative metrics (6)
+    "return_vs_sector",
+    "momentum_vs_sector",
+    "volume_vs_sector",
+    "volatility_vs_sector",
+    "strength_vs_sector",
+    "beta_to_sector",
+    # Group C: Market regime interaction (4)
+    "market_trend",
+    "market_volatility_regime",
+    "regime_interaction_momentum",
+    "regime_interaction_strength",
+    # Group D: Liquidity filters (4)
+    "volume_20d_avg",
+    "volume_rank_20d",
+    "price_level",
+    "volume_stability",
+]
+
 
 @dataclass
 class FeatureSet:
@@ -95,6 +121,6 @@ register_feature_set(
 )
 register_feature_set(
     "leading_v3",
-    [],  # Computed dynamically (36 from v2 + 22 new = 58)
+    LEADING_V3_COLS,
     _build_leading_v3,
 )

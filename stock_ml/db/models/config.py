@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import JSON, DateTime, Double, ForeignKey, Integer, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from stock_ml.db.base import Base
+
+if TYPE_CHECKING:
+    from stock_ml.db.models.run import LeaderboardRunModel
 
 
 class ExperimentConfigModel(Base):
@@ -29,6 +33,11 @@ class ExperimentConfigModel(Base):
     engine_config: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     seed: Mapped[int | None] = mapped_column(Integer, nullable=True)
     signal_threshold: Mapped[float | None] = mapped_column(Double, nullable=True)
+    signal_mode: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    model_mode: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    regime_model: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    size_model: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    yaml_schema_version: Mapped[int | None] = mapped_column(Integer, nullable=True)
     hypothesis: Mapped[str | None] = mapped_column(Text, nullable=True)
     raw_yaml: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(

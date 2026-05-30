@@ -6,7 +6,7 @@ Supports independent entry/exit models and YAML-driven configuration.
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -52,6 +52,13 @@ class ExperimentConfig:
     engine: dict
     seed: int = 42
     signal_threshold: float = 0.0
+    signal_mode: str = "entry_first"  # entry_first | exit_first | independent
+    model_mode: str = (
+        "ml_only"  # ml_only | rule_only | hybrid_ml_entry_rule_exit | hybrid_rule_entry_ml_exit
+    )
+    regime_model: dict = field(default_factory=lambda: {"type": "none", "enabled": False})
+    size_model: dict = field(default_factory=lambda: {"type": "none", "enabled": False})
+    yaml_schema_version: int = 2  # 1 = legacy, 2 = with signal_mode, model_mode, regime/size slots
     hypothesis: str = ""
     validation: dict | None = None
     strict_audit: bool = True
@@ -118,6 +125,26 @@ class ExperimentConfig:
         if metadata_cfg is not None and not isinstance(metadata_cfg, dict):
             raise ValueError("metadata must be a dict or null")
 
+        # Auto-detect model_mode if not explicitly set
+        model_mode = raw.get("model_mode")
+        if not model_mode:
+            entry_type = entry_model_cfg.get("type")
+            exit_type = comp.get("exit_model", {}).get("type")
+            exit_enabled = comp.get("exit_model", {}).get("enabled", False)
+
+            if entry_type == "rule":
+                if exit_enabled and exit_type == "rule":
+                    model_mode = "rule_only"
+                elif exit_enabled and exit_type != "rule":
+                    model_mode = "hybrid_rule_entry_ml_exit"
+                else:
+                    model_mode = "rule_only"
+            else:
+                if exit_enabled and exit_type == "rule":
+                    model_mode = "hybrid_ml_entry_rule_exit"
+                else:
+                    model_mode = "ml_only"
+
         return cls(
             name=raw["name"],
             strategy=raw["strategy"],
@@ -130,6 +157,11 @@ class ExperimentConfig:
             engine=engine_cfg,
             seed=raw.get("seed", 42),
             signal_threshold=raw.get("signal_threshold", 0.0),
+            signal_mode=comp.get("signal_mode", "entry_first"),
+            model_mode=model_mode,
+            regime_model=comp.get("regime_model", {"type": "none", "enabled": False}),
+            size_model=comp.get("size_model", {"type": "none", "enabled": False}),
+            yaml_schema_version=raw.get("schema_version", 2),
             hypothesis=raw.get("hypothesis", ""),
             validation=validation_cfg,
             strict_audit=raw.get("strict_audit", True),
@@ -193,15 +225,16 @@ def train_fold(
 
     X_test = test_use[feat_cols].to_numpy(dtype=np.float32)
 
-    # Rule-based technical indicators (no ML model)
+    # Legacy: technical_rules route to rule model
     if cfg.entry_model["type"] == "technical_rules":
         return None, None, generate_signals_from_technical_rules(test_use)
 
-    is_regression = y_full.dtype.kind == "f"
+    is_regression = cfg.target["type"] == "forward_return_regression"
 
-    if is_regression:
+    # Dispatch by model_mode
+    if cfg.model_mode == "ml_only" and is_regression:
         entry_model = build_regression_model(
-            cfg.entry_model["type"], cfg.entry_model.get("params", {})
+            cfg.entry_model["type"], cfg.entry_model.get("params", {}), seed=cfg.seed
         )
         entry_model.fit(X_train, y_full)
         exit_model = None
@@ -213,18 +246,32 @@ def train_fold(
             test_df=test_use,
             signal_threshold=cfg.signal_threshold,
             is_regression=True,
+            signal_mode=cfg.signal_mode,
         )
 
-    else:
+    elif cfg.model_mode == "rule_only" or (
+        cfg.model_mode.startswith("hybrid") and not is_regression
+    ):
         y_full = y_full.astype(np.int8)
         y_entry = (y_full == 1).astype(np.int8)
-        entry_model = build_entry_model(cfg.entry_model["type"], cfg.entry_model.get("params", {}))
+
+        entry_params = cfg.entry_model.get("params", {}).copy()
+        if cfg.entry_model["type"] == "rule":
+            entry_params["feature_cols"] = feat_cols
+        entry_model = build_entry_model(cfg.entry_model["type"], entry_params, seed=cfg.seed)
         entry_model.fit(X_train, y_entry)
 
         exit_model = None
-        if cfg.exit_model.get("enabled", False):
+        if cfg.model_mode.startswith("hybrid"):
+            exit_type = cfg.exit_model.get("type", "lightgbm")
+            if exit_type == "rule":
+                exit_params = cfg.exit_model.get("params", {}).copy()
+                exit_params["feature_cols"] = feat_cols
+            else:
+                exit_params = cfg.exit_model.get("params", {}).copy()
+
             y_exit = (y_full == -1).astype(np.int8)
-            exit_model = build_exit_model(cfg.exit_model["type"], cfg.exit_model.get("params", {}))
+            exit_model = build_exit_model(exit_type, exit_params, seed=cfg.seed)
             exit_model.fit(X_train, y_exit)
 
         signals_df = generate_signals_from_predictions(
@@ -235,6 +282,14 @@ def train_fold(
             entry_model=entry_model,
             exit_model=exit_model,
             X_test=X_test,
+            signal_mode=cfg.signal_mode,
+        )
+
+    else:
+        raise ValueError(
+            f"Invalid model_mode '{cfg.model_mode}' or unsupported combination with "
+            f"target type '{cfg.target.get('type')}'. Supported: "
+            f"ml_only (regression), rule_only (classification), hybrid_* (classification)"
         )
 
     return entry_model, exit_model, signals_df

@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "colab-mcp": {
+      "command": "uvx",
+      "args": ["git+https://github.com/googlecolab/colab-mcp"],
+      "timeout": 30000
+    }
+  },
+  "permissions": {
+    "allow": [
+      "mcp__colab-mcp__get_cells",
+      "Bash(claude mcp list *)",
+      "Bash(python stock_ml/scripts/build_leaderboard.py *)",
+      "Bash(PYTHONPATH=stock_ml python -m stock_ml.scripts.build_leaderboard *)",
+      "Bash(PYTHONPATH=stock_ml python -m stock_ml.scripts.cli *)"
+    ]
+  }
+}

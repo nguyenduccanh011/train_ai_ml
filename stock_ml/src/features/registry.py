@@ -14,6 +14,7 @@ from src.features.basic import FEATURE_COLS as BASIC_COLS
 from src.features.basic import add_features as add_basic_features
 from src.features.leading_v2 import FEATURE_COLS as LEADING_V2_COLS
 from src.features.leading_v2 import add_features as add_leading_v2_features
+from src.features.leading_v3 import leading_v3_features
 
 
 @dataclass
@@ -81,9 +82,19 @@ def _build_leading_v2(df: pd.DataFrame) -> pd.DataFrame:
     return add_leading_v2_features(df)
 
 
+def _build_leading_v3(df: pd.DataFrame) -> pd.DataFrame:
+    """Builder for leading_v3 feature set."""
+    return leading_v3_features(df)
+
+
 register_feature_set("basic_v1", BASIC_COLS, _build_basic_v1)
 register_feature_set(
     "leading_v2",
     LEADING_V2_COLS,
     _build_leading_v2,
+)
+register_feature_set(
+    "leading_v3",
+    [],  # Computed dynamically (36 from v2 + 22 new = 58)
+    _build_leading_v3,
 )

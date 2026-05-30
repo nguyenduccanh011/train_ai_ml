@@ -1,0 +1,147 @@
+"""Adapters between LeaderboardRow (Pydantic) and LeaderboardRunModel (SQLAlchemy)."""
+from __future__ import annotations
+
+from datetime import datetime, timezone
+from typing import Optional
+
+from stock_ml.src.leaderboard.schema import (
+    Artifacts,
+    CacheKeys,
+    CostProfile,
+    LeaderboardRow,
+    LifecycleState,
+    TargetConfig,
+)
+from stock_ml.db.models.run import LeaderboardRunModel
+
+
+def row_to_model(row: LeaderboardRow, *, parent_run_id: Optional[str] = None) -> LeaderboardRunModel:
+    """Convert LeaderboardRow Pydantic → LeaderboardRunModel ORM."""
+    generated = datetime.fromisoformat(row.generated_at)
+    if generated.tzinfo is None:
+        generated = generated.replace(tzinfo=timezone.utc)
+
+    return LeaderboardRunModel(
+        run_id=row.run_id,
+        bundle=row.bundle,
+        run_name=row.run_name,
+        config_hash=row.config_hash,
+        generated_at=generated,
+        superseded=row.superseded,
+        state=row.state.value,
+        cache_key_features=row.cache_keys.features,
+        cache_key_predictions=row.cache_keys.predictions,
+        artifact_trades_csv=row.artifacts.trades_csv,
+        artifact_meta_json=row.artifacts.meta_json,
+        artifact_model_pkl=row.artifacts.model_pkl,
+        market=row.market,
+        market_family=row.market_family,
+        currency=row.currency,
+        pnl_mode=row.pnl_mode,
+        schema_ver=row.schema,
+        timeframe=row.timeframe,
+        strategy=row.strategy,
+        feature_set=row.feature_set,
+        entry_model=row.entry_model,
+        exit_model_type=row.exit_model_type,
+        exit_model_enabled=row.exit_model_enabled,
+        target_type=row.target.type,
+        target_forward_window=row.target.forward_window,
+        target_gain_threshold=row.target.gain_threshold,
+        target_loss_threshold=row.target.loss_threshold,
+        trades=row.trades,
+        wr=row.wr,
+        avg_pnl=row.avg_pnl,
+        total_pnl=row.total_pnl,
+        pf=row.pf,
+        avg_hold=row.avg_hold,
+        sharpe=row.sharpe,
+        max_drawdown=row.max_drawdown,
+        mdd_per_symbol=row.mdd_per_symbol,
+        yearly_consistency=row.yearly_consistency,
+        composite_score=row.composite_score,
+        score_mode=row.score_mode,
+        n_symbols=row.n_symbols,
+        first_test_year=row.first_test_year,
+        last_test_year=row.last_test_year,
+        backtest_window_key=row.backtest_window_key,
+        cost_commission=str(row.cost_profile.commission),
+        cost_tax=str(row.cost_profile.tax),
+        cost_slippage=str(row.cost_profile.slippage),
+        fairness_group_key=row.fairness_group_key,
+        is_baseline=row.is_baseline,
+        same_symbols_as_baseline=row.same_symbols_as_baseline,
+        same_window_as_baseline=row.same_window_as_baseline,
+        same_cost_as_baseline=row.same_cost_as_baseline,
+        same_target_as_baseline=row.same_target_as_baseline,
+        same_timeframe_as_baseline=row.same_timeframe_as_baseline,
+        same_market_family_as_baseline=row.same_market_family_as_baseline,
+        warnings=list(row.warnings),
+        parent_run_id=parent_run_id,
+    )
+
+
+def model_to_row(m: LeaderboardRunModel) -> LeaderboardRow:
+    """Convert LeaderboardRunModel ORM → LeaderboardRow Pydantic."""
+    return LeaderboardRow(
+        run_id=m.run_id,
+        bundle=m.bundle,
+        run_name=m.run_name,
+        config_hash=m.config_hash,
+        generated_at=m.generated_at.isoformat(),
+        superseded=m.superseded,
+        state=LifecycleState(m.state),
+        cache_keys=CacheKeys(features=m.cache_key_features, predictions=m.cache_key_predictions),
+        artifacts=Artifacts(
+            trades_csv=m.artifact_trades_csv,
+            meta_json=m.artifact_meta_json,
+            model_pkl=m.artifact_model_pkl,
+        ),
+        market=m.market,
+        market_family=m.market_family,
+        currency=m.currency,
+        pnl_mode=m.pnl_mode,
+        schema=m.schema_ver,
+        timeframe=m.timeframe,
+        strategy=m.strategy,
+        feature_set=m.feature_set,
+        entry_model=m.entry_model,
+        exit_model_type=m.exit_model_type,
+        exit_model_enabled=m.exit_model_enabled,
+        target=TargetConfig(
+            type=m.target_type,
+            forward_window=m.target_forward_window,
+            gain_threshold=m.target_gain_threshold,
+            loss_threshold=m.target_loss_threshold,
+        ),
+        trades=m.trades,
+        wr=m.wr,
+        avg_pnl=m.avg_pnl,
+        total_pnl=m.total_pnl,
+        pf=m.pf,
+        avg_hold=m.avg_hold,
+        sharpe=m.sharpe,
+        max_drawdown=m.max_drawdown,
+        mdd_per_symbol=m.mdd_per_symbol,
+        yearly_consistency=m.yearly_consistency,
+        composite_score=m.composite_score,
+        score_mode=m.score_mode,
+        n_symbols=m.n_symbols,
+        first_test_year=m.first_test_year,
+        last_test_year=m.last_test_year,
+        backtest_window_key=m.backtest_window_key,
+        cost_profile=CostProfile(
+            commission=m.cost_commission,
+            tax=m.cost_tax,
+            slippage=m.cost_slippage,
+        ),
+        fairness_group_key=m.fairness_group_key,
+        is_baseline=m.is_baseline,
+        same_symbols_as_baseline=m.same_symbols_as_baseline,
+        same_window_as_baseline=m.same_window_as_baseline,
+        same_cost_as_baseline=m.same_cost_as_baseline,
+        same_target_as_baseline=m.same_target_as_baseline,
+        same_timeframe_as_baseline=m.same_timeframe_as_baseline,
+        same_market_family_as_baseline=m.same_market_family_as_baseline,
+        warnings=list(m.warnings or []),
+    )

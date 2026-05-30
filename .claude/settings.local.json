@@ -1,0 +1,33 @@
+{
+  "env": {},
+  "permissions": {
+    "allow": [
+      "PowerShell(Start-Sleep -Seconds 2; $response = Invoke-WebRequest -Uri \"http://localhost:8080/dashboard.html\" -Method Head -TimeoutSec 3 -ErrorAction SilentlyContinue; if \\($response.StatusCode -eq 200\\) { Write-Output \"Server running at http://localhost:8080\" } else { Write-Output \"Server may not be ready yet\" })",
+      "PowerShell(netstat -ano)",
+      "PowerShell(Invoke-WebRequest -Uri \"http://localhost:8080/dashboard.html\" -Method Head -TimeoutSec 5 -ErrorAction SilentlyContinue)",
+      "PowerShell(Invoke-WebRequest -Uri \"http://localhost:8181/dashboard.html\" -Method Head -TimeoutSec 5)",
+      "PowerShell(Start-Sleep -Seconds 2; $r = Invoke-WebRequest -Uri \"http://localhost:8181/leaderboard.html\" -UseBasicParsing -TimeoutSec 5 -ErrorAction SilentlyContinue; $r.StatusCode)",
+      "PowerShell(python -c \"import pandas as pd; p=r'c:\\\\Users\\\\DUC CANH PC\\\\Desktop\\\\train_ai_ml\\\\stock_ml\\\\results\\\\experiments\\\\derivatives_vn30f1m_phase86_1h_challenger_refine\\\\ranking.csv'; df=pd.read_csv\\(p\\); print\\(list\\(df.columns\\)\\); cols=[c for c in ['rank','name','run_name','composite_score','total_pnl','max_drawdown','mdd_per_symbol','yearly_consistency','trades','wr','avg_pnl','avg_hold'] if c in df.columns]; print\\(df[cols].head\\(10\\).to_string\\(index=False\\)\\)\")",
+      "PowerShell(Invoke-WebRequest -Uri \"http://localhost:8181/../results/leaderboard/by_market/vn_derivatives/leaderboard.json\" -UseBasicParsing -TimeoutSec 5 -ErrorAction SilentlyContinue)",
+      "PowerShell($runDir = 'c:\\\\Users\\\\DUC CANH PC\\\\Desktop\\\\train_ai_ml\\\\stock_ml\\\\results\\\\experiments\\\\derivatives_vn30f1m_phase86_1h_challenger_refine\\\\deriv_p86_1hcr_signals_features-leading-signals_entry_model_type-catboost-signals_target-e100g037l026-exit_model-x48l048-fusion-dist-params-s0'; python -c \"import sys; from pathlib import Path; sys.path.insert\\(0, r'c:\\\\Users\\\\DUC CANH PC\\\\Desktop\\\\train_ai_ml\\\\stock_ml'\\); from src.leaderboard.hooks import append_or_update; row=append_or_update\\(Path\\(r'$runDir'\\), Path\\(r'c:\\\\Users\\\\DUC CANH PC\\\\Desktop\\\\train_ai_ml\\\\stock_ml\\\\results\\\\leaderboard'\\)\\); print\\(row.run_id\\); print\\(row.composite_score, row.total_pnl, row.max_drawdown\\)\")",
+      "PowerShell(Start-Sleep -Seconds 2; $r = Invoke-WebRequest -Uri \"http://localhost:8181/results/leaderboard/by_market/vn_derivatives/leaderboard.json\" -UseBasicParsing -TimeoutSec 5 -ErrorAction SilentlyContinue; $r.StatusCode)",
+      "PowerShell(node --check \"stock_ml/visualization/leaderboard.js\")",
+      "PowerShell(node --check \"C:\\\\Users\\\\DUC CANH PC\\\\Desktop\\\\train_ai_ml\\\\stock_ml\\\\visualization\\\\leaderboard.js\"; $r = Invoke-WebRequest -Uri \"http://localhost:8181/visualization/leaderboard.html\" -UseBasicParsing -TimeoutSec 5 -ErrorAction SilentlyContinue; \"leaderboard.html: $\\($r.StatusCode\\)\"; $r2 = Invoke-WebRequest -Uri \"http://localhost:8181/visualization/dashboard.html\" -UseBasicParsing -TimeoutSec 5 -ErrorAction SilentlyContinue; \"dashboard.html: $\\($r2.StatusCode\\)\")",
+      "PowerShell(python -c \"import pandas as pd; p=r'c:\\\\Users\\\\DUC CANH PC\\\\Desktop\\\\train_ai_ml\\\\stock_ml\\\\results\\\\experiments\\\\derivatives_vn30f1m_phase87_1h_target_micro_refine\\\\ranking.csv'; df=pd.read_csv\\(p\\); cols=['rank','name','composite_score','total_pnl','max_drawdown','mdd_per_symbol','yearly_consistency','trade_count','avg_holding_days']; print\\(df[cols].head\\(12\\).to_string\\(index=False\\)\\)\")",
+      "PowerShell($runDir = 'c:\\\\Users\\\\DUC CANH PC\\\\Desktop\\\\train_ai_ml\\\\stock_ml\\\\results\\\\experiments\\\\derivatives_vn30f1m_phase87_1h_target_micro_refine\\\\deriv_p87_1htmr_signals_features-leading-signals_entry_model_type-catboost-signals_target-e96g037l026-exit_model-x50l048-fusion-dist-params-s0'; python -c \"import sys; from pathlib import Path; sys.path.insert\\(0, r'c:\\\\Users\\\\DUC CANH PC\\\\Desktop\\\\train_ai_ml\\\\stock_ml'\\); from src.leaderboard.hooks import append_or_update; row=append_or_update\\(Path\\(r'$runDir'\\), Path\\(r'c:\\\\Users\\\\DUC CANH PC\\\\Desktop\\\\train_ai_ml\\\\stock_ml\\\\results\\\\leaderboard'\\)\\); print\\(row.run_id\\); print\\(row.composite_score, row.total_pnl, row.max_drawdown\\)\")",
+      "PowerShell(python -c \"import pandas as pd; p=r'c:\\\\Users\\\\DUC CANH PC\\\\Desktop\\\\train_ai_ml\\\\stock_ml\\\\results\\\\experiments\\\\derivatives_vn30f1m_phase88_1h_dual_branch_refine\\\\ranking.csv'; df=pd.read_csv\\(p\\); cols=['rank','name','composite_score','total_pnl','max_drawdown','mdd_per_symbol','yearly_consistency','trade_count','avg_holding_days']; print\\(df[cols].head\\(15\\).to_string\\(index=False\\)\\)\")",
+      "PowerShell(python -c \"import pandas as pd; p=r'c:\\\\Users\\\\DUC CANH PC\\\\Desktop\\\\train_ai_ml\\\\stock_ml\\\\results\\\\experiments\\\\derivatives_vn30f1m_phase89_1h_wave_quality_refine\\\\ranking.csv'; df=pd.read_csv\\(p\\); cols=['rank','name','composite_score','total_pnl','max_drawdown','mdd_per_symbol','yearly_consistency','trade_count','avg_holding_days']; print\\(df[cols].head\\(15\\).to_string\\(index=False\\)\\)\")",
+      "PowerShell(python -c \"import pandas as pd; p=r'c:\\\\Users\\\\DUC CANH PC\\\\Desktop\\\\train_ai_ml\\\\stock_ml\\\\results\\\\experiments\\\\derivatives_vn30f1m_phase90_1h_low_quick_refine\\\\ranking.csv'; df=pd.read_csv\\(p\\); cols=['rank','name','composite_score','total_pnl','max_drawdown','mdd_per_symbol','yearly_consistency','trade_count','avg_holding_days']; print\\(df[cols].head\\(15\\).to_string\\(index=False\\)\\)\")",
+      "PowerShell(python -c \"import pandas as pd; p=r'c:\\\\Users\\\\DUC CANH PC\\\\Desktop\\\\train_ai_ml\\\\stock_ml\\\\results\\\\experiments\\\\derivatives_vn30f1m_phase95_1h_exit_stack_profit\\\\ranking.csv'; df=pd.read_csv\\(p\\); cols=['rank','name','composite_score','total_pnl','max_drawdown','mdd_per_symbol','yearly_consistency','trade_count','avg_holding_days']; print\\('TOP SCORE'\\); print\\(df[cols].head\\(20\\).to_string\\(index=False\\)\\); print\\('TOP TOTAL'\\); print\\(df.sort_values\\('total_pnl', ascending=False\\)[cols].head\\(20\\).to_string\\(index=False\\)\\)\")",
+      "Bash(grep -v \"^$\")",
+      "Skill(update-config)",
+      "Skill(update-config:*)"
+    ]
+  },
+  "model": "haiku",
+  "modelOverrides": {
+    "claude-haiku-4-5": "gpt-5.5",
+    "claude-sonnet-4-6": "claude-sonnet-4-6",
+    "claude-opus-4-7": "claude-opus-4-7"
+  }
+}

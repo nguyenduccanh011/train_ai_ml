@@ -26,6 +26,7 @@ sys.path.insert(0, str(REPO_ROOT / "stock_ml"))
 from src.data.loader import DataLoader
 from src.pipeline.experiment import ExperimentConfig, run_experiment
 from src.pipeline.multi_seed import run_experiment_multi_seed
+from src.leaderboard.aggregator import rebuild_leaderboard
 
 
 def try_acquire_lock(yaml_path: Path, timeout_sec: float = 5.0) -> bool:
@@ -172,6 +173,12 @@ def main():
         default=1,
         help="Number of parallel workers (default: 1 = sequential)",
     )
+    parser.add_argument(
+        "--rebuild-leaderboard",
+        type=bool,
+        default=True,
+        help="Rebuild leaderboard.json after all runs complete (default: True)",
+    )
 
     args = parser.parse_args()
 
@@ -243,6 +250,14 @@ def main():
     print(f"\n{'=' * 60}")
     print(f"Summary: {n_ok} passed, {n_fail} failed")
     print(f"Results written to: {out_dir}")
+
+    if args.rebuild_leaderboard and n_ok > 0:
+        print("Rebuilding leaderboard...")
+        experiments_dir = out_dir / "experiments"
+        leaderboard_dir = out_dir / "leaderboard"
+        rebuild_leaderboard(str(experiments_dir), str(leaderboard_dir))
+        print(f"Leaderboard rebuilt at: {leaderboard_dir}")
+
     print(f"{'=' * 60}")
 
     return 0 if n_fail == 0 else 1

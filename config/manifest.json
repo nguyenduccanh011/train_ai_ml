@@ -1,0 +1,83 @@
+{
+  "models": [
+    {
+      "name": "v22",
+      "display_name": "V22 - Baseline Champion",
+      "version": "1.0.0",
+      "market": "vn_stock",
+      "feature_set": "leading_v2",
+      "entry_model": "lightgbm",
+      "exit_model_type": "rule",
+      "status": "active",
+      "pnl_pct": 12.45,
+      "win_rate": 0.524,
+      "total_trades": 245,
+      "sharpe_ratio": 1.82,
+      "max_drawdown": -18.5,
+      "created_at": "2026-05-29T12:00:00Z",
+      "updated_at": "2026-05-29T12:00:00Z",
+      "description": "Leading V2 features with LightGBM entry model, rule-based exits. Baseline champion for VN Stock market."
+    },
+    {
+      "name": "v34",
+      "display_name": "V34 - Enhanced Entry/Exit",
+      "version": "1.1.0",
+      "market": "vn_stock",
+      "feature_set": "leading_v4",
+      "entry_model": "lightgbm",
+      "exit_model_type": "lightgbm",
+      "status": "active",
+      "pnl_pct": 12.88,
+      "win_rate": 0.531,
+      "total_trades": 312,
+      "sharpe_ratio": 1.71,
+      "max_drawdown": -22.1,
+      "created_at": "2026-05-28T15:30:00Z",
+      "updated_at": "2026-05-28T15:30:00Z",
+      "description": "Leading V4 features with both LightGBM entry and exit models. Enhanced signal quality."
+    },
+    {
+      "name": "v37a",
+      "display_name": "V37A - Optimized Strategy",
+      "version": "1.2.0",
+      "market": "vn_stock",
+      "feature_set": "leading_v4",
+      "entry_model": "lightgbm",
+      "exit_model_type": "lightgbm",
+      "status": "active",
+      "pnl_pct": 12.72,
+      "win_rate": 0.518,
+      "total_trades": 287,
+      "sharpe_ratio": 1.65,
+      "max_drawdown": -24.3,
+      "created_at": "2026-05-26T14:20:00Z",
+      "updated_at": "2026-05-26T14:20:00Z",
+      "description": "V37A runner with strategy V3 rule set. Optimized entry/exit timing."
+    },
+    {
+      "name": "rule",
+      "display_name": "Technical Rules Baseline",
+      "version": "1.0.0",
+      "market": "vn_stock",
+      "feature_set": "leading_v2",
+      "entry_model": "rule",
+      "exit_model_type": "rule",
+      "status": "active",
+      "pnl_pct": 7.82,
+      "win_rate": 0.485,
+      "total_trades": 198,
+      "sharpe_ratio": 1.24,
+      "max_drawdown": -28.5,
+      "created_at": "2026-05-27T09:15:00Z",
+      "updated_at": "2026-05-27T09:15:00Z",
+      "description": "MACD + MA20 rule-based strategy. Benchmark for ML models."
+    }
+  ],
+  "metadata": {
+    "total_models": 4,
+    "active_models": 4,
+    "last_updated": "2026-05-29T12:00:00Z",
+    "platform_version": "1.0.0",
+    "data_source": "leaderboard.json"
+  }
+}

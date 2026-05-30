@@ -55,6 +55,7 @@ class ExperimentConfig:
     hypothesis: str = ""
     validation: dict | None = None
     strict_audit: bool = True
+    metadata: dict | None = None
 
     @classmethod
     def from_yaml(cls, path: str | Path) -> ExperimentConfig:
@@ -113,6 +114,10 @@ class ExperimentConfig:
         if validation_cfg is not None and not isinstance(validation_cfg, dict):
             raise ValueError("validation must be a dict or null")
 
+        metadata_cfg = raw.get("metadata")
+        if metadata_cfg is not None and not isinstance(metadata_cfg, dict):
+            raise ValueError("metadata must be a dict or null")
+
         return cls(
             name=raw["name"],
             strategy=raw["strategy"],
@@ -128,6 +133,7 @@ class ExperimentConfig:
             hypothesis=raw.get("hypothesis", ""),
             validation=validation_cfg,
             strict_audit=raw.get("strict_audit", True),
+            metadata=metadata_cfg or {},
         )
 
 
@@ -475,6 +481,8 @@ def run_experiment(
             },
         },
     }
+    if cfg.metadata:
+        summary["metadata"] = cfg.metadata
     summary_path.write_text(json.dumps(summary, indent=2, default=str), encoding="utf-8")
     print(f"[{cfg.name}] wrote outputs to {out}")
 

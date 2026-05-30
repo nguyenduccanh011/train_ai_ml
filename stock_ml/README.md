@@ -24,6 +24,58 @@ pip install -r requirements-dev.txt   # ruff, mypy, pytest (dev only)
 
 **Yêu cầu:** Python 3.11+
 
+## REST API Server (Model Management & Lifecycle)
+
+Stock ML Platform includes a production REST API for model management, leaderboard, and cache operations.
+
+### Start API Server
+```bash
+# Development mode (auto-reload)
+python -m uvicorn stock_ml.api.main:app --reload --port 8000
+
+# Or production mode
+uvicorn stock_ml.api.main:app --host 0.0.0.0 --port 8000
+```
+
+### API Documentation
+- **Swagger UI**: http://localhost:8000/api/docs
+- **ReDoc**: http://localhost:8000/api/redoc
+- **API Reference**: `docs/API.md` (all endpoints documented)
+
+### Key Endpoints
+
+**Leaderboard & Models:**
+- `GET /api/v1/leaderboard` — Get all model runs ranked by composite score
+- `GET /api/v1/models` — List available models
+
+**Model Lifecycle (Pin/Unpin/Retire):**
+- `GET /api/v1/runs` — List all runs
+- `PATCH /api/v1/runs/{run_id}/state` — Change state (trained → pinned → retired)
+- `DELETE /api/v1/runs/{run_id}` — Delete model entirely
+
+**Cache Management:**
+- `GET /api/v1/cache/stats` — Cache disk usage and orphan stats
+- `POST /api/v1/gc/sweep` — Run garbage collection (quarantine orphans)
+- `POST /api/v1/cache/purge-trash` — Purge old trash batches
+
+**Bulk Operations:**
+- `POST /api/v1/runs/bulk-state` — Batch pin/retire/train models
+- `DELETE /api/v1/runs/bulk` — Delete all runs in a state
+
+See `docs/API.md` for complete endpoint documentation with request/response examples.
+
+### Dashboard & Leaderboard UI
+The API serves a web-based dashboard with:
+- **Candlestick chart** with signal overlays from pinned models
+- **Leaderboard table** with ranking, filtering, pin/unpin buttons
+- **Cache management panel** for cleanup and GC operations
+
+**Access Dashboard:**
+- Direct: http://localhost:9001 (development)
+- Via Nginx: http://localhost (production/containerized)
+
+---
+
 ## Cấu trúc dự án
 
 ```

@@ -1,0 +1,19 @@
+# Stock ML Platform - Dashboard (Visualization UI)
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Copy dashboard files
+COPY stock_ml/dashboard/ .
+
+# Install dependencies
+RUN npm install --legacy-peer-deps --no-save
+
+# Install http-server to run the dashboard (serves HTML files without SPA redirects)
+RUN npm install -g http-server
+
+# Expose port 3000 for dashboard
+EXPOSE 3000
+
+# Start the dashboard with http-server
+CMD ["http-server", "-p", "3000", "-c-1"]

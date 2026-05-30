@@ -39,6 +39,7 @@ def run_dir_to_row(run_dir: str | Path, *, bundle: str | None = None) -> Leaderb
     metrics_cache = _read_json(run_path / "metrics.json")
     lifecycle = _read_json(run_path / "lifecycle.json")
     resolved_config = _read_yaml(run_path / "config.resolved.yaml")
+    summary = _read_json(next(run_path.glob("summary_*.json"), Path()) if run_path.is_dir() else Path())
     warnings: list[str] = []
 
     trades_path = run_path / "trades.csv"
@@ -187,8 +188,20 @@ def run_dir_to_row(run_dir: str | Path, *, bundle: str | None = None) -> Leaderb
             currency,
             schema,
         ),
+        experiment_group=str(_metadata_field(summary, "experiment_group", "ungrouped")),
+        variant_type=_metadata_field(summary, "variant_type", None),
+        parent_run_id=_metadata_field(summary, "parent_run_id", None),
+        metadata_notes=_metadata_field(summary, "notes", None),
         warnings=warnings,
     )
+
+
+def _metadata_field(summary: dict[str, Any], key: str, default: Any = None) -> Any:
+    """Extract metadata field from summary dict."""
+    if not summary:
+        return default
+    metadata = summary.get("metadata", {})
+    return metadata.get(key, default)
 
 
 def _read_json(path: Path) -> dict[str, Any]:

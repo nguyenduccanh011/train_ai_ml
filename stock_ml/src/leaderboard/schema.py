@@ -128,6 +128,12 @@ class LeaderboardRow(BaseModel):
     same_timeframe_as_baseline: bool | None = None
     same_market_family_as_baseline: bool | None = None
 
+    # Experiment metadata (for research iteration tracking)
+    experiment_group: str = "ungrouped"
+    variant_type: str | None = None
+    parent_run_id: str | None = None
+    metadata_notes: str | None = None
+
     # Diagnostics
     warnings: list[str] = Field(default_factory=list)
 

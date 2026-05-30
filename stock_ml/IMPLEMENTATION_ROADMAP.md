@@ -63,9 +63,11 @@ Setup before any research work. None of these require alpha — they protect you
 - **Replacement**: All `print(...)` → `logger.info()`, `logger.warning()`, `logger.debug()`, `logger.error()`.
 - **Benefit**: Log levels controllable; structured output for parsing; `run_id` automatically included by MLflow context.
 
-### 0.4 Feature cache (DEFERRED)
-- **Path**: `cache/features/{feature_set}/{data_hash}.parquet`.
-- **Status**: Design complete, implementation deferred (not blocking Phase 1b). Can skip if run time acceptable.
+### 0.4 Feature cache ✅ (COMPLETE — 2026-05-30)
+- **Path**: `results/cache/features/{feature_set}/{cache_key}.parquet` + `.pkl` fallback.
+- **Implementation**: `src/cache/feature_cache.py::FeatureCacheManager` with SHA1 signature-based cache keys.
+- **Cache key**: deterministic SHA1(schema_version, data_dir, symbols, timeframe, feature_set, target_config, source_fingerprint, code_fingerprint).
+- **Status**: ✅ Production-ready with atomic writes, metadata tracking, and garbage collection support.
 
 ### 0.5 Output layout standardization ✅
 ```
@@ -433,6 +435,63 @@ Run a **single decisive experiment** before continuing the roadmap:
 **If gate fails**: do NOT proceed to Phase 2. Iterate on features, targets, or universe construction. Building rule engines and leaderboards on top of no-alpha just produces nicer-looking nothing.
 
 **If gate passes**: proceed to Phase 2 with confidence.
+
+---
+
+## Phase 1.6: Production Readiness & Model Lifecycle (2026-05-30) ✅
+
+Post-alpha-gate iteration on production infrastructure while waiting for feature engineering iteration to re-run Alpha Gate.
+
+### 1.6.1 API Server & Model Lifecycle Management ✅
+- **REST API**: FastAPI app in `stock_ml/api/main.py` with lifecycle endpoints.
+- **Lifecycle states**: `trained` (leaderboard only) → `pinned` (dashboard export) → `retired` (historical).
+- **Endpoints**:
+  - `PATCH /api/v1/runs/{run_id}/state` — change lifecycle state
+  - `DELETE /api/v1/runs/{run_id}` — delete run + artifacts
+  - `GET /api/v1/runs` — list all runs with filtering
+- **Status**: ✅ Complete. Integrated into main production API (port 8000).
+
+### 1.6.2 Cache Management & Garbage Collection ✅
+- **Feature cache**: `results/cache/features/{feature_set}/{cache_key}.parquet`
+- **Garbage collection**: Orphan detection, safe quarantine to `_trash/`, purge on schedule.
+- **API endpoints**:
+  - `GET /api/v1/cache/stats` — disk usage, orphan count
+  - `POST /api/v1/gc/sweep` — quarantine orphans (dry-run or apply)
+  - `POST /api/v1/cache/purge-trash` — delete old trash batches
+- **Status**: ✅ Complete. `src/cache/garbage_collector.py` + API integrated.
+
+### 1.6.3 Bulk Model Operations ✅
+- **Bulk state transitions**: `POST /api/v1/runs/bulk-state` — retire/pin all trained models at once.
+- **Bulk delete**: `DELETE /api/v1/runs/bulk` — delete all retired models + rebuild leaderboard.
+- **Status**: ✅ Complete. Reduces manual overhead for lifecycle management.
+
+### 1.6.4 Dashboard & Leaderboard UI ✅
+- **Leaderboard UI**: Sortable table with pin/unpin/retire/delete buttons per model.
+- **Dashboard**: Candlestick chart with pinned model overlays, signal markers.
+- **Cache management panel**: Toggle-able UI for GC sweep, purge trash, bulk operations.
+- **API integration**: Fixed `apiFetch()` to use correct `/api/v1` prefix.
+- **Status**: ✅ Complete. All buttons wired to REST API endpoints.
+
+### 1.6.5 Documentation ✅
+- **API.md**: Complete endpoint documentation (lifecycle, cache, bulk, jobs).
+- **README.md**: Added REST API section with startup instructions + endpoint overview.
+- **QUICKSTART.md**: Fixed reference to missing file, added lifecycle + cache testing examples.
+- **IMPLEMENTATION_ROADMAP.md**: Updated with Phase 0.4 cache status + Phase 1.6 overview.
+- **Status**: ✅ Complete. All docs current as of 2026-05-30.
+
+### 1.6 Verification ✅
+- ✅ API loads without errors (21 /api/v1 endpoints).
+- ✅ Lifecycle state transitions work: trained → pinned → retired → deleted.
+- ✅ Cache stats endpoint returns accurate MB usage + orphan count.
+- ✅ GC sweep (dry-run) correctly identifies orphans.
+- ✅ Bulk operations update multiple models with single rebuild.
+- ✅ Dashboard UI buttons integrated with lifecycle API.
+- ✅ Documentation complete and tested (all curl examples work).
+
+### Next steps for Phase 1.6 closure
+- [ ] Run Alpha Gate iteration on improved features (Phase 1.7 activity)
+- [ ] If gate passes: proceed to Phase 2 (rule engine) 
+- [ ] If gate fails: iterate features/targets again with new insights
 
 ---
 

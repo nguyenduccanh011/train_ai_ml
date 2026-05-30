@@ -1,0 +1,12 @@
+{
+  "subset_type": "latest_top_liquidity",
+  "top_n": 200,
+  "ranking_metric": "rolling_avg_traded_value",
+  "row_metric_formula": "traded_value = close * volume",
+  "lookback_sessions": 60,
+  "membership_generation": "At each month-end, rank symbols by trailing rolling average traded value. The ranking becomes effective on the first day of the next month.",
+  "always_included_symbols": [
+    "VNINDEX"
+  ],
+  "latest_subset_usage": "Files under top_200_liquidity contain the latest effective top-N subset plus always-included benchmark symbols for portability. For leakage-safe model training, filter symbols by top200_membership_monthly for each training month."
+}

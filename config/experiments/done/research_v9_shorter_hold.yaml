@@ -1,0 +1,52 @@
+﻿name: research_v9_shorter_hold
+hypothesis: |
+  Test shorter hold period (10 bars vs 20 bars).
+  Rationale: Maybe 20 bars is too long, holds through reversals.
+  Shorter hold = capture quick wins, avoid drawdowns, more frequent trading.
+  Downside: miss big moves, higher costs from more trades.
+strategy: entry_exit_ensemble
+market: vn_stock
+seed: 42
+
+components:
+  features: leading_v2
+  target:
+    type: forward_return_regression
+    horizon: 5
+
+  entry_model:
+    type: lightgbm
+    params:
+      n_estimators: 300
+      learning_rate: 0.05
+      num_leaves: 31
+
+  exit_model:
+    type: lightgbm
+    enabled: false
+
+split:
+  type: purged_kfold
+  n_splits: 6
+  embargo_days: 10
+  label_horizon: 5
+
+engine:
+  max_hold_bars: 10
+  min_hold_bars: 1
+  hard_stop_pct: -0.08
+  costs:
+    commission: 0.0025
+    tax: 0.001
+    slippage: 0.0015
+
+signal_threshold: 0.005
+
+validation:
+  n_seeds: 20
+  bootstrap_iterations: 1000
+  compute_dsr: true
+  compute_pbo: true
+
+strict_audit: true
+

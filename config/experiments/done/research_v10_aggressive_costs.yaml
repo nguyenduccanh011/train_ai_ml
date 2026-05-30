@@ -1,0 +1,52 @@
+﻿name: research_v10_aggressive_costs
+hypothesis: |
+  Test with more realistic (aggressive) costs.
+  Rationale: Alpha Gate used pessimistic costs but maybe still underestimated.
+  Real market: slippage higher, taxes more complex, commissions sticky.
+  More aggressive costs = if model passes, it's more likely to work in reality.
+strategy: entry_exit_ensemble
+market: vn_stock
+seed: 42
+
+components:
+  features: leading_v2
+  target:
+    type: forward_return_regression
+    horizon: 5
+
+  entry_model:
+    type: lightgbm
+    params:
+      n_estimators: 300
+      learning_rate: 0.05
+      num_leaves: 31
+
+  exit_model:
+    type: lightgbm
+    enabled: false
+
+split:
+  type: purged_kfold
+  n_splits: 6
+  embargo_days: 10
+  label_horizon: 5
+
+engine:
+  max_hold_bars: 20
+  min_hold_bars: 1
+  hard_stop_pct: -0.08
+  costs:
+    commission: 0.005
+    tax: 0.002
+    slippage: 0.003
+
+signal_threshold: 0.005
+
+validation:
+  n_seeds: 20
+  bootstrap_iterations: 1000
+  compute_dsr: true
+  compute_pbo: true
+
+strict_audit: true
+

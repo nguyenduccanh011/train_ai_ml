@@ -1,0 +1,27 @@
+{
+  "dataset_version": 1,
+  "generated_at_utc": "2026-04-21T01:17:12.104720+00:00",
+  "start_date": "2015-01-01",
+  "end_date": null,
+  "timeframe": "1D",
+  "format": "csv",
+  "output_root": "/home/duccanh/signal-provider/portable_data/vn_stock_ai_dataset",
+  "symbol_count": 1583,
+  "row_count": 3554428,
+  "top_n": 200,
+  "liquidity_lookback_sessions": 60,
+  "exchanges": [
+    "HOSE",
+    "HNX",
+    "UPCOM"
+  ],
+  "benchmark_symbols": [
+    "VNINDEX"
+  ],
+  "latest_top_selection_effective_month": "2026-05-01T00:00:00+00:00",
+  "latest_top_selection_symbol_count": 200,
+  "subdirectories": {
+    "all_symbols": "Full history for every symbol in the selected timeframe",
+    "top_200_liquidity": "Latest point-in-time top liquidity subset plus monthly membership metadata"
+  }
+}

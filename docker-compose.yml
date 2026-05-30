@@ -1,0 +1,103 @@
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: stock-ml-postgres
+    environment:
+      POSTGRES_DB: stockml
+      POSTGRES_USER: stockml
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-stockml_dev}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infrastructure/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "5432:5432"
+    networks:
+      - stock-ml-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U stockml -d stockml"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  api:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.api
+    container_name: stock-ml-api
+    ports:
+      - "8000:8000"
+    environment:
+      - LOG_LEVEL=INFO
+      - DEBUG=False
+      - API_PORT=8000
+      - DATABASE_URL=postgresql+asyncpg://stockml:${POSTGRES_PASSWORD:-stockml_dev}@postgres:5432/stockml
+      - DB_ENABLED=false
+      # DB_ENABLED=false: Use file-based leaderboard (leaderboard.json)
+      # To enable DB: set to true and seed models from leaderboard.json
+    volumes:
+      - ./data:/app/data
+      - ./results:/app/results
+      - ./logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    networks:
+      - stock-ml-network
+    restart: unless-stopped
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/Dockerfile.dashboard
+    container_name: stock-ml-dashboard
+    ports:
+      - "9001:3000"
+    volumes:
+      - ./stock_ml/dashboard:/app
+      - ./results:/app/results:ro
+    depends_on:
+      - api
+    networks:
+      - stock-ml-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/leaderboard.html"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+  nginx:
+    image: nginx:alpine
+    container_name: stock-ml-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./infrastructure/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - api
+      - dashboard
+    networks:
+      - stock-ml-network
+    restart: unless-stopped
+
+networks:
+  stock-ml-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  data:
+  results:
+  logs:

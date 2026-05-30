@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Server Test</title>
+  <style>
+    body { font-family: Arial; margin: 20px; background: #f0f0f0; }
+    .test { padding: 10px; margin: 10px 0; background: white; border: 1px solid #ccc; }
+    .pass { color: green; font-weight: bold; }
+    .fail { color: red; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h1>Server Test</h1>
+
+  <div class="test">
+    <p><strong>Server Status:</strong> <span class="pass">✓ Running</span></p>
+    <p>If you see this, server is working!</p>
+  </div>
+
+  <div class="test">
+    <p><strong>Testing JS Files:</strong></p>
+    <ul id="testResults"></ul>
+  </div>
+
+  <script>
+    const files = [
+      './js/nav.js',
+      './js/state.js',
+      './js/chart.js',
+      './js/ui.js',
+      './js/app.js'
+    ];
+
+    const results = document.getElementById('testResults');
+
+    files.forEach(file => {
+      const li = document.createElement('li');
+
+      fetch(file, { method: 'HEAD' })
+        .then(r => {
+          if (r.ok) {
+            li.innerHTML = `<span class="pass">✓</span> ${file}`;
+          } else {
+            li.innerHTML = `<span class="fail">✗</span> ${file} (${r.status})`;
+          }
+        })
+        .catch(e => {
+          li.innerHTML = `<span class="fail">✗</span> ${file} (${e.message})`;
+        });
+
+      results.appendChild(li);
+    });
+
+    // Test data access
+    const dataTest = document.createElement('div');
+    dataTest.className = 'test';
+
+    fetch('./data')
+      .then(r => {
+        if (r.ok) {
+          dataTest.innerHTML = '<p><strong>Data Folder:</strong> <span class="pass">✓ Found</span></p>';
+        } else {
+          dataTest.innerHTML = '<p><strong>Data Folder:</strong> <span class="fail">✗ Not found (expected)</span></p>';
+        }
+        document.body.appendChild(dataTest);
+      })
+      .catch(() => {
+        dataTest.innerHTML = '<p><strong>Data Folder:</strong> <span class="fail">✗ Cannot access</span></p>';
+        document.body.appendChild(dataTest);
+      });
+  </script>
+</body>
+</html>

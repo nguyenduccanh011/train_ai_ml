@@ -2,7 +2,7 @@
 
 Hệ thống ML giao dịch chuyên nghiệp (Two Sigma / AHL / de Prado methodology), hiện đang refactor thành modular research platform với proper validation, reproducibility, và alpha gate.
 
-## Status (2026-05-29)
+## Status (2026-05-31)
 
 **Phase 0 + Phase 1b.1-3**: ✅ Complete
 - ✅ Foundation infrastructure (MLflow tracking, reproducibility, logging, output layout)
@@ -11,7 +11,16 @@ Hệ thống ML giao dịch chuyên nghiệp (Two Sigma / AHL / de Prado methodo
 - ✅ Vectorized signal generation (threshold-based, O(n))
 - ✅ Score column for confidence-weighted sizing (Phase 3)
 
-**In Progress**: Phase 1b.4-11 (unify paths, YAML schema, strict audit, others)
+**Phase 3-6: Signal Priority & Hybrid Model Support**: ✅ Complete (2026-05-31)
+- ✅ Configurable signal priority: `entry_first | exit_first | independent`
+- ✅ Configurable exit priority: custom order for hard_stop, signal, max_hold
+- ✅ **RuleModel implementation** (AND/OR condition chains, no training needed)
+- ✅ **Hybrid model dispatch**: ml_only | rule_only | hybrid_ml_entry_rule_exit | hybrid_rule_entry_ml_exit
+- ✅ Regime & size model extension slots (stub implementations ready)
+- ✅ YAML schema v2 with backward compatibility
+- ✅ Database schema updates for model_mode, signal_mode, regime/size tracking
+
+**In Progress**: Feature/universe iteration for Alpha Gate re-run
 
 See `IMPLEMENTATION_ROADMAP.md` for detailed progress and next phases.
 
@@ -76,6 +85,115 @@ python stock_ml/scripts/cache_gc.py --apply-policy
 - ✅ **Production-Ready**: Full auditability, reproducibility, traceability
 
 **See RESEARCH_WORKFLOW.md for detailed 8-step guide.**
+
+---
+
+## Model Modes: Rule, ML, and Hybrid
+
+Stock ML supports multiple model configurations to compare pure rule-based, pure ML, and hybrid approaches on a level playing field.
+
+### Four Model Modes
+
+| Mode | Entry Model | Exit Model | Use Case |
+|------|-------------|-----------|----------|
+| `ml_only` | LightGBM / XGBoost / RF regression | (none; exit from return sign) | Traditional ML (single prediction model) |
+| `rule_only` | Rule conditions (AND/OR chain) | Rule conditions (AND/OR chain) | Transparent rule-based (MACD, moving average, etc.) |
+| `hybrid_ml_entry_rule_exit` | ML classifier (LightGBM, etc.) | Rule conditions | ML for entry, hard rules for protective exit |
+| `hybrid_rule_entry_ml_exit` | Rule conditions | ML classifier | Rule-confirmed entries, ML for ranking exits |
+
+### Configuration Example
+
+```yaml
+# Pure ML: forward-return regression
+name: ml_only_v1
+components:
+  entry_model:
+    type: lightgbm
+    params: {n_estimators: 300, learning_rate: 0.05}
+  signal_mode: entry_first
+model_mode: ml_only  # auto-detected; optional
+target:
+  type: forward_return_regression
+  horizon: 5
+
+---
+
+# Pure Rules: MACD + MA20 conditions
+name: rule_only_v1
+components:
+  entry_model:
+    type: rule
+    params:
+      conditions:
+        - {feature: macd_line, op: ">", value: 0}
+        - {feature: sma_20_ratio, op: ">", value: 0}
+      logic: AND
+      score_feature: macd_line
+  exit_model:
+    type: rule
+    enabled: true
+    params:
+      conditions:
+        - {feature: macd_line, op: "<", value: 0}
+        - {feature: sma_20_ratio, op: "<", value: 0}
+      logic: AND
+      score_feature: macd_line
+model_mode: rule_only  # auto-detected; optional
+target:
+  type: trend_regime
+
+---
+
+# Hybrid: ML entry + protective rule exit
+name: hybrid_ml_entry_rule_exit_v1
+components:
+  entry_model:
+    type: lightgbm
+    params: {n_estimators: 300}
+  exit_model:
+    type: rule
+    enabled: true
+    params:
+      conditions:
+        - {feature: macd_line, op: "<", value: 0}
+      logic: AND
+      score_feature: macd_line
+model_mode: hybrid_ml_entry_rule_exit  # auto-detected; optional
+target:
+  type: trend_regime
+```
+
+### Signal Priority
+
+Configurable signal evaluation order:
+
+```yaml
+components:
+  signal_mode: entry_first  # entry_first | exit_first | independent
+```
+
+- `entry_first` (default): check entry signal first; exit only if no entry
+- `exit_first`: check exit first (defensive); entry if exit fails
+- `independent`: both can fire; exit takes precedence
+
+### Exit Priority
+
+Configurable exit condition order in backtest:
+
+```yaml
+engine:
+  exit_priority: ["hard_stop", "signal", "max_hold"]  # custom order
+```
+
+Rules are checked in this order; first match triggers exit. Default: `hard_stop` > `signal` > `max_hold` (original behavior).
+
+### Auto-Detection
+
+YAML config without explicit `model_mode` auto-detects based on model types:
+- Entry type = `rule` → `rule_only` mode
+- Entry type = ML ∧ no exit → `ml_only` mode
+- Entry type = ML ∧ exit type = `rule` → `hybrid_ml_entry_rule_exit` mode
+- Entry type = `rule` ∧ exit type = ML → `hybrid_rule_entry_ml_exit` mode
 
 ---
 

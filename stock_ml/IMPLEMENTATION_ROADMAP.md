@@ -1,6 +1,6 @@
 # Implementation Roadmap: Research-Grade Trading Model System
 
-**Status**: Phase 0 ✅ · Phase 1a ✅ · Phase 1b ✅ · Phase 1.5 ✅ · Alpha Gate Prep ✅ · Alpha Gate Run (FAILED 2026-05-29) · **Phase 0-2: Production Research Pipeline ✅ (2026-05-31)** · Next: Feature/universe iteration
+**Status**: Phase 0 ✅ · Phase 1a ✅ · Phase 1b ✅ · Phase 1.5 ✅ · Alpha Gate Prep ✅ · Alpha Gate Run (FAILED 2026-05-29) · **Phase 0-2: Production Research Pipeline ✅ (2026-05-31)** · **Phase 3-6: Signal Priority & Hybrid Model Support ✅ (2026-05-31)** · Next: Feature/universe iteration
 **Last Updated**: 2026-05-31 (Production Research Pipeline complete: auto-rebuild, variant generator, metadata tracking, leaderboard UI, retention policy)
 **Owner**: Architecture Team
 
@@ -895,6 +895,194 @@ Original roadmap estimated 7 weeks but skipped Phase 1.5 (methodology) and alpha
 **Phase 3**: vol-targeting sizing improves Sharpe vs fixed sizing on the same signals.
 
 **Phase 4**: 3-month live shadow PnL stays within backtest 95% CI; drift dashboard alerts work on synthetic regime change.
+
+---
+
+## Phase 2.5-3: Signal Priority & Hybrid Model Support (✅ COMPLETE 2026-05-31)
+
+Post-Alpha-Gate investigation on rule vs ML performance (2026-05-30) revealed that simple rule-based signals outperform ML regression on weak feature sets. This triggered an architectural refactor to support rule-only, ML-only, and hybrid (rule + ML) models within a unified pipeline.
+
+### 3.1 Signal Priority Configurability ✅
+
+**Problem**: Entry-before-exit priority was hardcoded in `signals/core.py`. Needed to test different signal evaluation orders for research.
+
+**Solution**: Added configurable `signal_mode` field.
+
+```yaml
+components:
+  signal_mode: entry_first  # entry_first | exit_first | independent
+```
+
+**Implementation**:
+- `signal_mode` in `ExperimentConfig` (default: `"entry_first"`)
+- `generate_signals_from_predictions()` refactored to support 3 modes:
+  - `entry_first` (original): check entry signal first, exit if entry fails
+  - `exit_first`: check exit signal first (defensive), entry if exit fails
+  - `independent`: both entry and exit can fire (exit takes priority if both)
+- Classification signal loop updated to handle priority dispatch
+- **Files**: `src/signals/core.py`, `src/pipeline/experiment.py`
+
+### 3.2 Exit Priority Configurability ✅
+
+**Problem**: Exit conditions were hardcoded in order: `hard_stop` > `signal` > `max_hold`. This order is policy; should be configurable.
+
+**Solution**: Added `exit_priority` field to `EngineConfig`.
+
+```python
+@dataclass
+class EngineConfig:
+    exit_priority: list[str] = field(
+        default_factory=lambda: ["hard_stop", "signal", "max_hold"]
+    )
+```
+
+**Implementation**:
+- `_run_symbol()` refactored to iterate `cfg.exit_priority` instead of hardcoded if/elif chain
+- Each rule checked in configured order; first match triggers exit
+- Default preserves original behavior (backward compatible)
+- **Files**: `src/backtest/engine.py`
+
+### 3.3 RuleModel Implementation ✅
+
+**Problem**: Technical rules were a special case outside the model registry, preventing rule-based models from ranking on leaderboard alongside ML.
+
+**Solution**: Implemented full `RuleModel` class supporting AND/OR condition chains.
+
+**RuleModel Features**:
+- Condition format: `{feature, op, value}` where `op ∈ {>, >=, <, <=, ==, !=}`
+- Logic: AND or OR combination
+- Column binding: feature names mapped to column indices at predict time
+- `predict()`: vectorized evaluation of condition chain
+- `predict_proba()`: pseudo-probability from `score_feature` (e.g., MACD value)
+- `fit()`: no-op (rules are static, no training)
+
+**Example**:
+```yaml
+entry_model:
+  type: rule
+  params:
+    conditions:
+      - {feature: macd_line, op: ">", value: 0}
+      - {feature: sma_20_ratio, op: ">", value: 0}
+    logic: AND
+    score_feature: macd_line
+```
+
+**Implementation**:
+- `src/models/rules.py` — `RuleModel` dataclass
+- `src/models/registry.py` — added `RuleModel` to entry/exit registries
+- `train_fold()` injects `feature_cols` into rule params for column index mapping
+- **Files**: `src/models/rules.py`, `src/models/registry.py`, `src/pipeline/experiment.py`
+
+### 3.4 Hybrid Model Dispatch ✅
+
+**Problem**: Supporting rule-only, ML-only, and mixed entry/exit models required refactoring `train_fold()` with dispatch logic per model type combination.
+
+**Solution**: Added `model_mode` field to dispatch training flow.
+
+```python
+model_mode: str  # ml_only | rule_only | hybrid_ml_entry_rule_exit | hybrid_rule_entry_ml_exit
+```
+
+**Dispatch Logic**:
+- `ml_only`: regression path (single model predicts return)
+- `rule_only`: classification path (rule entry/exit)
+- `hybrid_ml_entry_rule_exit`: ML entry, rule exit (protective)
+- `hybrid_rule_entry_ml_exit`: rule entry, ML exit (rank high-confidence entries)
+
+**Auto-detection** in `from_yaml()`: infers `model_mode` from entry/exit model types if not explicitly set.
+
+**Example Configs** (all tested):
+- `test_ml_only.yaml` — forward-return regression (single model)
+- `test_rule_only.yaml` — rule entry + rule exit
+- `test_hybrid_ml_entry_rule_exit.yaml` — LightGBM entry, rule exit
+- `test_hybrid_rule_entry_ml_exit.yaml` — rule entry, LightGBM exit
+
+**Implementation**:
+- `model_mode` field in `ExperimentConfig` (default: `"ml_only"`)
+- `train_fold()` refactored with dispatch per `model_mode`
+- Auto-detect logic in `from_yaml()` infers from model types
+- **Files**: `src/pipeline/experiment.py`
+
+### 3.5 Regime & Size Model Extension Slots ✅
+
+**Problem**: Need to reserve architecture for market regime filtering and position sizing without forcing implementation now.
+
+**Solution**: Added extension slots with stub implementations.
+
+**Regime Model**:
+- `regime_model` field in `ExperimentConfig` (disabled by default)
+- `NaiveRegimeModel`: returns neutral regime (1) for all samples; template for real implementation
+- Future: train regime classifier on market conditions, filter/weight signals by regime
+
+**Size Model**:
+- `size_model` field in `ExperimentConfig` (disabled by default)
+- Placeholder for capital allocation layer (Kelly criterion, volatility targeting, etc.)
+- Future: allocate position size based on predicted return magnitude + regime
+
+**Implementation**:
+- `src/models/regime.py` — `NaiveRegimeModel` stub
+- `regime_model`, `size_model` fields in `ExperimentConfig`
+- Configuration via YAML (disabled by default, no runtime impact)
+- **Files**: `src/models/regime.py`, `src/pipeline/experiment.py`
+
+### 3.6 YAML Schema v2 Standardization ✅
+
+**Problem**: Tracking which YAML version a config is (v1 vs v2 with new fields) enables safe schema evolution.
+
+**Solution**: Added `schema_version` field.
+
+```yaml
+schema_version: 2  # optional; defaults to 2 for backward compat
+```
+
+**Implementation**:
+- `yaml_schema_version` in `ExperimentConfig` (default: 2)
+- Loaded from YAML `schema_version` field (optional)
+- v1 YAMLs work with defaults; v1 configs auto-upgrade to v2 handling
+- Future: migration shim to auto-convert v1 → v2 if v1 is encountered
+
+### 3.7 Database Schema Updates ✅
+
+**Added columns** to `leaderboard_runs` table:
+- `model_mode: str` — tracks which mode generated this run
+- `signal_mode: str` — entry priority strategy used
+- `regime_model_type: str` — regime model type (if enabled)
+- `size_model_type: str` — size model type (if enabled)
+
+**Added columns** to `experiment_configs` table:
+- `signal_mode: str` — from config
+- `model_mode: str` — from config
+- `regime_model: dict` — full regime config (JSON)
+- `size_model: dict` — full size config (JSON)
+- `yaml_schema_version: int` — schema version
+
+**Migration**: `0002_add_model_mode_signal_mode.py` — ALTER TABLE with nullable columns + server defaults
+
+### 3.8 Testing & Verification ✅
+
+All 4 model modes tested via:
+- Config load (YAML parsing + auto-detect)
+- train_fold() dispatch logic
+- Signal generation with priority modes
+- Database schema compatibility
+
+**Test coverage**:
+- ✅ model_mode auto-detect (ml_only, rule_only, hybrid modes)
+- ✅ signal_mode (entry_first, exit_first, independent)
+- ✅ exit_priority (custom order)
+- ✅ RuleModel condition evaluation
+- ✅ Regime & size slots (no-op by default)
+- ✅ YAML schema v2 (backward compatible)
+
+### Implications for Phase 2 Re-run
+
+With hybrid model support, the technical rules baseline (2026-05-30) can now:
+1. **Backtest within unified pipeline**: rule_only mode ranks on leaderboard alongside ML
+2. **Mix with ML**: hybrid modes allow rule entry + ML exit (or vice versa)
+3. **Iterate systematically**: research can A/B-test entry/exit rule combinations without code changes
+
+Recommendation: Re-run technical rules baseline using `test_rule_v1.yaml` (now integrated into registry), then explore hybrid combinations (rule entry + ML exit for ranking).
 
 ---
 

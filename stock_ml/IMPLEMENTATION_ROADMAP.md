@@ -1,7 +1,7 @@
 # Implementation Roadmap: Research-Grade Trading Model System
 
-**Status**: Phase 0 ✅ · Phase 1a ✅ · Phase 1b ✅ · Phase 1.5 ✅ · Alpha Gate Prep ✅ · **Alpha Gate Run ✅ (FAILED 2026-05-29)** · Next: Feature/universe iteration
-**Last Updated**: 2026-05-29 (Alpha Gate Run: 486 symbols, 20 seeds, -118.68% PnL → failed gate criteria)
+**Status**: Phase 0 ✅ · Phase 1a ✅ · Phase 1b ✅ · Phase 1.5 ✅ · Alpha Gate Prep ✅ · Alpha Gate Run (FAILED 2026-05-29) · **Phase 0-2: Production Research Pipeline ✅ (2026-05-31)** · Next: Feature/universe iteration
+**Last Updated**: 2026-05-31 (Production Research Pipeline complete: auto-rebuild, variant generator, metadata tracking, leaderboard UI, retention policy)
 **Owner**: Architecture Team
 
 ---
@@ -98,6 +98,77 @@ results/
 - ✅ Output structure enforced (run_id directory with all files).
 - ✅ Data fingerprint stable across runs.
 - ✅ Seed propagation working (all RNG systems seeded).
+
+---
+
+## Phase 0-2: Production Research Pipeline (✅ COMPLETE 2026-05-31)
+
+Optimized research iteration cycle supporting variant generation, auto-rebuild, experiment tracking, and automated cleanup. Enables professional-grade model research with full auditability and reproducibility.
+
+### 0-2.0 Colab Cleanup
+- ✅ Removed Colab-specific logic (`is_colab()`, `DRIVE_BASE` branching)
+- ✅ Refactored `env.py` to local-only (simplified path resolution)
+- ✅ Deleted temp docs (ANALYSIS_PLAN, FINAL_STATUS, PHASE_2_PLAN, etc.)
+- ✅ Cleaned memory files (project_colab_mcp, feedback_colab_mcp_tools)
+
+### 0-2.1 Auto-Rebuild Leaderboard
+- ✅ Added `--rebuild-leaderboard` flag to `run_experiments.py` (default: True)
+- ✅ After batch completes → auto-calls `rebuild_leaderboard()` if n_ok > 0
+- ✅ Updates `results/leaderboard/leaderboard.json` + splits
+- **Usage**: `python scripts/run_experiments.py --parallel 4` (auto-rebuilds)
+
+### 0-2.2 Experiment Metadata Tracking
+- ✅ Extended `ExperimentConfig` with `metadata: dict | None` (YAML section)
+- ✅ Metadata written to `summary_{name}.json` during run
+- ✅ Extended `LeaderboardRow` schema with 4 new fields:
+  - `experiment_group`: string (e.g., "2026-06-01_param_tuning")
+  - `variant_type`: string (params|features|target|model)
+  - `parent_run_id`: string (baseline model being optimized from)
+  - `metadata_notes`: string (researcher notes)
+- ✅ Loader auto-extracts metadata from `summary.json` → populates row fields
+- **Usage**: Add `metadata:` section to YAML config with experiment tracking
+
+### 0-2.3 Variant Generator CLI
+- ✅ New tool: `scripts/generate_variants.py`
+- ✅ Input: base YAML + param grid (JSON) → Output: N YAML files (cartesian product)
+- ✅ Auto-injects metadata (experiment_group, variant_type, parent_run_id, notes)
+- ✅ Supports `--dry-run` preview before generating
+- **Usage**: `python scripts/generate_variants.py --base X --group Y --variant-type Z --grid '{...}'`
+
+### 0-2.4 Leaderboard UI Enhancements
+- ✅ Experiment group dropdown filter (NEW)
+- ✅ Group + Type columns in leaderboard table (NEW)
+- ✅ Metadata notes as tooltip on Group column
+- ✅ Auto-populate filter options from leaderboard rows
+- **Benefit**: Filter variants by experiment group, see lineage at a glance
+
+### 0-2.5 Retention Policy Configuration
+- ✅ Added `retention:` config section to `base.yaml`:
+  - `keep_pinned: true` — never delete pinned models
+  - `keep_per_group: 5` — keep top-N trained per experiment_group
+  - `auto_retire_after_days: 30` — retire trained runs older than N days
+  - `trash_purge_after_days: 14` — purge trash older than N days
+- ✅ Added `--apply-policy` flag to `cache_gc.py`
+- ✅ Reads config and reports policy impact (dry-run)
+- **Usage**: `python scripts/cache_gc.py --apply-policy` (shows what would happen)
+
+### 0-2.6 End-to-End Research Iteration Cycle
+1. **ANALYZE** → Dashboard + top1_model.html (pinned models)
+2. **HYPOTHESIZE** → Choose variant dimension (params, features, target, model)
+3. **GENERATE** → `generate_variants.py --grid {...}` → N YAMLs
+4. **RUN BATCH** → `run_experiments.py --parallel 4` (auto-rebuilds)
+5. **EVALUATE** → leaderboard.html + filter by experiment_group
+6. **PIN WINNERS** → Click "Pin" button on top models
+7. **DEEP ANALYZE** → dashboard.html (pinned models overlaid)
+8. **CLEANUP** → `cache_gc.py --apply-policy` (auto-retire old, purge trash)
+
+### Production-Ready Features
+- ✅ Reproducible: Every config committed to git
+- ✅ Traceable: Metadata tracks variant lineage (parent_run_id)
+- ✅ Comparable: Fairness flagging when configs differ
+- ✅ Scalable: Parallel runs + auto-cleanup
+- ✅ Visual: Leaderboard filters + dashboard overlays
+- ✅ Auditable: All runs logged with timestamps + metadata
 
 ---
 

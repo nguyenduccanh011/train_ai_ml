@@ -24,6 +24,61 @@ pip install -r requirements-dev.txt   # ruff, mypy, pytest (dev only)
 
 **Yêu cầu:** Python 3.11+
 
+## 🔬 Research Workflow — Iterative Model Optimization
+
+### Phase 0-2 (NEW): Production Research Pipeline
+
+Stock ML now supports end-to-end research iteration: analyze → hypothesize → generate variants → run batch → compare → pin → repeat.
+
+**Workflow Overview:**
+
+```bash
+# 1. GENERATE variants from a base config
+python stock_ml/scripts/generate_variants.py \
+  --base stock_ml/config/experiments/done/alpha_gate_v1.yaml \
+  --group "2026-06-03_param_tuning" \
+  --variant-type params \
+  --grid '{"entry_model.params.learning_rate": [0.01, 0.05, 0.1], "entry_model.params.max_depth": [6, 8, 10]}'
+# → 9 YAML files with metadata, auto-saved to config/experiments/pending/
+
+# 2. RUN batch (auto-rebuilds leaderboard when done)
+python stock_ml/scripts/run_experiments.py \
+  --pending config/experiments/pending \
+  --done stock_ml/config/experiments/done \
+  --failed stock_ml/config/experiments/failed \
+  --data-root portable_data/vn_stock_ai_dataset_cleaned \
+  --symbols VNM,SOS,FPT \
+  --out results \
+  --parallel 4
+# → Runs 9 backtests in parallel, auto-rebuilds leaderboard.json
+
+# 3. COMPARE on leaderboard.html
+#    → Filter by "experiment_group" dropdown (NEW)
+#    → See Group + Type columns (NEW)
+#    → Sort by composite_score
+#    → Click "Pin" to move to dashboard
+
+# 4. DEEP ANALYZE on dashboard.html
+#    → Pinned models overlaid
+#    → Signal timing, trade distribution, drawdown curves
+
+# 5. CLEANUP (optional)
+python stock_ml/scripts/cache_gc.py --apply-policy
+# → Auto-retires old trained runs, purges stale cache per retention config
+```
+
+**Key Features:**
+- ✅ **Variant Generator**: Cartesian grid → N YAML files with metadata
+- ✅ **Auto-Rebuild**: Leaderboard updates automatically after batch
+- ✅ **Experiment Tracking**: Every run has experiment_group, variant_type, parent_run_id
+- ✅ **UI Filtering**: Filter leaderboard by experiment group, see lineage
+- ✅ **Retention Policy**: Auto-cleanup configured in base.yaml
+- ✅ **Production-Ready**: Full auditability, reproducibility, traceability
+
+**See RESEARCH_WORKFLOW.md for detailed 8-step guide.**
+
+---
+
 ## REST API Server (Model Management & Lifecycle)
 
 Stock ML Platform includes a production REST API for model management, leaderboard, and cache operations.

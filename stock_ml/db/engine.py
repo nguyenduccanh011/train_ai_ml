@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 def _get_settings():
     from stock_ml.api.config import settings
+
     return settings
 
 

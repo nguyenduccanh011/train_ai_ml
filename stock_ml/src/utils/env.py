@@ -46,5 +46,3 @@ def get_experiment_dir(experiment_key: str) -> str:
         Absolute path: results/{experiment_key}/
     """
     return os.path.join(get_results_dir(), experiment_key)
-
-

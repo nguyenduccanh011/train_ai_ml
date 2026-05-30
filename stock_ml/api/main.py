@@ -1,18 +1,19 @@
 """FastAPI Main Application - Production-ready configuration"""
-from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
-from fastapi.staticfiles import StaticFiles
+
 import logging
 import logging.config
 from pathlib import Path
-import yaml
 
+import yaml
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+
+from . import routes
 from .config import settings
 from .middleware.error_handler import error_exception_handler
 from .middleware.logging_middleware import LoggingMiddleware
 from .middleware.rate_limiter import limiter, rate_limit_error_handler
-from . import routes
 
 # Configure logging from YAML or fallback to basicConfig
 logging_config_path = Path(__file__).parent.parent.parent / "config" / "logging.yaml"
@@ -24,10 +25,7 @@ else:
     logging.basicConfig(
         level=settings.log_level,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-        handlers=[
-            logging.FileHandler(settings.log_file),
-            logging.StreamHandler()
-        ]
+        handlers=[logging.FileHandler(settings.log_file), logging.StreamHandler()],
     )
 
 logger = logging.getLogger(__name__)
@@ -38,7 +36,7 @@ app = FastAPI(
     version=settings.app_version,
     docs_url="/api/docs",
     redoc_url="/api/redoc",
-    openapi_url="/api/openapi.json"
+    openapi_url="/api/openapi.json",
 )
 
 # Attach limiter to app for use in routes
@@ -72,7 +70,7 @@ app.include_router(routes.experiments.router, tags=["experiments"])
 dashboard_dir = Path(__file__).parent.parent / "dashboard" / "build"
 if dashboard_dir.exists():
     app.mount("/", StaticFiles(directory=str(dashboard_dir), html=True), name="dashboard")
-    logger.info(f"Dashboard mounted at /")
+    logger.info("Dashboard mounted at /")
 
 
 @app.on_event("startup")
@@ -86,7 +84,9 @@ async def startup_event():
     if settings.db_enabled:
         try:
             from sqlalchemy import text
+
             from stock_ml.db.engine import async_engine
+
             async with async_engine.connect() as conn:
                 await conn.execute(text("SELECT 1"))
             logger.info("Database connection verified")
@@ -104,8 +104,5 @@ if __name__ == "__main__":
     import uvicorn
 
     uvicorn.run(
-        app,
-        host=settings.api_host,
-        port=settings.api_port,
-        log_level=settings.log_level.lower()
+        app, host=settings.api_host, port=settings.api_port, log_level=settings.log_level.lower()
     )

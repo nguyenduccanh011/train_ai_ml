@@ -1,10 +1,11 @@
 """API Request/Response Schemas"""
+
 from .models import (
+    HealthCheckResponse,
+    LeaderboardResponse,
     ModelInfo,
     ModelListResponse,
     TrainModelRequest,
-    LeaderboardResponse,
-    HealthCheckResponse
 )
 
 __all__ = [
@@ -12,5 +13,5 @@ __all__ = [
     "ModelListResponse",
     "TrainModelRequest",
     "LeaderboardResponse",
-    "HealthCheckResponse"
+    "HealthCheckResponse",
 ]

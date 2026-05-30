@@ -6,6 +6,7 @@ Usage:
 
 Idempotent: safe to re-run (uses ON CONFLICT DO UPDATE).
 """
+
 from __future__ import annotations
 
 import argparse
@@ -22,8 +23,8 @@ BATCH_SIZE = 100
 
 
 async def migrate(results_dir: Path) -> None:
-    from stock_ml.db.engine import AsyncSessionLocal, async_engine
     from stock_ml.db.base import Base
+    from stock_ml.db.engine import AsyncSessionLocal, async_engine
     from stock_ml.db.repositories.run_repo import LeaderboardRunRepository
     from stock_ml.db.repositories.trade_repo import RunTradeRepository
     from stock_ml.src.leaderboard.schema import LeaderboardRow
@@ -56,7 +57,7 @@ async def migrate(results_dir: Path) -> None:
     trade_total = 0
 
     for i in range(0, len(rows_data), BATCH_SIZE):
-        batch = rows_data[i:i + BATCH_SIZE]
+        batch = rows_data[i : i + BATCH_SIZE]
         async with AsyncSessionLocal() as session:
             run_repo = LeaderboardRunRepository(session)
             trade_repo = RunTradeRepository(session)
@@ -72,21 +73,24 @@ async def migrate(results_dir: Path) -> None:
                         trades_path = results_dir / trades_rel
                         if trades_path.exists():
                             import csv
+
                             trade_rows = []
                             with open(trades_path, newline="", encoding="utf-8") as f:
                                 reader = csv.DictReader(f)
                                 for t in reader:
-                                    trade_rows.append({
-                                        "symbol": t.get("symbol", ""),
-                                        "entry_date": t.get("entry_date") or None,
-                                        "entry_price": _float(t.get("entry_price")),
-                                        "exit_date": t.get("exit_date") or None,
-                                        "exit_price": _float(t.get("exit_price")),
-                                        "holding_days": _float(t.get("holding_days")),
-                                        "pnl_pct": float(t.get("pnl_pct", 0)),
-                                        "exit_reason": t.get("exit_reason") or None,
-                                        "entry_signal_date": t.get("entry_signal_date") or None,
-                                    })
+                                    trade_rows.append(
+                                        {
+                                            "symbol": t.get("symbol", ""),
+                                            "entry_date": t.get("entry_date") or None,
+                                            "entry_price": _float(t.get("entry_price")),
+                                            "exit_date": t.get("exit_date") or None,
+                                            "exit_price": _float(t.get("exit_price")),
+                                            "holding_days": _float(t.get("holding_days")),
+                                            "pnl_pct": float(t.get("pnl_pct", 0)),
+                                            "exit_reason": t.get("exit_reason") or None,
+                                            "entry_signal_date": t.get("entry_signal_date") or None,
+                                        }
+                                    )
                             n = await trade_repo.bulk_insert(row.run_id, trade_rows)
                             trade_total += n
 

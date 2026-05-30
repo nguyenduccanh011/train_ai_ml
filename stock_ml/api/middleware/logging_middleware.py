@@ -1,7 +1,9 @@
 """Request/response logging middleware"""
+
 import logging
 import time
-from typing import Callable
+from collections.abc import Callable
+
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
@@ -33,8 +35,8 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                     "path": path,
                     "status_code": response.status_code,
                     "duration_ms": round(duration * 1000, 2),
-                    "client_ip": client_ip
-                }
+                    "client_ip": client_ip,
+                },
             )
 
             return response
@@ -49,7 +51,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                     "path": path,
                     "duration_ms": round(duration * 1000, 2),
                     "client_ip": client_ip,
-                    "error": str(e)
-                }
+                    "error": str(e),
+                },
             )
             raise

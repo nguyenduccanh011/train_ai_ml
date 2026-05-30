@@ -2,16 +2,12 @@
 
 from __future__ import annotations
 
-import json
 import subprocess
-import sys
 import threading
-import uuid
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, Body, HTTPException
+from fastapi import APIRouter, HTTPException
 
 router = APIRouter(prefix="/api/v1", tags=["jobs"])
 
@@ -70,10 +66,7 @@ def get_job_status(job_id: str) -> dict:
 def list_jobs(status: str = "") -> list[dict]:
     """List all jobs, optionally filtered by status."""
     with _JOBS_LOCK:
-        jobs = [
-            {k: v for k, v in job.items() if not k.startswith("_")}
-            for job in _JOBS.values()
-        ]
+        jobs = [{k: v for k, v in job.items() if not k.startswith("_")} for job in _JOBS.values()]
     if status:
         jobs = [j for j in jobs if j.get("status") == status]
     return jobs

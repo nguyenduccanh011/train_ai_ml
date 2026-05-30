@@ -1,11 +1,14 @@
 """Model management endpoints"""
-from fastapi import APIRouter, HTTPException, Request
-from ..config import settings
-from ..schemas.models import ModelListResponse, TrainModelRequest
-from ..middleware.rate_limiter import get_limiter
+
 import json
 import logging
 from pathlib import Path
+
+from fastapi import APIRouter, HTTPException, Request
+
+from ..config import settings
+from ..middleware.rate_limiter import get_limiter
+from ..schemas.models import ModelListResponse, TrainModelRequest
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["models"])
@@ -33,7 +36,7 @@ def load_manifest() -> dict:
         return {"models": []}
 
     try:
-        with open(manifest_path, 'r') as f:
+        with open(manifest_path) as f:
             return json.load(f)
     except json.JSONDecodeError as e:
         logger.error(f"Failed to parse manifest.json: {e}")
@@ -52,10 +55,7 @@ async def list_models(request: Request) -> dict:
         models = manifest.get("models", [])
         logger.info(f"list_models: loaded {len(models)} models from manifest")
 
-        return {
-            "total": len(models),
-            "models": models
-        }
+        return {"total": len(models), "models": models}
     except HTTPException:
         raise
     except Exception as e:
@@ -68,7 +68,7 @@ async def list_models(request: Request) -> dict:
 async def get_model(request: Request, model_id: str) -> dict:
     """Get specific model details with input validation"""
     # Validate model_id format
-    if not all(c.isalnum() or c == '_' for c in model_id):
+    if not all(c.isalnum() or c == "_" for c in model_id):
         raise HTTPException(status_code=400, detail="Invalid model ID format")
 
     try:
@@ -96,5 +96,5 @@ async def train_model(request: Request, config: TrainModelRequest) -> dict:
         "status": "queued",
         "job_id": "job_123",
         "model_name": config.model_name,
-        "message": "Training started in background"
+        "message": "Training started in background",
     }

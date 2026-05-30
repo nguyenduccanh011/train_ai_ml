@@ -1,9 +1,10 @@
 """Adapters between LeaderboardRow (Pydantic) and LeaderboardRunModel (SQLAlchemy)."""
+
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
+from stock_ml.db.models.run import LeaderboardRunModel
 from stock_ml.src.leaderboard.schema import (
     Artifacts,
     CacheKeys,
@@ -12,14 +13,13 @@ from stock_ml.src.leaderboard.schema import (
     LifecycleState,
     TargetConfig,
 )
-from stock_ml.db.models.run import LeaderboardRunModel
 
 
-def row_to_model(row: LeaderboardRow, *, parent_run_id: Optional[str] = None) -> LeaderboardRunModel:
+def row_to_model(row: LeaderboardRow, *, parent_run_id: str | None = None) -> LeaderboardRunModel:
     """Convert LeaderboardRow Pydantic → LeaderboardRunModel ORM."""
     generated = datetime.fromisoformat(row.generated_at)
     if generated.tzinfo is None:
-        generated = generated.replace(tzinfo=timezone.utc)
+        generated = generated.replace(tzinfo=UTC)
 
     return LeaderboardRunModel(
         run_id=row.run_id,

@@ -111,6 +111,7 @@ let filters = {
   entry_model: '',
   year: '',
   state: '',
+  experiment_group: '',
 };
 
 const els = {
@@ -123,6 +124,7 @@ const els = {
   fairMode: document.getElementById('fairMode'),
   searchInput: document.getElementById('searchInput'),
   showSuperseded: document.getElementById('showSuperseded'),
+  experimentGroupFilter: document.getElementById('experimentGroupFilter'),
   bundleFilter: document.getElementById('bundleFilter'),
   strategyFilter: document.getElementById('strategyFilter'),
   featureFilter: document.getElementById('featureFilter'),
@@ -255,6 +257,7 @@ function applyFilters() {
     if (filters.entry_model && row.entry_model !== filters.entry_model) return false;
     if (filters.year && windowKey(row) !== filters.year) return false;
     if (filters.state && (row.state || 'trained') !== filters.state) return false;
+    if (filters.experiment_group && (row.experiment_group || 'ungrouped') !== filters.experiment_group) return false;
     return rowMatchesSearch(row);
   });
 
@@ -353,12 +356,16 @@ function renderTable() {
     const avgPnlClass = pnlClass(row.avg_pnl);
     const pnlPctClass = pnlClass(row.pnl_pct);
     const mddClass = Number(row.max_drawdown) > 0 ? 'negative' : 'muted';
+    const groupBadge = row.experiment_group ? `<span class="badge">${escapeHtml(row.experiment_group)}</span>` : '<span class="muted">—</span>';
+    const typeBadge = row.variant_type ? `<span class="badge">${escapeHtml(row.variant_type)}</span>` : '<span class="muted">—</span>';
     return `
       <tr class="${rowClass(row)}">
         <td>${rankBadge(row.rank)}</td>
         <td>${row.state || 'trained'}</td>
         <td class="num positive">${formatNum(row.composite_score, 2)}</td>
         <td class="run-name" title="${escapeHtml(row.name)}">${escapeHtml(row.name)}</td>
+        <td title="${escapeHtml(row.metadata_notes || '')}">${groupBadge}</td>
+        <td>${typeBadge}</td>
         <td>${escapeHtml(row.market || '—')}</td>
         <td>${escapeHtml(row.timeframe || '—')}</td>
         <td>${escapeHtml(row.model_type || '—')}</td>
@@ -476,6 +483,7 @@ function fillSelect(select, values, placeholder) {
 
 function renderFilters() {
   const unique = (field) => [...new Set(allRows.map((row) => row[field]).filter(Boolean))].sort();
+  fillSelect(els.experimentGroupFilter, unique('experiment_group'), 'All groups');
   fillSelect(els.bundleFilter, unique('bundle'), 'All bundles');
   fillSelect(els.strategyFilter, unique('strategy'), 'All strategies');
   fillSelect(els.featureFilter, unique('feature_set'), 'All feature sets');
@@ -484,9 +492,10 @@ function renderFilters() {
 }
 
 function resetFilters() {
-  filters = { bundle: '', strategy: '', feature_set: '', entry_model: '', year: '', state: '' };
+  filters = { bundle: '', strategy: '', feature_set: '', entry_model: '', year: '', state: '', experiment_group: '' };
   searchQuery = '';
   els.searchInput.value = '';
+  els.experimentGroupFilter.value = '';
   els.bundleFilter.value = '';
   els.strategyFilter.value = '';
   els.featureFilter.value = '';
@@ -595,6 +604,7 @@ function bindEvents() {
   });
 
   [
+    [els.experimentGroupFilter, 'experiment_group'],
     [els.bundleFilter, 'bundle'],
     [els.strategyFilter, 'strategy'],
     [els.featureFilter, 'feature_set'],

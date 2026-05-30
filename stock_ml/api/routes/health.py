@@ -1,8 +1,11 @@
 """Health check endpoints"""
-from fastapi import APIRouter, HTTPException
-from datetime import datetime
-import psutil
+
 import logging
+from datetime import datetime
+
+import psutil
+from fastapi import APIRouter, HTTPException
+
 from ..config import settings
 from ..schemas.models import HealthCheckResponse
 
@@ -16,7 +19,7 @@ async def health_check() -> dict:
     return {
         "status": "healthy",
         "timestamp": datetime.utcnow().isoformat(),
-        "version": settings.app_version
+        "version": settings.app_version,
     }
 
 
@@ -32,7 +35,7 @@ async def detailed_health() -> dict:
             "memory_percent": psutil.virtual_memory().percent,
             "disk_percent": psutil.disk_usage("/").percent,
             "data_dir_exists": settings.data_dir.exists(),
-            "results_dir_exists": settings.results_dir.exists()
+            "results_dir_exists": settings.results_dir.exists(),
         }
     except Exception as e:
         logger.error(f"Error in detailed health check: {e}")

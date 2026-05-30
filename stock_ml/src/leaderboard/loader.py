@@ -39,7 +39,9 @@ def run_dir_to_row(run_dir: str | Path, *, bundle: str | None = None) -> Leaderb
     metrics_cache = _read_json(run_path / "metrics.json")
     lifecycle = _read_json(run_path / "lifecycle.json")
     resolved_config = _read_yaml(run_path / "config.resolved.yaml")
-    summary = _read_json(next(run_path.glob("summary_*.json"), Path()) if run_path.is_dir() else Path())
+    summary = _read_json(
+        next(run_path.glob("summary_*.json"), Path()) if run_path.is_dir() else Path()
+    )
     warnings: list[str] = []
 
     trades_path = run_path / "trades.csv"

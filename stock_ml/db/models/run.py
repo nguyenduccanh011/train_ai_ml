@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
 
 from sqlalchemy import (
     JSON,
@@ -71,8 +70,8 @@ class LeaderboardRunModel(Base, TimestampMixin):
     # --- Target (flat) ---
     target_type: Mapped[str] = mapped_column(String(64), default="unknown", nullable=False)
     target_forward_window: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    target_gain_threshold: Mapped[Optional[float]] = mapped_column(Double, nullable=True)
-    target_loss_threshold: Mapped[Optional[float]] = mapped_column(Double, nullable=True)
+    target_gain_threshold: Mapped[float | None] = mapped_column(Double, nullable=True)
+    target_loss_threshold: Mapped[float | None] = mapped_column(Double, nullable=True)
 
     # --- Trading metrics ---
     trades: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -102,18 +101,18 @@ class LeaderboardRunModel(Base, TimestampMixin):
     cost_slippage: Mapped[str] = mapped_column(Text, default="unknown", nullable=False)
     fairness_group_key: Mapped[str] = mapped_column(String(40), nullable=False)
     is_baseline: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    same_symbols_as_baseline: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
-    same_window_as_baseline: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
-    same_cost_as_baseline: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
-    same_target_as_baseline: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
-    same_timeframe_as_baseline: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
-    same_market_family_as_baseline: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
+    same_symbols_as_baseline: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    same_window_as_baseline: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    same_cost_as_baseline: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    same_target_as_baseline: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    same_timeframe_as_baseline: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    same_market_family_as_baseline: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
 
     # --- Diagnostics ---
     warnings: Mapped[list] = mapped_column(JSON, default=list, nullable=False)
 
     # --- Versioning ---
-    parent_run_id: Mapped[Optional[str]] = mapped_column(
+    parent_run_id: Mapped[str | None] = mapped_column(
         String(512),
         ForeignKey("leaderboard_runs.run_id", ondelete="SET NULL"),
         nullable=True,
@@ -121,13 +120,17 @@ class LeaderboardRunModel(Base, TimestampMixin):
     )
 
     # --- Relationships ---
-    trades_list: Mapped[list["RunTradeModel"]] = relationship(
+    trades_list: Mapped[list[RunTradeModel]] = relationship(
         "RunTradeModel", back_populates="run", cascade="all, delete-orphan", lazy="noload"
     )
-    experiment_config: Mapped[Optional["ExperimentConfigModel"]] = relationship(
-        "ExperimentConfigModel", back_populates="run", uselist=False, cascade="all, delete-orphan", lazy="noload"
+    experiment_config: Mapped[ExperimentConfigModel | None] = relationship(
+        "ExperimentConfigModel",
+        back_populates="run",
+        uselist=False,
+        cascade="all, delete-orphan",
+        lazy="noload",
     )
-    parent: Mapped[Optional["LeaderboardRunModel"]] = relationship(
+    parent: Mapped[LeaderboardRunModel | None] = relationship(
         "LeaderboardRunModel",
         remote_side="LeaderboardRunModel.run_id",
         foreign_keys=[parent_run_id],

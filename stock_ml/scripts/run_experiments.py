@@ -24,9 +24,9 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT / "stock_ml"))
 
 from src.data.loader import DataLoader
+from src.leaderboard.aggregator import rebuild_leaderboard
 from src.pipeline.experiment import ExperimentConfig, run_experiment
 from src.pipeline.multi_seed import run_experiment_multi_seed
-from src.leaderboard.aggregator import rebuild_leaderboard
 
 
 def try_acquire_lock(yaml_path: Path, timeout_sec: float = 5.0) -> bool:

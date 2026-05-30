@@ -10,7 +10,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..",
 
 # Import models so Alembic sees them
 from stock_ml.db.base import Base
-from stock_ml.db.models import run, trade, config  # noqa: F401 — register models
+from stock_ml.db.models import config, run, trade  # noqa: F401 — register models
 
 alembic_config = context.config
 

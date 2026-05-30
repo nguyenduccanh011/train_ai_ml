@@ -1,9 +1,8 @@
 """FastAPI Configuration - Production-ready settings"""
-from pydantic_settings import BaseSettings
+
 from pathlib import Path
-import json
-import os
-from typing import List
+
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
@@ -28,11 +27,11 @@ class Settings(BaseSettings):
     log_file: Path = Path("./logs/app.log")
 
     # CORS - whitelist specific origins (FIX: not wildcard)
-    cors_origins: List[str] = [
+    cors_origins: list[str] = [
         "http://localhost:3000",
         "http://localhost:8000",
         "http://127.0.0.1:3000",
-        "http://127.0.0.1:8000"
+        "http://127.0.0.1:8000",
     ]
 
     # Rate limiting

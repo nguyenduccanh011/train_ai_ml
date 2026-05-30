@@ -1,6 +1,8 @@
 import time
 from functools import wraps
+
 from loguru import logger
+
 
 class MetricsCollector:
     def __init__(self):
@@ -20,7 +22,10 @@ class MetricsCollector:
                     duration = time.time() - start
                     logger.error(f"Endpoint {endpoint_name} failed after {duration:.2f}s: {e}")
                     raise
+
             return wrapper
+
         return decorator
+
 
 metrics = MetricsCollector()

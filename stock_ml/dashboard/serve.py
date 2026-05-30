@@ -11,7 +11,9 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
 def _parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Serve visualization pages with leaderboard access.")
+    parser = argparse.ArgumentParser(
+        description="Serve visualization pages with leaderboard access."
+    )
     parser.add_argument("--port", type=int, default=8080, help="HTTP port (default: 8080)")
     return parser.parse_args()
 

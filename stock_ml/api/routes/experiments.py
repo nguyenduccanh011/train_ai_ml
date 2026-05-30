@@ -2,12 +2,10 @@
 
 from __future__ import annotations
 
-import json
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
-from typing import Any
 
 from fastapi import APIRouter, Body, HTTPException
 
@@ -55,6 +53,7 @@ def submit_experiment(payload: dict = Body(...)) -> dict:
         config_path = Path(f.name)
         # Write config as YAML (simple dict dump)
         import yaml
+
         yaml.dump(config, f, default_flow_style=False, sort_keys=False)
 
     # Queue job via run_experiments.py
@@ -62,14 +61,17 @@ def submit_experiment(payload: dict = Body(...)) -> dict:
     log_path = stock_ml_root / "logs" / f"{job_id}.log"
     log_path.parent.mkdir(parents=True, exist_ok=True)
 
-    register_job(job_id, {
-        "job_id": job_id,
-        "type": "experiment",
-        "name": name,
-        "config_path": str(config_path),
-        "status": "queued",
-        "log": str(log_path),
-    })
+    register_job(
+        job_id,
+        {
+            "job_id": job_id,
+            "type": "experiment",
+            "name": name,
+            "config_path": str(config_path),
+            "status": "queued",
+            "log": str(log_path),
+        },
+    )
 
     # Start subprocess
     try:
@@ -77,11 +79,16 @@ def submit_experiment(payload: dict = Body(...)) -> dict:
         proc = subprocess.Popen(
             [
                 sys.executable,
-                "-m", "stock_ml.scripts.run_experiments",
-                "--pending", str(stock_ml_root / "stock_ml" / "config" / "experiments"),
-                "--done", str(stock_ml_root / "results" / "experiments_done"),
-                "--failed", str(stock_ml_root / "results" / "experiments_failed"),
-                "--parallel", "1",
+                "-m",
+                "stock_ml.scripts.run_experiments",
+                "--pending",
+                str(stock_ml_root / "stock_ml" / "config" / "experiments"),
+                "--done",
+                str(stock_ml_root / "results" / "experiments_done"),
+                "--failed",
+                str(stock_ml_root / "results" / "experiments_failed"),
+                "--parallel",
+                "1",
             ],
             cwd=str(stock_ml_root.parent),
             stdout=log_fh,
@@ -108,4 +115,6 @@ def list_pending_experiments() -> list[str]:
     pending_dir = stock_ml_root / "stock_ml" / "config" / "experiments"
     if not pending_dir.exists():
         return []
-    return [f.stem for f in pending_dir.glob("*.yaml") if f.is_file() and not f.name.startswith(".")]
+    return [
+        f.stem for f in pending_dir.glob("*.yaml") if f.is_file() and not f.name.startswith(".")
+    ]

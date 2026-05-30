@@ -74,3 +74,10 @@ output:
   experiments_dir: "experiments"
   save_predictions: true
   save_model: true
+
+retention:
+  # Cleanup policy for old models on disk (Phase 4)
+  keep_pinned: true              # Never delete pinned models
+  keep_per_group: 5              # Keep top-N trained per experiment_group
+  auto_retire_after_days: 30     # Retire trained runs older than N days
+  trash_purge_after_days: 14     # Delete trash dirs older than N days

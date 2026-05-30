@@ -310,6 +310,7 @@
         <button class="toggle-btn" id="fairMode" type="button">Fair</button>
       </div>
       <input id="searchInput" type="search" placeholder="Search run, bundle, model...">
+      <select id="experimentGroupFilter"><option value="">All groups</option></select>
       <select id="bundleFilter"><option value="">All bundles</option></select>
       <select id="strategyFilter"><option value="">All strategies</option></select>
       <select id="featureFilter"><option value="">All feature sets</option></select>
@@ -359,6 +360,8 @@
           <th data-sort="state">State</th>
           <th data-sort="composite_score" class="num">Score</th>
           <th data-sort="name">Model Name</th>
+          <th data-sort="experiment_group">Group</th>
+          <th data-sort="variant_type">Type</th>
           <th data-sort="market">Market</th>
           <th data-sort="timeframe">Timeframe</th>
           <th data-sort="model_type">Type</th>

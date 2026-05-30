@@ -20,12 +20,14 @@ router = APIRouter(prefix="/api/v1", tags=["runs"])
 def _results_dir() -> Path:
     """Get results directory from environment."""
     from stock_ml.src.utils.env import get_results_dir
+
     return Path(get_results_dir())
 
 
 def _viz_dir() -> Path:
     """Get visualization directory."""
     import os
+
     stock_ml_root = Path(__file__).resolve().parents[2]
     return Path(os.environ.get("STOCK_VIZ_DIR") or (stock_ml_root / "visualization"))
 
@@ -122,6 +124,7 @@ def _set_state(run_dir: Path, state: str) -> None:
 def _rebuild_leaderboard() -> None:
     """Rebuild leaderboard.json from experiments dir."""
     from stock_ml.src.leaderboard.aggregator import rebuild_leaderboard
+
     out = _results_dir() / "leaderboard"
     rebuild_leaderboard(str(_results_dir() / "experiments"), str(out))
 

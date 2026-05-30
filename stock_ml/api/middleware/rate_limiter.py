@@ -1,10 +1,12 @@
 """Rate limiting middleware using slowapi"""
-from slowapi import Limiter
-from slowapi.util import get_remote_address
-from slowapi.errors import RateLimitExceeded
+
+import logging
+
 from fastapi import Request
 from fastapi.responses import JSONResponse
-import logging
+from slowapi import Limiter
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 
 logger = logging.getLogger(__name__)
 
@@ -16,8 +18,7 @@ def rate_limit_error_handler(request: Request, exc: RateLimitExceeded):
     """Handle rate limit exceeded errors"""
     logger.warning(f"Rate limit exceeded: {request.client.host} - {request.url.path}")
     return JSONResponse(
-        status_code=429,
-        content={"detail": "Too many requests. Please try again later."}
+        status_code=429, content={"detail": "Too many requests. Please try again later."}
     )
 
 

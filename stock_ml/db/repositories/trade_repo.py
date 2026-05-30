@@ -1,4 +1,5 @@
 """Repository for run_trades table."""
+
 from __future__ import annotations
 
 from typing import Any

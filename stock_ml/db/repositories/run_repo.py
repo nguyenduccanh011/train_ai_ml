@@ -1,7 +1,6 @@
 """Repository for leaderboard_runs table."""
-from __future__ import annotations
 
-from typing import Optional
+from __future__ import annotations
 
 from sqlalchemy import select, update
 from sqlalchemy.dialects.postgresql import insert
@@ -16,7 +15,7 @@ class LeaderboardRunRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def get_by_run_id(self, run_id: str) -> Optional[LeaderboardRunModel]:
+    async def get_by_run_id(self, run_id: str) -> LeaderboardRunModel | None:
         result = await self._session.execute(
             select(LeaderboardRunModel).where(LeaderboardRunModel.run_id == run_id)
         )
@@ -70,12 +69,12 @@ class LeaderboardRunRepository:
     async def list_ranked(
         self,
         *,
-        market: Optional[str] = None,
-        strategy: Optional[str] = None,
-        feature_set: Optional[str] = None,
-        entry_model: Optional[str] = None,
-        state: Optional[str] = None,
-        timeframe: Optional[str] = None,
+        market: str | None = None,
+        strategy: str | None = None,
+        feature_set: str | None = None,
+        entry_model: str | None = None,
+        state: str | None = None,
+        timeframe: str | None = None,
         superseded: bool = False,
         limit: int = 100,
         offset: int = 0,
@@ -108,7 +107,7 @@ class LeaderboardRunRepository:
     async def get_version_chain(self, run_id: str) -> list[LeaderboardRunModel]:
         """Walk parent_run_id chain (newest first)."""
         chain: list[LeaderboardRunModel] = []
-        current_id: Optional[str] = run_id
+        current_id: str | None = run_id
         seen: set[str] = set()
         while current_id and current_id not in seen:
             seen.add(current_id)

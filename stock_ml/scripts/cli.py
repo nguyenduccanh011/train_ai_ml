@@ -1121,7 +1121,7 @@ def cmd_score_models(args: argparse.Namespace) -> int:
 
 
 def cmd_benchmark(args: argparse.Namespace) -> int:
-    from scripts.benchmark import _print_table, run_benchmark
+    from scripts.audit.benchmark import _print_table, run_benchmark
 
     versions = [v.strip() for v in args.versions.split(",") if v.strip()]
     try:

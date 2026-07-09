@@ -33,6 +33,8 @@ ignore = [
 "stock_ml/model_manager.py" = ["B007"]
 # Utility scripts: ignore E402 (imports after sys.path), B007 (unused loop vars), F841 (unused vars)
 "stock_ml/scripts/**" = ["E402", "B007", "F841", "E722"]
+# Archived experiment/ops/audit scripts (terse legacy style): style rules relaxed, logic rules kept
+"stock_ml/scripts/*/*.py" = ["E401", "E701", "E702", "E731", "F401", "F541", "I001", "N802", "SIM105", "SIM115", "UP015", "UP031"]
 "stock_ml/stock_ml/scripts/**" = ["E402", "B007", "F841", "E722"]
 # train61_standalone: ignore style warnings for legacy backtest engine and feature code
 "stock_ml/train61_standalone/app/**" = ["E402", "I"]

@@ -14,7 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from scripts.evaluate_unseen_symbols_api import TOP1_CONFIG_PATH, summarize_trades  # noqa: E402
+from scripts.audit.evaluate_unseen_symbols_api import TOP1_CONFIG_PATH, summarize_trades  # noqa: E402
 from src.components.exit_models.registry import get_exit_model  # noqa: E402
 from src.components.models.registry import get_model  # noqa: E402
 from src.config_loader import load_config, resolve_data_dir  # noqa: E402

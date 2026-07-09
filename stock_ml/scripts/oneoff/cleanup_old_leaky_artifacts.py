@@ -29,7 +29,7 @@ from typing import Any
 import pandas as pd
 import yaml
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
 from src.leaderboard import rebuild_leaderboard

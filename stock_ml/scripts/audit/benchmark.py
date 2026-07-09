@@ -15,7 +15,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-REPO_ROOT = Path(__file__).resolve().parents[2]
+REPO_ROOT = Path(__file__).resolve().parents[3]
 GOLDEN_DIR = REPO_ROOT / "stock_ml" / "tests" / "regression" / "golden"
 
 BENCHMARK_CHAMPIONS = [

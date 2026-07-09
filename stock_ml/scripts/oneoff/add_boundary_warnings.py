@@ -7,7 +7,7 @@ import shutil
 from datetime import datetime
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[2]
 LB_DIR = ROOT / "results/leaderboard"
 LB_JSON = LB_DIR / "leaderboard.json"
 

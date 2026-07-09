@@ -12,7 +12,7 @@ from collections import defaultdict
 import numpy as np
 import pandas as pd
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 import src.safe_io  # noqa: F401 — fix UnicodeEncodeError on Windows console
 from src.data.loader import DataLoader

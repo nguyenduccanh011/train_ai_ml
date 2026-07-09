@@ -89,6 +89,8 @@ Bắt buộc kiểm tra:
 
 ## Support docs
 
+- `MODEL_DASHBOARD_MANAGEMENT_PLAN.md` - Plan quan ly model/dashboard bang DB + UI.
+
 - ✅ `FUSION_STRATEGY_INVENTORY.md` — Mapping từ flag cũ → fusion strategy mới.
 - ✅ `HOW_TO_ADD_FEATURE_BLOCK.md` — Guide thêm feature block.
 - ✅ `HOW_TO_ADD_FUSION_STRATEGY.md` — Guide thêm fusion strategy.
@@ -108,6 +110,6 @@ Bắt buộc kiểm tra:
 ## Liên kết tài liệu khác
 
 - `../README.md` — Project README chính.
-- `../FIRST_TRAINING_REPORT.md` — Báo cáo đầu tiên.
-- `../SMART_EXIT_PROPOSAL.md` — Đề xuất exit model đã được partial implement.
-- `../MODEL_EVALUATION_REPORT.md` — Đánh giá model.
+- `../reports/FIRST_TRAINING_REPORT.md` — Báo cáo đầu tiên.
+- `../reports/SMART_EXIT_PROPOSAL.md` — Đề xuất exit model đã được partial implement.
+- `../reports/MODEL_EVALUATION_REPORT.md` — Đánh giá model.

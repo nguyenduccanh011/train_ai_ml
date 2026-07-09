@@ -1,5 +1,7 @@
 # Train61 Standalone
 
+> **Frozen snapshot** — không sửa code ở đây và không import từ ngoài package này (xem `FROZEN.md`).
+
 Standalone app for serving signals with one pooled model trained on 61 symbols.
 This folder now contains its own `src/` runtime so it can run independently of `stock_ml/src`.
 Runtime is self-contained: only reads data/artifacts inside `train61_standalone/`.

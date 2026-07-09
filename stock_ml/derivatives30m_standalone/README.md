@@ -1,5 +1,7 @@
 # Derivatives 30M Standalone
 
+> **Snapshot độc lập** — không import từ ngoài package này; artifacts (cache/, *.log) không track trong git.
+
 Standalone tối thiểu để build và serve model top 1 phái sinh VN30 timeframe 30M.
 
 ## Nguồn top 1

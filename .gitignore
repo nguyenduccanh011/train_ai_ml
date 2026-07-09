@@ -38,11 +38,14 @@ Thumbs.db
 
 # Large generated results (CSV/JSON data)
 results/
-stock_ml/results/*.csv
-stock_ml/results/*.json
-stock_ml/results/*.png
-stock_ml/results/cache/
-stock_ml/results/experiments/
+!stock_ml/src/results/
+stock_ml/results/
+stock_ml/analysis/out/
+
+# Logs & temp
+*.log
+logs/
+_tmp_analysis/
 
 # CatBoost training artifacts
 catboost_info/
@@ -50,6 +53,7 @@ catboost_info/
 
 # Generated visualization exports
 stock_ml/visualization/data_*/
+stock_ml/visualization/data/
 
 # Temporary implementation notes
 stock_ml/docs/refactor/*PLAN*.md
@@ -63,3 +67,6 @@ stock_ml/train61_standalone/**/__pycache__/
 stock_ml/train61_standalone/results/
 stock_ml/train61_standalone/models/
 stock_ml/train61_standalone/cache/
+
+# derivatives30m_standalone artifacts (data/ giữ tracked: dataset nguồn)
+stock_ml/derivatives30m_standalone/cache/

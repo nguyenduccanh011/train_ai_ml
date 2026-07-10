@@ -1,0 +1,63 @@
+name: early_wave_ml_b_v2
+hypothesis: >
+  Tier B + selectivity gate: y hệt early_wave_ml_b_v1 (RF 3-lớp entry + LGBM exit
+  classifier, leading_ew) nhưng chỉ vào lệnh khi P(buy) >= 0.65 (entry_threshold dùng
+  làm ngưỡng xác suất). Sweep cho thấy PF tăng đơn điệu theo độ siết (0.89→1.36) =
+  edge thật tập trung ở đuôi high-conviction. Đây là analog model-side của entry
+  cascade v22 (lọc bớt lệnh kém edge). Trailing-stop đã test âm ở đây nên không bật.
+strategy: dual_ml_classification
+market: vn_stock
+seed: 42
+
+components:
+  features: leading_ew
+  target:
+    type: early_wave_v2
+    short_window: 5
+    long_window: 20
+    forward_window: 21
+    gain_threshold: 0.033125
+    loss_threshold: 0.0165625
+    classes: 3
+  entry_model:
+    type: random_forest
+    params:
+      n_estimators: 200
+      max_depth: 12
+      min_samples_leaf: 20
+      class_weight: balanced
+  exit_model:
+    type: lightgbm
+    enabled: true
+    params:
+      n_estimators: 300
+      max_depth: 6
+      learning_rate: 0.05
+      subsample: 0.8
+      colsample_bytree: 0.8
+    target:
+      type: early_wave_exit
+      forward_window: 21
+      loss_threshold: 0.03725
+
+split:
+  type: walk_forward_year
+  train_years: 4
+  test_years: 1
+  gap_days: 50
+  first_test_year: 2020
+  last_test_year: 2025
+
+engine:
+  max_hold_bars: 21
+  min_hold_bars: 1
+  hard_stop_pct: -0.08
+  signal_exit_enabled: true
+  costs:
+    commission: 0.0025
+    tax: 0.001
+    slippage: 0.0015
+
+entry_threshold: 0.65
+signal_threshold: 0.0
+strict_audit: true

@@ -1,0 +1,51 @@
+﻿name: research_v5_random_forest
+hypothesis: |
+  Test RandomForest model (simpler ensemble than GBM).
+  Rationale: Less prone to overfitting on noisy features.
+  If RandomForest works, suggests features are robust, not just learned noise.
+strategy: entry_exit_ensemble
+market: vn_stock
+seed: 42
+
+components:
+  features: leading_v2
+  target:
+    type: forward_return_regression
+    horizon: 5
+
+  entry_model:
+    type: random_forest
+    params:
+      n_estimators: 300
+      max_depth: 15
+      max_samples: 0.8
+
+  exit_model:
+    type: random_forest
+    enabled: false
+
+split:
+  type: purged_kfold
+  n_splits: 6
+  embargo_days: 10
+  label_horizon: 5
+
+engine:
+  max_hold_bars: 20
+  min_hold_bars: 1
+  hard_stop_pct: -0.08
+  costs:
+    commission: 0.0025
+    tax: 0.001
+    slippage: 0.0015
+
+signal_threshold: 0.005
+
+validation:
+  n_seeds: 20
+  bootstrap_iterations: 1000
+  compute_dsr: true
+  compute_pbo: true
+
+strict_audit: true
+

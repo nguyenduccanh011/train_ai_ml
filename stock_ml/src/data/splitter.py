@@ -1,138 +1,241 @@
-"""
-Walk-forward and time-based data splitting.
-Supports rolling window, expanding window, and simple train/test split.
+"""Year-based walk-forward splitter + Purged K-Fold splitter — strict no-leakage.
+
+YearSplitter definition for test year `Y` with `train_years=N`, `gap_days=G`:
+  - train = rows with date in [Y-N, Y) **trimmed at the end by `G` calendar days**
+  - test  = rows with date in [Y, Y+test_years)
+
+PurgedKFoldSplitter (Phase 1.5.1): de Prado's Purged K-Fold with embargo.
+  - Divides data into k folds by date
+  - Each fold: test = [k_start, k_end), train = all other folds except embargo
+  - embargo = boundary rows within embargo_days of train/test split
+  - Prevents label leakage from forward-return targets (e.g., 5-bar forward return
+    at train end would peek into test start without embargo)
+  - Reference: de Prado, *Advances in Financial ML*, Ch. 7.
 """
 
-from collections.abc import Generator
+from __future__ import annotations
+
+from collections.abc import Iterator
 from dataclasses import dataclass
-from typing import Any
 
 import pandas as pd
 
 
-@dataclass
+@dataclass(frozen=True)
 class SplitWindow:
-    """A single train/test split window."""
-
-    window_id: int
+    test_year: int
     train_start: pd.Timestamp
-    train_end: pd.Timestamp
+    train_end: pd.Timestamp  # exclusive
     test_start: pd.Timestamp
-    test_end: pd.Timestamp
-    label: str  # e.g. "train_2015-2018_test_2019"
+    test_end: pd.Timestamp  # exclusive
 
-    def __repr__(self):
-        return (
-            f"Window {self.window_id}: "
-            f"Train [{self.train_start.date()} → {self.train_end.date()}] "
-            f"Test [{self.test_start.date()} → {self.test_end.date()}]"
-        )
+    @property
+    def label(self) -> str:
+        return f"test_{self.test_year}"
 
 
-class WalkForwardSplitter:
-    """
-    Walk-forward splitter for time series data.
+@dataclass
+class YearSplitter:
+    train_years: int = 4
+    test_years: int = 1
+    gap_days: int = 25
+    first_test_year: int = 2020
+    last_test_year: int = 2025
+    # When set, the final test window is extended to this exclusive bound so the
+    # last fold's model also scores the post-window "tail" data (e.g. a partial
+    # year beyond last_test_year). Without it, tail bars carry no signal and any
+    # position still open at the window edge rides to end_of_data far in the
+    # future — a silent buy-and-hold that distorts results.
+    last_test_end: pd.Timestamp | None = None
 
-    Supports:
-    - rolling: fixed-size training window slides forward
-    - expanding: training window grows, always starts from the same date
-    """
+    def __post_init__(self) -> None:
+        if self.train_years < 1:
+            raise ValueError("train_years must be >= 1")
+        if self.test_years < 1:
+            raise ValueError("test_years must be >= 1")
+        if self.gap_days < 0:
+            raise ValueError("gap_days must be >= 0")
+        if self.first_test_year > self.last_test_year:
+            raise ValueError("first_test_year must be <= last_test_year")
 
-    def __init__(
-        self,
-        method: str = "walk_forward",
+    @classmethod
+    def from_data(
+        cls,
+        df: pd.DataFrame,
         train_years: int = 4,
         test_years: int = 1,
-        gap_days: int = 0,
-        first_test_year: int = 2019,
-        last_test_year: int = 2025,
-    ):
-        self.method = method
-        self.train_years = train_years
-        self.test_years = test_years
-        self.gap_days = gap_days
-        self.first_test_year = first_test_year
-        self.last_test_year = last_test_year
+        gap_days: int = 25,
+        date_col: str = "date",
+    ) -> YearSplitter:
+        """Auto-detect year range from DataFrame.
 
-    def get_windows(self) -> list[SplitWindow]:
-        """Generate all walk-forward windows."""
-        windows = []
-        window_id = 0
+        Phase 1b.7: Auto-detect first_test_year and last_test_year from data.
+        Ensures first_test_year has at least train_years of prior data.
 
-        for test_year in range(self.first_test_year, self.last_test_year + 1):
-            test_start = pd.Timestamp(f"{test_year}-01-01", tz="UTC")
-            test_end = pd.Timestamp(f"{test_year + self.test_years - 1}-12-31", tz="UTC")
+        Args:
+            df: DataFrame with date column
+            train_years: number of years to train on
+            test_years: number of years per test fold
+            gap_days: gap between train and test
+            date_col: name of date column
 
-            if self.method == "expanding":
-                # Always start from the earliest data
-                train_start = pd.Timestamp(
-                    f"{self.first_test_year - self.train_years}-01-01", tz="UTC"
-                )
-            else:
-                # Rolling: fixed window size
-                train_start = pd.Timestamp(f"{test_year - self.train_years}-01-01", tz="UTC")
+        Returns:
+            YearSplitter instance with auto-detected year range
 
-            train_end = test_start - pd.Timedelta(days=self.gap_days + 1)
+        Raises:
+            ValueError: if date column missing or insufficient data
+        """
+        if date_col not in df.columns:
+            raise ValueError(f"DataFrame missing '{date_col}' column")
 
-            label = f"train_{train_start.year}-{train_end.year}_test_{test_year}"
+        dates = pd.to_datetime(df[date_col])
+        min_year = dates.dt.year.min()
+        max_year = dates.dt.year.max()
 
-            windows.append(
+        first_test_year = min_year + train_years
+        last_test_year = max_year - test_years
+
+        if first_test_year > last_test_year:
+            raise ValueError(
+                f"Insufficient data for {train_years}-year training: "
+                f"year range {min_year}-{max_year} too short"
+            )
+
+        return cls(
+            train_years=train_years,
+            test_years=test_years,
+            gap_days=gap_days,
+            first_test_year=first_test_year,
+            last_test_year=last_test_year,
+        )
+
+    def windows(self) -> list[SplitWindow]:
+        out: list[SplitWindow] = []
+        years = list(range(self.first_test_year, self.last_test_year + 1, self.test_years))
+        for y in years:
+            test_start = pd.Timestamp(year=y, month=1, day=1)
+            test_end = pd.Timestamp(year=y + self.test_years, month=1, day=1)
+            # Extend the final fold's test window to absorb the post-window tail.
+            if y == years[-1] and self.last_test_end is not None and self.last_test_end > test_end:
+                test_end = self.last_test_end
+            train_end_inclusive = test_start - pd.Timedelta(days=self.gap_days)
+            train_end = train_end_inclusive + pd.Timedelta(days=1)  # exclusive
+            train_start = pd.Timestamp(year=y - self.train_years, month=1, day=1)
+            out.append(
                 SplitWindow(
-                    window_id=window_id,
+                    test_year=y,
                     train_start=train_start,
                     train_end=train_end,
                     test_start=test_start,
                     test_end=test_end,
-                    label=label,
                 )
             )
-            window_id += 1
-
-        return windows
+        return out
 
     def split(
-        self,
-        df: pd.DataFrame,
-        time_col: str = "timestamp",
-    ) -> Generator[tuple[SplitWindow, pd.DataFrame, pd.DataFrame], None, None]:
-        """
-        Yield (window, train_df, test_df) for each walk-forward window.
+        self, df: pd.DataFrame, date_col: str = "date"
+    ) -> Iterator[tuple[SplitWindow, pd.DataFrame, pd.DataFrame]]:
+        if date_col not in df.columns:
+            raise ValueError(f"DataFrame missing '{date_col}' column")
+        dates = pd.to_datetime(df[date_col])
+        for w in self.windows():
+            train_mask = (dates >= w.train_start) & (dates < w.train_end)
+            test_mask = (dates >= w.test_start) & (dates < w.test_end)
+            yield w, df.loc[train_mask].copy(), df.loc[test_mask].copy()
+
+
+@dataclass(frozen=True)
+class PurgedFoldWindow:
+    fold_idx: int
+    train_start: pd.Timestamp
+    train_end: pd.Timestamp  # exclusive
+    test_start: pd.Timestamp
+    test_end: pd.Timestamp  # exclusive
+    embargo_start: pd.Timestamp  # embargo region start
+    embargo_end: pd.Timestamp  # embargo region end
+
+    @property
+    def label(self) -> str:
+        return f"fold_{self.fold_idx}"
+
+
+@dataclass
+class PurgedKFoldSplitter:
+    """Purged K-Fold with embargo (Phase 1.5.1).
+
+    Reference: de Prado, *Advances in Financial ML*, Ch. 7.
+
+    Divides data into k folds by date. For each fold:
+    - test = fold[i]
+    - train = all folds except fold[i] and embargo rows
+    - embargo = rows within embargo_days of fold[i] boundaries
+
+    Prevents label leakage from forward-return targets: a 5-bar forward return
+    computed at the end of training would otherwise peek into test start.
+    """
+
+    n_splits: int = 5
+    embargo_days: int = 0
+    label_horizon: int = 5
+
+    def __post_init__(self) -> None:
+        if self.n_splits < 2:
+            raise ValueError("n_splits must be >= 2")
+        if self.embargo_days < 0:
+            raise ValueError("embargo_days must be >= 0")
+        if self.label_horizon < 1:
+            raise ValueError("label_horizon must be >= 1")
+
+    def split(
+        self, df: pd.DataFrame, date_col: str = "date"
+    ) -> Iterator[tuple[PurgedFoldWindow, pd.DataFrame, pd.DataFrame]]:
+        """Yield (window, train_df, test_df) for each fold.
 
         Args:
-            df: DataFrame with a timestamp column
-            time_col: name of the timestamp column
+            df: DataFrame to split (must be sorted by date)
+            date_col: name of date column
+
+        Yields:
+            (PurgedFoldWindow, train_df, test_df) for each of n_splits folds
         """
-        windows = self.get_windows()
+        if date_col not in df.columns:
+            raise ValueError(f"DataFrame missing '{date_col}' column")
 
-        for window in windows:
-            train_mask = (df[time_col] >= window.train_start) & (df[time_col] <= window.train_end)
-            test_mask = (df[time_col] >= window.test_start) & (df[time_col] <= window.test_end)
+        dates = pd.to_datetime(df[date_col])
+        unique_dates = sorted(dates.unique())
 
-            train_df = df[train_mask].copy()
-            test_df = df[test_mask].copy()
+        if len(unique_dates) < self.n_splits:
+            raise ValueError(
+                f"Insufficient unique dates ({len(unique_dates)}) for {self.n_splits} splits"
+            )
 
-            if len(train_df) == 0 or len(test_df) == 0:
-                continue
+        fold_size = len(unique_dates) // self.n_splits
+        embargo_td = pd.Timedelta(days=self.embargo_days)
 
-            yield window, train_df, test_df
+        for fold_idx in range(self.n_splits):
+            test_start_idx = fold_idx * fold_size
+            test_end_idx = (
+                (fold_idx + 1) * fold_size if fold_idx < self.n_splits - 1 else len(unique_dates)
+            )
 
-    def summary(self) -> str:
-        """Print a summary of all windows."""
-        windows = self.get_windows()
-        lines = [f"Walk-Forward Split ({self.method}): {len(windows)} windows"]
-        for w in windows:
-            lines.append(f"  {w}")
-        return "\n".join(lines)
+            test_start = pd.Timestamp(unique_dates[test_start_idx])
+            test_end = pd.Timestamp(unique_dates[test_end_idx - 1]) + pd.Timedelta(days=1)
 
-    @classmethod
-    def from_config(cls, config: dict[str, Any]) -> "WalkForwardSplitter":
-        """Create splitter from config dict."""
-        split_cfg = config.get("split", config)
-        return cls(
-            method=split_cfg.get("method", "walk_forward"),
-            train_years=split_cfg.get("train_years", 4),
-            test_years=split_cfg.get("test_years", 1),
-            gap_days=split_cfg.get("gap_days", 0),
-            first_test_year=split_cfg.get("first_test_year", 2019),
-            last_test_year=split_cfg.get("last_test_year", 2025),
-        )
+            embargo_start = test_start - embargo_td
+            embargo_end = test_end + embargo_td
+
+            test_mask = (dates >= test_start) & (dates < test_end)
+            embargo_mask = (dates >= embargo_start) & (dates < embargo_end)
+            train_mask = ~embargo_mask
+
+            window = PurgedFoldWindow(
+                fold_idx=fold_idx,
+                train_start=pd.Timestamp(unique_dates[0]),
+                train_end=test_start,
+                test_start=test_start,
+                test_end=test_end,
+                embargo_start=embargo_start,
+                embargo_end=embargo_end,
+            )
+
+            yield window, df.loc[train_mask].copy(), df.loc[test_mask].copy()

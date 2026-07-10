@@ -1,0 +1,77 @@
+name: per_slot_features_demo_v1
+hypothesis: Demonstrate per-slot feature sets and targets. Entry uses richer features (leading_v4) with longer horizon (7d), exit uses minimal features (leading_v2) with shorter horizon (3d).
+version: 2.0
+
+market: vn_stock
+strategy: ml_only_regression
+seed: 42
+
+metadata:
+  experiment_group: per_slot_demo
+  variant_type: architecture
+  notes: "Phase 0.4 example: per-slot features and targets"
+
+components:
+  # Global defaults (fallback if not overridden per-slot)
+  features: leading_v2
+  target:
+    type: forward_return
+    horizon: 5
+    gain_threshold: 0.04
+    loss_threshold: 0.04
+
+  signal_mode: entry_first
+
+  # Entry model: uses richer features (leading_v4) and longer horizon
+  entry_model:
+    type: lightgbm
+    features: leading_v4        # PER-SLOT OVERRIDE
+    target:                      # PER-SLOT OVERRIDE
+      type: forward_return
+      horizon: 7
+      gain_threshold: 0.03
+      loss_threshold: 0.03
+    params:
+      n_estimators: 300
+      learning_rate: 0.05
+      num_leaves: 31
+      min_data_in_leaf: 50
+      feature_fraction: 0.8
+      bagging_fraction: 0.8
+
+  # Exit model: uses minimal features (leading_v2) and shorter horizon
+  exit_model:
+    type: lightgbm
+    enabled: false              # No exit model in this demo (ml_only mode)
+    features: leading_v2        # PER-SLOT OVERRIDE (if enabled)
+    target:                      # PER-SLOT OVERRIDE (if enabled)
+      type: forward_return
+      horizon: 3
+      gain_threshold: 0.015
+      loss_threshold: 0.015
+    params:
+      n_estimators: 100
+      learning_rate: 0.05
+
+split:
+  type: walk_forward_year
+  train_years: 2
+  test_years: 1
+  gap_days: 25
+  first_test_year: 2020
+  last_test_year: 2021
+
+engine:
+  max_hold_bars: 20
+  min_hold_bars: 1
+  hard_stop_pct: -0.08
+  signal_exit_enabled: true
+  entry_bar_fill_type: close_next
+  exit_bar_fill_type: null
+  costs:
+    commission: 0.0025
+    tax: 0.001
+    slippage: 0.0015
+
+signal_threshold: 0.0
+strict_audit: true

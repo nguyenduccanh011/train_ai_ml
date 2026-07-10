@@ -1,0 +1,57 @@
+{
+  "42": {
+    "composite": 731.8,
+    "total_pnl": 127.88436825628057,
+    "pf": 6.003758950623839,
+    "mdd": 0.17454927579356125,
+    "trades": 1377
+  },
+  "7": {
+    "name": "w0_snr_10",
+    "template_id": 2677,
+    "seed": 7,
+    "run_id": "template/w0_snr_10-32a8dfee",
+    "runtime_s": 39.8,
+    "composite": 733.7,
+    "total_pnl": 128.64301691483737,
+    "pf": 6.033742825559345,
+    "mdd": 0.17866099093461837,
+    "trades": 1374
+  },
+  "99": {
+    "name": "w0_snr_10",
+    "template_id": 2677,
+    "seed": 99,
+    "run_id": "template/w0_snr_10-32a8dfee",
+    "runtime_s": 39.5,
+    "composite": 725.4,
+    "total_pnl": 127.35290852811484,
+    "pf": 5.863212742515644,
+    "mdd": 0.1823136003933448,
+    "trades": 1386
+  },
+  "555": {
+    "name": "w0_snr_10",
+    "template_id": 2677,
+    "seed": 555,
+    "run_id": "template/w0_snr_10-32a8dfee",
+    "runtime_s": 43.7,
+    "composite": 732.1,
+    "total_pnl": 128.48441887435257,
+    "pf": 5.971699546526139,
+    "mdd": 0.18018071750724832,
+    "trades": 1380
+  },
+  "123": {
+    "name": "w0_snr_10",
+    "template_id": 2677,
+    "seed": 123,
+    "run_id": "template/w0_snr_10-32a8dfee",
+    "runtime_s": 79.9,
+    "composite": 730.2,
+    "total_pnl": 128.55433210350046,
+    "pf": 5.915662749684614,
+    "mdd": 0.17958977520094893,
+    "trades": 1375
+  }
+}

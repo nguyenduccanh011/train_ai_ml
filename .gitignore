@@ -70,3 +70,26 @@ stock_ml/train61_standalone/cache/
 
 # derivatives30m_standalone artifacts (data/ giữ tracked: dataset nguồn)
 stock_ml/derivatives30m_standalone/cache/
+
+# --- Data / DB stores (not source) ---
+market_data/
+*.duckdb
+*.duckdb.bak
+*.db.bak
+_intraday_feats.parquet
+*.parquet
+
+# --- Built serving bundles / wheel-check extraction ---
+bundles/
+whlchk/
+
+# --- Feature / prediction caches ---
+stock_ml/src/results/cache/
+**/results/cache/
+
+# --- Env / secrets ---
+.env
+
+# --- Large regenerable analysis dumps ---
+stock_ml/analysis/**/*_out.txt
+stock_ml/analysis/**/*.csv

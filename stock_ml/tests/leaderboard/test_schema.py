@@ -34,8 +34,6 @@ def _make_valid_row(**overrides) -> dict:
         "strategy": "v22",
         "feature_set": "leading_v2",
         "entry_model": "lightgbm",
-        "exit_model_type": "lightgbm",
-        "exit_model_enabled": True,
         "target": {
             "type": "trend_regime",
             "forward_window": 8,
@@ -46,8 +44,11 @@ def _make_valid_row(**overrides) -> dict:
         "wr": 55.0,
         "avg_pnl": 3.5,
         "total_pnl": 3500.0,
+        "pnl_pct": 3.5,
         "pf": 2.5,
         "avg_hold": 10.0,
+        "max_win": 50.0,
+        "max_loss": -30.0,
         "sharpe": 1.2,
         "max_drawdown": 200.0,
         "mdd_per_symbol": 20.0,
@@ -102,9 +103,11 @@ class TestLeaderboardRowBasic:
 
 class TestTargetConfig:
     def test_null_thresholds_allowed(self):
+        # TargetConfig is now a minimal DTO (type + forward_window); per-slot
+        # thresholds live in the target params/config, not on this object.
         target = TargetConfig(type="custom", forward_window=5)
-        assert target.gain_threshold is None
-        assert target.loss_threshold is None
+        assert target.type == "custom"
+        assert target.forward_window == 5
 
     def test_with_thresholds(self):
         target = TargetConfig(

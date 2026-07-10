@@ -1,0 +1,49 @@
+name: mean_reversion_short
+strategy: mean_reversion
+market: US_large_cap
+direction: short  # Short strategy: entry on overbought (signal=1 → short at open[T+1]), exit on oversold (signal=-1 → cover at open[T+1])
+seed: 42
+
+components:
+  features: basic_v1
+
+  target:
+    type: forward_return_regression
+    horizon: 5
+
+  entry_model:
+    type: rule
+    params:
+      conditions:
+        # Overbought conditions (normally "sell" for long, but we SHORT on this)
+        - {feature: rsi, op: ">", value: 70}
+        - {feature: bb_upper, op: ">=", value: 2}  # At upper Bollinger Band
+      logic: OR
+      score_feature: rsi
+
+  signal_mode: entry_first
+
+split:
+  type: walk_forward_year
+  gap_bars: 10
+  test_bars: 252
+
+engine:
+  max_hold_bars: 10  # Shorter hold for mean reversion
+  min_hold_bars: 1
+  hard_stop_pct: -0.08  # Note: still applies to mark-to-market
+  signal_exit_enabled: true
+  exit_priority: [hard_stop, signal, max_hold]
+
+signal_threshold: 0.0
+hypothesis: "Mean reversion strategy - short positions on overbought signals, cover on oversold"
+strict_audit: true
+metadata:
+  version: 2
+  direction_note: |
+    Signals are flipped due to direction=short:
+    - Entry condition met (rsi > 70) → raw_signal = 1 → flipped to -1 → SHORT at open[T+1]
+    - Exit condition met (rsi < 30) → raw_signal = -1 → flipped to 1 → COVER at open[T+1]
+    Thus:
+      Entry: SHORT (signal=-1 in backtest logic)
+      Exit: COVER (signal=1 in backtest logic)

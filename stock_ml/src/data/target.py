@@ -275,7 +275,8 @@ class TargetGenerator:
             else:
                 targets[i] = 0.0
 
-        df["target"] = targets
+        # Shift by -1: target[i] predicts "early wave at i+1" to avoid leakage
+        df["target"] = pd.Series(targets, index=df.index).shift(-1)
         return df
 
     def _early_wave_v2(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -363,7 +364,8 @@ class TargetGenerator:
             else:
                 targets[i] = 0.0
 
-        df["target"] = targets
+        # Shift by -1: target[i] predicts "early wave at i+1" to avoid leakage
+        df["target"] = pd.Series(targets, index=df.index).shift(-1)
         return df
 
     def _early_exit_signal(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -372,6 +374,9 @@ class TargetGenerator:
         target_sell=1 if within forward_window N bars the price drops by
         >= loss_threshold from current close (forward drawdown). Else 0.
         Used by V37b dual-head ML to give an early exit signal.
+
+        Shifted by -1 so target_sell[i] predicts "should exit at i+1",
+        matching the convention used by target_buy (entry).
         """
         close = df["close"].values
         n = len(close)
@@ -389,7 +394,8 @@ class TargetGenerator:
             max_drawdown = (np.min(future) - close[i]) / close[i]
             if max_drawdown <= -loss_thresh:
                 sell[i] = 1.0
-        df["target_sell"] = sell
+        # Shift by -1: target_sell[i] predicts "should exit at i+1"
+        df["target_sell"] = pd.Series(sell, index=df.index).shift(-1)
         return df
 
     def generate_for_all_symbols(self, df: pd.DataFrame) -> pd.DataFrame:

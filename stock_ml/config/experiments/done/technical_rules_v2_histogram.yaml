@@ -1,0 +1,66 @@
+name: technical_rules_v2_histogram
+version: 2.0
+
+hypothesis: "Rule-based trading signals using MACD histogram - variant"
+
+metadata:
+  experiment_group: "technical_rules_baseline"
+  variant_type: "features"
+  parent_run_id: "technical_rules_v1"
+  notes: "MACD histogram variant with CLOSE(t+1) fill"
+
+strategy: entry_exit_regression
+market: vn_stock
+seed: 42
+
+data:
+  source_dir: "portable_data/vn_stock_ai_dataset"
+
+components:
+  features: leading_v2
+
+  target:
+    type: forward_return_regression
+    horizon: 5
+
+  entry_model:
+    type: technical_rules
+    score_feature: macd_hist
+    rules:
+      macd_hist: ">0"
+      sma_20_ratio: ">0"
+      close_to_open: ">0"
+
+  exit_model:
+    type: technical_rules
+    enabled: true
+    score_feature: macd_hist
+    rules:
+      macd_hist: "<0"
+      sma_20_ratio: "<0"
+      close_to_open: "<0"
+
+split:
+  type: purged_kfold
+  n_splits: 2
+  embargo_days: 10
+  label_horizon: 5
+
+  fold_assignment:
+    fold_0: {train: "2020-01-01 to 2024-09-30", test: "2024-10-10 to 2024-12-31"}
+    fold_1: {train: "2020-01-01 to 2024-09-30", test: "2024-10-10 to 2024-12-31"}
+
+engine:
+  max_hold_bars: 20
+  min_hold_bars: 1
+  hard_stop_pct: -0.08
+  signal_exit_enabled: true
+  entry_bar_fill_type: close_next
+  exit_bar_fill_type: null
+  costs:
+    commission: 0.0025
+    tax: 0.001
+    slippage: 0.0015
+
+signal_threshold: 0.0
+strict_audit: true

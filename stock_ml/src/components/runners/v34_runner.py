@@ -203,6 +203,7 @@ def _run_cache_item(
     extra: dict[str, Any] = {}
     if enable_exit_model and item.get("y_pred_exit") is not None and "y_pred_exit" in sig_params:
         extra["y_pred_exit"] = item["y_pred_exit"]
+
     result = backtest_fn(
         item["y_pred"],
         item["returns"],

@@ -1,0 +1,52 @@
+name: test_hybrid_rule_entry_ml_exit
+hypothesis: |
+  Test hybrid mode: Rule-based entry with ML exit model.
+  Entry: Rule conditions (macd_line > 0 AND sma_20_ratio > 0)
+  Exit: LightGBM classification (sell signal)
+  model_mode should auto-detect as hybrid_rule_entry_ml_exit.
+strategy: hybrid_rule_entry_ml_exit
+market: vn_stock
+seed: 42
+model_mode: hybrid_rule_entry_ml_exit
+
+components:
+  features: leading_v2
+  target:
+    type: trend_regime
+    trend_method: dual_ma
+    short_window: 10
+    long_window: 40
+    classes: 3
+
+  entry_model:
+    type: rule
+    params:
+      conditions:
+        - {feature: macd_line, op: ">", value: 0}
+        - {feature: sma_20_ratio, op: ">", value: 0}
+      logic: AND
+      score_feature: macd_line
+
+  exit_model:
+    type: lightgbm
+    enabled: true
+    params:
+      n_estimators: 100
+      learning_rate: 0.05
+      num_leaves: 31
+
+split:
+  type: walk_forward_year
+  train_years: 2
+  test_years: 1
+  gap_days: 25
+  first_test_year: 2020
+  last_test_year: 2021
+
+engine:
+  max_hold_bars: 20
+  min_hold_bars: 1
+  hard_stop_pct: -0.08
+
+signal_threshold: 0.0
+strict_audit: true

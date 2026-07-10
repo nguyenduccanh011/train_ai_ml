@@ -7,14 +7,14 @@ from collections import defaultdict
 from collections.abc import Iterable
 from pathlib import Path
 
-from src.leaderboard.fairness import (
+from stock_ml.src.leaderboard.fairness import (
     annotate_rows,
     load_config,
     resolve_baseline,
     resolve_baseline_for_market,
 )
-from src.leaderboard.loader import run_dir_to_row
-from src.leaderboard.schema import LeaderboardRow, export_json_schema
+from stock_ml.src.leaderboard.loader import run_dir_to_row
+from stock_ml.src.leaderboard.schema import LeaderboardRow, export_json_schema
 
 LEADERBOARD_JSON = "leaderboard.json"
 LEADERBOARD_CSV = "leaderboard.csv"
@@ -125,12 +125,10 @@ def _row_signature(row: LeaderboardRow) -> tuple[object, ...]:
         row.strategy,
         row.feature_set,
         row.entry_model,
-        row.exit_model_type,
-        row.exit_model_enabled,
+        row.model_mode,
+        row.signal_mode,
         row.target.type,
         row.target.forward_window,
-        row.target.gain_threshold,
-        row.target.loss_threshold,
         row.trades,
         row.wr,
         row.avg_pnl,
@@ -168,6 +166,9 @@ def _write_csv(rows: list[LeaderboardRow], path: Path) -> None:
         "config_hash",
         "generated_at",
         "superseded",
+        "state",
+        "cache_key_features",
+        "cache_key_predictions",
         "market",
         "market_family",
         "currency",
@@ -177,24 +178,30 @@ def _write_csv(rows: list[LeaderboardRow], path: Path) -> None:
         "strategy",
         "feature_set",
         "entry_model",
-        "exit_model_type",
-        "exit_model_enabled",
+        "model_mode",
+        "signal_mode",
         "target_type",
         "target_forward_window",
-        "target_gain_threshold",
-        "target_loss_threshold",
         "trades",
         "wr",
         "avg_pnl",
         "total_pnl",
+        "pnl_pct",
         "pf",
         "avg_hold",
+        "max_win",
+        "max_loss",
         "sharpe",
         "max_drawdown",
         "mdd_per_symbol",
         "yearly_consistency",
         "composite_score",
         "score_mode",
+        "direction",
+        "experiment_group",
+        "variant_type",
+        "parent_run_id",
+        "metadata_notes",
         "n_symbols",
         "first_test_year",
         "last_test_year",
@@ -214,7 +221,10 @@ def _write_csv(rows: list[LeaderboardRow], path: Path) -> None:
     ]
     tmp_path = path.with_suffix(path.suffix + ".tmp")
     with tmp_path.open("w", encoding="utf-8", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        # extrasaction="ignore": _flatten_row emits every LeaderboardRow field
+        # (e.g. model_mode, test/train dates, universe_*) but the CSV pins a stable
+        # column set — drop the rest instead of raising on schema growth.
+        writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
         writer.writeheader()
         for row in rows:
             writer.writerow(_flatten_row(row))
@@ -226,15 +236,17 @@ def _flatten_row(row: LeaderboardRow) -> dict[str, object]:
     target = data.pop("target")
     cost = data.pop("cost_profile")
     warnings = data.pop("warnings")
+    cache_keys = data.pop("cache_keys")
+    data.pop("artifacts")
     data.update(
         {
             "target_type": target["type"],
             "target_forward_window": target["forward_window"],
-            "target_gain_threshold": target["gain_threshold"],
-            "target_loss_threshold": target["loss_threshold"],
             "cost_commission": cost["commission"],
             "cost_tax": cost["tax"],
             "cost_slippage": cost["slippage"],
+            "cache_key_features": cache_keys["features"],
+            "cache_key_predictions": cache_keys["predictions"],
             "warnings": " | ".join(warnings),
         }
     )

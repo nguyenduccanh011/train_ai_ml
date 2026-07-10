@@ -1,0 +1,62 @@
+{
+ "n_trades_total": 3813,
+ "n_trades_closed": 3781,
+ "n_open_positions_now": 32,
+ "win_rate_closed": 0.5573,
+ "avg_pnl_pct": 0.07607,
+ "median_pnl_pct": 0.00955,
+ "sum_pnl_units": 287.61,
+ "profit_factor": 4.527,
+ "bucket_counts": {
+  "small": 1899,
+  "big_win": 717,
+  "loss": 560,
+  "win": 546,
+  "big_loss": 59
+ },
+ "bucket_pnl_sum": {
+  "big_loss": -10.77,
+  "big_win": 301.56,
+  "loss": -46.59,
+  "small": -6.04,
+  "win": 49.46
+ },
+ "exit_reason_counts": {
+  "signal": 3773,
+  "end_of_data": 32,
+  "trailing_stop": 7,
+  "overext_trail": 1
+ },
+ "buy_signal_disposition": {
+  "filled": 3813,
+  "in_position": 69000,
+  "skipped_pending_wait": 24824,
+  "unfilled": 7318,
+  "entry_market_gate": 478,
+  "cooldown": 413,
+  "unfilled_window_open": 264,
+  "last_bar_not_evaluated": 10,
+  "total_buy_bars": 106120
+ },
+ "fill_rate_of_placed_limits": 0.3346,
+ "unfilled_atmarket_ret21_mean": 0.1111,
+ "unfilled_atmarket_ret21_median": 0.0816,
+ "unfilled_max_runup42_mean": 0.2205,
+ "avg_pending_limits_per_day_all": 213.5,
+ "avg_pending_limits_per_day_2025plus": 242.4,
+ "avg_new_buy_signals_per_day_2025plus": 22.6,
+ "avg_open_positions_2025plus": 53.9,
+ "last_day_pending_limits_mine_vs_serving": [
+  157,
+  171
+ ],
+ "sold_too_early_count": 2046,
+ "sold_too_early_rate": 0.5411,
+ "hot_run_count": 737,
+ "touch_bar_red_rate": 0.6863,
+ "big_loss_spans_bad_adjustment": 0,
+ "date_range_trades": [
+  "2020-01-02",
+  "2026-07-08"
+ ]
+}

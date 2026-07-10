@@ -1,0 +1,54 @@
+name: test_universe_tracking
+hypothesis: |
+  Test universe tracking system to verify symbol count is captured correctly.
+
+strategy: entry_exit_ensemble
+market: vn_stock
+seed: 42
+
+components:
+  features: basic_v1
+  target:
+    type: forward_return_regression
+    horizon: 5
+    gain_threshold: 0.04
+    loss_threshold: 0.04
+
+  entry_model:
+    type: lightgbm
+    params:
+      n_estimators: 50
+      learning_rate: 0.1
+      num_leaves: 15
+
+  exit_model:
+    type: none
+    enabled: false
+
+split:
+  type: year
+  first_train_year: 2020
+  last_train_year: 2024
+  first_test_year: 2025
+  last_test_year: 2025
+
+engine:
+  max_hold_bars: 20
+  min_hold_bars: 1
+  hard_stop_pct: -0.08
+  costs:
+    commission: 0.001
+    tax: 0.0
+    slippage: 0.0005
+
+universe:
+  mode: db
+  slug: vn_top60
+
+validation:
+  n_seeds: 1
+  bootstrap_iterations: 100
+  compute_dsr: false
+  compute_pbo: false
+
+strict_audit: false

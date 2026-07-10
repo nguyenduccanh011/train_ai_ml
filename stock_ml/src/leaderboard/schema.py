@@ -7,15 +7,47 @@ Export JSON Schema via LeaderboardRow.model_json_schema().
 from __future__ import annotations
 
 import json
+from enum import StrEnum
 
 from pydantic import BaseModel, Field, field_validator
+
+
+class LifecycleState(StrEnum):
+    """Model lifecycle state, single source of truth for dashboard visibility.
+
+    - trained: backtested, metrics on leaderboard, not shown on dashboard
+    - pinned: promoted to dashboard with buy/sell signal overlays
+    - retired: kept on leaderboard for history, caches/artifacts may be purged
+    """
+
+    trained = "trained"
+    pinned = "pinned"
+    retired = "retired"
+
+
+class CacheKeys(BaseModel):
+    """Cache keys owned by this run, used by the GC to attribute cache files.
+
+    features: FeatureCacheManager key (results/cache/features/<feature_set>/<key>)
+    predictions: PredictionCacheManager key (results/cache/predictions/<key>.pkl)
+    Empty string means unknown (legacy run; GC recomputes prediction key from config).
+    """
+
+    features: str = ""
+    predictions: str = ""
+
+
+class Artifacts(BaseModel):
+    """Relative paths (from results/) to this run's on-disk artifacts."""
+
+    trades_csv: str = ""
+    meta_json: str = ""
+    model_pkl: str = ""
 
 
 class TargetConfig(BaseModel):
     type: str
     forward_window: int
-    gain_threshold: float | None = None
-    loss_threshold: float | None = None
 
 
 class CostProfile(BaseModel):
@@ -40,6 +72,11 @@ class LeaderboardRow(BaseModel):
     generated_at: str = Field(description="ISO-8601 timestamp")
     superseded: bool = False
 
+    # Lifecycle (Model Lifecycle UI — single source of truth for dashboard)
+    state: LifecycleState = LifecycleState.trained
+    cache_keys: CacheKeys = Field(default_factory=CacheKeys)
+    artifacts: Artifacts = Field(default_factory=Artifacts)
+
     # Strategy / model identity
     market: str = "unknown"
     market_family: str = "unknown"
@@ -50,8 +87,10 @@ class LeaderboardRow(BaseModel):
     strategy: str
     feature_set: str
     entry_model: str
-    exit_model_type: str
-    exit_model_enabled: bool
+    direction: str = "long"  # long | short
+    # Component composition (parity with leaderboard_runs columns; read by row_to_model)
+    model_mode: str = "ml_only"  # ml_only | rule_only | hybrid_ml_entry_rule_exit | hybrid_rule_entry_ml_exit
+    signal_mode: str = "entry_first"  # entry/exit hysteresis mode
     target: TargetConfig
 
     # Trading metrics (recomputed from trades.csv)
@@ -59,8 +98,11 @@ class LeaderboardRow(BaseModel):
     wr: float
     avg_pnl: float
     total_pnl: float
+    pnl_pct: float
     pf: float
     avg_hold: float
+    max_win: float
+    max_loss: float
     sharpe: float
 
     # Risk
@@ -89,8 +131,24 @@ class LeaderboardRow(BaseModel):
     same_timeframe_as_baseline: bool | None = None
     same_market_family_as_baseline: bool | None = None
 
+    # Experiment metadata (for research iteration tracking)
+    experiment_group: str = "ungrouped"
+    variant_type: str | None = None
+    parent_run_id: str | None = None
+    metadata_notes: str | None = None
+
     # Diagnostics
     warnings: list[str] = Field(default_factory=list)
+
+    # Backtest transparency (for fair comparison)
+    test_start_date: str | None = None  # ISO-8601 timestamp
+    test_end_date: str | None = None  # ISO-8601 timestamp
+    train_start_date: str | None = None  # ISO-8601 timestamp
+    train_end_date: str | None = None  # ISO-8601 timestamp
+
+    # Universe tracking
+    universe_slug: str | None = None
+    universe_version: int | None = None
 
     model_config = {"extra": "forbid"}
 

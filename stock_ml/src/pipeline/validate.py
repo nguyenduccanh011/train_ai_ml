@@ -24,6 +24,7 @@ VALID_TARGET_TYPES = {
     "return_classification",
     "forward_risk_reward",
     "forward_return",
+    "zigzag_pivot",
 }
 EXIT_LABEL_TARGETS = {"early_wave", "early_wave_v2", "early_wave_dual"}
 

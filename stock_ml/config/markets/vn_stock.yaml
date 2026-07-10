@@ -2,7 +2,10 @@ name: vn_stock
 market_type: equity_spot
 
 data:
-  data_dir: "../portable_data/vn_stock_ai_dataset_cleaned"
+  # OHLCV source-of-truth is the DuckDB OLAP store (read-only). Path is relative
+  # to the stock_ml/ package and resolves to <repo>/market_data/market.duckdb.
+  # Rollback: point back to "/portable_data/vn_stock_ai_dataset_cleaned" (CSV kept).
+  data_dir: "../market_data/market.duckdb"
   schema: ohlcv_daily
   default_timeframe: "1D"
   benchmark_symbol: "HNXINDEX"
@@ -27,91 +30,10 @@ execution:
   maintenance_margin_rate: 0.0
   liquidation_fee: 0.0
 
-symbols:
-  default_group: balanced
-  default_list:
-    - ACB
-    - AAS
-    - AAV
-    - ACV
-    - BCG
-    - BCM
-    - BID
-    - BSR
-    - BVH
-    - CTG
-    - DCM
-    - DGC
-    - DIG
-    - DPM
-    - EIB
-    - FPT
-    - FRT
-    - GAS
-    - GEX
-    - GMD
-    - HCM
-    - HDB
-    - HDG
-    - HPG
-    - HSG
-    - KBC
-    - KDH
-    - LPB
-    - MBB
-    - MSN
-    - MWG
-    - NKG
-    - NLG
-    - NT2
-    - NVL
-    - OCB
-    - PC1
-    - PDR
-    - PLX
-    - PNJ
-    - POW
-    - PVD
-    - PVS
-    - REE
-    - SAB
-    - SBT
-    - SHB
-    - SSI
-    - STB
-    - TCB
-    - TPB
-    - VCB
-    - VCI
-    - VDS
-    - VHM
-    - VIC
-    - VJC
-    - VND
-    - VNM
-    - VPB
-    - VTP
-  groups:
-    ACB: bank
-    BID: bank
-    MBB: bank
-    TCB: bank
-    AAV: high_beta
-    AAS: high_beta
-    SSI: high_beta
-    VND: high_beta
-    DGC: momentum
-    HPG: momentum
-    VIC: momentum
-    FPT: defensive
-    REE: defensive
-    VNM: defensive
-
-strategy_overrides:
-  min_hold_protection:
-    rule_priority: [AAA, SSN, TEG, GAS, PLX, IJC, DQC]
-  v19_entry_cascade:
-    score5_risky: [AAA, IJC, ITC, VHM, TEG, QBS, KMR, SSN, PLX]
+# P5: the symbol universe is DB-managed (universe_sets). The market default set
+# lives under slug "vn_stock_default" (seeded by migration 0021) and is resolved
+# at runtime by get_pipeline_symbols — the market YAML no longer hardcodes a
+# symbol list, groups, or per-strategy symbol overrides.
 
 features:
   enabled_blocks: null

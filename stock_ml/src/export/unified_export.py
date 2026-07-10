@@ -20,14 +20,15 @@ import pandas as pd
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 
-import src.safe_io  # noqa: F401 — fix UnicodeEncodeError on Windows console
-from src.config_loader import (
+from stock_ml.src.utils.config_loader import (
     get_all_models,
     get_exit_abbreviations,
     get_model_config,
 )
-from src.env import get_experiment_dir, get_results_dir
-from src.evaluation.scoring import calc_metrics, composite_score
+from stock_ml.src.utils.env import get_experiment_dir, get_results_dir
+
+import stock_ml.src.utils.safe_io  # noqa: F401 — fix UnicodeEncodeError on Windows console
+from stock_ml.src.evaluation.scoring import calc_metrics, composite_score
 
 
 def _format_chart_time(value):
@@ -174,10 +175,13 @@ def _score_trades(trades):
     return composite_score(metrics, trades)
 
 
-def export_version(version_key, model_cfg, results_dir, viz_dir):
-    """Export a single model version's trades to JSON files."""
-    # Determine trades CSV path
-    trades_csv = os.path.join(results_dir, f"trades_{version_key}.csv")
+def export_version(version_key, model_cfg, results_dir, viz_dir, trades_csv=None):
+    """Export a single model version's trades to JSON files.
+
+    trades_csv: optional explicit path. Defaults to results_dir/trades_{version_key}.csv.
+    """
+    if trades_csv is None:
+        trades_csv = os.path.join(results_dir, f"trades_{version_key}.csv")
     if not os.path.exists(trades_csv):
         print(f"  ⚠ Skipping {version_key}: {trades_csv} not found")
         return None
@@ -369,13 +373,16 @@ def _build_market_groups(models: list[dict], base_data_dirs: dict[str, str]) -> 
     return groups
 
 
-def generate_manifest(exported_versions, viz_dir, base_data_dir="data"):
+def generate_manifest(exported_versions, viz_dir, base_data_dir="data", merge=True):
     """Generate manifest.json for the dynamic dashboard.
 
-    Merges with existing manifest: preserves prior model entries whose
+    When merge=True (default), preserves prior model entries whose
     data_{version}/ folder still exists on disk and that were not part of
     this export run. This prevents partial exports (e.g. running just one
     version) from wiping other models from the dashboard.
+
+    When merge=False, the manifest contains exactly exported_versions — used by
+    the lifecycle API to make the dashboard show only pinned models.
     """
     # Check if base OHLCV data exists
     base_index_path = os.path.join(viz_dir, base_data_dir, "index.json")
@@ -393,7 +400,7 @@ def generate_manifest(exported_versions, viz_dir, base_data_dir="data"):
     preserved_keys = []
     dropped_keys = []
 
-    if os.path.exists(manifest_path):
+    if merge and os.path.exists(manifest_path):
         try:
             with open(manifest_path, encoding="utf-8") as f:
                 old_manifest = json.load(f)

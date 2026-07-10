@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from src.leaderboard.aggregator import append_or_update as _append_or_update
-from src.leaderboard.schema import LeaderboardRow
+from stock_ml.src.leaderboard.aggregator import append_or_update as _append_or_update
+from stock_ml.src.leaderboard.schema import LeaderboardRow
 
 
 def append_or_update(

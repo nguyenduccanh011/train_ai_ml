@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Feature Store - Stock ML</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; background: #f5f5f5; color: #333; }
+    header { background: #fff; border-bottom: 1px solid #ddd; padding: 18px 24px; }
+    header h1 { font-size: 22px; font-weight: 600; }
+    header p { color: #777; font-size: 13px; margin-top: 4px; }
+    .wrap { padding: 20px 24px; max-width: 1200px; margin: 0 auto; }
+    .tabs { display: flex; gap: 6px; margin-bottom: 16px; }
+    .tab { padding: 8px 16px; border: 1px solid #ccc; background: #fff; border-radius: 6px; cursor: pointer; font-size: 13px; }
+    .tab.active { background: #2a2e39; color: #fff; border-color: #2a2e39; }
+    .panel { display: none; }
+    .panel.active { display: block; }
+    table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+    th, td { text-align: left; padding: 9px 12px; font-size: 13px; border-bottom: 1px solid #eee; }
+    th { background: #fafafa; font-weight: 600; color: #555; }
+    tr:hover td { background: #fafcff; }
+    code { font-family: "SF Mono", Menlo, Consolas, monospace; font-size: 12px; background: #f0f2f5; padding: 1px 5px; border-radius: 3px; }
+    .badge { font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+    .badge.per_symbol { background: #e3f0ff; color: #1769d1; }
+    .badge.cross_sectional { background: #fdeccf; color: #b9740a; }
+    .badge.market { background: #e8e0fb; color: #6b3fc4; }
+    .toolbar { display: flex; gap: 8px; margin-bottom: 12px; align-items: center; }
+    input, select, textarea { font-family: inherit; font-size: 13px; padding: 7px 10px; border: 1px solid #ccc; border-radius: 6px; }
+    textarea { width: 100%; font-family: "SF Mono", Menlo, monospace; }
+    button { font-size: 13px; padding: 7px 14px; border: none; border-radius: 6px; background: #2a6df4; color: #fff; cursor: pointer; }
+    button.secondary { background: #e8eaed; color: #333; }
+    .card { background: #fff; border-radius: 8px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+    .card h3 { font-size: 14px; margin-bottom: 12px; }
+    .row { display: flex; gap: 10px; margin-bottom: 10px; align-items: center; }
+    .row label { width: 110px; font-size: 13px; color: #555; }
+    .validate { font-size: 12px; margin-top: 6px; }
+    .validate.ok { color: #1a8a3a; }
+    .validate.err { color: #c0392b; }
+    .muted { color: #999; }
+    #members { margin-top: 12px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🧬 Feature Store</h1>
+    <p>Read-only catalog — definitions are authored in code (<code>src/features/catalog.py</code>) and mirrored here.</p>
+  </header>
+
+  <div class="wrap">
+    <div class="tabs">
+      <div class="tab active" data-tab="features">Features</div>
+      <div class="tab" data-tab="sets">Sets</div>
+      <div class="tab" data-tab="values">Values</div>
+    </div>
+
+    <!-- Features panel -->
+    <div class="panel active" id="panel-features">
+      <div class="card">
+        <h3>Validate expression</h3>
+        <p class="muted" style="font-size:12px;margin-bottom:10px">Check a DSL formula's syntax, inferred kind and dependencies. To add a feature, define it in <code>src/features/catalog.py</code> and run <code>seed_features</code>.</p>
+        <div class="row"><label>Expression</label><textarea id="f-expr" rows="2" placeholder="$close / Ref($close, 5) - 1"></textarea></div>
+        <div class="validate muted" id="f-validate">Type an expression to validate…</div>
+      </div>
+
+      <div class="toolbar">
+        <select id="kind-filter">
+          <option value="">All kinds</option>
+          <option value="per_symbol">per_symbol</option>
+          <option value="cross_sectional">cross_sectional</option>
+          <option value="market">market</option>
+        </select>
+        <input id="search" placeholder="search name…" style="flex:1">
+      </div>
+      <table>
+        <thead><tr><th>Name</th><th>Kind</th><th>Expression</th><th>Ver</th><th>Used by</th></tr></thead>
+        <tbody id="def-rows"><tr><td colspan="5" class="muted">Loading…</td></tr></tbody>
+      </table>
+    </div>
+
+    <!-- Sets panel -->
+    <div class="panel" id="panel-sets">
+      <table>
+        <thead><tr><th>Name</th><th>Members</th><th>Description</th></tr></thead>
+        <tbody id="set-rows"><tr><td colspan="3" class="muted">Loading…</td></tr></tbody>
+      </table>
+      <div id="members"></div>
+    </div>
+
+    <!-- Values panel -->
+    <div class="panel" id="panel-values">
+      <div class="card">
+        <h3>Inspect feature values for one symbol</h3>
+        <p class="muted" style="font-size:12px;margin-bottom:10px">Computed on the symbol's full history (rolling features warm), newest rows last. Per-symbol sets only — cross-sectional/market features need the whole universe.</p>
+        <div class="row"><label>Symbol</label><input id="v-symbol" placeholder="FPT" style="width:140px"></div>
+        <div class="row"><label>Set</label><select id="v-set" style="min-width:160px"></select></div>
+        <div class="row"><label>Features</label><input id="v-features" placeholder="optional: sma_20_ratio,rsi_14 — empty = all" style="flex:1"></div>
+        <div class="row">
+          <label>From / To</label>
+          <input id="v-from" placeholder="from (YYYY-MM-DD)" style="width:150px">
+          <input id="v-to" placeholder="to (optional)" style="width:150px">
+          <label style="width:auto">Rows</label><input id="v-limit" value="200" style="width:80px">
+        </div>
+        <div class="row"><button onclick="loadValues()">Load</button><span id="v-status" class="muted" style="font-size:12px"></span></div>
+      </div>
+      <div style="overflow:auto"><table id="v-table"><thead id="v-head"></thead><tbody id="v-body"></tbody></table></div>
+    </div>
+  </div>
+
+  <script>
+    const API = '/api/v1/features';
+    const $ = (id) => document.getElementById(id);
+
+    // Tabs
+    document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
+      t.classList.add('active');
+      $('panel-' + t.dataset.tab).classList.add('active');
+      if (t.dataset.tab === 'sets') loadSets();
+      if (t.dataset.tab === 'values') loadSetOptions();
+    }));
+
+    function esc(s) { return String(s == null ? '' : s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+
+    async function loadDefinitions() {
+      const kind = $('kind-filter').value;
+      const search = $('search').value.trim();
+      const q = new URLSearchParams();
+      if (kind) q.set('kind', kind);
+      if (search) q.set('search', search);
+      const res = await fetch(`${API}/definitions?${q}`);
+      const defs = await res.json();
+      $('def-rows').innerHTML = defs.length ? defs.map(d => `
+        <tr>
+          <td><strong>${esc(d.name)}</strong></td>
+          <td><span class="badge ${d.kind}">${d.kind}</span></td>
+          <td><code>${esc(d.expr)}</code></td>
+          <td>${d.version}</td>
+          <td>${d.usedByCount}</td>
+        </tr>`).join('') : '<tr><td colspan="5" class="muted">No features</td></tr>';
+    }
+
+    let validateTimer = null;
+    $('f-expr').addEventListener('input', () => {
+      clearTimeout(validateTimer);
+      validateTimer = setTimeout(runValidate, 250);
+    });
+    async function runValidate() {
+      const expr = $('f-expr').value.trim();
+      const el = $('f-validate');
+      if (!expr) { el.className = 'validate muted'; el.textContent = 'Type an expression to validate…'; return; }
+      const res = await fetch(`${API}/validate`, {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ expr })
+      });
+      const v = await res.json();
+      if (v.valid) {
+        const deps = [...v.deps.features.map(f => '#' + f), ...v.deps.raw.map(r => '$' + r)].join(', ') || 'none';
+        el.className = 'validate ok';
+        el.textContent = `✓ valid · kind=${v.kind} · deps: ${deps}`;
+      } else {
+        el.className = 'validate err';
+        el.textContent = `✗ ${v.error}`;
+      }
+    }
+
+    $('kind-filter').addEventListener('change', loadDefinitions);
+    $('search').addEventListener('input', () => { clearTimeout(validateTimer); validateTimer = setTimeout(loadDefinitions, 200); });
+
+    async function loadSets() {
+      const res = await fetch(`${API}/sets`);
+      const sets = await res.json();
+      $('set-rows').innerHTML = sets.length ? sets.map(s => `
+        <tr style="cursor:pointer" onclick="showMembers(${s.id}, '${esc(s.name)}')">
+          <td><strong>${esc(s.name)}</strong></td>
+          <td>${s.memberCount}</td>
+          <td class="muted">${esc(s.description)}</td>
+        </tr>`).join('') : '<tr><td colspan="3" class="muted">No sets</td></tr>';
+      $('members').innerHTML = '';
+    }
+
+    window.showMembers = async (id, name) => {
+      const res = await fetch(`${API}/sets/${id}`);
+      const s = await res.json();
+      $('members').innerHTML = `<div class="card"><h3>${esc(name)} — ${s.members.length} members</h3>
+        <table><thead><tr><th>#</th><th>Name</th><th>Kind</th></tr></thead><tbody>
+        ${s.members.map(m => `<tr><td>${m.position}</td><td>${esc(m.name)}</td><td><span class="badge ${m.kind}">${m.kind}</span></td></tr>`).join('')}
+        </tbody></table></div>`;
+    };
+
+    // Values: populate set dropdown once, then load a symbol's series on demand.
+    let setOptionsLoaded = false;
+    async function loadSetOptions() {
+      if (setOptionsLoaded) return;
+      const res = await fetch(`${API}/sets`);
+      const sets = await res.json();
+      $('v-set').innerHTML = sets.map(s =>
+        `<option value="${esc(s.name)}"${s.name === 'leading_v2' ? ' selected' : ''}>${esc(s.name)}</option>`
+      ).join('');
+      setOptionsLoaded = true;
+    }
+
+    window.loadValues = async () => {
+      const symbol = $('v-symbol').value.trim();
+      const status = $('v-status');
+      if (!symbol) { status.className = 'validate err'; status.textContent = 'enter a symbol'; return; }
+      const q = new URLSearchParams({ symbol, set: $('v-set').value, limit: $('v-limit').value || '200' });
+      const feats = $('v-features').value.trim(); if (feats) q.set('features', feats);
+      const from = $('v-from').value.trim(); if (from) q.set('start', from);
+      const to = $('v-to').value.trim(); if (to) q.set('end', to);
+      status.className = 'muted'; status.textContent = 'loading…';
+      let res;
+      try { res = await fetch(`${API}/values?${q}`); }
+      catch (e) { status.className = 'validate err'; status.textContent = '✗ network error'; return; }
+      if (!res.ok) {
+        const e = await res.json().catch(() => ({}));
+        status.className = 'validate err'; status.textContent = '✗ ' + (e.detail || res.status);
+        $('v-head').innerHTML = ''; $('v-body').innerHTML = ''; return;
+      }
+      const data = await res.json();
+      const cols = ['date', 'close', ...data.columns];
+      $('v-head').innerHTML = '<tr>' + cols.map(c => `<th>${esc(c)}</th>`).join('') + '</tr>';
+      $('v-body').innerHTML = data.rows.map(r =>
+        '<tr>' + cols.map(c => `<td>${r[c] == null ? '<span class="muted">·</span>' : esc(r[c])}</td>`).join('') + '</tr>'
+      ).join('') || `<tr><td colspan="${cols.length}" class="muted">No rows</td></tr>`;
+      status.className = 'validate ok';
+      status.textContent = `✓ ${data.count} rows · ${data.symbol} · ${data.set}`;
+    };
+
+    loadDefinitions();
+  </script>
+  <script src="./js/nav.js"></script>
+</body>
+</html>

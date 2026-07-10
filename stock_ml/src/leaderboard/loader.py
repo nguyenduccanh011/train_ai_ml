@@ -9,8 +9,8 @@ from typing import Any
 
 import yaml
 
-from src.backtest.defaults import DEFAULT_TRADING_COST
-from src.evaluation.scoring import (
+from stock_ml.src.backtest.defaults import DEFAULT_TRADING_COST
+from stock_ml.src.evaluation.scoring import (
     calc_max_drawdown,
     calc_mdd_per_symbol,
     calc_metrics,
@@ -18,8 +18,19 @@ from src.evaluation.scoring import (
     calc_yearly_consistency,
     composite_score,
 )
-from src.leaderboard.fairness import backtest_window_key, load_config, resolve_market_family
-from src.leaderboard.schema import CostProfile, LeaderboardRow, TargetConfig
+from stock_ml.src.leaderboard.fairness import (
+    backtest_window_key,
+    load_config,
+    resolve_market_family,
+)
+from stock_ml.src.leaderboard.schema import (
+    Artifacts,
+    CacheKeys,
+    CostProfile,
+    LeaderboardRow,
+    LifecycleState,
+    TargetConfig,
+)
 
 MISSING_TRADES_WARNING = "trades.csv missing → metrics from cache"
 COST_PROFILE_UNKNOWN_WARNING = "cost_profile=unknown"
@@ -30,7 +41,11 @@ def run_dir_to_row(run_dir: str | Path, *, bundle: str | None = None) -> Leaderb
     predictions_meta = _read_json(run_path / "predictions_meta.json")
     ranking_row = _read_json(run_path / "ranking_row.json")
     metrics_cache = _read_json(run_path / "metrics.json")
+    lifecycle = _read_json(run_path / "lifecycle.json")
     resolved_config = _read_yaml(run_path / "config.resolved.yaml")
+    summary = _read_json(
+        next(run_path.glob("summary_*.json"), Path()) if run_path.is_dir() else Path()
+    )
     warnings: list[str] = []
 
     trades_path = run_path / "trades.csv"
@@ -108,6 +123,14 @@ def run_dir_to_row(run_dir: str | Path, *, bundle: str | None = None) -> Leaderb
         or resolve_market_family(market, timeframe, load_config())
     )
 
+    cache_keys = _cache_keys(predictions_meta)
+    artifacts = _artifacts(run_path)
+    state = _lifecycle_state(lifecycle)
+
+    # Extract universe info from summary (Phase 1e)
+    universe_slug = summary.get("universe_slug") if summary else None
+    universe_version = summary.get("universe_version") if summary else None
+
     return LeaderboardRow(
         run_id=f"{bundle_name}/{run_name}#{config_hash[:8]}",
         bundle=bundle_name,
@@ -115,6 +138,9 @@ def run_dir_to_row(run_dir: str | Path, *, bundle: str | None = None) -> Leaderb
         config_hash=config_hash,
         generated_at=generated_at,
         superseded=False,
+        state=state,
+        cache_keys=cache_keys,
+        artifacts=artifacts,
         market=market,
         market_family=market_family,
         currency=currency,
@@ -136,21 +162,16 @@ def run_dir_to_row(run_dir: str | Path, *, bundle: str | None = None) -> Leaderb
         entry_model=str(
             predictions_meta.get("entry_model") or ranking_row.get("entry_model") or "unknown"
         ),
-        exit_model_type=str(
-            predictions_meta.get("exit_model_type")
-            or ranking_row.get("exit_model_type")
-            or "unknown"
-        ),
-        exit_model_enabled=bool(
-            predictions_meta.get("exit_model_enabled", ranking_row.get("exit_model_enabled", False))
-        ),
         target=target,
         trades=int(metrics["trades"]),
         wr=float(metrics["wr"]),
         avg_pnl=float(metrics["avg_pnl"]),
         total_pnl=float(metrics["total_pnl"]),
+        pnl_pct=round(float(metrics["total_pnl"]) * 100, 4),
         pf=float(metrics["pf"]),
         avg_hold=float(metrics["avg_hold"]),
+        max_win=round(max((float(t["pnl_pct"]) for t in trades), default=0.0), 4),
+        max_loss=round(float(metrics.get("max_loss", 0.0)), 4),
         sharpe=round(float(sharpe), 4),
         max_drawdown=round(float(max_drawdown), 4),
         mdd_per_symbol=round(float(mdd_per_symbol), 4),
@@ -171,16 +192,71 @@ def run_dir_to_row(run_dir: str | Path, *, bundle: str | None = None) -> Leaderb
             market_family,
             currency,
             schema,
+            universe_slug=universe_slug,
         ),
+        experiment_group=str(_metadata_field(summary, "experiment_group", "ungrouped")),
+        variant_type=_metadata_field(summary, "variant_type", None),
+        parent_run_id=_metadata_field(summary, "parent_run_id", None),
+        metadata_notes=_metadata_field(summary, "notes", None),
+        universe_slug=universe_slug,
+        universe_version=universe_version,
         warnings=warnings,
     )
 
 
+def _metadata_field(summary: dict[str, Any], key: str, default: Any = None) -> Any:
+    """Extract metadata field from summary dict."""
+    if not summary:
+        return default
+    metadata = summary.get("metadata", {})
+    return metadata.get(key, default)
+
+
 def _read_json(path: Path) -> dict[str, Any]:
-    if not path.exists():
+    # Guard against the empty-glob sentinel: ``next(glob(...), Path())`` yields
+    # ``Path('.')`` when a run dir has no summary_*.json, and ``.`` (the cwd) both
+    # exists() and is a directory — opening it raises PermissionError/IsADirectoryError.
+    if not path.exists() or path.is_dir():
         return {}
     with path.open("r", encoding="utf-8") as f:
         return json.load(f)
+
+
+def _cache_keys(predictions_meta: dict[str, Any]) -> CacheKeys:
+    raw = predictions_meta.get("cache_keys") or {}
+    return CacheKeys(
+        features=str(raw.get("features", "")),
+        predictions=str(raw.get("predictions", "")),
+    )
+
+
+def _artifacts(run_path: Path) -> Artifacts:
+    """Record run artifact paths relative to results/ (or absolute if outside)."""
+
+    def rel(p: Path) -> str:
+        if not p.exists():
+            return ""
+        try:
+            from src.utils.env import get_results_dir
+
+            return p.resolve().relative_to(Path(get_results_dir()).resolve()).as_posix()
+        except (ValueError, Exception):
+            return p.as_posix()
+
+    model_pkl = run_path / "model.pkl"
+    return Artifacts(
+        trades_csv=rel(run_path / "trades.csv"),
+        meta_json=rel(run_path / "predictions_meta.json"),
+        model_pkl=rel(model_pkl) if model_pkl.exists() else "",
+    )
+
+
+def _lifecycle_state(lifecycle: dict[str, Any]) -> LifecycleState:
+    raw = str(lifecycle.get("state", "trained")).lower()
+    try:
+        return LifecycleState(raw)
+    except ValueError:
+        return LifecycleState.trained
 
 
 def _read_yaml(path: Path) -> dict[str, Any]:
@@ -247,8 +323,6 @@ def _target_config(config: dict[str, Any]) -> TargetConfig:
     return TargetConfig(
         type=str(target.get("type", "unknown")),
         forward_window=int(target.get("forward_window", 0)),
-        gain_threshold=target.get("gain_threshold"),
-        loss_threshold=target.get("loss_threshold"),
     )
 
 
@@ -298,7 +372,14 @@ def _fairness_group_key(
     market_family: str,
     currency: str,
     schema: str,
+    universe_slug: str | None = None,
 ) -> str:
+    """Compute fairness group key with optional universe slug (Phase 2a).
+
+    When universe_slug is not None, it's included in the hash to ensure
+    runs from different universes are in different fairness groups.
+    When None (old runs), universe is not included for backward compat.
+    """
     key_obj = {
         "market_family": market_family,
         "currency": currency,
@@ -308,6 +389,8 @@ def _fairness_group_key(
         "cost_profile": cost_profile.model_dump(),
         "target": target.model_dump(),
     }
+    if universe_slug is not None:
+        key_obj["universe_slug"] = universe_slug
     payload = json.dumps(key_obj, sort_keys=True, separators=(",", ":"))
     return hashlib.sha1(payload.encode("utf-8")).hexdigest()
 

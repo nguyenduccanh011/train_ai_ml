@@ -138,53 +138,21 @@ def _build_predictions(
         drop_cols.append("target_sell")
     df = df.dropna(subset=drop_cols)
 
-    results = []
-    for window, train_df, test_df in splitter.split(df):
-        model = get_model(effective_model_type, device=device, **model_extras)
-        X_train = np.nan_to_num(train_df[feature_cols].values)
-        y_train = train_df["target"].values.astype(int)
-        model.fit(X_train, y_train)
+    from src.pipeline._train_loop import train_predict_walk_forward
 
-        sell_model = None
-        if has_exit:
-            sell_model = get_model(effective_model_type, device=device, **model_extras)
-            sell_model.fit(X_train, train_df["target_sell"].values.astype(int))
-
-        for sym in test_df["symbol"].unique():
-            if sym not in symbols_list:
-                continue
-            sym_test = test_df[test_df["symbol"] == sym].reset_index(drop=True)
-            if len(sym_test) < 10:
-                continue
-            X_sym = np.nan_to_num(sym_test[feature_cols].values)
-            y_pred_raw = model.predict(X_sym)
-            y_pred = canonicalize_predictions(y_pred_raw, config["target"])
-            rets = sym_test["return_1d"].values
-
-            # V37c: capture proba + class mapping for per-profile threshold tuning
-            y_proba = None
-            classes = None
-            try:
-                if hasattr(model, "predict_proba"):
-                    y_proba = model.predict_proba(X_sym)
-                    final_est = model.steps[-1][1] if hasattr(model, "steps") else model
-                    classes = list(final_est.classes_)
-            except Exception:
-                y_proba = None
-
-            results.append(
-                {
-                    "symbol": sym,
-                    "y_pred": y_pred,
-                    "y_pred_exit": (
-                        sell_model.predict(X_sym).astype(int) if sell_model is not None else None
-                    ),
-                    "y_proba": y_proba,
-                    "classes": classes,
-                    "returns": rets,
-                    "sym_test_df": sym_test,
-                    "feature_cols": feature_cols,
-                }
-            )
-
-    return results
+    return train_predict_walk_forward(
+        df=df,
+        splitter=splitter,
+        symbols=symbols_list,
+        feature_cols=feature_cols,
+        target_cfg=config["target"],
+        entry_model_factory=lambda: get_model(
+            effective_model_type, device=device, **model_extras
+        ),
+        exit_model_factory=(
+            lambda: get_model(effective_model_type, device=device, **model_extras)
+        )
+        if has_exit
+        else None,
+        has_exit=has_exit,
+    )

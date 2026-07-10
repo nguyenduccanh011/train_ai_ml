@@ -1,0 +1,739 @@
+{
+  "aggregate_stats": {
+    "avg_hold_days": 3.44117647,
+    "avg_pnl": -9.939e-05,
+    "losses": 52.0,
+    "max_loss": -0.10664349,
+    "max_win": 0.14571996,
+    "med_pnl": -0.00081873,
+    "n_trades": 102.0,
+    "profit_factor": 0.99353102,
+    "std_pnl": 0.0406705,
+    "total_pnl": -0.01013775,
+    "win_rate": 0.49019608,
+    "wins": 50.0
+  },
+  "n_trades": 102,
+  "score_mean": 0.0012939,
+  "score_sum": 0.797043,
+  "signal_counts": {
+    "-1": 302,
+    "1": 314
+  },
+  "trades": [
+    {
+      "entry_date": "2021-06-09",
+      "exit_date": "2021-06-11",
+      "holding_days": 2,
+      "pnl_pct": 0.0005982,
+      "symbol": "A"
+    },
+    {
+      "entry_date": "2021-06-14",
+      "exit_date": "2021-06-16",
+      "holding_days": 2,
+      "pnl_pct": -0.01396434,
+      "symbol": "A"
+    },
+    {
+      "entry_date": "2021-06-17",
+      "exit_date": "2021-06-21",
+      "holding_days": 2,
+      "pnl_pct": -0.00780238,
+      "symbol": "A"
+    },
+    {
+      "entry_date": "2021-06-22",
+      "exit_date": "2021-06-24",
+      "holding_days": 2,
+      "pnl_pct": 0.00617464,
+      "symbol": "A"
+    },
+    {
+      "entry_date": "2021-07-02",
+      "exit_date": "2021-07-06",
+      "holding_days": 2,
+      "pnl_pct": -0.02770041,
+      "symbol": "A"
+    },
+    {
+      "entry_date": "2021-07-07",
+      "exit_date": "2021-07-12",
+      "holding_days": 3,
+      "pnl_pct": -0.02258139,
+      "symbol": "A"
+    },
+    {
+      "entry_date": "2021-07-14",
+      "exit_date": "2021-07-16",
+      "holding_days": 2,
+      "pnl_pct": -0.04291264,
+      "symbol": "A"
+    },
+    {
+      "entry_date": "2021-07-21",
+      "exit_date": "2021-07-23",
+      "holding_days": 2,
+      "pnl_pct": -0.01277133,
+      "symbol": "A"
+    },
+    {
+      "entry_date": "2021-07-26",
+      "exit_date": "2021-07-29",
+      "holding_days": 3,
+      "pnl_pct": -0.07799592,
+      "symbol": "A"
+    },
+    {
+      "entry_date": "2021-08-02",
+      "exit_date": "2021-08-04",
+      "holding_days": 2,
+      "pnl_pct": 0.00024779,
+      "symbol": "A"
+    },
+    {
+      "entry_date": "2021-08-05",
+      "exit_date": "2021-08-10",
+      "holding_days": 3,
+      "pnl_pct": 0.01425526,
+      "symbol": "A"
+    },
+    {
+      "entry_date": "2021-08-16",
+      "exit_date": "2021-08-18",
+      "holding_days": 2,
+      "pnl_pct": -0.01332819,
+      "symbol": "A"
+    },
+    {
+      "entry_date": "2021-08-19",
+      "exit_date": "2021-08-24",
+      "holding_days": 3,
+      "pnl_pct": -0.03905369,
+      "symbol": "A"
+    },
+    {
+      "entry_date": "2021-08-27",
+      "exit_date": "2021-09-06",
+      "holding_days": 6,
+      "pnl_pct": -0.03355832,
+      "symbol": "A"
+    },
+    {
+      "entry_date": "2021-09-09",
+      "exit_date": "2021-09-13",
+      "holding_days": 2,
+      "pnl_pct": -0.00791437,
+      "symbol": "A"
+    },
+    {
+      "entry_date": "2021-09-14",
+      "exit_date": "2021-09-23",
+      "holding_days": 7,
+      "pnl_pct": 0.03327724,
+      "symbol": "A"
+    },
+    {
+      "entry_date": "2021-09-24",
+      "exit_date": "2021-09-30",
+      "holding_days": 4,
+      "pnl_pct": -0.03508549,
+      "symbol": "A"
+    },
+    {
+      "entry_date": "2021-10-04",
+      "exit_date": "2021-10-07",
+      "holding_days": 3,
+      "pnl_pct": -0.00331529,
+      "symbol": "A"
+    },
+    {
+      "entry_date": "2021-10-11",
+      "exit_date": "2021-10-22",
+      "holding_days": 9,
+      "pnl_pct": -0.08374049,
+      "symbol": "A"
+    },
+    {
+      "entry_date": "2021-10-25",
+      "exit_date": "2021-10-27",
+      "holding_days": 2,
+      "pnl_pct": -0.00062633,
+      "symbol": "A"
+    },
+    {
+      "entry_date": "2021-10-28",
+      "exit_date": "2021-11-04",
+      "holding_days": 5,
+      "pnl_pct": -0.05732255,
+      "symbol": "A"
+    },
+    {
+      "entry_date": "2021-11-08",
+      "exit_date": "2021-11-26",
+      "holding_days": 14,
+      "pnl_pct": 0.00123491,
+      "symbol": "A"
+    },
+    {
+      "entry_date": "2021-12-01",
+      "exit_date": "2021-12-03",
+      "holding_days": 2,
+      "pnl_pct": 0.0371096,
+      "symbol": "A"
+    },
+    {
+      "entry_date": "2021-12-06",
+      "exit_date": "2021-12-08",
+      "holding_days": 2,
+      "pnl_pct": -0.01650597,
+      "symbol": "A"
+    },
+    {
+      "entry_date": "2021-12-09",
+      "exit_date": "2021-12-15",
+      "holding_days": 4,
+      "pnl_pct": -0.10243567,
+      "symbol": "A"
+    },
+    {
+      "entry_date": "2021-12-24",
+      "exit_date": "2021-12-29",
+      "holding_days": 3,
+      "pnl_pct": -0.04910599,
+      "symbol": "A"
+    },
+    {
+      "entry_date": "2021-12-30",
+      "exit_date": "2021-12-31",
+      "holding_days": 1,
+      "pnl_pct": -0.00101114,
+      "symbol": "A"
+    },
+    {
+      "entry_date": "2021-06-07",
+      "exit_date": "2021-06-14",
+      "holding_days": 5,
+      "pnl_pct": 0.0678364,
+      "symbol": "B"
+    },
+    {
+      "entry_date": "2021-06-15",
+      "exit_date": "2021-06-24",
+      "holding_days": 7,
+      "pnl_pct": 0.0254707,
+      "symbol": "B"
+    },
+    {
+      "entry_date": "2021-07-05",
+      "exit_date": "2021-07-08",
+      "holding_days": 3,
+      "pnl_pct": 0.00522903,
+      "symbol": "B"
+    },
+    {
+      "entry_date": "2021-07-13",
+      "exit_date": "2021-07-16",
+      "holding_days": 3,
+      "pnl_pct": 0.04839444,
+      "symbol": "B"
+    },
+    {
+      "entry_date": "2021-07-20",
+      "exit_date": "2021-07-22",
+      "holding_days": 2,
+      "pnl_pct": -0.00997047,
+      "symbol": "B"
+    },
+    {
+      "entry_date": "2021-07-28",
+      "exit_date": "2021-07-30",
+      "holding_days": 2,
+      "pnl_pct": -0.00843274,
+      "symbol": "B"
+    },
+    {
+      "entry_date": "2021-08-03",
+      "exit_date": "2021-08-16",
+      "holding_days": 9,
+      "pnl_pct": -0.02957934,
+      "symbol": "B"
+    },
+    {
+      "entry_date": "2021-08-17",
+      "exit_date": "2021-08-23",
+      "holding_days": 4,
+      "pnl_pct": 0.06348563,
+      "symbol": "B"
+    },
+    {
+      "entry_date": "2021-08-25",
+      "exit_date": "2021-08-27",
+      "holding_days": 2,
+      "pnl_pct": -0.03653221,
+      "symbol": "B"
+    },
+    {
+      "entry_date": "2021-08-31",
+      "exit_date": "2021-09-06",
+      "holding_days": 4,
+      "pnl_pct": 0.0449801,
+      "symbol": "B"
+    },
+    {
+      "entry_date": "2021-09-07",
+      "exit_date": "2021-09-09",
+      "holding_days": 2,
+      "pnl_pct": -0.00813817,
+      "symbol": "B"
+    },
+    {
+      "entry_date": "2021-09-10",
+      "exit_date": "2021-09-14",
+      "holding_days": 2,
+      "pnl_pct": 0.01486288,
+      "symbol": "B"
+    },
+    {
+      "entry_date": "2021-09-21",
+      "exit_date": "2021-09-23",
+      "holding_days": 2,
+      "pnl_pct": 0.03311802,
+      "symbol": "B"
+    },
+    {
+      "entry_date": "2021-09-24",
+      "exit_date": "2021-10-04",
+      "holding_days": 6,
+      "pnl_pct": 0.04840546,
+      "symbol": "B"
+    },
+    {
+      "entry_date": "2021-10-06",
+      "exit_date": "2021-10-08",
+      "holding_days": 2,
+      "pnl_pct": 0.00827673,
+      "symbol": "B"
+    },
+    {
+      "entry_date": "2021-10-14",
+      "exit_date": "2021-10-18",
+      "holding_days": 2,
+      "pnl_pct": -0.00606927,
+      "symbol": "B"
+    },
+    {
+      "entry_date": "2021-10-27",
+      "exit_date": "2021-11-03",
+      "holding_days": 5,
+      "pnl_pct": 0.04616755,
+      "symbol": "B"
+    },
+    {
+      "entry_date": "2021-11-04",
+      "exit_date": "2021-11-08",
+      "holding_days": 2,
+      "pnl_pct": 0.00904765,
+      "symbol": "B"
+    },
+    {
+      "entry_date": "2021-11-12",
+      "exit_date": "2021-11-17",
+      "holding_days": 3,
+      "pnl_pct": 0.04185628,
+      "symbol": "B"
+    },
+    {
+      "entry_date": "2021-11-22",
+      "exit_date": "2021-11-25",
+      "holding_days": 3,
+      "pnl_pct": 0.03990804,
+      "symbol": "B"
+    },
+    {
+      "entry_date": "2021-11-26",
+      "exit_date": "2021-12-01",
+      "holding_days": 3,
+      "pnl_pct": 0.01250502,
+      "symbol": "B"
+    },
+    {
+      "entry_date": "2021-12-02",
+      "exit_date": "2021-12-08",
+      "holding_days": 4,
+      "pnl_pct": 0.05249945,
+      "symbol": "B"
+    },
+    {
+      "entry_date": "2021-12-09",
+      "exit_date": "2021-12-23",
+      "holding_days": 10,
+      "pnl_pct": 0.05680611,
+      "symbol": "B"
+    },
+    {
+      "entry_date": "2021-12-29",
+      "exit_date": "2021-12-31",
+      "holding_days": 2,
+      "pnl_pct": 0.00947449,
+      "symbol": "B"
+    },
+    {
+      "entry_date": "2021-06-03",
+      "exit_date": "2021-06-14",
+      "holding_days": 7,
+      "pnl_pct": 0.14571996,
+      "symbol": "C"
+    },
+    {
+      "entry_date": "2021-06-15",
+      "exit_date": "2021-06-21",
+      "holding_days": 4,
+      "pnl_pct": 0.02551503,
+      "symbol": "C"
+    },
+    {
+      "entry_date": "2021-06-25",
+      "exit_date": "2021-06-30",
+      "holding_days": 3,
+      "pnl_pct": 0.00173975,
+      "symbol": "C"
+    },
+    {
+      "entry_date": "2021-07-02",
+      "exit_date": "2021-07-06",
+      "holding_days": 2,
+      "pnl_pct": -0.02313001,
+      "symbol": "C"
+    },
+    {
+      "entry_date": "2021-07-13",
+      "exit_date": "2021-07-21",
+      "holding_days": 6,
+      "pnl_pct": 0.05725536,
+      "symbol": "C"
+    },
+    {
+      "entry_date": "2021-08-05",
+      "exit_date": "2021-08-10",
+      "holding_days": 3,
+      "pnl_pct": -0.10664349,
+      "symbol": "C"
+    },
+    {
+      "entry_date": "2021-08-17",
+      "exit_date": "2021-08-20",
+      "holding_days": 3,
+      "pnl_pct": 0.08643916,
+      "symbol": "C"
+    },
+    {
+      "entry_date": "2021-08-23",
+      "exit_date": "2021-08-26",
+      "holding_days": 3,
+      "pnl_pct": 0.00605152,
+      "symbol": "C"
+    },
+    {
+      "entry_date": "2021-08-31",
+      "exit_date": "2021-09-03",
+      "holding_days": 3,
+      "pnl_pct": 0.03324332,
+      "symbol": "C"
+    },
+    {
+      "entry_date": "2021-09-10",
+      "exit_date": "2021-09-14",
+      "holding_days": 2,
+      "pnl_pct": -0.04699689,
+      "symbol": "C"
+    },
+    {
+      "entry_date": "2021-09-16",
+      "exit_date": "2021-09-20",
+      "holding_days": 2,
+      "pnl_pct": 0.06040701,
+      "symbol": "C"
+    },
+    {
+      "entry_date": "2021-09-21",
+      "exit_date": "2021-09-24",
+      "holding_days": 3,
+      "pnl_pct": -0.03662402,
+      "symbol": "C"
+    },
+    {
+      "entry_date": "2021-10-08",
+      "exit_date": "2021-10-12",
+      "holding_days": 2,
+      "pnl_pct": 0.02093491,
+      "symbol": "C"
+    },
+    {
+      "entry_date": "2021-10-13",
+      "exit_date": "2021-10-15",
+      "holding_days": 2,
+      "pnl_pct": -0.01053496,
+      "symbol": "C"
+    },
+    {
+      "entry_date": "2021-10-18",
+      "exit_date": "2021-10-27",
+      "holding_days": 7,
+      "pnl_pct": -0.024382,
+      "symbol": "C"
+    },
+    {
+      "entry_date": "2021-10-28",
+      "exit_date": "2021-11-01",
+      "holding_days": 2,
+      "pnl_pct": -0.01738219,
+      "symbol": "C"
+    },
+    {
+      "entry_date": "2021-11-08",
+      "exit_date": "2021-11-10",
+      "holding_days": 2,
+      "pnl_pct": 0.04637615,
+      "symbol": "C"
+    },
+    {
+      "entry_date": "2021-11-11",
+      "exit_date": "2021-11-19",
+      "holding_days": 6,
+      "pnl_pct": 0.05281387,
+      "symbol": "C"
+    },
+    {
+      "entry_date": "2021-11-24",
+      "exit_date": "2021-11-26",
+      "holding_days": 2,
+      "pnl_pct": -0.01347399,
+      "symbol": "C"
+    },
+    {
+      "entry_date": "2021-11-30",
+      "exit_date": "2021-12-02",
+      "holding_days": 2,
+      "pnl_pct": -0.00869521,
+      "symbol": "C"
+    },
+    {
+      "entry_date": "2021-12-03",
+      "exit_date": "2021-12-08",
+      "holding_days": 3,
+      "pnl_pct": -0.05230928,
+      "symbol": "C"
+    },
+    {
+      "entry_date": "2021-12-16",
+      "exit_date": "2021-12-20",
+      "holding_days": 2,
+      "pnl_pct": 0.04572011,
+      "symbol": "C"
+    },
+    {
+      "entry_date": "2021-12-22",
+      "exit_date": "2021-12-28",
+      "holding_days": 4,
+      "pnl_pct": -0.04473598,
+      "symbol": "C"
+    },
+    {
+      "entry_date": "2021-12-29",
+      "exit_date": "2021-12-31",
+      "holding_days": 2,
+      "pnl_pct": -0.00699398,
+      "symbol": "C"
+    },
+    {
+      "entry_date": "2021-06-02",
+      "exit_date": "2021-06-10",
+      "holding_days": 6,
+      "pnl_pct": 0.02423928,
+      "symbol": "D"
+    },
+    {
+      "entry_date": "2021-06-16",
+      "exit_date": "2021-06-18",
+      "holding_days": 2,
+      "pnl_pct": 0.01977427,
+      "symbol": "D"
+    },
+    {
+      "entry_date": "2021-06-21",
+      "exit_date": "2021-06-24",
+      "holding_days": 3,
+      "pnl_pct": 0.01262397,
+      "symbol": "D"
+    },
+    {
+      "entry_date": "2021-06-25",
+      "exit_date": "2021-06-29",
+      "holding_days": 2,
+      "pnl_pct": -0.00125044,
+      "symbol": "D"
+    },
+    {
+      "entry_date": "2021-07-05",
+      "exit_date": "2021-07-08",
+      "holding_days": 3,
+      "pnl_pct": 0.04196115,
+      "symbol": "D"
+    },
+    {
+      "entry_date": "2021-07-09",
+      "exit_date": "2021-07-13",
+      "holding_days": 2,
+      "pnl_pct": -0.0066677,
+      "symbol": "D"
+    },
+    {
+      "entry_date": "2021-07-15",
+      "exit_date": "2021-07-28",
+      "holding_days": 9,
+      "pnl_pct": -0.04602464,
+      "symbol": "D"
+    },
+    {
+      "entry_date": "2021-08-02",
+      "exit_date": "2021-08-06",
+      "holding_days": 4,
+      "pnl_pct": -0.00209277,
+      "symbol": "D"
+    },
+    {
+      "entry_date": "2021-08-09",
+      "exit_date": "2021-08-13",
+      "holding_days": 4,
+      "pnl_pct": -0.0613067,
+      "symbol": "D"
+    },
+    {
+      "entry_date": "2021-08-18",
+      "exit_date": "2021-08-20",
+      "holding_days": 2,
+      "pnl_pct": 0.0142631,
+      "symbol": "D"
+    },
+    {
+      "entry_date": "2021-08-24",
+      "exit_date": "2021-09-02",
+      "holding_days": 7,
+      "pnl_pct": -0.06854469,
+      "symbol": "D"
+    },
+    {
+      "entry_date": "2021-09-03",
+      "exit_date": "2021-09-09",
+      "holding_days": 4,
+      "pnl_pct": 0.00392756,
+      "symbol": "D"
+    },
+    {
+      "entry_date": "2021-09-15",
+      "exit_date": "2021-09-20",
+      "holding_days": 3,
+      "pnl_pct": -0.00925171,
+      "symbol": "D"
+    },
+    {
+      "entry_date": "2021-09-21",
+      "exit_date": "2021-09-27",
+      "holding_days": 4,
+      "pnl_pct": 0.05587748,
+      "symbol": "D"
+    },
+    {
+      "entry_date": "2021-09-29",
+      "exit_date": "2021-10-01",
+      "holding_days": 2,
+      "pnl_pct": 0.02580371,
+      "symbol": "D"
+    },
+    {
+      "entry_date": "2021-10-05",
+      "exit_date": "2021-10-12",
+      "holding_days": 5,
+      "pnl_pct": -0.08333581,
+      "symbol": "D"
+    },
+    {
+      "entry_date": "2021-10-15",
+      "exit_date": "2021-10-19",
+      "holding_days": 2,
+      "pnl_pct": -0.02959326,
+      "symbol": "D"
+    },
+    {
+      "entry_date": "2021-11-01",
+      "exit_date": "2021-11-08",
+      "holding_days": 5,
+      "pnl_pct": 0.01178268,
+      "symbol": "D"
+    },
+    {
+      "entry_date": "2021-11-09",
+      "exit_date": "2021-11-11",
+      "holding_days": 2,
+      "pnl_pct": -0.02519228,
+      "symbol": "D"
+    },
+    {
+      "entry_date": "2021-11-15",
+      "exit_date": "2021-11-17",
+      "holding_days": 2,
+      "pnl_pct": -0.00431511,
+      "symbol": "D"
+    },
+    {
+      "entry_date": "2021-11-19",
+      "exit_date": "2021-11-23",
+      "holding_days": 2,
+      "pnl_pct": 0.00486069,
+      "symbol": "D"
+    },
+    {
+      "entry_date": "2021-11-24",
+      "exit_date": "2021-11-26",
+      "holding_days": 2,
+      "pnl_pct": -0.01407536,
+      "symbol": "D"
+    },
+    {
+      "entry_date": "2021-12-02",
+      "exit_date": "2021-12-06",
+      "holding_days": 2,
+      "pnl_pct": 0.02384381,
+      "symbol": "D"
+    },
+    {
+      "entry_date": "2021-12-07",
+      "exit_date": "2021-12-10",
+      "holding_days": 3,
+      "pnl_pct": 0.00226921,
+      "symbol": "D"
+    },
+    {
+      "entry_date": "2021-12-14",
+      "exit_date": "2021-12-16",
+      "holding_days": 2,
+      "pnl_pct": -0.05544978,
+      "symbol": "D"
+    },
+    {
+      "entry_date": "2021-12-21",
+      "exit_date": "2021-12-28",
+      "holding_days": 5,
+      "pnl_pct": 0.01232952,
+      "symbol": "D"
+    },
+    {
+      "entry_date": "2021-12-29",
+      "exit_date": "2021-12-31",
+      "holding_days": 2,
+      "pnl_pct": -0.02067562,
+      "symbol": "D"
+    }
+  ]
+}

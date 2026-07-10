@@ -239,18 +239,11 @@ def get_pipeline_symbols(symbols_arg="", min_rows_override=None, market: str | N
     if run_context.resolved_data_dir is None:
         raise ValueError(f"Market {resolved_market!r} does not define data.data_dir")
 
-    from src.data.loader import DataLoader
+    from src.data.loader import get_loader
 
     abs_data_dir = resolve_data_dir(run_context.resolved_data_dir)
-    loader = DataLoader(
-        abs_data_dir,
-        timeframe=run_context.timeframe,
-        timestamp_column=profile.data.timestamp_column,
-        timezone=profile.data.timezone,
-        required_columns=profile.data.required_columns,
-        optional_columns=profile.data.optional_columns,
-    )
-    available = set(loader.symbols)
+    loader = get_loader(abs_data_dir, timeframe=run_context.timeframe)
+    available = set(loader.list_symbols())
 
     if symbols_arg and symbols_arg.strip():
         pick = [s.strip().upper() for s in symbols_arg.split(",") if s.strip()]
@@ -269,7 +262,7 @@ def get_pipeline_symbols(symbols_arg="", min_rows_override=None, market: str | N
             return sorted(s for s in pick if s in available)
 
     viable = []
-    for sym in loader.symbols:
+    for sym in loader.list_symbols():
         try:
             df = loader.load_symbol(sym)
             if len(df) >= min_rows:

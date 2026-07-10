@@ -74,6 +74,49 @@ jobs:
             -k "not integration" \
             --ignore=tests/components/test_legacy_adapter.py
 
+  db-migrations:
+    name: DB migrations (fresh Postgres)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: stockml
+          POSTGRES_USER: stockml
+          POSTGRES_PASSWORD: stockml_dev
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U stockml -d stockml"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install DB deps
+        working-directory: .
+        run: pip install -r requirements-api.txt
+
+      # Validates every migration (0001→head) applies cleanly on a fresh Postgres,
+      # catching dialect-portability regressions (e.g. non-idempotent DROP INDEX).
+      - name: alembic upgrade head
+        working-directory: .
+        env:
+          DATABASE_URL: postgresql://stockml:stockml_dev@localhost:5432/stockml
+          PYTHONPATH: .
+        run: alembic -c alembic.ini upgrade head
+
+      - name: Schema/leaderboard tests
+        env:
+          DATABASE_URL: sqlite:///:memory:
+        run: pytest tests/leaderboard/test_schema.py -q --tb=short
+
   test-regression:
     name: Regression (hash check)
     runs-on: ubuntu-latest

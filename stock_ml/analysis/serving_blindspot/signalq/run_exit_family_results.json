@@ -1,0 +1,99 @@
+{
+  "control_seed42": {
+    "composite": 729.6,
+    "total_pnl": 127.253,
+    "pf": 5.963,
+    "mdd": 0.17455,
+    "trades": 1384
+  },
+  "results": [
+    {
+      "name": "xq_snr_t08_g15",
+      "template_id": 2729,
+      "seed": 42,
+      "composite": 732.0,
+      "total_pnl": 128.33755160665797,
+      "pf": 6.033149162491894,
+      "mdd": 0.1775018056333412,
+      "trades": 1365,
+      "runtime_s": 37.9
+    },
+    {
+      "name": "xq_snr_t08_g27",
+      "template_id": 2730,
+      "seed": 42,
+      "composite": 733.3,
+      "total_pnl": 128.17677216676685,
+      "pf": 6.015310926745523,
+      "mdd": 0.17454927579356125,
+      "trades": 1376,
+      "runtime_s": 38.2
+    },
+    {
+      "name": "xq_snr_t10_g15",
+      "template_id": 2731,
+      "seed": 42,
+      "composite": 731.6,
+      "total_pnl": 128.11178249038835,
+      "pf": 6.030648604601038,
+      "mdd": 0.17639287585630464,
+      "trades": 1369,
+      "runtime_s": 39.9
+    },
+    {
+      "name": "xq_snr_t12_g15",
+      "template_id": 2732,
+      "seed": 42,
+      "composite": 731.0,
+      "total_pnl": 127.7395842022244,
+      "pf": 6.029281809210252,
+      "mdd": 0.1745776732478693,
+      "trades": 1371,
+      "runtime_s": 37.2
+    },
+    {
+      "name": "xq_cons_m05",
+      "template_id": 2733,
+      "seed": 42,
+      "composite": 729.6,
+      "total_pnl": 127.25301810134556,
+      "pf": 5.963310002880663,
+      "mdd": 0.17454927579356125,
+      "trades": 1384,
+      "runtime_s": 37.6
+    },
+    {
+      "name": "xq_cons_m07",
+      "template_id": 2734,
+      "seed": 42,
+      "composite": 729.6,
+      "total_pnl": 127.25301810134556,
+      "pf": 5.963310002880663,
+      "mdd": 0.17454927579356125,
+      "trades": 1384,
+      "runtime_s": 37.3
+    },
+    {
+      "name": "xq_tier2_a12_s11",
+      "template_id": 2735,
+      "seed": 42,
+      "composite": 727.2,
+      "total_pnl": 127.00697259160938,
+      "pf": 5.919640840179851,
+      "mdd": 0.17669019472280037,
+      "trades": 1384,
+      "runtime_s": 36.4
+    },
+    {
+      "name": "xq_pop_a05_t05",
+      "template_id": 2736,
+      "seed": 42,
+      "composite": 729.5,
+      "total_pnl": 127.23831911978355,
+      "pf": 5.959893128382682,
+      "mdd": 0.17454927579356125,
+      "trades": 1384,
+      "runtime_s": 36.3
+    }
+  ]
+}

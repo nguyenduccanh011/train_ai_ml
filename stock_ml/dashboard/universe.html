@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Universe Management - Stock ML</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+        }
+
+        header {
+            background: white;
+            border-bottom: 1px solid #ddd;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        header h1 {
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .toolbar {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        button {
+            padding: 8px 16px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: white;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            background: #f5f5f5;
+            border-color: #999;
+        }
+
+        button.primary {
+            background: #0066cc;
+            color: white;
+            border-color: #0066cc;
+        }
+
+        button.primary:hover {
+            background: #0052a3;
+        }
+
+        button.danger {
+            background: #dc3545;
+            color: white;
+            border-color: #dc3545;
+        }
+
+        button.danger:hover {
+            background: #c82333;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        select {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        input[type="text"]:focus,
+        select:focus {
+            outline: none;
+            border-color: #0066cc;
+            box-shadow: 0 0 0 2px rgba(0,102,204,0.1);
+        }
+
+        .table-container {
+            background: white;
+            border-radius: 4px;
+            overflow: hidden;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: #f9f9f9;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            border-bottom: 1px solid #ddd;
+            font-size: 13px;
+        }
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #eee;
+        }
+
+        tr:hover {
+            background: #fafafa;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .badge.locked {
+            background: #ffe6e6;
+            color: #dc3545;
+        }
+
+        .badge.active {
+            background: #e6f2ff;
+            color: #0066cc;
+        }
+
+        .badge.inactive {
+            background: #f0f0f0;
+            color: #666;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid #ddd;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h2 {
+            font-size: 18px;
+        }
+
+        .modal-header .close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+
+        .symbols-list {
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            margin-top: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .symbol-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            background: white;
+            border: 1px solid #eee;
+            border-radius: 3px;
+            margin-bottom: 5px;
+            font-size: 13px;
+        }
+
+        .symbol-item button {
+            padding: 4px 8px;
+            font-size: 12px;
+        }
+
+        .modal-footer {
+            padding: 20px;
+            border-top: 1px solid #ddd;
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #0066cc;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #ffe6e6;
+            color: #dc3545;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            border: 1px solid #ffcccc;
+        }
+
+        .success {
+            background: #e6ffe6;
+            color: #28a745;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            border: 1px solid #ccffcc;
+        }
+
+        .symbol-search {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .symbol-search input {
+            flex: 1;
+        }
+
+        .available-symbols {
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 10px;
+            max-height: 150px;
+            overflow-y: auto;
+            font-size: 13px;
+        }
+
+        .available-symbols .symbol {
+            padding: 4px;
+            cursor: pointer;
+            border-radius: 3px;
+            display: inline-block;
+            margin: 2px;
+            background: white;
+            border: 1px solid #ddd;
+        }
+
+        .available-symbols .symbol:hover {
+            background: #e6f2ff;
+            border-color: #0066cc;
+        }
+
+        .action-menu {
+            display: flex;
+            gap: 5px;
+        }
+
+        .action-menu button {
+            padding: 4px 8px;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+
+        .market-badge {
+            background: #f0f0f0;
+            color: #333;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .empty-state p {
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+
+        .empty-state button {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Universe Management</h1>
+        <p style="color: #666; margin-top: 5px; font-size: 14px;">Create and manage symbol sets for backtesting</p>
+    </header>
+
+    <div class="container">
+        <div class="toolbar">
+            <button class="primary" onclick="openCreateModal()">+ New Universe</button>
+            <select id="marketFilter" onchange="loadUniverses()">
+                <option value="">All Markets</option>
+            </select>
+            <label style="display: flex; align-items: center; gap: 5px; margin-left: auto;">
+                <input type="checkbox" id="activeOnly" checked onchange="loadUniverses()">
+                Active Only
+            </label>
+        </div>
+
+        <div id="messageContainer"></div>
+
+        <div id="loadingContainer" class="loading" style="display: none;">
+            <div class="spinner"></div>
+            <p>Loading universes...</p>
+        </div>
+
+        <div id="tableContainer" class="table-container" style="display: none;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Slug</th>
+                        <th>Name</th>
+                        <th>Market</th>
+                        <th>Symbols</th>
+                        <th>Version</th>
+                        <th>Status</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="universeTable">
+                </tbody>
+            </table>
+        </div>
+
+        <div id="emptyState" class="empty-state" style="display: none;">
+            <p>No universes found</p>
+            <button class="primary" onclick="openCreateModal()">Create Your First Universe</button>
+        </div>
+    </div>
+
+    <!-- Create/Edit Modal -->
+    <div id="createModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">New Universe</h2>
+                <button class="close" onclick="closeCreateModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="createForm" onsubmit="saveUniverse(event)">
+                    <div class="form-group">
+                        <label>Slug *</label>
+                        <input type="text" id="slugInput" required placeholder="e.g., main_50" pattern="^[a-z0-9_-]+$">
+                        <small style="color: #999; display: block; margin-top: 4px;">Alphanumeric, underscore, hyphen only</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Name *</label>
+                        <input type="text" id="nameInput" required placeholder="e.g., Main 50 Symbols">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Market *</label>
+                        <select id="marketInput" required>
+                            <option value="">Select market...</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Description</label>
+                        <textarea id="descriptionInput" placeholder="Optional description"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Notes</label>
+                        <textarea id="notesInput" placeholder="Optional notes"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="checkbox-group">
+                            <input type="checkbox" id="lockedInput">
+                            <span>Lock this universe (prevent deletion)</span>
+                        </label>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Symbols</label>
+                        <div class="symbol-search" id="symbolSearch" style="display: none;">
+                            <input type="text" id="symbolFilter" placeholder="Search symbols...">
+                            <button type="button" onclick="addSymbolFromSearch()">Add</button>
+                        </div>
+                        <div id="availableSymbols" class="available-symbols" style="display: none;"></div>
+                        <div id="selectedSymbolsList" class="symbols-list"></div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" onclick="closeCreateModal()">Cancel</button>
+                        <button type="submit" class="primary">Save Universe</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Modal -->
+    <div id="viewModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="viewTitle">Universe Details</h2>
+                <button class="close" onclick="closeViewModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="viewContent"></div>
+                <div class="modal-footer">
+                    <button type="button" onclick="closeViewModal()">Close</button>
+                    <button type="button" class="primary" onclick="openEditModal()">Edit</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api/v1';
+        let currentUniverse = null;
+        let availableMarkets = [];
+        let selectedSymbols = [];
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadMarkets();
+            await loadUniverses();
+        });
+
+        async function loadMarkets() {
+            try {
+                const res = await fetch(`${API_BASE}/markets`);
+                const data = await res.json();
+                availableMarkets = data.markets || [];
+                populateMarketSelects();
+            } catch (err) {
+                console.error('Failed to load markets:', err);
+            }
+        }
+
+        function populateMarketSelects() {
+            const selects = ['marketFilter', 'marketInput'];
+            selects.forEach(id => {
+                const sel = document.getElementById(id);
+                const currentVal = sel.value;
+                if (id === 'marketFilter') return;
+                sel.innerHTML = '<option value="">Select market...</option>' +
+                    availableMarkets.map(m => `<option value="${m}">${m}</option>`).join('');
+                sel.value = currentVal;
+                if (id === 'marketInput') {
+                    sel.onchange = loadSymbolsForMarket;
+                }
+            });
+        }
+
+        async function loadUniverses() {
+            const loading = document.getElementById('loadingContainer');
+            const table = document.getElementById('tableContainer');
+            const empty = document.getElementById('emptyState');
+            loading.style.display = 'block';
+            table.style.display = 'none';
+            empty.style.display = 'none';
+
+            try {
+                const market = document.getElementById('marketFilter').value;
+                const activeOnly = document.getElementById('activeOnly').checked;
+                let url = `${API_BASE}/universes?active_only=${activeOnly}`;
+                if (market) url += `&market=${market}`;
+
+                const res = await fetch(url);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const data = await res.json();
+                const universes = data.universes || [];
+
+                if (universes.length === 0) {
+                    empty.style.display = 'block';
+                } else {
+                    const tbody = document.getElementById('universeTable');
+                    tbody.innerHTML = universes.map(u => `
+                        <tr>
+                            <td><strong>${u.slug}</strong></td>
+                            <td>${u.name}</td>
+                            <td><span class="market-badge">${u.market}</span></td>
+                            <td>${u.symbol_count}</td>
+                            <td>v${u.version}</td>
+                            <td>
+                                ${u.is_locked ? '<span class="badge locked">🔒 Locked</span>' : ''}
+                                ${u.is_active ? '<span class="badge active">Active</span>' : '<span class="badge inactive">Inactive</span>'}
+                            </td>
+                            <td>${new Date(u.created_at).toLocaleDateString()}</td>
+                            <td>
+                                <div class="action-menu">
+                                    <button onclick="viewUniverse('${u.slug}')">View</button>
+                                    <button onclick="openEditUniverse('${u.slug}')">Edit</button>
+                                    <button onclick="cloneUniverse('${u.slug}')" style="font-size:12px;">Clone</button>
+                                    ${!u.is_locked ? `<button class="danger" onclick="deleteUniverse('${u.slug}')">Delete</button>` : ''}
+                                </div>
+                            </td>
+                        </tr>
+                    `).join('');
+                    table.style.display = 'block';
+                }
+            } catch (err) {
+                showMessage('error', `Failed to load universes: ${err.message}`);
+            } finally {
+                loading.style.display = 'none';
+            }
+        }
+
+        async function loadSymbolsForMarket() {
+            const market = document.getElementById('marketInput').value;
+            if (!market) {
+                document.getElementById('availableSymbols').style.display = 'none';
+                document.getElementById('symbolSearch').style.display = 'none';
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_BASE}/markets/${market}/symbols`);
+                const data = await res.json();
+                const symbols = data.symbols || [];
+                const div = document.getElementById('availableSymbols');
+                div.innerHTML = symbols.map(s => `<span class="symbol" onclick="addSymbol('${s}')">${s}</span>`).join('');
+                div.style.display = 'block';
+                document.getElementById('symbolSearch').style.display = 'flex';
+            } catch (err) {
+                console.error('Failed to load symbols:', err);
+            }
+        }
+
+        function addSymbol(symbol) {
+            if (!selectedSymbols.includes(symbol)) {
+                selectedSymbols.push(symbol);
+                updateSelectedSymbolsList();
+            }
+        }
+
+        function removeSymbol(symbol) {
+            selectedSymbols = selectedSymbols.filter(s => s !== symbol);
+            updateSelectedSymbolsList();
+        }
+
+        function updateSelectedSymbolsList() {
+            const div = document.getElementById('selectedSymbolsList');
+            div.innerHTML = selectedSymbols.map(s => `
+                <div class="symbol-item">
+                    <span>${s}</span>
+                    <button type="button" onclick="removeSymbol('${s}')" class="danger">Remove</button>
+                </div>
+            `).join('');
+        }
+
+        function openCreateModal() {
+            currentUniverse = null;
+            selectedSymbols = [];
+            document.getElementById('modalTitle').textContent = 'New Universe';
+            document.getElementById('slugInput').value = '';
+            document.getElementById('slugInput').disabled = false;
+            document.getElementById('nameInput').value = '';
+            document.getElementById('marketInput').value = '';
+            document.getElementById('descriptionInput').value = '';
+            document.getElementById('notesInput').value = '';
+            document.getElementById('lockedInput').checked = false;
+            updateSelectedSymbolsList();
+            loadSymbolsForMarket();
+            document.getElementById('createModal').classList.add('active');
+        }
+
+        function closeCreateModal() {
+            document.getElementById('createModal').classList.remove('active');
+        }
+
+        function closeViewModal() {
+            document.getElementById('viewModal').classList.remove('active');
+        }
+
+        async function openEditUniverse(slug) {
+            try {
+                const res = await fetch(`${API_BASE}/universes/${slug}`);
+                const data = await res.json();
+                currentUniverse = data;
+                selectedSymbols = (data.symbols || []).map(s => s.symbol);
+
+                document.getElementById('modalTitle').textContent = `Edit ${slug}`;
+                document.getElementById('slugInput').value = data.slug;
+                document.getElementById('slugInput').disabled = true;
+                document.getElementById('nameInput').value = data.name;
+                document.getElementById('marketInput').value = data.market;
+                document.getElementById('descriptionInput').value = data.description || '';
+                document.getElementById('notesInput').value = data.notes || '';
+                document.getElementById('lockedInput').checked = data.is_locked;
+                updateSelectedSymbolsList();
+                loadSymbolsForMarket();
+                document.getElementById('createModal').classList.add('active');
+            } catch (err) {
+                showMessage('error', `Failed to load universe: ${err.message}`);
+            }
+        }
+
+        async function saveUniverse(e) {
+            e.preventDefault();
+            const slug = document.getElementById('slugInput').value.trim();
+            const name = document.getElementById('nameInput').value.trim();
+            const market = document.getElementById('marketInput').value;
+            const description = document.getElementById('descriptionInput').value.trim();
+            const notes = document.getElementById('notesInput').value.trim();
+            const isLocked = document.getElementById('lockedInput').checked;
+
+            if (!slug || !name || !market) {
+                showMessage('error', 'Please fill in all required fields');
+                return;
+            }
+
+            try {
+                if (currentUniverse) {
+                    // Update existing
+                    const res = await fetch(`${API_BASE}/universes/${slug}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ name, description, notes, is_locked: isLocked })
+                    });
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+                    // Update symbols
+                    await fetch(`${API_BASE}/universes/${slug}/symbols`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ symbols: selectedSymbols.map(s => ({ symbol: s })) })
+                    });
+                    showMessage('success', 'Universe updated successfully');
+                } else {
+                    // Create new
+                    const res = await fetch(`${API_BASE}/universes`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            slug, name, market, description, notes,
+                            symbols: selectedSymbols.map(s => ({ symbol: s }))
+                        })
+                    });
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                    showMessage('success', 'Universe created successfully');
+                }
+                closeCreateModal();
+                loadUniverses();
+            } catch (err) {
+                showMessage('error', `Failed to save universe: ${err.message}`);
+            }
+        }
+
+        async function viewUniverse(slug) {
+            try {
+                const res = await fetch(`${API_BASE}/universes/${slug}`);
+                const data = await res.json();
+                currentUniverse = data;
+                document.getElementById('viewTitle').textContent = data.slug;
+                document.getElementById('viewContent').innerHTML = `
+                    <div style="margin-bottom: 15px;">
+                        <p><strong>Name:</strong> ${data.name}</p>
+                        <p><strong>Market:</strong> ${data.market}</p>
+                        <p><strong>Description:</strong> ${data.description || '—'}</p>
+                        <p><strong>Symbols:</strong> ${data.symbol_count}</p>
+                        <p><strong>Version:</strong> v${data.version}</p>
+                        <p><strong>Locked:</strong> ${data.is_locked ? '🔒 Yes' : 'No'}</p>
+                        <p><strong>Created:</strong> ${new Date(data.created_at).toLocaleString()}</p>
+                    </div>
+                    <div>
+                        <strong>Symbols:</strong>
+                        <div class="symbols-list" style="margin-top: 10px;">
+                            ${(data.symbols || []).map(s => `<div style="padding: 4px; background: white; border-radius: 3px; margin-bottom: 3px;">${s.symbol}${s.group ? ` (${s.group})` : ''}</div>`).join('')}
+                        </div>
+                    </div>
+                `;
+                document.getElementById('viewModal').classList.add('active');
+            } catch (err) {
+                showMessage('error', `Failed to load universe: ${err.message}`);
+            }
+        }
+
+        async function cloneUniverse(slug) {
+            const newSlug = prompt('Enter new slug for cloned universe:');
+            if (!newSlug) return;
+
+            try {
+                const res = await fetch(`${API_BASE}/universes/${slug}/clone`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ new_slug: newSlug, new_name: `${slug} (copy)` })
+                });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                showMessage('success', `Universe cloned as ${newSlug}`);
+                loadUniverses();
+            } catch (err) {
+                showMessage('error', `Failed to clone universe: ${err.message}`);
+            }
+        }
+
+        async function deleteUniverse(slug) {
+            if (!confirm(`Are you sure you want to delete "${slug}"?`)) return;
+
+            try {
+                const res = await fetch(`${API_BASE}/universes/${slug}`, { method: 'DELETE' });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                showMessage('success', 'Universe deleted');
+                loadUniverses();
+            } catch (err) {
+                showMessage('error', `Failed to delete universe: ${err.message}`);
+            }
+        }
+
+        function showMessage(type, message) {
+            const div = document.getElementById('messageContainer');
+            div.innerHTML = `<div class="${type}">${message}</div>`;
+            setTimeout(() => { div.innerHTML = ''; }, 5000);
+        }
+    </script>
+
+    <script src="./js/nav.js"></script>
+</body>
+</html>

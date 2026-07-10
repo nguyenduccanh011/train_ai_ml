@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Model Manager</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      background: #101318;
+      color: #d7dde8;
+    }
+    a { color: #7db3ff; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    button, input, select {
+      font: inherit;
+    }
+    button {
+      background: #232835;
+      color: #e7edf8;
+      border: 1px solid #384054;
+      border-radius: 4px;
+      padding: 7px 10px;
+      cursor: pointer;
+    }
+    button:hover { border-color: #5f6c88; }
+    button.danger { background: #402126; border-color: #7d3943; }
+    button.primary { background: #204a8d; border-color: #2f65ba; }
+    button[disabled] { opacity: 0.45; cursor: not-allowed; }
+    input, select {
+      background: #181d26;
+      color: #e7edf8;
+      border: 1px solid #384054;
+      border-radius: 4px;
+      padding: 7px 10px;
+      outline: none;
+      min-width: 0;
+    }
+    input:focus, select:focus { border-color: #6b90d6; }
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: end;
+      padding: 14px 18px;
+      border-bottom: 1px solid #222a36;
+      background: #151a22;
+    }
+    .title h1 {
+      margin: 0;
+      font-size: 18px;
+      color: #fff;
+    }
+    .subtle {
+      margin-top: 4px;
+      color: #7a8498;
+      font-size: 12px;
+    }
+    .summary {
+      display: flex;
+      gap: 14px;
+      font-size: 12px;
+      color: #aeb7c8;
+      white-space: nowrap;
+    }
+    .controls, .actions {
+      display: grid;
+      gap: 10px;
+      padding: 12px 18px;
+      border-bottom: 1px solid #222a36;
+      background: #101318;
+    }
+    .controls {
+      grid-template-columns: minmax(240px, 1.8fr) 180px 130px 160px 140px 100px;
+    }
+    .actions {
+      grid-template-columns: repeat(6, max-content) 1fr;
+      align-items: center;
+    }
+    .actions .spacer { min-width: 0; }
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 2.2fr) minmax(320px, 1fr);
+      gap: 0;
+      min-height: calc(100vh - 150px);
+    }
+    .list-pane {
+      border-right: 1px solid #222a36;
+      overflow: auto;
+    }
+    .detail-pane {
+      overflow: auto;
+      padding: 14px 16px 18px;
+      background: #0f131a;
+    }
+    .table-wrap {
+      height: calc(100vh - 150px);
+      overflow: auto;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 1360px;
+    }
+    thead th {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      background: #151a22;
+      color: #d7dde8;
+      border-bottom: 1px solid #222a36;
+      padding: 10px 8px;
+      text-align: left;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    tbody td {
+      border-bottom: 1px solid #222a36;
+      padding: 9px 8px;
+      font-size: 12px;
+      vertical-align: top;
+      white-space: nowrap;
+    }
+    tbody tr:hover { background: #141b26; }
+    tbody tr.selected { background: #17253a; }
+    .num { text-align: right; font-variant-numeric: tabular-nums; }
+    .muted { color: #7a8498; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .wrap {
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+    .status {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid #384054;
+      font-size: 11px;
+    }
+    .status.active { background: #143f3a; border-color: #296d61; color: #8ef0dc; }
+    .status.inactive { background: #2b313d; color: #c2c8d4; }
+    .status.archived { background: #43381a; border-color: #79652a; color: #f0d48e; }
+    .status.quarantined { background: #401e2d; border-color: #7c3a56; color: #f0a6cc; }
+    .status.purged { background: #2f2f33; color: #b8beca; }
+    .badge {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 4px;
+      background: #232835;
+      border: 1px solid #384054;
+      font-size: 11px;
+      margin-right: 4px;
+      margin-bottom: 4px;
+    }
+    .panel {
+      border: 1px solid #222a36;
+      border-radius: 4px;
+      background: #151a22;
+      margin-bottom: 12px;
+      padding: 12px;
+    }
+    .panel h2 {
+      margin: 0 0 10px;
+      font-size: 13px;
+      color: #fff;
+    }
+    .kv {
+      display: grid;
+      grid-template-columns: 120px minmax(0, 1fr);
+      gap: 6px 10px;
+      font-size: 12px;
+    }
+    .kv .k { color: #7a8498; }
+    .kv .v { overflow-wrap: anywhere; }
+    .audit-list { display: grid; gap: 8px; }
+    .audit-item {
+      border: 1px solid #222a36;
+      border-radius: 4px;
+      background: #101318;
+      padding: 8px 10px;
+      font-size: 12px;
+    }
+    .audit-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+    .empty, .error {
+      padding: 20px;
+      color: #7a8498;
+      font-size: 13px;
+    }
+    .error { color: #ef6b7b; }
+    @media (max-width: 1200px) {
+      .layout { grid-template-columns: 1fr; }
+      .list-pane { border-right: 0; border-bottom: 1px solid #222a36; }
+      .table-wrap { height: auto; max-height: 58vh; }
+      .controls { grid-template-columns: 1fr 1fr; }
+      .actions { grid-template-columns: repeat(2, max-content) 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="title">
+      <h1>Model Manager</h1>
+      <div class="subtle">
+        <a href="/visualization/leaderboard.html">Leaderboard</a> - DB-backed admin
+      </div>
+    </div>
+    <div class="summary">
+      <span id="summaryCount">0 rows</span>
+      <span id="summaryVisible">0 visible</span>
+      <span id="summaryStatuses">0 statuses</span>
+    </div>
+  </header>
+
+  <section class="controls">
+    <input id="searchInput" type="search" placeholder="Search id, name, strategy, feature set, reason...">
+    <select id="statusSelect">
+      <option value="">All statuses</option>
+      <option value="active">active</option>
+      <option value="inactive">inactive</option>
+      <option value="archived">archived</option>
+      <option value="quarantined">quarantined</option>
+      <option value="purged">purged</option>
+    </select>
+    <select id="sortBySelect">
+      <option value="updated_at">Updated</option>
+      <option value="created_at">Created</option>
+      <option value="priority">Priority</option>
+      <option value="name">Name</option>
+      <option value="version">Version</option>
+      <option value="status">Status</option>
+      <option value="market">Market</option>
+      <option value="id">Model ID</option>
+    </select>
+    <select id="sortDirSelect">
+      <option value="desc">Desc</option>
+      <option value="asc">Asc</option>
+    </select>
+    <label class="muted" style="display:flex;align-items:center;gap:8px;font-size:12px;">
+      <input id="visibleOnly" type="checkbox">
+      visible only
+    </label>
+    <button id="refreshBtn" class="primary" type="button">Refresh</button>
+  </section>
+
+  <section class="actions">
+    <button data-action="activate" type="button">Activate</button>
+    <button data-action="deactivate" type="button">Deactivate</button>
+    <button data-action="archive" type="button">Archive</button>
+    <button data-action="quarantine" type="button">Quarantine</button>
+    <button data-action="restore" type="button">Restore</button>
+    <button data-action="purge" type="button" class="danger">Purge</button>
+    <div class="spacer muted" id="selectionHint">No selection</div>
+  </section>
+
+  <main class="layout">
+    <section class="list-pane">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th><input id="selectAll" type="checkbox" aria-label="Select all"></th>
+              <th>Model</th>
+              <th>Status</th>
+              <th>Visible</th>
+              <th>Market</th>
+              <th>Strategy</th>
+              <th>Feature Set</th>
+              <th>Entry</th>
+              <th>Exit</th>
+              <th class="num">Priority</th>
+              <th>Updated</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+            <tr><td colspan="12" class="empty">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <aside class="detail-pane" id="detailPane">
+      <div class="panel">
+        <h2>Detail</h2>
+        <div id="detailEmpty" class="empty">Select a model.</div>
+        <div id="detailView" hidden>
+          <div class="kv" id="detailKv"></div>
+        </div>
+      </div>
+      <div class="panel">
+        <h2>Bundle</h2>
+        <div id="bundleEmpty" class="empty">No bundle loaded.</div>
+        <div id="bundleView" hidden>
+          <div class="kv" id="bundleKv"></div>
+          <div style="margin-top:10px;">
+            <div class="muted" style="margin-bottom:6px;font-size:12px;">Artifacts</div>
+            <div id="artifactList"></div>
+          </div>
+          <div style="margin-top:10px;">
+            <div class="muted" style="margin-bottom:6px;font-size:12px;">Metrics</div>
+            <div class="kv" id="metricsKv"></div>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <h2>Audit</h2>
+        <div id="auditEmpty" class="empty">No audit log loaded.</div>
+        <div id="auditList" class="audit-list" hidden></div>
+      </div>
+    </aside>
+  </main>
+
+  <script src="js/model_manager.js"></script>
+</body>
+</html>

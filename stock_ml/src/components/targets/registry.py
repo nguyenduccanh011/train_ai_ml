@@ -4,12 +4,14 @@ from src.components.targets.early_wave import EarlyWaveTarget
 from src.components.targets.early_wave_dual import EarlyWaveDualTarget
 from src.components.targets.early_wave_v2 import EarlyWaveV2Target
 from src.components.targets.trend_regime import TrendRegimeTarget
+from src.components.targets.zigzag_pivot import ZigzagPivotTarget
 
 _REGISTRY: dict[str, type] = {
     "trend_regime": TrendRegimeTarget,
     "early_wave": EarlyWaveTarget,
     "early_wave_v2": EarlyWaveV2Target,
     "early_wave_dual": EarlyWaveDualTarget,
+    "zigzag_pivot": ZigzagPivotTarget,
 }
 
 

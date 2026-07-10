@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Model Library - Stock ML Research</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; color: #333; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        header { background: white; padding: 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        h1 { font-size: 28px; margin-bottom: 10px; }
+        .breadcrumb { font-size: 14px; color: #666; }
+
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #ddd; }
+        .tab-button {
+            padding: 10px 20px; border: none; background: none; cursor: pointer; font-size: 14px; font-weight: 500;
+            color: #666; border-bottom: 3px solid transparent; transition: all 0.3s;
+        }
+        .tab-button.active { color: #0066cc; border-bottom-color: #0066cc; }
+
+        .content { background: white; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); padding: 20px; }
+
+        .toolbar { display: flex; gap: 10px; margin-bottom: 20px; justify-content: space-between; align-items: center; }
+        .search-box { flex: 1; }
+        .search-box input { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+        .btn { padding: 10px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 500; }
+        .btn-primary { background: #0066cc; color: white; }
+        .btn-primary:hover { background: #0052a3; }
+        .btn-secondary { background: #f0f0f0; color: #333; }
+        .btn-secondary:hover { background: #e0e0e0; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-danger:hover { background: #c82333; }
+
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #f8f8f8; padding: 12px; text-align: left; font-weight: 600; border-bottom: 2px solid #ddd; }
+        td { padding: 12px; border-bottom: 1px solid #eee; }
+        tr:hover { background: #f9f9f9; }
+
+        .badge { display: inline-block; padding: 4px 8px; border-radius: 3px; font-size: 12px; font-weight: 500; }
+        .badge-entry { background: #e3f2fd; color: #1976d2; }
+        .badge-exit { background: #f3e5f5; color: #7b1fa2; }
+        .badge-regime { background: #e8f5e9; color: #388e3c; }
+        .badge-size { background: #fff3e0; color: #f57c00; }
+
+        .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
+        .modal.active { display: flex; }
+        .modal-content { background: white; border-radius: 8px; padding: 30px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; }
+        .modal-header { font-size: 20px; font-weight: 600; margin-bottom: 20px; }
+        .modal-close { position: absolute; top: 10px; right: 10px; background: none; border: none; font-size: 24px; cursor: pointer; }
+
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 500; font-size: 14px; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; font-family: inherit; }
+        .form-group textarea { min-height: 100px; resize: vertical; }
+
+        .action-buttons { display: flex; gap: 8px; font-size: 12px; }
+        .action-buttons button { padding: 4px 8px; font-size: 12px; }
+
+        .loading { text-align: center; padding: 40px; color: #666; }
+        .empty { text-align: center; padding: 40px; color: #999; }
+        .error { background: #ffebee; color: #c62828; padding: 12px; border-radius: 4px; margin-bottom: 20px; }
+        .success { background: #e8f5e9; color: #2e7d32; padding: 12px; border-radius: 4px; margin-bottom: 20px; }
+
+        .json-display { background: #f5f5f5; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto; }
+
+        .feature-count { font-size: 12px; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📚 Model Library</h1>
+            <div class="breadcrumb">Dashboard / Model Components & Catalog</div>
+        </header>
+
+        <div class="tabs">
+            <button class="tab-button active" onclick="switchTab('components')">Model Components</button>
+            <button class="tab-button" onclick="switchTab('targets')">Target Definitions</button>
+            <button class="tab-button" onclick="switchTab('features')">Feature Sets</button>
+        </div>
+
+        <!-- Components Tab -->
+        <div id="components-tab" class="content" style="display: block;">
+            <div class="toolbar">
+                <div class="search-box">
+                    <input type="text" id="components-search" placeholder="Search components..." onkeyup="filterComponents()">
+                </div>
+                <button class="btn btn-primary" onclick="openComponentModal()">+ New Component</button>
+            </div>
+            <div id="components-list"></div>
+        </div>
+
+        <!-- Targets Tab -->
+        <div id="targets-tab" class="content" style="display: none;">
+            <div class="toolbar">
+                <div class="search-box">
+                    <input type="text" id="targets-search" placeholder="Search targets..." onkeyup="filterTargets()">
+                </div>
+                <button class="btn btn-primary" onclick="openTargetModal()">+ New Target</button>
+            </div>
+            <div id="targets-list"></div>
+        </div>
+
+        <!-- Features Tab -->
+        <div id="features-tab" class="content" style="display: none;">
+            <div id="features-list"></div>
+        </div>
+    </div>
+
+    <!-- Component Modal -->
+    <div id="component-modal" class="modal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeComponentModal()">×</button>
+            <div class="modal-header">New Model Component</div>
+            <div id="component-error"></div>
+            <form onsubmit="saveComponent(event)">
+                <div class="form-group">
+                    <label>Name *</label>
+                    <input type="text" id="comp-name" required>
+                </div>
+                <div class="form-group">
+                    <label>Role *</label>
+                    <select id="comp-role" required onchange="updateAlgorithmOptions()">
+                        <option value="">Select role...</option>
+                        <option value="entry">Entry Model</option>
+                        <option value="exit">Exit Model</option>
+                        <option value="regime">Regime Model</option>
+                        <option value="size">Size Model</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Algorithm *</label>
+                    <select id="comp-algo" required></select>
+                </div>
+                <div class="form-group">
+                    <label>Parameters (JSON)</label>
+                    <textarea id="comp-params" placeholder='{"n_estimators": 300, "learning_rate": 0.05}'></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <input type="text" id="comp-desc" placeholder="Brief description">
+                </div>
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button type="button" class="btn btn-secondary" onclick="closeComponentModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Component</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Target Modal -->
+    <div id="target-modal" class="modal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeTargetModal()">×</button>
+            <div class="modal-header">New Target Definition</div>
+            <div id="target-error"></div>
+            <form onsubmit="saveTarget(event)">
+                <div class="form-group">
+                    <label>Name *</label>
+                    <input type="text" id="tgt-name" required>
+                </div>
+                <div class="form-group">
+                    <label>Type *</label>
+                    <select id="tgt-type" required onchange="updateTargetParams()">
+                        <option value="">Select type...</option>
+                        <option value="forward_return_regression">Forward Return (Regression)</option>
+                        <option value="forward_return">Forward Return (Classification)</option>
+                        <option value="trend_regime">Trend Regime</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Parameters (JSON) *</label>
+                    <textarea id="tgt-params" required placeholder='{"horizon": 5}'></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <input type="text" id="tgt-desc">
+                </div>
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button type="button" class="btn btn-secondary" onclick="closeTargetModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Target</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api/v1';
+
+        function switchTab(tab) {
+            document.querySelectorAll('.content').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.tab-button').forEach(el => el.classList.remove('active'));
+            document.getElementById(tab + '-tab').style.display = 'block';
+            event.target.classList.add('active');
+
+            if (tab === 'components') loadComponents();
+            else if (tab === 'targets') loadTargets();
+            else if (tab === 'features') loadFeatures();
+        }
+
+        async function loadComponents() {
+            const list = document.getElementById('components-list');
+            list.innerHTML = '<div class="loading">Loading...</div>';
+
+            try {
+                const res = await fetch(`${API_BASE}/model-library/components`);
+                const components = await res.json();
+
+                if (!components.length) {
+                    list.innerHTML = '<div class="empty">No components yet. Create your first one!</div>';
+                    return;
+                }
+
+                const grouped = {};
+                components.forEach(c => {
+                    if (!grouped[c.role]) grouped[c.role] = [];
+                    grouped[c.role].push(c);
+                });
+
+                let html = '';
+                Object.entries(grouped).forEach(([role, comps]) => {
+                    html += `<h3 style="margin-top: 20px; margin-bottom: 10px;">
+                        <span class="badge badge-${role}">${role.toUpperCase()}</span>
+                    </h3>`;
+                    html += '<table>';
+                    html += '<tr><th>Name</th><th>Algorithm</th><th>Params</th><th>Actions</th></tr>';
+                    comps.forEach(c => {
+                        html += `<tr>
+                            <td><strong>${c.name}</strong></td>
+                            <td>${c.algorithm}</td>
+                            <td><div class="json-display">${JSON.stringify(c.params).substring(0, 100)}...</div></td>
+                            <td><div class="action-buttons">
+                                <button class="btn btn-secondary" onclick="editComponent(${c.id})">Edit</button>
+                                <button class="btn btn-danger" onclick="deleteComponent(${c.id})">Delete</button>
+                            </div></td>
+                        </tr>`;
+                    });
+                    html += '</table>';
+                });
+                list.innerHTML = html;
+            } catch (e) {
+                list.innerHTML = `<div class="error">Error loading components: ${e.message}</div>`;
+            }
+        }
+
+        async function loadTargets() {
+            const list = document.getElementById('targets-list');
+            list.innerHTML = '<div class="loading">Loading...</div>';
+
+            try {
+                const res = await fetch(`${API_BASE}/model-library/targets`);
+                const targets = await res.json();
+
+                if (!targets.length) {
+                    list.innerHTML = '<div class="empty">No targets yet. Create your first one!</div>';
+                    return;
+                }
+
+                let html = '<table>';
+                html += '<tr><th>Name</th><th>Type</th><th>Output</th><th>Params</th><th>Actions</th></tr>';
+                targets.forEach(t => {
+                    html += `<tr>
+                        <td><strong>${t.name}</strong></td>
+                        <td>${t.type}</td>
+                        <td>${t.outputDtype}</td>
+                        <td><div class="json-display">${JSON.stringify(t.params)}</div></td>
+                        <td><div class="action-buttons">
+                            <button class="btn btn-secondary" onclick="editTarget(${t.id})">Edit</button>
+                            <button class="btn btn-danger" onclick="deleteTarget(${t.id})">Delete</button>
+                        </div></td>
+                    </tr>`;
+                });
+                html += '</table>';
+                list.innerHTML = html;
+            } catch (e) {
+                list.innerHTML = `<div class="error">Error loading targets: ${e.message}</div>`;
+            }
+        }
+
+        async function loadFeatures() {
+            const list = document.getElementById('features-list');
+            list.innerHTML = '<div class="loading">Loading...</div>';
+
+            try {
+                const res = await fetch(`${API_BASE}/model-library/feature-sets`);
+                const features = await res.json();
+
+                if (!features.length) {
+                    list.innerHTML = '<div class="empty">No feature sets found.</div>';
+                    return;
+                }
+
+                let html = '<table>';
+                html += '<tr><th>Name</th><th>Column Count</th><th>Description</th></tr>';
+                features.forEach(f => {
+                    html += `<tr>
+                        <td><strong>${f.name}</strong></td>
+                        <td><span class="feature-count">${f.columnCount} columns</span></td>
+                        <td>${f.description || '–'}</td>
+                    </tr>`;
+                });
+                html += '</table>';
+                list.innerHTML = html;
+            } catch (e) {
+                list.innerHTML = `<div class="error">Error loading feature sets: ${e.message}</div>`;
+            }
+        }
+
+        function openComponentModal() {
+            document.getElementById('component-modal').classList.add('active');
+        }
+
+        function closeComponentModal() {
+            document.getElementById('component-modal').classList.remove('active');
+            document.getElementById('component-error').innerHTML = '';
+            document.getElementById('component-form')?.reset?.();
+        }
+
+        function openTargetModal() {
+            document.getElementById('target-modal').classList.add('active');
+        }
+
+        function closeTargetModal() {
+            document.getElementById('target-modal').classList.remove('active');
+            document.getElementById('target-error').innerHTML = '';
+        }
+
+        async function saveComponent(e) {
+            e.preventDefault();
+            const errorDiv = document.getElementById('component-error');
+            errorDiv.innerHTML = '';
+
+            try {
+                let params = {};
+                const paramsInput = document.getElementById('comp-params').value.trim();
+                if (paramsInput) {
+                    params = JSON.parse(paramsInput);
+                }
+
+                const res = await fetch(`${API_BASE}/model-library/components`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: document.getElementById('comp-name').value,
+                        role: document.getElementById('comp-role').value,
+                        algorithm: document.getElementById('comp-algo').value,
+                        params,
+                        description: document.getElementById('comp-desc').value
+                    })
+                });
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.detail || 'Failed to create component');
+                }
+
+                closeComponentModal();
+                loadComponents();
+            } catch (e) {
+                errorDiv.innerHTML = `<div class="error">${e.message}</div>`;
+            }
+        }
+
+        async function saveTarget(e) {
+            e.preventDefault();
+            const errorDiv = document.getElementById('target-error');
+            errorDiv.innerHTML = '';
+
+            try {
+                const params = JSON.parse(document.getElementById('tgt-params').value);
+                const res = await fetch(`${API_BASE}/model-library/targets`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: document.getElementById('tgt-name').value,
+                        type: document.getElementById('tgt-type').value,
+                        params,
+                        outputDtype: document.getElementById('tgt-type').value.includes('regression') ? 'regression' : 'classification',
+                        description: document.getElementById('tgt-desc').value
+                    })
+                });
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.detail || 'Failed to create target');
+                }
+
+                closeTargetModal();
+                loadTargets();
+            } catch (e) {
+                errorDiv.innerHTML = `<div class="error">${e.message}</div>`;
+            }
+        }
+
+        async function deleteComponent(id) {
+            if (!confirm('Delete this component?')) return;
+            try {
+                await fetch(`${API_BASE}/model-library/components/${id}`, { method: 'DELETE' });
+                loadComponents();
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+        }
+
+        async function deleteTarget(id) {
+            if (!confirm('Delete this target?')) return;
+            try {
+                await fetch(`${API_BASE}/model-library/targets/${id}`, { method: 'DELETE' });
+                loadTargets();
+            } catch (e) {
+                alert('Error: ' + e.message);
+            }
+        }
+
+        function filterComponents() {
+            const search = document.getElementById('components-search').value.toLowerCase();
+            document.querySelectorAll('#components-list tr').forEach(row => {
+                if (!row.querySelector('th')) {
+                    row.style.display = row.textContent.toLowerCase().includes(search) ? '' : 'none';
+                }
+            });
+        }
+
+        function filterTargets() {
+            const search = document.getElementById('targets-search').value.toLowerCase();
+            document.querySelectorAll('#targets-list tr').forEach(row => {
+                if (!row.querySelector('th')) {
+                    row.style.display = row.textContent.toLowerCase().includes(search) ? '' : 'none';
+                }
+            });
+        }
+
+        function updateAlgorithmOptions() {
+            const role = document.getElementById('comp-role').value;
+            const algo = document.getElementById('comp-algo');
+            const options = {
+                entry: ['lightgbm', 'xgboost', 'random_forest', 'mlp', 'lstm', 'rule'],
+                exit: ['lightgbm', 'xgboost', 'random_forest', 'mlp', 'lstm', 'rule'],
+                regime: ['none', 'lightgbm', 'xgboost', 'random_forest'],
+                size: ['none', 'lightgbm', 'xgboost', 'random_forest']
+            };
+
+            algo.innerHTML = '';
+            (options[role] || []).forEach(opt => {
+                const el = document.createElement('option');
+                el.value = opt;
+                el.textContent = opt;
+                algo.appendChild(el);
+            });
+        }
+
+        function updateTargetParams() {
+            const type = document.getElementById('tgt-type').value;
+            const examples = {
+                forward_return_regression: '{"horizon": 5}',
+                forward_return: '{"horizon": 5, "gain_threshold": 0.04, "loss_threshold": 0.04}',
+                trend_regime: '{"short_window": 5, "long_window": 20}'
+            };
+            document.getElementById('tgt-params').value = examples[type] || '';
+        }
+
+        // Initial load
+        loadComponents();
+    </script>
+</body>
+</html>

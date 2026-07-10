@@ -1,0 +1,57 @@
+name: early_wave_ml_a_v1
+hypothesis: >
+  Tier A baseline cho công thức early_wave: dual-ML regression giữ đúng "RF entry +
+  LGBM exit" (cả hai ML) trên feature set leading_ew. Entry = RandomForest regressor
+  trên forward_return_regression (mua khi dự báo return 21 phiên cao); exit = LightGBM
+  regressor trên forward_drawdown_regression (bán khi dự báo sụt giảm vượt ngưỡng).
+  Đây là xấp xỉ regression của nhãn 3 lớp early_wave_v2 (Tier B sẽ làm classifier đầy đủ).
+strategy: dual_ml_regression
+market: vn_stock
+seed: 42
+
+components:
+  features: leading_ew
+  target:
+    type: forward_return_regression
+    horizon: 21
+  entry_model:
+    type: random_forest
+    params:
+      n_estimators: 200
+      max_depth: 12
+      min_samples_leaf: 20
+  exit_model:
+    type: lightgbm
+    enabled: true
+    params:
+      n_estimators: 300
+      max_depth: 6
+      learning_rate: 0.05
+      subsample: 0.8
+      colsample_bytree: 0.8
+    target:
+      type: forward_drawdown_regression
+      horizon: 21
+
+split:
+  type: walk_forward_year
+  train_years: 4
+  test_years: 1
+  gap_days: 50
+  first_test_year: 2020
+  last_test_year: 2025
+
+engine:
+  max_hold_bars: 21
+  min_hold_bars: 1
+  hard_stop_pct: -0.08
+  signal_exit_enabled: true
+  costs:
+    commission: 0.0025
+    tax: 0.001
+    slippage: 0.0015
+
+entry_threshold: 0.02
+exit_threshold: 0.03
+signal_threshold: 0.0
+strict_audit: true

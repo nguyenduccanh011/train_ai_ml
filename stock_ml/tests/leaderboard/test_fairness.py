@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from src.leaderboard.fairness import annotate_rows, load_config, resolve_market_family
-from src.leaderboard.schema import LeaderboardRow
+from stock_ml.src.leaderboard.fairness import annotate_rows, load_config, resolve_market_family
+from stock_ml.src.leaderboard.schema import LeaderboardRow
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -20,20 +20,19 @@ def _row(**overrides) -> LeaderboardRow:
         "strategy": "v22",
         "feature_set": "leading_v2",
         "entry_model": "lightgbm",
-        "exit_model_type": "lightgbm",
-        "exit_model_enabled": True,
         "target": {
             "type": "trend_regime",
             "forward_window": 8,
-            "gain_threshold": 0.06,
-            "loss_threshold": 0.03,
         },
         "trades": 1000,
         "wr": 55.0,
         "avg_pnl": 3.5,
         "total_pnl": 3500.0,
+        "pnl_pct": 350000.0,
         "pf": 2.5,
         "avg_hold": 10.0,
+        "max_win": 50.0,
+        "max_loss": -20.0,
         "sharpe": 1.2,
         "max_drawdown": 200.0,
         "mdd_per_symbol": 20.0,

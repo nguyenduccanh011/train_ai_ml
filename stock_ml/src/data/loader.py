@@ -1,161 +1,93 @@
+"""OHLCV loader for the partitioned CSV dataset.
+
+Dataset layout:
+    <data_root>/all_symbols/symbol=<SYM>/timeframe=<TF>/data.csv
+
+Each CSV has columns: timestamp, symbol, exchange, asset_type, data_provider,
+timeframe, open, high, low, close, volume, traded_value.
+
+The loader returns a clean per-symbol DataFrame indexed by tz-naive UTC date
+with columns [open, high, low, close, volume].
 """
-Data loader for VN stock dataset.
-Loads OHLCV data from Hive-partitioned parquet/csv structure.
-"""
+
+from __future__ import annotations
 
 from pathlib import Path
 
 import pandas as pd
-from tqdm import tqdm
+
+REQUIRED_COLS = ["open", "high", "low", "close", "volume"]
 
 
 class DataLoader:
-    """Load stock data from cleaned dataset directory."""
-
-    def __init__(
-        self,
-        data_dir: str,
-        timeframe: str = "1D",
-        timestamp_column: str = "timestamp",
-        timezone: str | None = None,
-        required_columns: list[str] | None = None,
-        optional_columns: list[str] | None = None,
-    ):
-        self.data_dir = Path(data_dir)
-        # Support both layouts:
-        # 1) data_dir/all_symbols/symbol=XXX/timeframe=.../data.csv
-        # 2) data_dir/symbol=XXX/timeframe=.../data.csv
-        self.all_symbols_dir = self.data_dir / "all_symbols"
-        self.symbols_dir = self.all_symbols_dir if self.all_symbols_dir.exists() else self.data_dir
-        self.context_dir = self.data_dir / "context_features"
+    def __init__(self, data_root: str | Path, timeframe: str = "1D") -> None:
+        self.root = Path(data_root)
         self.timeframe = timeframe
-        self.timestamp_column = timestamp_column
-        self.timezone = timezone
-        self.required_columns = required_columns or ["open", "high", "low", "close", "volume"]
-        self.optional_columns = optional_columns or []
-        self._symbols_cache: list[str] | None = None
-        self._data_cache: dict[str, pd.DataFrame] = {}
+        if not self.root.exists():
+            raise FileNotFoundError(f"data_root does not exist: {self.root}")
 
     @property
-    def symbols(self) -> list[str]:
-        """Get list of available symbols."""
-        if self._symbols_cache is None:
-            symbols_file = self.data_dir / "clean_symbols.txt"
-            if symbols_file.exists():
-                self._symbols_cache = symbols_file.read_text().strip().split("\n")
-            else:
-                # Discover from directory
-                self._symbols_cache = sorted(
-                    [
-                        d.name.replace("symbol=", "")
-                        for d in self.symbols_dir.iterdir()
-                        if d.is_dir() and d.name.startswith("symbol=")
-                    ]
-                )
-        return self._symbols_cache
+    def symbols_root(self) -> Path:
+        return self.root / "all_symbols"
 
-    def load_symbol(self, symbol: str, use_cache: bool = True) -> pd.DataFrame:
-        """Load data for a single symbol."""
-        if use_cache and symbol in self._data_cache:
-            return self._data_cache[symbol].copy()
+    def list_symbols(self) -> list[str]:
+        if not self.symbols_root.exists():
+            return []
+        out: list[str] = []
+        for p in sorted(self.symbols_root.iterdir()):
+            if p.is_dir() and p.name.startswith("symbol="):
+                sym = p.name.split("=", 1)[1]
+                if (p / f"timeframe={self.timeframe}" / "data.csv").exists():
+                    out.append(sym)
+        return out
 
-        csv_path = (
-            self.symbols_dir / f"symbol={symbol}" / f"timeframe={self.timeframe}" / "data.csv"
-        )
+    def symbol_path(self, symbol: str) -> Path:
+        return self.symbols_root / f"symbol={symbol}" / f"timeframe={self.timeframe}" / "data.csv"
 
-        if not csv_path.exists():
-            raise FileNotFoundError(f"No data for {symbol} at {csv_path}")
-
-        df = pd.read_csv(csv_path, parse_dates=[self.timestamp_column])
-        missing = [col for col in self.required_columns if col not in df.columns]
+    def load_symbol(self, symbol: str) -> pd.DataFrame:
+        path = self.symbol_path(symbol)
+        if not path.exists():
+            raise FileNotFoundError(f"missing data file for {symbol}: {path}")
+        df = pd.read_csv(path)
+        if "timestamp" not in df.columns:
+            raise ValueError(f"{path} missing 'timestamp' column")
+        df["date"] = pd.to_datetime(df["timestamp"], utc=True).dt.tz_convert(None).dt.normalize()
+        missing = [c for c in REQUIRED_COLS if c not in df.columns]
         if missing:
-            raise ValueError(f"Missing required columns for {symbol}: {missing}")
-        df = df.sort_values(self.timestamp_column).reset_index(drop=True)
-        df[self.timestamp_column] = pd.to_datetime(df[self.timestamp_column], utc=True)
-        if self.timestamp_column != "timestamp" and "timestamp" not in df.columns:
-            df["timestamp"] = df[self.timestamp_column]
-
-        if use_cache:
-            self._data_cache[symbol] = df
-
-        return df.copy()
-
-    def load_all(
-        self,
-        symbols: list[str] | None = None,
-        show_progress: bool = True,
-    ) -> pd.DataFrame:
-        """Load data for multiple symbols, concatenated into one DataFrame."""
-        symbols = symbols or self.symbols
-        dfs = []
-        iterator = tqdm(symbols, desc="Loading symbols") if show_progress else symbols
-
-        for sym in iterator:
-            try:
-                df = self.load_symbol(sym)
-                dfs.append(df)
-            except FileNotFoundError:
-                continue
-
-        if not dfs:
-            raise ValueError("No data loaded!")
-
-        result = pd.concat(dfs, ignore_index=True)
-        result = result.sort_values(["symbol", "timestamp"]).reset_index(drop=True)
-        return result
-
-    def load_context(self, context_symbol: str | None = None) -> pd.DataFrame:
-        """Load context/market data (indices, futures)."""
-        if context_symbol is None:
-            return pd.DataFrame()
-        csv_path = (
-            self.context_dir
-            / f"symbol={context_symbol}"
-            / f"timeframe={self.timeframe}"
-            / "data.csv"
-        )
-        if not csv_path.exists():
-            raise FileNotFoundError(f"No context data for {context_symbol}")
-
-        df = pd.read_csv(csv_path, parse_dates=[self.timestamp_column])
-        df = df.sort_values(self.timestamp_column).reset_index(drop=True)
-        df[self.timestamp_column] = pd.to_datetime(df[self.timestamp_column], utc=True)
-        if self.timestamp_column != "timestamp" and "timestamp" not in df.columns:
-            df["timestamp"] = df[self.timestamp_column]
+            raise ValueError(f"{path} missing required columns {missing}")
+        df = df[["date", *REQUIRED_COLS]].copy()
+        df = df.dropna(subset=["date", "open", "high", "low", "close"])
+        df = df.sort_values("date").drop_duplicates("date", keep="last").reset_index(drop=True)
+        df["symbol"] = symbol
         return df
 
-    def load_all_context(self) -> dict[str, pd.DataFrame]:
-        """Load all context features (indices + futures)."""
-        result = {}
-        if not self.context_dir.exists():
-            return result
-        for d in self.context_dir.iterdir():
-            if d.is_dir() and d.name.startswith("symbol="):
-                sym = d.name.replace("symbol=", "")
-                try:
-                    result[sym] = self.load_context(sym)
-                except FileNotFoundError:
-                    continue
-        return result
+    def load_many(self, symbols: list[str]) -> pd.DataFrame:
+        frames = [self.load_symbol(s) for s in symbols]
+        if not frames:
+            return pd.DataFrame(columns=["date", *REQUIRED_COLS, "symbol"])
+        return pd.concat(frames, ignore_index=True)
 
-    def clear_cache(self):
-        """Clear data cache to free memory."""
-        self._data_cache.clear()
 
-    def get_date_range(self) -> tuple:
-        """Get overall date range from first symbol."""
-        df = self.load_symbol(self.symbols[0])
-        return df["timestamp"].min(), df["timestamp"].max()
+def get_loader(data_root: str | Path, timeframe: str = "1D"):
+    """Factory function to get appropriate loader for data_root.
 
-    def summary(self) -> dict:
-        """Quick dataset summary."""
-        return {
-            "n_symbols": len(self.symbols),
-            "data_dir": str(self.data_dir),
-            "timeframe": self.timeframe,
-            "context_symbols": [
-                d.name.replace("symbol=", "") for d in self.context_dir.iterdir() if d.is_dir()
-            ]
-            if self.context_dir.exists()
-            else [],
-        }
+    If data_root is a .duckdb file, returns DuckDBLoader.
+    Otherwise returns DataLoader (CSV-based).
+
+    Args:
+        data_root: path to data directory or .duckdb file
+        timeframe: timeframe filter (default 1D)
+
+    Returns:
+        DataLoader or DuckDBLoader instance
+    """
+    root = Path(data_root)
+
+    # If it's a DuckDB file, use DuckDBLoader
+    if root.suffix == ".duckdb" or (root.is_file() and "duckdb" in root.name):
+        from src.data.duckdb_loader import DuckDBLoader
+
+        return DuckDBLoader(root, timeframe=timeframe)
+
+    # Otherwise use CSV-based DataLoader
+    return DataLoader(root, timeframe=timeframe)

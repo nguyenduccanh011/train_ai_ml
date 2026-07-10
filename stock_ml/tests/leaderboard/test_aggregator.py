@@ -3,7 +3,8 @@ import shutil
 from pathlib import Path
 
 import pytest
-from src.leaderboard.aggregator import (
+
+from stock_ml.src.leaderboard.aggregator import (
     INDEX_JSON,
     LEADERBOARD_CSV,
     LEADERBOARD_JSON,
@@ -14,8 +15,8 @@ from src.leaderboard.aggregator import (
     rebuild_leaderboard,
     validate_leaderboard,
 )
-from src.leaderboard.hooks import append_or_update as hook_append_or_update
-from src.leaderboard.schema import LeaderboardRow
+from stock_ml.src.leaderboard.hooks import append_or_update as hook_append_or_update
+from stock_ml.src.leaderboard.schema import LeaderboardRow
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -94,20 +95,19 @@ def _mock_row(*, run_id: str, schema: str, timeframe: str) -> LeaderboardRow:
         strategy="v22",
         feature_set="leading",
         entry_model="random_forest",
-        exit_model_type="lightgbm",
-        exit_model_enabled=True,
         target={
             "type": "early_wave_v2",
             "forward_window": 21,
-            "gain_threshold": 0.03,
-            "loss_threshold": 0.015,
         },
         trades=1000,
         wr=70.0,
         avg_pnl=10.0,
         total_pnl=10000.0,
+        pnl_pct=1000000.0,
         pf=2.0,
         avg_hold=30.0,
+        max_win=80.0,
+        max_loss=-30.0,
         sharpe=1.2,
         max_drawdown=400.0,
         mdd_per_symbol=20.0,

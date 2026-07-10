@@ -1,355 +1,544 @@
-"""
-Model registry - unified interface for all ML models.
+"""Model registry — factories for entry/exit models with support for multiple algorithms.
 
-Supports GPU acceleration for:
-  - LightGBM: device="gpu" (OpenCL-based, works with NVIDIA/AMD)
-  - XGBoost:  device="cuda" (CUDA-based, NVIDIA only)
-  - CatBoost: task_type="GPU" (CUDA-based, NVIDIA only)
+Supported types: lightgbm, xgboost, random_forest, mlp, lstm, rule
+Each trains on binary labels {0, 1}.
 
-Usage:
-  build_model("lightgbm", device="gpu")    # GPU mode
-  build_model("lightgbm", device="cpu")    # CPU mode (default)
-  build_model("lightgbm", device="auto")   # Auto-detect GPU
+For regression (forward return prediction), use regression module.
 """
 
-import warnings
+from __future__ import annotations
 
-from sklearn.ensemble import (
-    AdaBoostClassifier,
-    ExtraTreesClassifier,
-    GradientBoostingClassifier,
-    RandomForestClassifier,
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Protocol
+
+import numpy as np
+
+from stock_ml.src.models.regression import (
+    LGBMRegressionModel,
+    MLPRegressionModel,
+    RandomForestRegressionModel,
+    XGBRegressionModel,
 )
-from sklearn.linear_model import LogisticRegression, SGDClassifier
-from sklearn.naive_bayes import GaussianNB
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import RobustScaler, StandardScaler
-from sklearn.svm import SVC
+from stock_ml.src.models.rules import RuleModel
 
-warnings.filterwarnings("ignore")
-
-# Optional imports
-try:
-    from xgboost import XGBClassifier
-
-    HAS_XGB = True
-except ImportError:
-    HAS_XGB = False
-
-try:
-    from lightgbm import LGBMClassifier
-
-    HAS_LGB = True
-except ImportError:
-    HAS_LGB = False
-
-try:
-    from catboost import CatBoostClassifier
-
-    HAS_CAT = True
-except ImportError:
-    HAS_CAT = False
+if TYPE_CHECKING:
+    from typing import Self
 
 
-# ── Model Definitions ────────────────────────────────────────────
+class EntryModelProtocol(Protocol):
+    """Entry model interface — predicts buy signals {0, 1}."""
 
-MODEL_CATALOG = {
-    # Tree-based
-    "random_forest": {
-        "class": RandomForestClassifier,
-        "params": {
-            "n_estimators": 200,
-            "max_depth": 12,
-            "min_samples_leaf": 20,
-            "n_jobs": -1,
-            "random_state": 42,
-            "class_weight": "balanced",
-        },
-        "needs_scaling": False,
-    },
-    "extra_trees": {
-        "class": ExtraTreesClassifier,
-        "params": {
-            "n_estimators": 200,
-            "max_depth": 12,
-            "min_samples_leaf": 20,
-            "n_jobs": -1,
-            "random_state": 42,
-            "class_weight": "balanced",
-        },
-        "needs_scaling": False,
-    },
-    "gradient_boosting": {
-        "class": GradientBoostingClassifier,
-        "params": {
-            "n_estimators": 200,
-            "max_depth": 5,
+    def fit(self, X: np.ndarray, y: np.ndarray) -> Self:
+        """Train on binary labels (1=buy, 0=not buy)."""
+        ...
+
+    def predict(self, X: np.ndarray) -> np.ndarray:
+        """Predict binary labels {0, 1}."""
+        ...
+
+    def predict_proba(self, X: np.ndarray) -> np.ndarray:
+        """Return class probabilities [P(class=0), P(class=1)]. Optional."""
+        ...
+
+
+class ExitModelProtocol(Protocol):
+    """Exit model interface — predicts sell signals {0, 1}."""
+
+    def fit(self, X: np.ndarray, y: np.ndarray) -> Self:
+        """Train on binary labels (1=sell, 0=not sell)."""
+        ...
+
+    def predict(self, X: np.ndarray) -> np.ndarray:
+        """Predict binary labels {0, 1}."""
+        ...
+
+
+@dataclass
+class LGBMEntryModel:
+    """LightGBM entry model wrapper."""
+
+    params: dict = None
+    seed: int = 42
+
+    def __post_init__(self):
+        if self.params is None:
+            self.params = {}
+        self._clf = None
+
+    def fit(self, X: np.ndarray, y: np.ndarray) -> LGBMEntryModel:
+        try:
+            from lightgbm import LGBMClassifier
+        except ImportError as e:
+            raise RuntimeError("lightgbm not installed: pip install lightgbm") from e
+        defaults = {
+            "n_estimators": 300,
             "learning_rate": 0.05,
+            "num_leaves": 31,
+            "min_data_in_leaf": 50,
+            "feature_fraction": 0.8,
+            "bagging_fraction": 0.8,
+            "bagging_freq": 5,
+            "verbose": -1,
+            # REPRODUCIBILITY (see regression.py): subsampling + default multi-threaded LightGBM
+            # is non-deterministic (same config+seed varied ~±5 composite pts run-to-run). These
+            # two flags give stable results across num_threads. User params can override.
+            "deterministic": True,
+            "force_col_wise": True,
+        }
+        merged = {**defaults, **self.params}
+        class_weight = merged.pop("class_weight", None)
+        self._clf = LGBMClassifier(**merged, random_state=self.seed)
+        sample_weight = None
+        if class_weight == "balanced":
+            classes, counts = np.unique(y, return_counts=True)
+            freq = dict(zip(classes, counts))
+            total = len(y)
+            n_cls = len(classes)
+            w = {c: total / (n_cls * cnt) for c, cnt in freq.items()}
+            sample_weight = np.array([w[yi] for yi in y])
+        elif isinstance(class_weight, dict):
+            sample_weight = np.array([class_weight.get(yi, 1.0) for yi in y])
+        self._clf.fit(X, y, sample_weight=sample_weight)
+        return self
+
+    def predict(self, X: np.ndarray) -> np.ndarray:
+        if self._clf is None:
+            raise RuntimeError("model not fitted")
+        return self._clf.predict(X).astype(np.int8)
+
+    def predict_proba(self, X: np.ndarray) -> np.ndarray:
+        if self._clf is None:
+            raise RuntimeError("model not fitted")
+        return self._clf.predict_proba(X)
+
+
+@dataclass
+class LGBMExitModel:
+    """LightGBM exit model wrapper."""
+
+    params: dict = None
+    seed: int = 42
+
+    def __post_init__(self):
+        if self.params is None:
+            self.params = {}
+        self._clf = None
+
+    def fit(self, X: np.ndarray, y: np.ndarray) -> LGBMExitModel:
+        try:
+            from lightgbm import LGBMClassifier
+        except ImportError as e:
+            raise RuntimeError("lightgbm not installed") from e
+        defaults = {
+            "n_estimators": 300,
+            "learning_rate": 0.05,
+            "num_leaves": 31,
+            "min_data_in_leaf": 50,
+            "feature_fraction": 0.8,
+            "bagging_fraction": 0.8,
+            "bagging_freq": 5,
+            "verbose": -1,
+            # REPRODUCIBILITY (see regression.py): subsampling + default multi-threaded LightGBM
+            # is non-deterministic (same config+seed varied ~±5 composite pts run-to-run). These
+            # two flags give stable results across num_threads. User params can override.
+            "deterministic": True,
+            "force_col_wise": True,
+        }
+        merged = {**defaults, **self.params}
+        self._clf = LGBMClassifier(**merged, random_state=self.seed)
+        self._clf.fit(X, y)
+        return self
+
+    def predict(self, X: np.ndarray) -> np.ndarray:
+        if self._clf is None:
+            raise RuntimeError("model not fitted")
+        return self._clf.predict(X).astype(np.int8)
+
+
+@dataclass
+class XGBEntryModel:
+    """XGBoost entry model wrapper."""
+
+    params: dict = None
+    seed: int = 42
+
+    def __post_init__(self):
+        if self.params is None:
+            self.params = {}
+        self._clf = None
+
+    def fit(self, X: np.ndarray, y: np.ndarray) -> XGBEntryModel:
+        try:
+            from xgboost import XGBClassifier
+        except ImportError as e:
+            raise RuntimeError("xgboost not installed: pip install xgboost") from e
+        defaults = {
+            "n_estimators": 300,
+            "learning_rate": 0.05,
+            "max_depth": 6,
             "subsample": 0.8,
-            "random_state": 42,
-        },
-        "needs_scaling": False,
-    },
-    "adaboost": {
-        "class": AdaBoostClassifier,
-        "params": {"n_estimators": 100, "learning_rate": 0.1, "random_state": 42},
-        "needs_scaling": False,
-    },
-    # Linear
-    "logistic_regression": {
-        "class": LogisticRegression,
-        "params": {
+            "colsample_bytree": 0.8,
+        }
+        merged = {**defaults, **self.params}
+        self._clf = XGBClassifier(**merged, random_state=self.seed, verbosity=0)
+        self._clf.fit(X, y)
+        return self
+
+    def predict(self, X: np.ndarray) -> np.ndarray:
+        if self._clf is None:
+            raise RuntimeError("model not fitted")
+        return self._clf.predict(X).astype(np.int8)
+
+    def predict_proba(self, X: np.ndarray) -> np.ndarray:
+        if self._clf is None:
+            raise RuntimeError("model not fitted")
+        return self._clf.predict_proba(X)
+
+
+@dataclass
+class XGBExitModel:
+    """XGBoost exit model wrapper."""
+
+    params: dict = None
+    seed: int = 42
+
+    def __post_init__(self):
+        if self.params is None:
+            self.params = {}
+        self._clf = None
+
+    def fit(self, X: np.ndarray, y: np.ndarray) -> XGBExitModel:
+        try:
+            from xgboost import XGBClassifier
+        except ImportError as e:
+            raise RuntimeError("xgboost not installed") from e
+        defaults = {
+            "n_estimators": 300,
+            "learning_rate": 0.05,
+            "max_depth": 6,
+            "subsample": 0.8,
+            "colsample_bytree": 0.8,
+        }
+        merged = {**defaults, **self.params}
+        self._clf = XGBClassifier(**merged, random_state=self.seed, verbosity=0)
+        self._clf.fit(X, y)
+        return self
+
+    def predict(self, X: np.ndarray) -> np.ndarray:
+        if self._clf is None:
+            raise RuntimeError("model not fitted")
+        return self._clf.predict(X).astype(np.int8)
+
+
+@dataclass
+class RandomForestEntryModel:
+    """Random Forest entry model wrapper."""
+
+    params: dict = None
+    seed: int = 42
+
+    def __post_init__(self):
+        if self.params is None:
+            self.params = {}
+        self._clf = None
+
+    def fit(self, X: np.ndarray, y: np.ndarray) -> RandomForestEntryModel:
+        from sklearn.ensemble import RandomForestClassifier
+
+        defaults = {
+            "n_estimators": 100,
+            "max_depth": 15,
+            "min_samples_split": 20,
+            "min_samples_leaf": 10,
+            "max_features": "sqrt",
+        }
+        merged = {**defaults, **self.params}
+        self._clf = RandomForestClassifier(**merged, random_state=self.seed, n_jobs=-1)
+        self._clf.fit(X, y)
+        return self
+
+    def predict(self, X: np.ndarray) -> np.ndarray:
+        if self._clf is None:
+            raise RuntimeError("model not fitted")
+        return self._clf.predict(X).astype(np.int8)
+
+    def predict_proba(self, X: np.ndarray) -> np.ndarray:
+        if self._clf is None:
+            raise RuntimeError("model not fitted")
+        return self._clf.predict_proba(X)
+
+
+@dataclass
+class RandomForestExitModel:
+    """Random Forest exit model wrapper."""
+
+    params: dict = None
+    seed: int = 42
+
+    def __post_init__(self):
+        if self.params is None:
+            self.params = {}
+        self._clf = None
+
+    def fit(self, X: np.ndarray, y: np.ndarray) -> RandomForestExitModel:
+        from sklearn.ensemble import RandomForestClassifier
+
+        defaults = {
+            "n_estimators": 100,
+            "max_depth": 15,
+            "min_samples_split": 20,
+            "min_samples_leaf": 10,
+            "max_features": "sqrt",
+        }
+        merged = {**defaults, **self.params}
+        self._clf = RandomForestClassifier(**merged, random_state=self.seed, n_jobs=-1)
+        self._clf.fit(X, y)
+        return self
+
+    def predict(self, X: np.ndarray) -> np.ndarray:
+        if self._clf is None:
+            raise RuntimeError("model not fitted")
+        return self._clf.predict(X).astype(np.int8)
+
+
+@dataclass
+class MLPEntryModel:
+    """MLP (sklearn) entry model wrapper."""
+
+    params: dict = None
+    seed: int = 42
+
+    def __post_init__(self):
+        if self.params is None:
+            self.params = {}
+        self._clf = None
+
+    def fit(self, X: np.ndarray, y: np.ndarray) -> MLPEntryModel:
+        from sklearn.neural_network import MLPClassifier
+        from sklearn.pipeline import make_pipeline
+        from sklearn.preprocessing import StandardScaler
+
+        defaults = {
+            "hidden_layer_sizes": (100, 50),
+            "activation": "relu",
+            "solver": "adam",
             "max_iter": 1000,
-            "C": 1.0,
-            "class_weight": "balanced",
-            "random_state": 42,
-            "n_jobs": -1,
-        },
-        "needs_scaling": True,
-    },
-    "sgd": {
-        "class": SGDClassifier,
-        "params": {
-            "loss": "modified_huber",
+            "alpha": 0.0001,
+            "learning_rate_init": 0.001,
+        }
+        merged = {**defaults, **self.params}
+        # Drop params MLPClassifier doesn't accept (e.g. class_weight, injected by callers for
+        # tree models; MLP handles imbalance via the data/early_stopping, not class_weight).
+        for k in ("class_weight", "num_leaves", "min_data_in_leaf", "feature_fraction",
+                  "bagging_fraction", "bagging_freq", "n_estimators", "deterministic",
+                  "force_col_wise", "lambda_l1", "lambda_l2", "learning_rate", "verbose"):
+            merged.pop(k, None)
+        # MLP needs standardized inputs (features span ranks 0-1, returns, ratios); without a
+        # scaler it barely converges. Pipeline exposes classes_/predict_proba (delegated).
+        self._clf = make_pipeline(
+            StandardScaler(),
+            MLPClassifier(**merged, random_state=self.seed, early_stopping=True),
+        )
+        # NOTE: do NOT balance classes for the MLP — its UNBALANCED ultra-selectivity (entering
+        # only the clearest setups) is the feature, giving pf 8-13 / mdd ~0.05; sample_weight
+        # balancing collapsed it to pf 2.0 / mdd 0.3 (v31). Train on the natural distribution.
+        self._clf.fit(X, y)
+        return self
+
+    def predict(self, X: np.ndarray) -> np.ndarray:
+        if self._clf is None:
+            raise RuntimeError("model not fitted")
+        return self._clf.predict(X).astype(np.int8)
+
+    def predict_proba(self, X: np.ndarray) -> np.ndarray:
+        if self._clf is None:
+            raise RuntimeError("model not fitted")
+        return self._clf.predict_proba(X)
+
+
+@dataclass
+class MLPExitModel:
+    """MLP (sklearn) exit model wrapper."""
+
+    params: dict = None
+    seed: int = 42
+
+    def __post_init__(self):
+        if self.params is None:
+            self.params = {}
+        self._clf = None
+
+    def fit(self, X: np.ndarray, y: np.ndarray) -> MLPExitModel:
+        from sklearn.neural_network import MLPClassifier
+
+        defaults = {
+            "hidden_layer_sizes": (100, 50),
+            "activation": "relu",
+            "solver": "adam",
             "max_iter": 1000,
-            "class_weight": "balanced",
-            "random_state": 42,
-            "n_jobs": -1,
-        },
-        "needs_scaling": True,
-    },
-    # Distance-based
-    "knn": {
-        "class": KNeighborsClassifier,
-        "params": {"n_neighbors": 15, "weights": "distance", "n_jobs": -1},
-        "needs_scaling": True,
-    },
-    # SVM
-    "svm": {
-        "class": SVC,
-        "params": {
-            "kernel": "rbf",
-            "C": 1.0,
-            "probability": True,
-            "class_weight": "balanced",
-            "random_state": 42,
-        },
-        "needs_scaling": True,
-    },
-    # Naive Bayes
-    "naive_bayes": {
-        "class": GaussianNB,
-        "params": {},
-        "needs_scaling": True,
-    },
+            "alpha": 0.0001,
+            "learning_rate_init": 0.001,
+        }
+        merged = {**defaults, **self.params}
+        self._clf = MLPClassifier(**merged, random_state=self.seed, early_stopping=True)
+        self._clf.fit(X, y)
+        return self
+
+    def predict(self, X: np.ndarray) -> np.ndarray:
+        if self._clf is None:
+            raise RuntimeError("model not fitted")
+        return self._clf.predict(X).astype(np.int8)
+
+
+@dataclass
+class LSTMEntryModel:
+    """LSTM entry model wrapper (keras/tensorflow)."""
+
+    params: dict = None
+
+    def __post_init__(self):
+        if self.params is None:
+            self.params = {}
+        self._model = None
+
+    def fit(self, X: np.ndarray, y: np.ndarray) -> LSTMEntryModel:
+        try:
+            import keras.layers  # noqa: F401
+            import keras.models  # noqa: F401
+        except ImportError as e:
+            raise RuntimeError("LSTM requires keras/tensorflow: pip install tensorflow") from e
+        raise NotImplementedError("LSTM entry model not yet implemented")
+
+    def predict(self, X: np.ndarray) -> np.ndarray:
+        raise NotImplementedError("LSTM not yet implemented")
+
+
+@dataclass
+class LSTMExitModel:
+    """LSTM exit model wrapper (keras/tensorflow)."""
+
+    params: dict = None
+
+    def __post_init__(self):
+        if self.params is None:
+            self.params = {}
+        self._model = None
+
+    def fit(self, X: np.ndarray, y: np.ndarray) -> LSTMExitModel:
+        raise NotImplementedError("LSTM exit model not yet implemented")
+
+    def predict(self, X: np.ndarray) -> np.ndarray:
+        raise NotImplementedError("LSTM not yet implemented")
+
+
+_ENTRY_REGISTRY: dict[str, type] = {
+    "lightgbm": LGBMEntryModel,
+    "xgboost": XGBEntryModel,
+    "random_forest": RandomForestEntryModel,
+    "mlp": MLPEntryModel,
+    "lstm": LSTMEntryModel,
+    "rule": RuleModel,
 }
 
-# Add XGBoost if available
-if HAS_XGB:
-    MODEL_CATALOG["xgboost"] = {
-        "class": XGBClassifier,
-        "params": {
-            "n_estimators": 300,
-            "max_depth": 6,
-            "learning_rate": 0.05,
-            "subsample": 0.8,
-            "colsample_bytree": 0.8,
-            "use_label_encoder": False,
-            "eval_metric": "mlogloss",
-            "random_state": 42,
-            "n_jobs": -1,
-        },
-        "needs_scaling": False,
-    }
-
-if HAS_LGB:
-    MODEL_CATALOG["lightgbm"] = {
-        "class": LGBMClassifier,
-        "params": {
-            "n_estimators": 300,
-            "max_depth": 6,
-            "learning_rate": 0.05,
-            "subsample": 0.8,
-            "colsample_bytree": 0.8,
-            "random_state": 42,
-            "n_jobs": -1,
-            "verbose": -1,
-        },
-        "needs_scaling": False,
-    }
-
-if HAS_CAT:
-    MODEL_CATALOG["catboost"] = {
-        "class": CatBoostClassifier,
-        "params": {
-            "iterations": 300,
-            "depth": 6,
-            "learning_rate": 0.05,
-            "random_state": 42,
-            "verbose": 0,
-        },
-        "needs_scaling": False,
-    }
-
-# GRU sequence classifier (V37d)
-try:
-    from src.models.sequence import HAS_TORCH as _HAS_TORCH_GRU
-    from src.models.sequence import GRUClassifier
-
-    if _HAS_TORCH_GRU:
-        MODEL_CATALOG["gru"] = {
-            "class": GRUClassifier,
-            "params": {
-                "window": 20,
-                "hidden": 64,
-                "n_layers": 2,
-                "dropout": 0.2,
-                "epochs": 8,
-                "batch_size": 512,
-                "lr": 1e-3,
-                "n_classes": 3,
-                "device": "auto",
-                "random_state": 42,
-                "verbose": False,
-            },
-            "needs_scaling": True,
-        }
-except ImportError:
-    pass
+_EXIT_REGISTRY: dict[str, type] = {
+    "lightgbm": LGBMExitModel,
+    "xgboost": XGBExitModel,
+    "random_forest": RandomForestExitModel,
+    "mlp": MLPExitModel,
+    "lstm": LSTMExitModel,
+    "rule": RuleModel,
+}
 
 
-def get_available_models() -> list[str]:
-    return list(MODEL_CATALOG.keys())
+def build_entry_model(
+    model_type: str, params: dict | None = None, seed: int = 42
+) -> EntryModelProtocol:
+    """Build an entry model by type.
 
+    Args:
+        model_type: one of {lightgbm, xgboost, random_forest, mlp, lstm, rule}
+        params: dict of model-specific hyperparameters
+        seed: random seed for reproducibility
 
-# ── GPU Detection ────────────────────────────────────────────────
+    Returns:
+        Fitted or unfitted model instance implementing EntryModelProtocol
 
-
-def _detect_gpu() -> bool:
-    """Check if NVIDIA GPU is available for training."""
-    import subprocess
-
-    try:
-        result = subprocess.run(["nvidia-smi"], capture_output=True, text=True, timeout=5)
-        return result.returncode == 0
-    except (FileNotFoundError, subprocess.TimeoutExpired):
-        return False
-
-
-def _resolve_device(device: str) -> str:
-    """Resolve 'auto' to 'gpu' or 'cpu' based on hardware detection.
-
-    Returns normalized device string: 'gpu', 'cuda', or 'cpu'.
+    Raises:
+        KeyError: if model_type not in registry
     """
-    if device == "auto":
-        return "gpu" if _detect_gpu() else "cpu"
-    return device.lower()
+    if model_type not in _ENTRY_REGISTRY:
+        raise KeyError(
+            f"Unknown entry model type: {model_type}. Available: {sorted(_ENTRY_REGISTRY.keys())}"
+        )
+    model_class = _ENTRY_REGISTRY[model_type]
+    return model_class(params=params or {}, seed=seed)
 
 
-_GPU_DETECTED = None  # Lazy cache
+def build_exit_model(
+    model_type: str, params: dict | None = None, seed: int = 42
+) -> ExitModelProtocol:
+    """Build an exit model by type.
+
+    Args:
+        model_type: one of {lightgbm, xgboost, random_forest, mlp, lstm, rule}
+        params: dict of model-specific hyperparameters
+        seed: random seed for reproducibility
+
+    Returns:
+        Fitted or unfitted model instance implementing ExitModelProtocol
+
+    Raises:
+        KeyError: if model_type not in registry
+    """
+    if model_type not in _EXIT_REGISTRY:
+        raise KeyError(
+            f"Unknown exit model type: {model_type}. Available: {sorted(_EXIT_REGISTRY.keys())}"
+        )
+    model_class = _EXIT_REGISTRY[model_type]
+    return model_class(params=params or {}, seed=seed)
+
+
+_REGRESSION_REGISTRY: dict[str, type] = {
+    "lightgbm": LGBMRegressionModel,
+    "xgboost": XGBRegressionModel,
+    "random_forest": RandomForestRegressionModel,
+    "mlp": MLPRegressionModel,
+}
+
+
+def build_regression_model(model_type: str, params: dict | None = None, seed: int = 42):
+    """Build a regression model for forward-return prediction.
+
+    Args:
+        model_type: one of {lightgbm, xgboost, random_forest}
+        params: dict of model-specific hyperparameters
+        seed: random seed for reproducibility
+
+    Returns:
+        Regression model instance
+
+    Raises:
+        KeyError: if model_type not in registry
+    """
+    if model_type not in _REGRESSION_REGISTRY:
+        raise KeyError(
+            f"Unknown regression model type: {model_type}. Available: {sorted(_REGRESSION_REGISTRY.keys())}"
+        )
+    model_class = _REGRESSION_REGISTRY[model_type]
+    return model_class(params=params or {}, seed=seed)
+
+
+_GPU_DETECTED = None
 
 
 def detect_device(device: str = "auto") -> str:
-    """Public API: resolve device setting with caching.
-
-    Args:
-        device: "auto" | "gpu" | "cuda" | "cpu"
-
-    Returns:
-        Resolved device string
-    """
     global _GPU_DETECTED
-    if device == "auto":
-        if _GPU_DETECTED is None:
-            _GPU_DETECTED = _detect_gpu()
-        return "gpu" if _GPU_DETECTED else "cpu"
-    return device.lower()
-
-
-def _apply_device_params(name: str, params: dict, device: str) -> dict:
-    """Apply GPU/CPU device parameters to model-specific params.
-
-    Each library has different parameter names for GPU:
-      - LightGBM: device="gpu" or device="cpu"
-      - XGBoost:  device="cuda" or device="cpu", tree_method="hist"
-      - CatBoost: task_type="GPU" or task_type="CPU"
-    """
-    resolved = detect_device(device)
-    params = params.copy()
-
-    if resolved in ("gpu", "cuda"):
-        if name == "lightgbm":
-            params["device"] = "gpu"
-            # GPU mode doesn't support n_jobs parallelism
-            params.pop("n_jobs", None)
-        elif name == "xgboost":
-            params["device"] = "cuda"
-            params["tree_method"] = "hist"
-            # GPU mode doesn't support n_jobs parallelism
-            params.pop("n_jobs", None)
-        elif name == "catboost":
-            params["task_type"] = "GPU"
-            params["devices"] = "0"
-    else:
-        # Explicitly set CPU mode
-        if name == "lightgbm" or name == "xgboost":
-            params["device"] = "cpu"
-        elif name == "catboost":
-            params["task_type"] = "CPU"
-
-    return params
-
-
-# ── Build Functions ──────────────────────────────────────────────
-
-
-def build_model(
-    name: str, scaling: str = "robust", device: str = "cpu", **override_params
-) -> Pipeline:
-    """Build a sklearn Pipeline with optional scaler + model.
-
-    Args:
-        name: Model name from MODEL_CATALOG (e.g., "lightgbm", "xgboost")
-        scaling: "robust" or "standard" (only for models that need scaling)
-        device: "auto" | "gpu" | "cuda" | "cpu" — GPU acceleration for
-                LightGBM/XGBoost/CatBoost. Other models ignore this param.
-        **override_params: Additional params passed to the model constructor
-
-    Returns:
-        sklearn Pipeline with optional scaler + model
-
-    Examples:
-        build_model("lightgbm")                    # CPU (default)
-        build_model("lightgbm", device="gpu")      # GPU mode
-        build_model("lightgbm", device="auto")     # Auto-detect
-    """
-    if name not in MODEL_CATALOG:
-        raise ValueError(f"Unknown model: {name}. Available: {get_available_models()}")
-
-    spec = MODEL_CATALOG[name]
-    params = {**spec["params"], **override_params}
-
-    # Apply GPU/CPU device params for supported models
-    if name in ("lightgbm", "xgboost", "catboost"):
-        params = _apply_device_params(name, params, device)
-
-    model = spec["class"](**params)
-
-    steps = []
-    if spec["needs_scaling"]:
-        scaler = RobustScaler() if scaling == "robust" else StandardScaler()
-        steps.append(("scaler", scaler))
-    steps.append(("model", model))
-
-    return Pipeline(steps)
-
-
-def build_all_models(
-    model_names: list[str] | None = None,
-    scaling: str = "robust",
-    device: str = "cpu",
-) -> dict[str, Pipeline]:
-    """Build all requested models (or all available)."""
-    names = model_names or get_available_models()
-    return {name: build_model(name, scaling, device=device) for name in names}
+    if device != "auto":
+        return device.lower()
+    if _GPU_DETECTED is None:
+        try:
+            import lightgbm as lgb
+            _GPU_DETECTED = lgb.basic.device_type() == "gpu"
+        except Exception:
+            _GPU_DETECTED = False
+    return "gpu" if _GPU_DETECTED else "cpu"

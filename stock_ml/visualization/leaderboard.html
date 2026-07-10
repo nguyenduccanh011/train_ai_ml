@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Backtest Leaderboard</title>
+  <!-- Load API configuration first -->
+  <script src="api-config.js"></script>
   <style>
     * { box-sizing: border-box; }
 
@@ -194,6 +196,56 @@
     .badge.fair-ok { background: #144f47; border-color: #26a69a; }
     .badge.exit-on { background: #144f47; border-color: #26a69a; }
     .badge.exit-off { background: #4f1c1c; border-color: #ef5350; }
+    .badge.state-pinned { background: #1d3f7a; border-color: #2962ff; color: #fff; }
+    .badge.state-trained { background: #2a2e39; border-color: #444; }
+    .badge.state-retired { background: #3a2e1c; border-color: #9a6a00; }
+
+    .actions { display: flex; gap: 4px; white-space: nowrap; }
+    .act-btn {
+      border: 1px solid #444;
+      background: #2a2e39;
+      color: #d1d4dc;
+      border-radius: 4px;
+      padding: 3px 7px;
+      font-size: 11px;
+      cursor: pointer;
+    }
+    .act-btn:hover { border-color: #2962ff; color: #fff; }
+    .act-btn.pin { border-color: #2962ff; }
+    .act-btn.danger:hover { border-color: #ef5350; color: #ef5350; }
+    .act-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .api-banner {
+      padding: 6px 20px;
+      font-size: 12px;
+      background: #2a2410;
+      color: #d6b656;
+      border-bottom: 1px solid #4a3f15;
+    }
+    .api-banner.ok { background: #112a1f; color: #4fbf8b; border-color: #1d4a35; }
+
+    #toasts {
+      position: fixed;
+      right: 16px;
+      bottom: 16px;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .toast {
+      background: #1e222d;
+      border: 1px solid #2B2B43;
+      border-left: 3px solid #2962ff;
+      border-radius: 6px;
+      padding: 10px 14px;
+      color: #d1d4dc;
+      font-size: 13px;
+      max-width: 360px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    }
+    .toast.success { border-left-color: #26a69a; }
+    .toast.error { border-left-color: #ef5350; }
 
     .empty, .error {
       padding: 28px;
@@ -203,6 +255,53 @@
 
     .error { color: #ef5350; }
 
+    .cand-panel {
+      border-bottom: 1px solid #2B2B43;
+      background: #131722;
+    }
+    .cand-panel summary {
+      list-style: none;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 20px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 600;
+      color: #d1d4dc;
+      background: #1a1e2d;
+      border-bottom: 1px solid #2B2B43;
+      user-select: none;
+    }
+    .cand-panel summary::-webkit-details-marker { display: none; }
+    .cand-panel summary::before {
+      content: '▶';
+      font-size: 10px;
+      color: #787b86;
+      transition: transform .15s;
+    }
+    .cand-panel[open] summary::before { transform: rotate(90deg); }
+    .cand-meta { color: #787b86; font-weight: 400; font-size: 11px; }
+    .cand-wrap { padding: 10px 20px 14px; overflow-x: auto; }
+    .cand-table { border-collapse: collapse; font-size: 12px; min-width: 700px; }
+    .cand-table th {
+      color: #787b86;
+      font-weight: 600;
+      padding: 5px 10px;
+      text-align: left;
+      border-bottom: 1px solid #2B2B43;
+      white-space: nowrap;
+    }
+    .cand-table th.num { text-align: right; }
+    .cand-table td { padding: 5px 10px; border-bottom: 1px solid #1e222d; white-space: nowrap; }
+    .cand-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+    .cand-table tr.cand-live { background: rgba(255,215,0,0.06); }
+    .cand-table tr.cand-pick { background: rgba(41,98,255,0.07); }
+    .cand-table tr:hover { background: #1b2030; }
+    .badge.navscan { background: #2a2e39; border-color: #555; }
+    .badge.cand { background: #1d3f7a; border-color: #2962ff; }
+    .badge.live { background: #1c3d28; border-color: #26a69a; color: #26a69a; }
+
     @media (max-width: 1100px) {
       .controls { grid-template-columns: repeat(2, minmax(130px, 1fr)); }
       .stats-bar { grid-template-columns: repeat(2, minmax(140px, 1fr)); }
@@ -210,6 +309,7 @@
       .title-row { align-items: flex-start; flex-direction: column; }
     }
   </style>
+  <script src="./js/nav.js"></script>
 </head>
 <body>
   <header class="header">
@@ -237,9 +337,17 @@
       <select id="featureFilter"><option value="">All feature sets</option></select>
       <select id="modelFilter"><option value="">All entry models</option></select>
       <select id="yearFilter"><option value="">All windows</option></select>
+      <select id="stateFilter">
+        <option value="">All states</option>
+        <option value="pinned">Pinned</option>
+        <option value="trained">Trained</option>
+        <option value="retired">Retired</option>
+      </select>
       <label class="checkbox"><input id="showSuperseded" type="checkbox"> Show superseded</label>
     </div>
   </header>
+
+  <div class="api-banner" id="apiBanner">Read-only mode — start the API server for actions: <code>python -m stock_ml.scripts.api_server</code></div>
 
   <section class="stats-bar">
     <div class="stat-card"><div class="stat-title">Visible rows</div><div class="stat-value" id="visibleCount">—</div></div>
@@ -248,11 +356,98 @@
     <div class="stat-card"><div class="stat-title">Current mode</div><div class="stat-value" id="modeLabel">Global</div></div>
   </section>
 
+  <details class="cand-panel">
+    <summary>NAV Comparison Candidates
+      <span class="cand-meta">nh_nav2 · K25 · adv R0.6 · 2020-01-01 → 2026-07-08 (6.52y) · f22: 2022-01-01 → 2026-07-08 (4.51y)</span>
+    </summary>
+    <div class="cand-wrap">
+      <table class="cand-table">
+        <thead>
+          <tr>
+            <th>Model</th>
+            <th class="num">NAV full</th>
+            <th class="num">CAGR full</th>
+            <th class="num">NAV f22</th>
+            <th class="num">CAGR f22</th>
+            <th class="num">MaxDD</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>n2_velov_univ150c</td>
+            <td class="num">×22.40</td>
+            <td class="num positive">61.1%</td>
+            <td class="num">×3.08</td>
+            <td class="num positive">28.3%</td>
+            <td class="num negative">−20.8%</td>
+            <td><span class="badge navscan">navscan</span> DD cao, chưa prosecute</td>
+          </tr>
+          <tr>
+            <td>n2_2429_maxhold20</td>
+            <td class="num">×19.85</td>
+            <td class="num positive">58.2%</td>
+            <td class="num">×4.15</td>
+            <td class="num positive">37.1%</td>
+            <td class="num negative">−12.4%</td>
+            <td><span class="badge navscan">navscan</span></td>
+          </tr>
+          <tr>
+            <td>n2_2429_base</td>
+            <td class="num">×17.90</td>
+            <td class="num positive">55.7%</td>
+            <td class="num">×3.74</td>
+            <td class="num positive">33.9%</td>
+            <td class="num negative">−12.9%</td>
+            <td><span class="badge navscan">navscan</span></td>
+          </tr>
+          <tr>
+            <td>n2_2429_dyncsr88</td>
+            <td class="num">×17.42</td>
+            <td class="num positive">55.0%</td>
+            <td class="num">×3.76</td>
+            <td class="num positive">34.1%</td>
+            <td class="num negative">−12.9%</td>
+            <td><span class="badge navscan">navscan</span></td>
+          </tr>
+          <tr class="cand-pick">
+            <td><strong>r2c_oxt04_p42</strong></td>
+            <td class="num">×16.84</td>
+            <td class="num positive"><strong>54.2%</strong></td>
+            <td class="num">×3.76</td>
+            <td class="num positive"><strong>34.1%</strong></td>
+            <td class="num negative">−13.3%</td>
+            <td><span class="badge cand">0-ML candidate</span> prosecuted, cond. pass</td>
+          </tr>
+          <tr>
+            <td>n2_v19_fullwave</td>
+            <td class="num">×16.29</td>
+            <td class="num positive">53.5%</td>
+            <td class="num">×3.40</td>
+            <td class="num positive">31.1%</td>
+            <td class="num negative">−12.5%</td>
+            <td><span class="badge navscan">navscan</span></td>
+          </tr>
+          <tr class="cand-live">
+            <td><strong>gb_x08</strong></td>
+            <td class="num">×13.78</td>
+            <td class="num positive">49.6%</td>
+            <td class="num">×3.43</td>
+            <td class="num positive">31.4%</td>
+            <td class="num negative">−15.3%</td>
+            <td><span class="badge live">LIVE champion</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </details>
+
   <main class="table-wrap">
     <table>
       <thead>
         <tr>
           <th data-sort="rank">Rank</th>
+          <th data-sort="state">State</th>
           <th data-sort="composite_score" class="num">Score</th>
           <th data-sort="run_name">Run</th>
           <th data-sort="bundle">Bundle</th>
@@ -264,6 +459,7 @@
           <th data-sort="wr" class="num">WR</th>
           <th data-sort="avg_pnl" class="num">Avg PnL</th>
           <th data-sort="total_pnl" class="num">Total PnL</th>
+          <th data-sort="cagr" class="num" title="avg annual PnL per symbol = total_pnl / n_symbols / n_years">CAGR~</th>
           <th data-sort="pf" class="num">PF</th>
           <th data-sort="sharpe" class="num">Sharpe</th>
           <th data-sort="max_drawdown" class="num">MDD</th>
@@ -272,14 +468,17 @@
           <th data-sort="first_test_year">Window</th>
           <th data-sort="warnings">Warnings</th>
           <th data-sort="fairness_group_key">Fair group</th>
+          <th>Actions</th>
         </tr>
       </thead>
       <tbody id="leaderboardBody">
-        <tr><td colspan="20" class="empty">Loading leaderboard...</td></tr>
+        <tr><td colspan="23" class="empty">Loading leaderboard...</td></tr>
       </tbody>
     </table>
   </main>
 
-  <script src="./leaderboard.js?v=3"></script>
+  <div id="toasts"></div>
+
+  <script src="./leaderboard.js?v=4"></script>
 </body>
 </html>

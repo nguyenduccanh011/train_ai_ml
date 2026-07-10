@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Strategy Templates - Stock ML Research</title>
+    <script src="api-config.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+        }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        header {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        h1 { font-size: 28px; margin-bottom: 10px; }
+        .breadcrumb { font-size: 14px; color: #666; }
+
+        .toolbar {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .search-box { flex: 1; max-width: 400px; }
+        .search-box input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .btn {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .btn-primary { background: #0066cc; color: white; }
+        .btn-primary:hover { background: #0052a3; }
+        .btn-secondary { background: #f0f0f0; color: #333; }
+        .btn-secondary:hover { background: #e0e0e0; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-danger:hover { background: #c82333; }
+        .btn-sm { padding: 6px 12px; font-size: 12px; }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 20px;
+            transition: all 0.3s;
+        }
+        .card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transform: translateY(-2px);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 12px;
+        }
+        .card-title { font-size: 18px; font-weight: 600; }
+        .card-badges { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+        .badge-market { background: #e3f2fd; color: #1976d2; }
+        .badge-mode { background: #f3e5f5; color: #7b1fa2; }
+        .badge-status { background: #e8f5e9; color: #388e3c; }
+
+        .card-meta {
+            font-size: 13px;
+            color: #666;
+            margin: 12px 0;
+            line-height: 1.5;
+        }
+        .meta-row { display: flex; justify-content: space-between; padding: 4px 0; }
+
+        .card-description {
+            font-size: 13px;
+            color: #555;
+            margin: 12px 0;
+            line-height: 1.5;
+        }
+
+        .slots { margin: 12px 0; padding-top: 12px; border-top: 1px solid #eee; }
+        .slot {
+            font-size: 12px;
+            color: #666;
+            margin: 6px 0;
+            padding: 4px;
+            background: #f9f9f9;
+            border-radius: 3px;
+        }
+        .slot-label { font-weight: 500; color: #333; }
+
+        .card-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+            padding-top: 12px;
+            border-top: 1px solid #eee;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal.active { display: flex; }
+        .modal-content {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            max-width: 700px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .modal-header {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+        .modal-close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #999;
+        }
+
+        .form-group { margin-bottom: 15px; }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+        .form-group textarea { min-height: 100px; resize: vertical; }
+
+        .details-panel {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 30px;
+            margin-bottom: 20px;
+        }
+        .details-section { margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid #eee; }
+        .details-section:last-child { border-bottom: none; }
+        .section-title { font-size: 16px; font-weight: 600; margin-bottom: 12px; }
+        .detail-row { display: grid; grid-template-columns: 150px 1fr; margin: 8px 0; }
+        .detail-label { font-weight: 500; color: #666; }
+        .detail-value { color: #333; font-family: monospace; font-size: 13px; }
+
+        .json-display {
+            background: #f5f5f5;
+            padding: 12px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+        }
+
+        .loading { text-align: center; padding: 40px; color: #666; }
+        .empty { text-align: center; padding: 40px; color: #999; }
+        .error { background: #ffebee; color: #c62828; padding: 12px; border-radius: 4px; margin-bottom: 20px; }
+        .success { background: #e8f5e9; color: #2e7d32; padding: 12px; border-radius: 4px; margin-bottom: 20px; }
+
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #ddd; }
+        .tab-button {
+            padding: 10px 20px; border: none; background: none; cursor: pointer; font-size: 14px; font-weight: 500;
+            color: #666; border-bottom: 3px solid transparent; transition: all 0.3s;
+        }
+        .tab-button.active { color: #0066cc; border-bottom-color: #0066cc; }
+
+        .status-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+        .status-active { background: #c8e6c9; color: #2e7d32; }
+        .status-inactive { background: #ffccbc; color: #d84315; }
+    </style>
+</head>
+<body>
+    <script src="js/nav.js"></script>
+
+    <div class="container">
+        <header>
+            <h1>Strategy Templates</h1>
+            <div class="breadcrumb">Dashboard / Templates / Experiment Configuration Library</div>
+        </header>
+
+        <!-- Error/Success Messages -->
+        <div id="messages"></div>
+
+        <!-- Toolbar -->
+        <div class="toolbar">
+            <div class="search-box">
+                <input type="text" id="search-input" placeholder="Search templates by name, market, strategy..." onkeyup="filterTemplates()">
+            </div>
+            <button class="btn btn-primary" onclick="openCreateModal()">+ Create Template</button>
+        </div>
+
+        <!-- Templates Grid -->
+        <div id="templates-container" class="grid"></div>
+
+        <!-- Details Panel (shown when clicking a template) -->
+        <div id="details-panel" style="display: none;"></div>
+    </div>
+
+    <!-- Create/Edit Modal -->
+    <div id="template-modal" class="modal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal()">&times;</button>
+            <div class="modal-header" id="modal-title">Create New Template</div>
+
+            <form id="template-form" onsubmit="handleSubmitTemplate(event)">
+                <div class="form-group">
+                    <label>Name *</label>
+                    <input type="text" id="form-name" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Market *</label>
+                    <select id="form-market" required>
+                        <option value="">-- Select Market --</option>
+                        <option value="vn_stock">VN Stock</option>
+                        <option value="vn_derivatives">VN Derivatives</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Strategy *</label>
+                    <input type="text" id="form-strategy" placeholder="e.g., macd_ma20" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Direction</label>
+                    <select id="form-direction">
+                        <option value="long">Long</option>
+                        <option value="short">Short</option>
+                        <option value="both">Both</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="form-description" placeholder="Brief description of the template..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Universe Slug</label>
+                    <input type="text" id="form-universe" placeholder="e.g., vn_large_cap">
+                </div>
+
+                <div style="margin-top: 20px; border-top: 1px solid #eee; padding-top: 20px;">
+                    <h3 style="margin-bottom: 15px;">Components</h3>
+                    <div class="form-group">
+                        <label>Feature Set *</label>
+                        <select id="form-feature-set" required onchange="updateFeatureSetInfo()">
+                            <option value="">-- Select Feature Set --</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Target *</label>
+                        <select id="form-target" required onchange="updateTargetInfo()">
+                            <option value="">-- Select Target --</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="margin-top: 20px; text-align: right; gap: 10px; display: flex; justify-content: flex-end;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create Template</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.API_BASE || window.API_CONFIG?.baseUrl || '/api/v1';
+        let templates = [];
+        let allFeatureSets = [];
+        let allTargets = [];
+        let currentEditId = null;
+
+        // Initialize
+        async function init() {
+            await loadFeatureSets();
+            await loadTargets();
+            await loadTemplates();
+        }
+
+        async function loadFeatureSets() {
+            try {
+                const res = await fetch(`${API_BASE}/model-library/feature-sets`);
+                const data = await res.json();
+                allFeatureSets = data.feature_sets || [];
+                updateFeatureSetSelect();
+            } catch (error) {
+                console.error('Failed to load feature sets:', error);
+            }
+        }
+
+        async function loadTargets() {
+            try {
+                const res = await fetch(`${API_BASE}/model-library/targets`);
+                const data = await res.json();
+                allTargets = data.targets || [];
+                updateTargetSelect();
+            } catch (error) {
+                console.error('Failed to load targets:', error);
+            }
+        }
+
+        function updateFeatureSetSelect() {
+            const select = document.getElementById('form-feature-set');
+            select.innerHTML = '<option value="">-- Select Feature Set --</option>';
+            allFeatureSets.forEach(fs => {
+                const opt = document.createElement('option');
+                opt.value = fs.id;
+                opt.textContent = fs.name;
+                select.appendChild(opt);
+            });
+        }
+
+        function updateTargetSelect() {
+            const select = document.getElementById('form-target');
+            select.innerHTML = '<option value="">-- Select Target --</option>';
+            allTargets.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t.id;
+                opt.textContent = `${t.name} (${t.type})`;
+                select.appendChild(opt);
+            });
+        }
+
+        function updateFeatureSetInfo() {
+            const fsId = document.getElementById('form-feature-set').value;
+            const fs = allFeatureSets.find(f => f.id == fsId);
+            // Could show more info here
+        }
+
+        function updateTargetInfo() {
+            const tId = document.getElementById('form-target').value;
+            const t = allTargets.find(tgt => tgt.id == tId);
+            // Could show more info here
+        }
+
+        async function loadTemplates() {
+            try {
+                document.getElementById('templates-container').innerHTML = '<div class="loading">Loading templates...</div>';
+                const res = await fetch(`${API_BASE}/templates/`);
+                if (!res.ok) throw new Error('Failed to load templates');
+                const data = await res.json();
+                templates = data || [];
+                renderTemplates();
+            } catch (error) {
+                showError('Failed to load templates: ' + error.message);
+                document.getElementById('templates-container').innerHTML = '<div class="empty">Failed to load templates</div>';
+            }
+        }
+
+        function renderTemplates() {
+            const container = document.getElementById('templates-container');
+            if (templates.length === 0) {
+                container.innerHTML = '<div class="empty">No templates found. Create one to get started!</div>';
+                return;
+            }
+
+            container.innerHTML = templates.map(t => `
+                <div class="card">
+                    <div class="card-header">
+                        <div>
+                            <div class="card-title">${escapeHtml(t.name)}</div>
+                            <div class="card-badges">
+                                <span class="badge badge-market">${t.market}</span>
+                                <span class="badge badge-mode">${t.modelMode || 'unknown'}</span>
+                                <span class="badge ${t.isActive ? 'status-active' : 'status-inactive'}">
+                                    ${t.isActive ? 'Active' : 'Inactive'}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-meta">
+                        <div class="meta-row">
+                            <span><strong>Strategy:</strong> ${t.strategy}</span>
+                            <span><strong>Direction:</strong> ${t.direction || 'long'}</span>
+                        </div>
+                        <div class="meta-row">
+                            <span><strong>Features:</strong> ${t.featureSet?.name || 'N/A'}</span>
+                            <span><strong>Target:</strong> ${t.target?.name || 'N/A'}</span>
+                        </div>
+                    </div>
+
+                    ${t.description ? `<div class="card-description">${escapeHtml(t.description)}</div>` : ''}
+
+                    ${t.componentSlots && t.componentSlots.length > 0 ? `
+                        <div class="slots">
+                            <strong style="font-size: 12px;">Slots:</strong>
+                            ${t.componentSlots.map(slot => `
+                                <div class="slot">
+                                    <span class="slot-label">${slot.slotType}:</span>
+                                    ${slot.mlComponent ? `ML: ${slot.mlComponent.name}` : ''}
+                                    ${slot.ruleComponent ? `${slot.mlComponent ? ' + ' : ''}Rule: ${slot.ruleComponent.name}` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+
+                    <div class="card-actions">
+                        <button class="btn btn-sm btn-secondary" onclick="viewTemplate(${t.id})">View Details</button>
+                        <button class="btn btn-sm btn-primary" style="background: #28a745;" onclick="submitTemplate(${t.id})">Submit</button>
+                        <button class="btn btn-sm btn-secondary" onclick="editTemplate(${t.id})">Edit</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteTemplate(${t.id})">Delete</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function filterTemplates() {
+            const search = document.getElementById('search-input').value.toLowerCase();
+            const filtered = templates.filter(t =>
+                t.name.toLowerCase().includes(search) ||
+                t.market.toLowerCase().includes(search) ||
+                t.strategy.toLowerCase().includes(search)
+            );
+
+            const container = document.getElementById('templates-container');
+            if (filtered.length === 0) {
+                container.innerHTML = '<div class="empty">No templates match your search</div>';
+                return;
+            }
+
+            // Re-render with filtered
+            const origTemplates = templates;
+            templates = filtered;
+            renderTemplates();
+            templates = origTemplates;
+        }
+
+        function openCreateModal() {
+            currentEditId = null;
+            document.getElementById('modal-title').textContent = 'Create New Template';
+            document.getElementById('template-form').reset();
+            document.getElementById('template-modal').classList.add('active');
+        }
+
+        async function editTemplate(id) {
+            const template = templates.find(t => t.id === id);
+            if (!template) return;
+
+            currentEditId = id;
+            document.getElementById('modal-title').textContent = 'Edit Template';
+            document.getElementById('form-name').value = template.name;
+            document.getElementById('form-market').value = template.market;
+            document.getElementById('form-strategy').value = template.strategy;
+            document.getElementById('form-direction').value = template.direction || 'long';
+            document.getElementById('form-description').value = template.description || '';
+            document.getElementById('form-universe').value = template.universeSlug || '';
+            document.getElementById('form-feature-set').value = template.featureSetId || '';
+            document.getElementById('form-target').value = template.targetId || '';
+
+            document.getElementById('template-modal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('template-modal').classList.remove('active');
+            currentEditId = null;
+        }
+
+        async function handleSubmitTemplate(event) {
+            event.preventDefault();
+
+            const payload = {
+                name: document.getElementById('form-name').value,
+                market: document.getElementById('form-market').value,
+                strategy: document.getElementById('form-strategy').value,
+                direction: document.getElementById('form-direction').value,
+                description: document.getElementById('form-description').value,
+                universeSlug: document.getElementById('form-universe').value,
+                featureSetId: parseInt(document.getElementById('form-feature-set').value),
+                targetId: parseInt(document.getElementById('form-target').value),
+                componentSlots: [], // Would need to implement component selection UI
+            };
+
+            try {
+                let res;
+                if (currentEditId) {
+                    res = await fetch(`${API_BASE}/templates/${currentEditId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload),
+                    });
+                } else {
+                    res = await fetch(`${API_BASE}/templates/`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload),
+                    });
+                }
+
+                if (!res.ok) throw new Error('Failed to save template');
+
+                showSuccess(currentEditId ? 'Template updated!' : 'Template created!');
+                closeModal();
+                await loadTemplates();
+            } catch (error) {
+                showError('Error saving template: ' + error.message);
+            }
+        }
+
+        async function viewTemplate(id) {
+            const template = templates.find(t => t.id === id);
+            if (!template) return;
+
+            const panel = document.getElementById('details-panel');
+            panel.innerHTML = `
+                <div>
+                    <button class="btn btn-secondary btn-sm" onclick="document.getElementById('details-panel').style.display='none'">Close</button>
+                    <button class="btn btn-secondary btn-sm" onclick="editTemplate(${id})">Edit</button>
+                </div>
+                <div class="details-panel">
+                    <div class="details-section">
+                        <div class="section-title">${template.name}</div>
+                        ${template.description ? `<div style="color: #666; margin-bottom: 10px;">${escapeHtml(template.description)}</div>` : ''}
+                        <div class="detail-row">
+                            <div class="detail-label">Market:</div>
+                            <div class="detail-value">${template.market}</div>
+                        </div>
+                        <div class="detail-row">
+                            <div class="detail-label">Strategy:</div>
+                            <div class="detail-value">${template.strategy}</div>
+                        </div>
+                        <div class="detail-row">
+                            <div class="detail-label">Direction:</div>
+                            <div class="detail-value">${template.direction || 'long'}</div>
+                        </div>
+                        <div class="detail-row">
+                            <div class="detail-label">Mode:</div>
+                            <div class="detail-value">${template.modelMode}</div>
+                        </div>
+                        <div class="detail-row">
+                            <div class="detail-label">Signal Mode:</div>
+                            <div class="detail-value">${template.signalMode}</div>
+                        </div>
+                        <div class="detail-row">
+                            <div class="detail-label">Status:</div>
+                            <div class="detail-value">${template.isActive ? 'Active' : 'Inactive'}</div>
+                        </div>
+                    </div>
+
+                    <div class="details-section">
+                        <div class="section-title">Components</div>
+                        <div class="detail-row">
+                            <div class="detail-label">Feature Set:</div>
+                            <div class="detail-value">${template.featureSet?.name || 'N/A'}</div>
+                        </div>
+                        <div class="detail-row">
+                            <div class="detail-label">Target:</div>
+                            <div class="detail-value">${template.target?.name || 'N/A'}</div>
+                        </div>
+                    </div>
+
+                    ${template.componentSlots && template.componentSlots.length > 0 ? `
+                        <div class="details-section">
+                            <div class="section-title">Component Slots</div>
+                            ${template.componentSlots.map(slot => `
+                                <div style="margin-bottom: 12px; padding: 10px; background: #f9f9f9; border-radius: 4px;">
+                                    <div style="font-weight: 500; margin-bottom: 6px;">${slot.slotType}</div>
+                                    ${slot.mlComponent ? `<div style="font-size: 12px; color: #666;">ML: ${slot.mlComponent.name}</div>` : ''}
+                                    ${slot.ruleComponent ? `<div style="font-size: 12px; color: #666;">Rule: ${slot.ruleComponent.name}</div>` : ''}
+                                    ${slot.featureSetName ? `<div style="font-size: 12px; color: #666;">Features: ${slot.featureSetName}</div>` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+
+                    <div class="details-section">
+                        <div class="section-title">Configuration</div>
+                        <div class="json-display"><pre>${JSON.stringify({
+                            modelMode: template.modelMode,
+                            signalMode: template.signalMode,
+                            signalThreshold: template.signalThreshold,
+                            splitConfig: template.splitConfig,
+                            engineConfig: template.engineConfig,
+                            seed: template.seed,
+                        }, null, 2)}</pre></div>
+                    </div>
+
+                    <div class="details-section">
+                        <div class="section-title">Metadata</div>
+                        <div class="detail-row">
+                            <div class="detail-label">Created:</div>
+                            <div class="detail-value">${new Date(template.createdAt).toLocaleString()}</div>
+                        </div>
+                        <div class="detail-row">
+                            <div class="detail-label">Updated:</div>
+                            <div class="detail-value">${new Date(template.updatedAt).toLocaleString()}</div>
+                        </div>
+                        <div class="detail-row">
+                            <div class="detail-label">Config Hash:</div>
+                            <div class="detail-value">${template.configHash || 'N/A'}</div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            panel.style.display = 'block';
+            window.scrollTo(0, 0);
+        }
+
+        async function submitTemplate(id) {
+            const template = templates.find(t => t.id === id);
+            if (!template) return;
+
+            if (!confirm(`Submit "${template.name}" to experiment queue?`)) return;
+
+            try {
+                const res = await fetch(`${API_BASE}/templates/${id}/submit`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ override_seed: template.seed }),
+                });
+
+                if (!res.ok) {
+                    const error = await res.json();
+                    throw new Error(error.detail || 'Failed to submit template');
+                }
+
+                const result = await res.json();
+                showSuccess(`Experiment queued! Job ID: ${result.job_id}`);
+                console.log('Job details:', result);
+
+                // Optionally show run details
+                setTimeout(() => {
+                    alert(`Job submitted successfully!\n\nJob ID: ${result.job_id}\nLog: ${result.log_path}`);
+                }, 500);
+            } catch (error) {
+                showError('Error submitting template: ' + error.message);
+            }
+        }
+
+        async function deleteTemplate(id) {
+            if (!confirm('Are you sure you want to delete this template?')) return;
+
+            try {
+                const res = await fetch(`${API_BASE}/templates/${id}`, { method: 'DELETE' });
+                if (!res.ok) throw new Error('Failed to delete template');
+
+                showSuccess('Template deleted!');
+                await loadTemplates();
+            } catch (error) {
+                showError('Error deleting template: ' + error.message);
+            }
+        }
+
+        function showError(msg) {
+            const container = document.getElementById('messages');
+            const div = document.createElement('div');
+            div.className = 'error';
+            div.textContent = msg;
+            container.prepend(div);
+            setTimeout(() => div.remove(), 5000);
+        }
+
+        function showSuccess(msg) {
+            const container = document.getElementById('messages');
+            const div = document.createElement('div');
+            div.className = 'success';
+            div.textContent = msg;
+            container.prepend(div);
+            setTimeout(() => div.remove(), 3000);
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Template Builder - Stock ML Research</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f5f5f5; color: #333; }
+        .container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+        header { background: white; padding: 20px; margin-bottom: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        h1 { font-size: 28px; margin-bottom: 10px; }
+
+        .main-layout { display: grid; grid-template-columns: 1fr 400px; gap: 20px; }
+        @media (max-width: 1200px) { .main-layout { grid-template-columns: 1fr; } }
+
+        .form-section { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        .form-section h2 { font-size: 18px; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #f0f0f0; }
+        .form-section h3 { font-size: 14px; margin: 15px 0 10px 0; color: #666; font-weight: 600; }
+
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 500; font-size: 14px; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; font-family: inherit; }
+        .form-group textarea { min-height: 80px; resize: vertical; }
+
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .form-row.full { grid-template-columns: 1fr; }
+
+        .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-bottom: 15px; }
+        .card { padding: 12px; border: 2px solid #ddd; border-radius: 6px; cursor: pointer; transition: all 0.3s; text-align: center; font-size: 13px; }
+        .card:hover { border-color: #0066cc; background: #f0f7ff; }
+        .card.selected { border-color: #0066cc; background: #e3f2fd; font-weight: 600; }
+        .card-value { font-size: 11px; color: #666; margin-top: 5px; font-family: monospace; }
+
+        .side-panel { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); height: fit-content; }
+        .side-panel h2 { font-size: 16px; margin-bottom: 15px; }
+
+        .preview-section { margin-bottom: 20px; }
+        .preview-label { font-size: 12px; font-weight: 600; color: #666; margin-bottom: 8px; }
+        .preview-value { background: #f5f5f5; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 12px; max-height: 150px; overflow-y: auto; line-height: 1.4; }
+
+        .btn { padding: 10px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 500; width: 100%; text-align: center; }
+        .btn-primary { background: #0066cc; color: white; }
+        .btn-primary:hover { background: #0052a3; }
+        .btn-secondary { background: #f0f0f0; color: #333; margin-bottom: 8px; }
+        .btn-secondary:hover { background: #e0e0e0; }
+
+        .section-actions { display: flex; gap: 8px; margin-top: 12px; }
+        .section-actions button { flex: 1; padding: 8px; font-size: 12px; }
+
+        .error { background: #ffebee; color: #c62828; padding: 12px; border-radius: 4px; margin-bottom: 15px; }
+        .success { background: #e8f5e9; color: #2e7d32; padding: 12px; border-radius: 4px; margin-bottom: 15px; }
+
+        .templates-list { max-height: 300px; overflow-y: auto; }
+        .template-item { padding: 10px; border: 1px solid #eee; border-radius: 4px; margin-bottom: 8px; cursor: pointer; }
+        .template-item:hover { background: #f9f9f9; }
+        .template-item-name { font-weight: 600; font-size: 13px; }
+        .template-item-meta { font-size: 11px; color: #666; margin-top: 4px; }
+
+        .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; }
+        .modal.active { display: flex; }
+        .modal-content { background: white; border-radius: 8px; padding: 30px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; }
+        .modal-close { position: absolute; top: 10px; right: 10px; background: none; border: none; font-size: 24px; cursor: pointer; }
+
+        .json-view { background: #f5f5f5; padding: 12px; border-radius: 4px; font-family: monospace; font-size: 11px; overflow-x: auto; line-height: 1.4; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔧 Strategy Template Builder</h1>
+            <p style="color: #666; font-size: 14px; margin-top: 5px;">Create and manage experiment configurations from the model library</p>
+        </header>
+
+        <div class="main-layout">
+            <!-- Left: Form -->
+            <div>
+                <!-- Basic Info -->
+                <div class="form-section">
+                    <h2>📝 Strategy Identity</h2>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Template Name *</label>
+                            <input type="text" id="template-name" placeholder="e.g., alpha_v5_aggressive" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Market *</label>
+                            <select id="template-market" required>
+                                <option value="">Select market...</option>
+                                <option value="vn_stock">VN Stock</option>
+                                <option value="us_stock">US Stock</option>
+                                <option value="crypto">Crypto</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Strategy *</label>
+                            <input type="text" id="template-strategy" placeholder="e.g., entry_exit_ensemble" value="entry_exit_ensemble">
+                        </div>
+                        <div class="form-group">
+                            <label>Direction *</label>
+                            <select id="template-direction">
+                                <option value="long">Long (Buy)</option>
+                                <option value="short">Short (Sell)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Hypothesis / Description</label>
+                        <textarea id="template-hypothesis" placeholder="Why this strategy? What are we testing?"></textarea>
+                    </div>
+                </div>
+
+                <!-- Components -->
+                <div class="form-section">
+                    <h2>🔌 Components</h2>
+
+                    <h3>Feature Set</h3>
+                    <div class="cards-grid" id="feature-sets"></div>
+
+                    <h3>Target</h3>
+                    <div class="cards-grid" id="targets"></div>
+
+                    <h3>Entry Model * (Choose ML or Rule)</h3>
+                    <div style="margin-bottom: 12px; padding: 10px; background: #f9f9f9; border-radius: 4px; font-size: 12px; color: #666;">
+                        📌 ML: Machine learning model | Rule: Technical rule conditions | Both: Rule filters ML signals
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <div style="font-size: 12px; font-weight: 600; color: #666; margin-bottom: 8px;">🧠 ML Algorithm:</div>
+                        <div class="cards-grid" id="entry-ml-models"></div>
+                    </div>
+                    <div>
+                        <div style="font-size: 12px; font-weight: 600; color: #666; margin-bottom: 8px;">🔴 Rule Conditions (Optional Filter):</div>
+                        <div class="cards-grid" id="entry-rule-models"></div>
+                        <div onclick="selectComponent('entry', 'rule-none', 'None')" class="card" style="cursor: pointer;">
+                            <div>None</div>
+                            <div class="card-value">no filter</div>
+                        </div>
+                    </div>
+
+                    <!-- Per-Slot Overrides (Phase 0.4) -->
+                    <div style="border-top: 2px solid #f0f0f0; padding-top: 12px; margin-top: 12px;">
+                        <div style="font-size: 12px; font-weight: 600; color: #666; margin-bottom: 8px;">📋 Feature & Target Overrides (Optional):</div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label style="font-size: 12px;">Feature Set Override</label>
+                                <select id="entry-fs-override" onchange="setSlotFeatureSet('entry', this.value)">
+                                    <option value="">Use Global Default</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label style="font-size: 12px;">Target Override</label>
+                                <select id="entry-target-override" onchange="setSlotTarget('entry', this.value)">
+                                    <option value="">Use Global Default</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h3>Exit Model (Optional)</h3>
+                    <div style="margin-bottom: 12px;">
+                        <div style="font-size: 12px; font-weight: 600; color: #666; margin-bottom: 8px;">🧠 ML Algorithm:</div>
+                        <div class="cards-grid" id="exit-ml-models"></div>
+                        <div onclick="selectComponent('exit', 'ml-none', 'None')" class="card" style="cursor: pointer;">
+                            <div>None</div>
+                            <div class="card-value">no ML exit</div>
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-size: 12px; font-weight: 600; color: #666; margin-bottom: 8px;">🔴 Rule Conditions:</div>
+                        <div class="cards-grid" id="exit-rule-models"></div>
+                        <div onclick="selectComponent('exit', 'rule-none', 'None')" class="card" style="cursor: pointer;">
+                            <div>None</div>
+                            <div class="card-value">no rule exit</div>
+                        </div>
+                    </div>
+
+                    <!-- Per-Slot Overrides (Phase 0.4) -->
+                    <div style="border-top: 2px solid #f0f0f0; padding-top: 12px; margin-top: 12px;">
+                        <div style="font-size: 12px; font-weight: 600; color: #666; margin-bottom: 8px;">📋 Feature & Target Overrides (Optional):</div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label style="font-size: 12px;">Feature Set Override</label>
+                                <select id="exit-fs-override" onchange="setSlotFeatureSet('exit', this.value)">
+                                    <option value="">Use Global Default</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label style="font-size: 12px;">Target Override</label>
+                                <select id="exit-target-override" onchange="setSlotTarget('exit', this.value)">
+                                    <option value="">Use Global Default</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h3>Regime Model (Advanced)</h3>
+                    <div style="margin-bottom: 12px;">
+                        <div style="font-size: 12px; font-weight: 600; color: #666; margin-bottom: 8px;">🧠 ML Algorithm:</div>
+                        <div class="cards-grid" id="regime-ml-models"></div>
+                        <div onclick="selectComponent('regime', 'ml-none', 'None')" class="card" style="cursor: pointer;">
+                            <div>None</div>
+                            <div class="card-value">no regime</div>
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-size: 12px; font-weight: 600; color: #666; margin-bottom: 8px;">🔴 Rule Conditions:</div>
+                        <div class="cards-grid" id="regime-rule-models"></div>
+                        <div onclick="selectComponent('regime', 'rule-none', 'None')" class="card" style="cursor: pointer;">
+                            <div>None</div>
+                            <div class="card-value">no rule</div>
+                        </div>
+                    </div>
+
+                    <!-- Per-Slot Overrides (Phase 0.4) -->
+                    <div style="border-top: 2px solid #f0f0f0; padding-top: 12px; margin-top: 12px;">
+                        <div style="font-size: 12px; font-weight: 600; color: #666; margin-bottom: 8px;">📋 Feature & Target Overrides (Optional):</div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label style="font-size: 12px;">Feature Set Override</label>
+                                <select id="regime-fs-override" onchange="setSlotFeatureSet('regime', this.value)">
+                                    <option value="">Use Global Default</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label style="font-size: 12px;">Target Override</label>
+                                <select id="regime-target-override" onchange="setSlotTarget('regime', this.value)">
+                                    <option value="">Use Global Default</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h3>Size Model (Advanced)</h3>
+                    <div style="margin-bottom: 12px;">
+                        <div style="font-size: 12px; font-weight: 600; color: #666; margin-bottom: 8px;">🧠 ML Algorithm:</div>
+                        <div class="cards-grid" id="size-ml-models"></div>
+                        <div onclick="selectComponent('size', 'ml-none', 'None')" class="card" style="cursor: pointer;">
+                            <div>None</div>
+                            <div class="card-value">no size ML</div>
+                        </div>
+                    </div>
+                    <div>
+                        <div style="font-size: 12px; font-weight: 600; color: #666; margin-bottom: 8px;">🔴 Rule Conditions:</div>
+                        <div class="cards-grid" id="size-rule-models"></div>
+                        <div onclick="selectComponent('size', 'rule-none', 'None')" class="card" style="cursor: pointer;">
+                            <div>None</div>
+                            <div class="card-value">no rule</div>
+                        </div>
+                    </div>
+
+                    <!-- Per-Slot Overrides (Phase 0.4) -->
+                    <div style="border-top: 2px solid #f0f0f0; padding-top: 12px; margin-top: 12px;">
+                        <div style="font-size: 12px; font-weight: 600; color: #666; margin-bottom: 8px;">📋 Feature & Target Overrides (Optional):</div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label style="font-size: 12px;">Feature Set Override</label>
+                                <select id="size-fs-override" onchange="setSlotFeatureSet('size', this.value)">
+                                    <option value="">Use Global Default</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label style="font-size: 12px;">Target Override</label>
+                                <select id="size-target-override" onchange="setSlotTarget('size', this.value)">
+                                    <option value="">Use Global Default</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Signal Config -->
+                <div class="form-section">
+                    <h2>🎯 Signal Configuration</h2>
+                    <div style="margin-bottom: 12px; padding: 10px; background: #f9f9f9; border-radius: 4px; font-size: 12px; color: #666;">
+                        📌 Hysteresis band: score &gt; <b>entry</b> → mở long; score &lt; <b>exit</b> → thoát.
+                        Vùng giữa = giữ nguyên (chống whipsaw). Để trống = suy ra từ Signal Threshold (±thr).
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Signal Threshold (base)</label>
+                            <input type="number" id="template-signal-threshold" value="0.0" step="0.001">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Entry Threshold</label>
+                            <input type="number" id="template-entry-threshold" placeholder="auto (+base)" step="0.001">
+                        </div>
+                        <div class="form-group">
+                            <label>Exit Threshold</label>
+                            <input type="number" id="template-exit-threshold" placeholder="auto (-base)" step="0.001">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Portfolio Config -->
+                <div class="form-section">
+                    <h2>📊 Portfolio Construction</h2>
+                    <div style="margin-bottom: 12px; padding: 10px; background: #f9f9f9; border-radius: 4px; font-size: 12px; color: #666;">
+                        📌 Khi bật: alpha score → trọng số danh mục (top-k / market-neutral / sizing) →
+                        thực thi theo vốn (capital curve). Tắt = engine per-symbol cũ.
+                    </div>
+                    <div class="form-group">
+                        <label><input type="checkbox" id="portfolio-enabled"> Enable portfolio engine</label>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Policy</label>
+                            <select id="portfolio-policy">
+                                <option value="threshold_binary">Threshold Binary (equal-weight)</option>
+                                <option value="score_proportional">Score Proportional</option>
+                                <option value="top_k">Top-K</option>
+                                <option value="market_neutral">Market Neutral</option>
+                                <option value="vol_target">Vol Target</option>
+                                <option value="kelly">Kelly Fractional</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Top-K (k)</label>
+                            <input type="number" id="portfolio-k" value="10" min="1">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Max Gross</label>
+                            <input type="number" id="portfolio-max-gross" value="1.0" step="0.1">
+                        </div>
+                        <div class="form-group">
+                            <label>Max Per Name</label>
+                            <input type="number" id="portfolio-max-per-name" value="1.0" step="0.05">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Execution Config -->
+                <div class="form-section">
+                    <h2>⚙️ Execution Config</h2>
+                    <h3>Split Strategy</h3>
+                    <div class="form-group">
+                        <label>Split Type</label>
+                        <select id="template-split-type" onchange="updateSplitConfig()">
+                            <option value="walk_forward_year">Walk Forward (Yearly)</option>
+                            <option value="purged_kfold">Purged K-Fold</option>
+                        </select>
+                    </div>
+                    <div id="split-params"></div>
+
+                    <h3>Engine (Costs, Execution)</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Max Hold (bars)</label>
+                            <input type="number" id="engine-max-hold" value="20" min="1">
+                        </div>
+                        <div class="form-group">
+                            <label>Min Hold (bars)</label>
+                            <input type="number" id="engine-min-hold" value="1" min="1">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Hard Stop %</label>
+                            <input type="number" id="engine-hard-stop" value="-0.08" step="0.01">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Commission %</label>
+                        <input type="number" id="engine-commission" value="0.0025" step="0.0001">
+                    </div>
+                    <div class="form-group">
+                        <label>Tax %</label>
+                        <input type="number" id="engine-tax" value="0.001" step="0.0001">
+                    </div>
+                    <div class="form-group">
+                        <label>Slippage %</label>
+                        <input type="number" id="engine-slippage" value="0.0015" step="0.0001">
+                    </div>
+
+                    <h3>Validation</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>N Seeds</label>
+                            <input type="number" id="validation-n-seeds" value="1" min="1">
+                        </div>
+                        <div class="form-group">
+                            <label>Seed</label>
+                            <input type="number" id="template-seed" value="42" min="0">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="form-section">
+                    <div id="save-message"></div>
+                    <button class="btn btn-primary" onclick="saveTemplate()" style="margin-bottom: 8px;">✓ Save Template</button>
+                    <button class="btn btn-primary" onclick="submitTemplateForBacktest()" style="margin-bottom: 8px; background: #10b981;">▶ Submit for Backtest</button>
+                    <button class="btn btn-secondary" onclick="resetForm()">Reset Form</button>
+                </div>
+            </div>
+
+            <!-- Right: Preview -->
+            <div>
+                <div class="side-panel">
+                    <h2>📋 Preview</h2>
+
+                    <div class="preview-section">
+                        <div class="preview-label">Template Name</div>
+                        <div class="preview-value" id="preview-name">—</div>
+                    </div>
+
+                    <div class="preview-section">
+                        <div class="preview-label">Selected Components</div>
+                        <div class="preview-value" id="preview-components">
+                            Feature Set: —<br>
+                            Target: —<br>
+                            Entry Model: —<br>
+                            Exit Model: —
+                        </div>
+                    </div>
+
+                    <div class="preview-section">
+                        <div class="preview-label">YAML Preview</div>
+                        <div class="json-view" id="preview-yaml" style="max-height: 300px;">name: —</div>
+                    </div>
+
+                    <hr style="margin: 20px 0; border: none; border-top: 1px solid #eee;">
+
+                    <h2 style="font-size: 16px; margin-bottom: 15px;">📚 My Templates</h2>
+                    <div class="templates-list" id="templates-list"></div>
+
+                    <button class="btn btn-secondary" style="margin-top: 12px;" onclick="loadTemplates()">Refresh List</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = '/api/v1';
+
+        async function initializeForm() {
+            await loadFeatureSets();
+            await loadTargets();
+            // Load dual-component (ML + Rule) for each slot
+            await loadComponentsByRoleAndType('entry', 'ml');
+            await loadComponentsByRoleAndType('entry', 'rule');
+            await loadComponentsByRoleAndType('exit', 'ml');
+            await loadComponentsByRoleAndType('exit', 'rule');
+            await loadComponentsByRoleAndType('regime', 'ml');
+            await loadComponentsByRoleAndType('regime', 'rule');
+            await loadComponentsByRoleAndType('size', 'ml');
+            await loadComponentsByRoleAndType('size', 'rule');
+            updateSplitConfig();
+            loadTemplates();
+        }
+
+        async function loadFeatureSets() {
+            try {
+                const res = await fetch(`${API_BASE}/model-library/feature-sets`);
+                const features = await res.json();
+                const container = document.getElementById('feature-sets');
+                container.innerHTML = features.map(f => `
+                    <div class="card" onclick="selectFeatureSet(${f.id}, '${f.name}')">
+                        <div>${f.name}</div>
+                        <div class="card-value">${f.columnCount} cols</div>
+                    </div>
+                `).join('');
+                // Populate per-slot feature set overrides
+                ['entry', 'exit', 'regime', 'size'].forEach(slot => {
+                    const sel = document.getElementById(`${slot}-fs-override`);
+                    if (!sel) return;
+                    features.forEach(f => {
+                        const opt = document.createElement('option');
+                        opt.value = f.name;
+                        opt.textContent = f.name;
+                        sel.appendChild(opt);
+                    });
+                });
+            } catch (e) {
+                console.error('Error loading feature sets:', e);
+            }
+        }
+
+        async function loadTargets() {
+            try {
+                const res = await fetch(`${API_BASE}/model-library/targets`);
+                const targets = await res.json();
+                allTargets = targets;
+                const container = document.getElementById('targets');
+                container.innerHTML = targets.map(t => `
+                    <div class="card" onclick="selectTarget(${t.id}, '${t.name}')">
+                        <div>${t.name}</div>
+                        <div class="card-value">${t.type}</div>
+                    </div>
+                `).join('');
+                // Populate per-slot target overrides
+                ['entry', 'exit', 'regime', 'size'].forEach(slot => {
+                    const sel = document.getElementById(`${slot}-target-override`);
+                    if (!sel) return;
+                    targets.forEach(t => {
+                        const opt = document.createElement('option');
+                        opt.value = String(t.id);
+                        opt.textContent = `${t.name} (${t.type})`;
+                        sel.appendChild(opt);
+                    });
+                });
+            } catch (e) {
+                console.error('Error loading targets:', e);
+            }
+        }
+
+        async function loadComponentsByRoleAndType(role, type) {
+            try {
+                const res = await fetch(`${API_BASE}/model-library/components?role=${role}&component_type=${type}`);
+                const components = await res.json();
+                const container = document.getElementById(`${role}-${type}-models`);
+                if (!components.length) {
+                    container.innerHTML = '<div style="color: #999; font-size: 12px; padding: 10px;">No components</div>';
+                    return;
+                }
+                container.innerHTML = components.map(c => {
+                    const selectValue = type === 'ml' ? `${role}-ml-${c.id}` : `${role}-rule-${c.id}`;
+                    return `
+                        <div class="card" onclick="selectComponent('${role}-${type}', '${selectValue}', '${c.name}', ${c.id})">
+                            <div>${c.name}</div>
+                            <div class="card-value">${c.algorithm}</div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (e) {
+                console.error(`Error loading ${role} ${type} models:`, e);
+            }
+        }
+
+        const selections = {};
+        const slotOverrides = {
+            entry: { featureSetName: null, targetConfig: null },
+            exit:  { featureSetName: null, targetConfig: null },
+            regime:{ featureSetName: null, targetConfig: null },
+            size:  { featureSetName: null, targetConfig: null },
+        };
+        let allTargets = [];
+
+        function selectFeatureSet(id, name) {
+            selections.featureSetId = id;
+            selections.featureSetName = name;
+            highlightCard('feature-sets', `${id}`);
+            updatePreview();
+        }
+
+        function selectTarget(id, name) {
+            selections.targetId = id;
+            selections.targetName = name;
+            highlightCard('targets', `${id}`);
+            updatePreview();
+        }
+
+        function setSlotFeatureSet(slot, name) {
+            slotOverrides[slot].featureSetName = name || null;
+            updatePreview();
+        }
+
+        function setSlotTarget(slot, targetId) {
+            if (!targetId) {
+                slotOverrides[slot].targetConfig = null;
+                updatePreview();
+                return;
+            }
+            const t = allTargets.find(x => String(x.id) === targetId);
+            slotOverrides[slot].targetConfig = t ? {type: t.type, ...t.params} : null;
+            updatePreview();
+        }
+
+        function selectComponent(slotType, value, name, id) {
+            // slotType: 'entry-ml', 'entry-rule', 'exit-ml', etc.
+            // value: selection identifier (e.g., 'entry-ml-5')
+            // name: component name
+            // id: component DB ID
+
+            const [slot, type] = slotType.split('-');
+
+            if (value === 'none' || value === `${slot}-ml-none` || value === `${slot}-rule-none`) {
+                // Deselect
+                if (type === 'ml') {
+                    selections[`${slot}MlComponentId`] = null;
+                    selections[`${slot}MlComponentName`] = null;
+                } else {
+                    selections[`${slot}RuleComponentId`] = null;
+                    selections[`${slot}RuleComponentName`] = null;
+                }
+            } else {
+                // Select component
+                if (type === 'ml') {
+                    selections[`${slot}MlComponentId`] = id;
+                    selections[`${slot}MlComponentName`] = name;
+                } else {
+                    selections[`${slot}RuleComponentId`] = id;
+                    selections[`${slot}RuleComponentName`] = name;
+                }
+            }
+
+            highlightCard(`${slotType}-models`, value);
+            updatePreview();
+        }
+
+        function highlightCard(containerId, value) {
+            document.querySelectorAll(`#${containerId} .card`).forEach(card => {
+                card.classList.remove('selected');
+            });
+            // Find and highlight the card containing the value
+            document.querySelectorAll(`#${containerId} .card`).forEach(card => {
+                if (card.textContent.includes(value)) card.classList.add('selected');
+            });
+        }
+
+        function updateSplitConfig() {
+            const type = document.getElementById('template-split-type').value;
+            const container = document.getElementById('split-params');
+            if (type === 'walk_forward_year') {
+                container.innerHTML = `
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Train Years</label>
+                            <input type="number" id="split-train-years" value="4" min="1">
+                        </div>
+                        <div class="form-group">
+                            <label>Test Years</label>
+                            <input type="number" id="split-test-years" value="1" min="1">
+                        </div>
+                    </div>
+                `;
+            } else {
+                container.innerHTML = `
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>N Splits</label>
+                            <input type="number" id="split-n-splits" value="6" min="2">
+                        </div>
+                        <div class="form-group">
+                            <label>Embargo Days</label>
+                            <input type="number" id="split-embargo-days" value="10" min="0">
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        function updatePreview() {
+            document.getElementById('preview-name').textContent = document.getElementById('template-name').value || '—';
+
+            const formatSlot = (slot) => {
+                const ml = selections[`${slot}MlComponentName`] ? `🧠 ${selections[`${slot}MlComponentName`]}` : '';
+                const rule = selections[`${slot}RuleComponentName`] ? `🔴 ${selections[`${slot}RuleComponentName`]}` : '';
+                if (ml && rule) return `${ml} + ${rule} (hybrid)`;
+                if (ml) return `${ml}`;
+                if (rule) return `${rule}`;
+                return '—';
+            };
+
+            document.getElementById('preview-components').innerHTML = `
+                Feature Set: ${selections.featureSetName || '—'}<br>
+                Target: ${selections.targetName || '—'}<br>
+                Entry: ${formatSlot('entry')}<br>
+                Exit: ${formatSlot('exit')}<br>
+                Regime: ${formatSlot('regime')}<br>
+                Size: ${formatSlot('size')}
+            `;
+            updateYamlPreview();
+        }
+
+        // Optional numeric field: returns the parsed value or null when left blank.
+        function optNum(id) {
+            const el = document.getElementById(id);
+            if (!el || el.value === '' || el.value === null) return null;
+            const v = parseFloat(el.value);
+            return Number.isNaN(v) ? null : v;
+        }
+
+        function buildPortfolioConfig() {
+            return {
+                enabled: document.getElementById('portfolio-enabled').checked,
+                policy: document.getElementById('portfolio-policy').value,
+                params: { k: parseInt(document.getElementById('portfolio-k').value) || 10 },
+                max_gross: parseFloat(document.getElementById('portfolio-max-gross').value) || 1.0,
+                max_per_name: parseFloat(document.getElementById('portfolio-max-per-name').value) || 1.0,
+            };
+        }
+
+        function buildEngineConfig() {
+            return {
+                max_hold_bars: parseInt(document.getElementById('engine-max-hold').value),
+                min_hold_bars: parseInt(document.getElementById('engine-min-hold').value),
+                hard_stop_pct: parseFloat(document.getElementById('engine-hard-stop').value),
+                costs: {
+                    commission: parseFloat(document.getElementById('engine-commission').value),
+                    tax: parseFloat(document.getElementById('engine-tax').value),
+                    slippage: parseFloat(document.getElementById('engine-slippage').value)
+                },
+                portfolio: buildPortfolioConfig()
+            };
+        }
+
+        function updateYamlPreview() {
+            const yaml = {
+                name: document.getElementById('template-name').value || 'unnamed',
+                strategy: document.getElementById('template-strategy').value || 'entry_exit_ensemble',
+                market: document.getElementById('template-market').value || 'vn_stock',
+                direction: document.getElementById('template-direction').value,
+                signal_threshold: parseFloat(document.getElementById('template-signal-threshold').value),
+                entry_threshold: optNum('template-entry-threshold'),
+                exit_threshold: optNum('template-exit-threshold'),
+                hypothesis: document.getElementById('template-hypothesis').value || '',
+                components: {
+                    features: selections.featureSetName || 'leading_v2',
+                    target: {
+                        type: selections.targetName || 'forward_return_regression',
+                        horizon: 5
+                    },
+                    entry_model: {
+                        type: selections.entryComponentName || 'lightgbm',
+                        params: {}
+                    }
+                },
+                portfolio: buildPortfolioConfig()
+            };
+            document.getElementById('preview-yaml').textContent = JSON.stringify(yaml, null, 2);
+        }
+
+        async function saveTemplate() {
+            const messageDiv = document.getElementById('save-message');
+            messageDiv.innerHTML = '';
+
+            if (!selections.featureSetId) {
+                messageDiv.innerHTML = '<div class="error">Please select a feature set</div>';
+                return;
+            }
+            if (!selections.targetId) {
+                messageDiv.innerHTML = '<div class="error">Please select a target</div>';
+                return;
+            }
+            if (!selections.entryMlComponentId && !selections.entryRuleComponentId) {
+                messageDiv.innerHTML = '<div class="error">Please select at least an entry ML model or rule</div>';
+                return;
+            }
+
+            try {
+                // Build componentSlots array with per-slot overrides
+                const componentSlots = [
+                    {
+                        slotType: 'entry',
+                        mlComponentId: selections.entryMlComponentId || null,
+                        ruleComponentId: selections.entryRuleComponentId || null,
+                        featureSetName: slotOverrides.entry.featureSetName || null,
+                        targetConfig: slotOverrides.entry.targetConfig || null,
+                    },
+                    {
+                        slotType: 'exit',
+                        mlComponentId: selections.exitMlComponentId || null,
+                        ruleComponentId: selections.exitRuleComponentId || null,
+                        featureSetName: slotOverrides.exit.featureSetName || null,
+                        targetConfig: slotOverrides.exit.targetConfig || null,
+                    },
+                    {
+                        slotType: 'regime',
+                        mlComponentId: selections.regimeMlComponentId || null,
+                        ruleComponentId: selections.regimeRuleComponentId || null,
+                        featureSetName: slotOverrides.regime.featureSetName || null,
+                        targetConfig: slotOverrides.regime.targetConfig || null,
+                    },
+                    {
+                        slotType: 'size',
+                        mlComponentId: selections.sizeMlComponentId || null,
+                        ruleComponentId: selections.sizeRuleComponentId || null,
+                        featureSetName: slotOverrides.size.featureSetName || null,
+                        targetConfig: slotOverrides.size.targetConfig || null,
+                    }
+                ].filter(s => s.mlComponentId || s.ruleComponentId);
+
+                const res = await fetch(`${API_BASE}/templates/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: document.getElementById('template-name').value,
+                        market: document.getElementById('template-market').value,
+                        strategy: document.getElementById('template-strategy').value,
+                        featureSetId: selections.featureSetId,
+                        targetId: selections.targetId,
+                        componentSlots: componentSlots,
+                        direction: document.getElementById('template-direction').value,
+                        signalThreshold: parseFloat(document.getElementById('template-signal-threshold').value),
+                        entryThreshold: optNum('template-entry-threshold'),
+                        exitThreshold: optNum('template-exit-threshold'),
+                        seed: parseInt(document.getElementById('template-seed').value),
+                        hypothesis: document.getElementById('template-hypothesis').value,
+                        splitConfig: {
+                            type: document.getElementById('template-split-type').value
+                        },
+                        engineConfig: buildEngineConfig()
+                    })
+                });
+
+                if (!res.ok) {
+                    const err = await res.json();
+                    throw new Error(err.detail || 'Failed to save template');
+                }
+
+                messageDiv.innerHTML = '<div class="success">✓ Template saved successfully!</div>';
+                setTimeout(() => loadTemplates(), 500);
+            } catch (e) {
+                messageDiv.innerHTML = `<div class="error">Error: ${e.message}</div>`;
+            }
+        }
+
+        async function submitTemplateForBacktest() {
+            const messageDiv = document.getElementById('save-message');
+            messageDiv.innerHTML = '';
+
+            const templateName = document.getElementById('template-name').value;
+            if (!templateName) {
+                messageDiv.innerHTML = '<div class="error">Please enter a template name first</div>';
+                return;
+            }
+
+            try {
+                messageDiv.innerHTML = '<div style="color: #0066cc;">Saving template...</div>';
+
+                // First, save the template if not already saved
+                const componentSlots = [
+                    {
+                        slotType: 'entry',
+                        mlComponentId: selections.entryMlComponentId || null,
+                        ruleComponentId: selections.entryRuleComponentId || null,
+                        featureSetName: slotOverrides.entry.featureSetName || null,
+                        targetConfig: slotOverrides.entry.targetConfig || null,
+                    },
+                    {
+                        slotType: 'exit',
+                        mlComponentId: selections.exitMlComponentId || null,
+                        ruleComponentId: selections.exitRuleComponentId || null,
+                        featureSetName: slotOverrides.exit.featureSetName || null,
+                        targetConfig: slotOverrides.exit.targetConfig || null,
+                    }
+                ].filter(s => s.mlComponentId || s.ruleComponentId);
+
+                const saveRes = await fetch(`${API_BASE}/templates/`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: templateName,
+                        market: document.getElementById('template-market').value,
+                        strategy: document.getElementById('template-strategy').value,
+                        featureSetId: selections.featureSetId,
+                        targetId: selections.targetId,
+                        componentSlots: componentSlots,
+                        direction: document.getElementById('template-direction').value,
+                        signalThreshold: parseFloat(document.getElementById('template-signal-threshold').value),
+                        entryThreshold: optNum('template-entry-threshold'),
+                        exitThreshold: optNum('template-exit-threshold'),
+                        seed: parseInt(document.getElementById('template-seed').value),
+                        hypothesis: document.getElementById('template-hypothesis').value,
+                        splitConfig: { type: document.getElementById('template-split-type').value },
+                        engineConfig: buildEngineConfig()
+                    })
+                });
+
+                if (!saveRes.ok) {
+                    const err = await saveRes.json();
+                    // Template might already exist, which is OK
+                    if (saveRes.status !== 409) throw new Error(err.detail || 'Failed to save template');
+                }
+
+                // Get template ID from saved response or from loaded list
+                let templateId = null;
+                if (saveRes.ok) {
+                    const savedTemplate = await saveRes.json();
+                    templateId = savedTemplate.id;
+                } else {
+                    // If already exists, find it in the list
+                    const listRes = await fetch(`${API_BASE}/templates/?market=${document.getElementById('template-market').value}`);
+                    const templates = await listRes.json();
+                    const found = templates.find(t => t.name === templateName);
+                    if (!found) throw new Error('Could not find template ID');
+                    templateId = found.id;
+                }
+
+                messageDiv.innerHTML = '<div style="color: #0066cc;">Submitting for backtest...</div>';
+
+                // Now submit for backtest
+                const submitRes = await fetch(`${API_BASE}/templates/${templateId}/submit`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+
+                if (!submitRes.ok) {
+                    const err = await submitRes.json();
+                    throw new Error(err.detail || 'Failed to submit for backtest');
+                }
+
+                const submitResult = await submitRes.json();
+                messageDiv.innerHTML = `<div class="success">✓ Template submitted! Job ID: ${submitResult.job_id}<br>Backtest is now running. Check leaderboard in a few minutes.</div>`;
+                setTimeout(() => loadTemplates(), 500);
+            } catch (e) {
+                messageDiv.innerHTML = `<div class="error">Error: ${e.message}</div>`;
+            }
+        }
+
+        async function loadTemplates() {
+            try {
+                const res = await fetch(`${API_BASE}/templates/`);
+                const templates = await res.json();
+                const container = document.getElementById('templates-list');
+                if (!templates.length) {
+                    container.innerHTML = '<div style="color: #999; font-size: 12px;">No templates yet</div>';
+                    return;
+                }
+                container.innerHTML = templates.map(t => `
+                    <div class="template-item" onclick="loadTemplate(${t.id})">
+                        <div class="template-item-name">${t.name}</div>
+                        <div class="template-item-meta">${t.market} • ${t.strategy}</div>
+                    </div>
+                `).join('');
+            } catch (e) {
+                console.error('Error loading templates:', e);
+            }
+        }
+
+        async function loadTemplate(id) {
+            try {
+                const res = await fetch(`${API_BASE}/templates/${id}`);
+                const template = await res.json();
+
+                document.getElementById('template-name').value = template.name;
+                document.getElementById('template-market').value = template.market;
+                document.getElementById('template-strategy').value = template.strategy;
+                document.getElementById('template-direction').value = template.direction;
+                document.getElementById('template-hypothesis').value = template.hypothesis || '';
+
+                // Restore signal/hysteresis config (previously lost on load).
+                document.getElementById('template-signal-threshold').value = template.signalThreshold ?? 0.0;
+                document.getElementById('template-entry-threshold').value =
+                    template.entryThreshold ?? '';
+                document.getElementById('template-exit-threshold').value =
+                    template.exitThreshold ?? '';
+
+                // Restore engine + portfolio config.
+                const eng = template.engineConfig || {};
+                if (eng.max_hold_bars != null) document.getElementById('engine-max-hold').value = eng.max_hold_bars;
+                if (eng.min_hold_bars != null) document.getElementById('engine-min-hold').value = eng.min_hold_bars;
+                if (eng.hard_stop_pct != null) document.getElementById('engine-hard-stop').value = eng.hard_stop_pct;
+                const pf = eng.portfolio || {};
+                document.getElementById('portfolio-enabled').checked = !!pf.enabled;
+                if (pf.policy) document.getElementById('portfolio-policy').value = pf.policy;
+                if (pf.params && pf.params.k != null) document.getElementById('portfolio-k').value = pf.params.k;
+                if (pf.max_gross != null) document.getElementById('portfolio-max-gross').value = pf.max_gross;
+                if (pf.max_per_name != null) document.getElementById('portfolio-max-per-name').value = pf.max_per_name;
+
+                selections.featureSetId = template.featureSetId;
+                selections.featureSetName = template.featureSet?.name || '';
+                selections.targetId = template.targetId;
+                selections.targetName = template.target?.name || '';
+
+                // Load component slots (new architecture)
+                const slots = template.componentSlots || [];
+                slots.forEach(slot => {
+                    if (slot.mlComponentId) {
+                        selections[`${slot.slotType}MlComponentId`] = slot.mlComponentId;
+                        selections[`${slot.slotType}MlComponentName`] = slot.mlComponent?.name || '';
+                    }
+                    if (slot.ruleComponentId) {
+                        selections[`${slot.slotType}RuleComponentId`] = slot.ruleComponentId;
+                        selections[`${slot.slotType}RuleComponentName`] = slot.ruleComponent?.name || '';
+                    }
+                    // Load per-slot overrides (Phase 0.4)
+                    if (slot.featureSetName) {
+                        const fsEl = document.getElementById(`${slot.slotType}-fs-override`);
+                        if (fsEl) fsEl.value = slot.featureSetName;
+                        slotOverrides[slot.slotType].featureSetName = slot.featureSetName;
+                    }
+                    if (slot.targetConfig) {
+                        slotOverrides[slot.slotType].targetConfig = slot.targetConfig;
+                        const targetEl = document.getElementById(`${slot.slotType}-target-override`);
+                        if (targetEl && allTargets.length) {
+                            const match = allTargets.find(t => t.type === slot.targetConfig.type);
+                            if (match) targetEl.value = String(match.id);
+                        }
+                    }
+                });
+
+                updatePreview();
+            } catch (e) {
+                console.error('Error loading template:', e);
+            }
+        }
+
+        function resetForm() {
+            document.getElementById('template-name').value = '';
+            document.getElementById('template-market').value = '';
+            document.getElementById('template-strategy').value = 'entry_exit_ensemble';
+            document.getElementById('template-hypothesis').value = '';
+            selections = {};
+            updatePreview();
+        }
+
+        // Initialize on load
+        window.addEventListener('load', initializeForm);
+        document.getElementById('template-name').addEventListener('input', updatePreview);
+        ['template-signal-threshold', 'template-entry-threshold', 'template-exit-threshold',
+         'portfolio-policy', 'portfolio-k', 'portfolio-max-gross', 'portfolio-max-per-name']
+            .forEach(id => document.getElementById(id).addEventListener('input', updatePreview));
+        document.getElementById('portfolio-enabled').addEventListener('change', updatePreview);
+    </script>
+</body>
+</html>

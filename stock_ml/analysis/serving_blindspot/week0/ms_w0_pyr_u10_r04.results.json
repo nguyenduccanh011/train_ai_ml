@@ -1,0 +1,42 @@
+{
+  "rows": [
+    {
+      "name": "w0_pyr_u10_r04",
+      "template_id": 2671,
+      "seed": 7,
+      "composite": 891.9,
+      "total_pnl": 168.42100054953272,
+      "pf": 6.539563114309752,
+      "mdd": 0.21334443957024676,
+      "trades": 1381,
+      "runtime_s": 70.3,
+      "run_id": "template/w0_pyr_u10_r04-32a8dfee"
+    },
+    {
+      "name": "w0_pyr_u10_r04",
+      "template_id": 2671,
+      "seed": 99,
+      "composite": 880.0,
+      "total_pnl": 166.03778722040914,
+      "pf": 6.354845002895104,
+      "mdd": 0.21477302883128693,
+      "trades": 1392,
+      "runtime_s": 66.6,
+      "run_id": "template/w0_pyr_u10_r04-32a8dfee"
+    },
+    {
+      "name": "w0_pyr_u10_r04",
+      "template_id": 2671,
+      "seed": 555,
+      "composite": 894.2,
+      "total_pnl": 168.83924485226697,
+      "pf": 6.536945778844326,
+      "mdd": 0.21310218071431383,
+      "trades": 1386,
+      "runtime_s": 54.0,
+      "run_id": "template/w0_pyr_u10_r04-32a8dfee"
+    }
+  ],
+  "known_seed42_composite": 886.1,
+  "mean_composite_4seeds": 888.05
+}

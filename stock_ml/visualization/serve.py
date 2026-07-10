@@ -22,11 +22,24 @@ def main() -> None:
     # Serve from stock_ml root so "/results/..." resolves to stock_ml/results.
     os.chdir(PROJECT_ROOT)
 
-    with socketserver.TCPServer(("", args.port), http.server.SimpleHTTPRequestHandler) as httpd:
-        print(f"Serving project root at http://localhost:{args.port}")
-        print(f"Leaderboard: http://localhost:{args.port}/visualization/leaderboard.html")
-        print(f"Dashboard:   http://localhost:{args.port}/visualization/dashboard.html")
-        httpd.serve_forever()
+    # Try to bind to port, fallback to next available if in use
+    port = args.port
+    max_attempts = 10
+    for attempt in range(max_attempts):
+        try:
+            with socketserver.TCPServer(("", port), http.server.SimpleHTTPRequestHandler) as httpd:
+                print(f"Serving project root at http://localhost:{port}")
+                print(f"Leaderboard: http://localhost:{port}/visualization/leaderboard.html")
+                print(f"Dashboard:   http://localhost:{port}/visualization/dashboard.html")
+                httpd.serve_forever()
+                return
+        except OSError as e:
+            if attempt < max_attempts - 1:
+                print(f"Port {port} in use, trying {port + 1}...")
+                port += 1
+            else:
+                print(f"Error: Could not bind to any port. {e}")
+                raise
 
 
 if __name__ == "__main__":

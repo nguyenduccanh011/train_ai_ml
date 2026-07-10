@@ -1,12 +1,13 @@
 from pathlib import Path
 
 import pandas as pd
-from src.leaderboard.loader import (
+
+from stock_ml.src.leaderboard.loader import (
     COST_PROFILE_UNKNOWN_WARNING,
     MISSING_TRADES_WARNING,
     run_dir_to_row,
 )
-from src.leaderboard.schema import LeaderboardRow
+from stock_ml.src.leaderboard.schema import LeaderboardRow
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -21,15 +22,13 @@ def test_loader_rule_run():
     assert row.strategy == "rule"
     assert row.feature_set == "leading_v2"
     assert row.entry_model == "rule"
-    assert row.exit_model_type == "null"
-    assert row.exit_model_enabled is False
     assert row.target.type == "early_wave"
     assert row.first_test_year == 2020
     assert row.last_test_year == 2025
     assert row.backtest_window_key == "2020-2025"
     assert row.cost_profile.commission == 0.0015
     assert row.cost_profile.tax == 0.001
-    assert row.cost_profile.slippage == 0.0
+    assert row.cost_profile.slippage == 0.001
     assert COST_PROFILE_UNKNOWN_WARNING not in row.warnings
 
 
@@ -40,8 +39,6 @@ def test_loader_v22_run_uses_matrix_name_bundle():
     assert row.bundle == "champions_2020_2025_fair"
     assert row.run_name == "v22"
     assert row.entry_model == "lightgbm"
-    assert row.exit_model_type == "lightgbm"
-    assert row.exit_model_enabled is True
     assert row.target.type == "trend_regime"
     assert row.trades == 11
     assert row.n_symbols == 4

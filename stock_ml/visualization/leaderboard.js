@@ -1,49 +1,58 @@
-// Market-aware data URLs
+// API-aware data URLs - Integrated with FastAPI backend
+// Uses dynamic API_CONFIG from api-config.js
+const getApiBase = () => {
+  if (window.API_CONFIG && window.API_CONFIG.baseUrl) {
+    return window.API_CONFIG.baseUrl;
+  }
+  // Fallback to relative path (works in production behind Nginx)
+  return '/api/v1';
+};
+
 const MARKET_CONFIGS = {
   all: {
-    dataUrl: '../results/leaderboard/leaderboard.json',
-    summaryUrl: '../results/leaderboard/summary.json',
-    label: 'All Markets'
+    apiUrl: () => `${getApiBase()}/leaderboard`,
+    label: 'All Markets',
+    useApi: true
   },
   vn_stock: {
-    dataUrl: '../results/leaderboard/by_market/vn_stock/leaderboard.json',
-    summaryUrl: '../results/leaderboard/by_market/vn_stock/summary.json',
+    apiUrl: () => `${getApiBase()}/leaderboard?market=vn_stock`,
     label: 'VN Stock',
-    market: 'vn_stock'
+    market: 'vn_stock',
+    useApi: true
   },
   vn_derivatives_family: {
-    dataUrl: '../results/leaderboard/by_market_family/vn_derivatives/leaderboard.json',
-    summaryUrl: '../results/leaderboard/by_market_family/vn_derivatives/summary.json',
+    apiUrl: () => `${getApiBase()}/leaderboard?market_family=vn_derivatives`,
     label: 'VN Derivatives (All Timeframes)',
-    marketFamily: 'vn_derivatives'
+    marketFamily: 'vn_derivatives',
+    useApi: true
   },
   vn_derivatives: {
-    dataUrl: '../results/leaderboard/by_market/vn_derivatives/leaderboard.json',
-    summaryUrl: '../results/leaderboard/by_market/vn_derivatives/summary.json',
+    apiUrl: () => `${getApiBase()}/leaderboard?market=vn_derivatives`,
     label: 'VN Derivatives 1H',
     market: 'vn_derivatives',
-    timeframe: '1H'
+    timeframe: '1H',
+    useApi: true
   },
   vn_derivatives_30m: {
-    dataUrl: '../results/leaderboard/by_market/vn_derivatives_30m/leaderboard.json',
-    summaryUrl: '../results/leaderboard/by_market/vn_derivatives_30m/summary.json',
+    apiUrl: () => `${getApiBase()}/leaderboard?market=vn_derivatives_30m`,
     label: 'VN Derivatives 30M',
     market: 'vn_derivatives_30m',
-    timeframe: '30m'
+    timeframe: '30m',
+    useApi: true
   },
   vn_derivatives_1d: {
-    dataUrl: '../results/leaderboard/by_market/vn_derivatives_1d/leaderboard.json',
-    summaryUrl: '../results/leaderboard/by_market/vn_derivatives_1d/summary.json',
+    apiUrl: () => `${getApiBase()}/leaderboard?market=vn_derivatives_1d`,
     label: 'VN Derivatives 1D',
     market: 'vn_derivatives_1d',
-    timeframe: '1D'
+    timeframe: '1D',
+    useApi: true
   },
   vn_derivatives_15m: {
-    dataUrl: '../results/leaderboard/by_market/vn_derivatives_15m/leaderboard.json',
-    summaryUrl: '../results/leaderboard/by_market/vn_derivatives_15m/summary.json',
+    apiUrl: () => `${getApiBase()}/leaderboard?market=vn_derivatives_15m`,
     label: 'VN Derivatives 15M',
     market: 'vn_derivatives_15m',
-    timeframe: '15m'
+    timeframe: '15m',
+    useApi: true
   }
 };
 
@@ -92,12 +101,14 @@ let sortDir = -1;
 let scoreMode = 'global';
 let showSuperseded = false;
 let searchQuery = '';
+let apiAvailable = false;
 let filters = {
   bundle: '',
   strategy: '',
   feature_set: '',
   entry_model: '',
   year: '',
+  state: '',
 };
 
 const els = {
@@ -115,8 +126,11 @@ const els = {
   featureFilter: document.getElementById('featureFilter'),
   modelFilter: document.getElementById('modelFilter'),
   yearFilter: document.getElementById('yearFilter'),
+  stateFilter: document.getElementById('stateFilter'),
   marketFilter: document.getElementById('marketFilter'),
   dataPath: document.getElementById('dataPath'),
+  apiBanner: document.getElementById('apiBanner'),
+  toasts: document.getElementById('toasts'),
 };
 
 if (els.marketFilter) {
@@ -130,6 +144,26 @@ function escapeHtml(value) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
+}
+
+function toast(message, kind = 'info', timeout = 4000) {
+  if (!els.toasts) return;
+  const el = document.createElement('div');
+  el.className = `toast ${kind}`;
+  el.textContent = message;
+  els.toasts.appendChild(el);
+  if (timeout) setTimeout(() => el.remove(), timeout);
+  return el;
+}
+
+async function apiFetch(path, options) {
+  const resp = await fetch(`/api${path}`, options);
+  if (!resp.ok) {
+    let detail = `${resp.status}`;
+    try { detail = (await resp.json()).detail || detail; } catch (_) {}
+    throw new Error(detail);
+  }
+  return resp.json();
 }
 
 function formatNum(value, digits = 2) {
@@ -182,6 +216,15 @@ function windowKey(row) {
   return `${row.first_test_year}–${row.last_test_year}`;
 }
 
+function computeCagr(row) {
+  const n = row.n_symbols || 0;
+  const firstYear = row.first_test_year || 0;
+  const lastYear = row.last_test_year || 0;
+  const nYears = lastYear - firstYear + 1;
+  if (!row.total_pnl || n <= 0 || nYears <= 0) return null;
+  return row.total_pnl / n / nYears;
+}
+
 function getFairBaselineGroup(rows) {
   if (summary.baseline_fairness_group_key) return summary.baseline_fairness_group_key;
   const activeRows = rows.filter((row) => !row.superseded);
@@ -218,6 +261,7 @@ function applyFilters() {
     if (filters.feature_set && row.feature_set !== filters.feature_set) return false;
     if (filters.entry_model && row.entry_model !== filters.entry_model) return false;
     if (filters.year && windowKey(row) !== filters.year) return false;
+    if (filters.state && (row.state || 'trained') !== filters.state) return false;
     return rowMatchesSearch(row);
   });
 
@@ -284,6 +328,28 @@ function renderExit(row) {
   return `<span class="badge ${cls}">${escapeHtml(label)}</span>`;
 }
 
+function renderState(row) {
+  const state = row.state || 'trained';
+  return `<span class="badge state-${escapeHtml(state)}">${escapeHtml(state)}</span>`;
+}
+
+function renderActions(row) {
+  if (!apiAvailable) return '<span class="muted">—</span>';
+  const id = escapeHtml(row.run_id);
+  const state = row.state || 'trained';
+  const pinLabel = state === 'pinned' ? 'Unpin' : 'Pin';
+  const pinTarget = state === 'pinned' ? 'trained' : 'pinned';
+  const retireLabel = state === 'retired' ? 'Unretire' : 'Retire';
+  const retireTarget = state === 'retired' ? 'trained' : 'retired';
+  return `<div class="actions">
+    <button class="act-btn pin" data-act="state" data-id="${id}" data-state="${pinTarget}">${pinLabel}</button>
+    <button class="act-btn" data-act="state" data-id="${id}" data-state="${retireTarget}">${retireLabel}</button>
+    <button class="act-btn" data-act="retrain" data-id="${id}">Retrain</button>
+    <button class="act-btn danger" data-act="delcache" data-id="${id}">Del cache</button>
+    <button class="act-btn danger" data-act="delete" data-id="${id}">Delete</button>
+  </div>`;
+}
+
 function renderTable() {
   if (!filteredRows.length) {
     els.body.innerHTML = tableMessageRow('No rows match current filters.', 'empty');
@@ -297,6 +363,7 @@ function renderTable() {
     return `
       <tr class="${rowClass(row)}">
         <td>${rankBadge(row.rank)}</td>
+        <td>${renderState(row)}</td>
         <td class="num positive">${formatNum(row.composite_score, 2)}</td>
         <td class="run-name" title="${escapeHtml(row.run_name)}">${escapeHtml(row.run_name)}</td>
         <td>${escapeHtml(row.bundle)}</td>
@@ -308,6 +375,7 @@ function renderTable() {
         <td class="num">${formatNum(row.wr, 2)}%</td>
         <td class="num ${avgPnlClass}">${formatNum(row.avg_pnl, 3)}</td>
         <td class="num ${totalPnlClass}">${formatNum(row.total_pnl, 2)}</td>
+        <td class="num positive">${row.cagr != null ? formatNum(row.cagr * 100, 1) + '%' : '—'}</td>
         <td class="num">${formatNum(row.pf, 2)}</td>
         <td class="num">${formatNum(row.sharpe, 3)}</td>
         <td class="num ${mddClass}">${formatNum(row.max_drawdown, 2)}</td>
@@ -316,8 +384,96 @@ function renderTable() {
         <td>${escapeHtml(windowKey(row))}</td>
         <td>${renderWarnings(row)}</td>
         <td>${renderFairness(row)}</td>
+        <td>${renderActions(row)}</td>
       </tr>`;
   }).join('');
+
+  bindRowActions();
+}
+
+function findRow(runId) {
+  return allRows.find((r) => r.run_id === runId);
+}
+
+async function doSetState(runId, state) {
+  try {
+    await apiFetch(`/runs?run_id=${encodeURIComponent(runId)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ state }),
+    });
+    const row = findRow(runId);
+    if (row) row.state = state;
+    toast(`State → ${state}`, 'success');
+    applyFilters();
+  } catch (err) {
+    toast(`Set state failed: ${err.message}`, 'error');
+  }
+}
+
+async function doRetrain(runId) {
+  try {
+    const res = await apiFetch(`/runs/retrain?run_id=${encodeURIComponent(runId)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    });
+    toast(`Retrain started (job ${res.job_id})`, 'info', 6000);
+    pollJob(res.job_id, runId);
+  } catch (err) {
+    toast(`Retrain failed: ${err.message}`, 'error');
+  }
+}
+
+async function pollJob(jobId, runId) {
+  try {
+    const status = await apiFetch(`/jobs/${jobId}`);
+    if (status.status === 'running') {
+      setTimeout(() => pollJob(jobId, runId), 4000);
+      return;
+    }
+    if (status.status === 'done') {
+      toast(`Retrain done: ${runId.split('/').pop()}`, 'success', 6000);
+      loadData(currentMarket);
+    } else {
+      toast(`Retrain error (exit ${status.exit_code}) — see ${status.log}`, 'error', 8000);
+    }
+  } catch (err) {
+    toast(`Job poll failed: ${err.message}`, 'error');
+  }
+}
+
+async function doDeleteCache(runId) {
+  if (!window.confirm(`Quarantine cache for this run? Backtest metrics stay on the leaderboard.\n\n${runId}`)) return;
+  try {
+    const res = await apiFetch(`/runs/cache?run_id=${encodeURIComponent(runId)}`, { method: 'DELETE' });
+    toast(`Quarantined ${res.quarantined_cache.length} cache file(s)`, 'success');
+  } catch (err) {
+    toast(`Delete cache failed: ${err.message}`, 'error');
+  }
+}
+
+async function doDelete(runId) {
+  if (!window.confirm(`Delete this run entirely (artifacts + cache)? This removes it from the leaderboard.\n\n${runId}`)) return;
+  try {
+    await apiFetch(`/runs?run_id=${encodeURIComponent(runId)}`, { method: 'DELETE' });
+    toast('Run deleted', 'success');
+    loadData(currentMarket);
+  } catch (err) {
+    toast(`Delete failed: ${err.message}`, 'error');
+  }
+}
+
+function bindRowActions() {
+  els.body.querySelectorAll('button[data-act]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const { act, id, state } = btn.dataset;
+      if (act === 'state') doSetState(id, state);
+      else if (act === 'retrain') doRetrain(id);
+      else if (act === 'delcache') doDeleteCache(id);
+      else if (act === 'delete') doDelete(id);
+    });
+  });
 }
 
 function fillSelect(select, values, placeholder) {
@@ -338,7 +494,7 @@ function renderFilters() {
 }
 
 function resetFilters() {
-  filters = { bundle: '', strategy: '', feature_set: '', entry_model: '', year: '' };
+  filters = { bundle: '', strategy: '', feature_set: '', entry_model: '', year: '', state: '' };
   searchQuery = '';
   els.searchInput.value = '';
   els.bundleFilter.value = '';
@@ -346,6 +502,7 @@ function resetFilters() {
   els.featureFilter.value = '';
   els.modelFilter.value = '';
   els.yearFilter.value = '';
+  if (els.stateFilter) els.stateFilter.value = '';
 }
 
 function setScoreMode(nextMode) {
@@ -353,6 +510,30 @@ function setScoreMode(nextMode) {
   els.globalMode.classList.toggle('active', scoreMode === 'global');
   els.fairMode.classList.toggle('active', scoreMode === 'fair');
   applyFilters();
+}
+
+async function detectApi() {
+  try {
+    const resp = await fetch('/api/runs?market=__ping__', { cache: 'no-store' });
+    apiAvailable = resp.ok;
+  } catch (_) {
+    apiAvailable = false;
+  }
+  if (els.apiBanner) {
+    if (apiAvailable) {
+      els.apiBanner.classList.add('ok');
+      els.apiBanner.innerHTML = 'Live mode — actions enabled (Pin / Retrain / Delete).';
+    } else {
+      els.apiBanner.classList.remove('ok');
+    }
+  }
+}
+
+async function loadFromApi(cfg) {
+  const params = new URLSearchParams();
+  if (cfg.market) params.set('market', cfg.market);
+  const rows = await apiFetch(`/runs${params.toString() ? `?${params}` : ''}`);
+  return applyMarketConfigFilter(rows, cfg);
 }
 
 async function loadData(market) {
@@ -363,24 +544,34 @@ async function loadData(market) {
     els.body.innerHTML = tableMessageRow(`Unknown leaderboard selection: ${escapeHtml(market)}`, 'error');
     return;
   }
-  if (els.dataPath) els.dataPath.textContent = cfg.dataUrl;
+  if (els.dataPath) els.dataPath.textContent = apiAvailable ? '/api/runs' : cfg.dataUrl;
   els.body.innerHTML = tableMessageRow(`Loading ${cfg.label}...`, 'empty');
 
   try {
-    const [dataResponse, summaryResponse] = await Promise.all([
-      fetch(cfg.dataUrl, { cache: 'no-store' }),
-      fetch(cfg.summaryUrl, { cache: 'no-store' }),
-    ]);
-    if (!dataResponse.ok) throw new Error(`${dataResponse.status} ${dataResponse.statusText}`);
-    allRows = applyMarketConfigFilter(await dataResponse.json(), cfg);
-    summary = summaryResponse.ok ? await summaryResponse.json() : {};
+    if (apiAvailable) {
+      allRows = await loadFromApi(cfg);
+      // summary still from static file for fairness baseline (best-effort)
+      try {
+        const sr = await fetch(cfg.summaryUrl, { cache: 'no-store' });
+        summary = sr.ok ? await sr.json() : {};
+      } catch (_) { summary = {}; }
+    } else {
+      const [dataResponse, summaryResponse] = await Promise.all([
+        fetch(cfg.dataUrl, { cache: 'no-store' }),
+        fetch(cfg.summaryUrl, { cache: 'no-store' }),
+      ]);
+      if (!dataResponse.ok) throw new Error(`${dataResponse.status} ${dataResponse.statusText}`);
+      allRows = applyMarketConfigFilter(await dataResponse.json(), cfg);
+      summary = summaryResponse.ok ? await summaryResponse.json() : {};
+    }
+    allRows.forEach(r => { r.cagr = computeCagr(r); });
     resetFilters();
     renderFilters();
     applyFilters();
   } catch (error) {
     const msg = market !== 'all'
       ? `${cfg.label} leaderboard not found. Run experiments then rebuild: python -m stock_ml.scripts.build_leaderboard rebuild`
-      : `Failed to load ${cfg.dataUrl}: ${escapeHtml(error.message)}`;
+      : `Failed to load leaderboard: ${escapeHtml(error.message)}`;
     els.body.innerHTML = tableMessageRow(msg, 'error');
   }
 }
@@ -411,7 +602,9 @@ function bindEvents() {
     [els.featureFilter, 'feature_set'],
     [els.modelFilter, 'entry_model'],
     [els.yearFilter, 'year'],
+    [els.stateFilter, 'state'],
   ].forEach(([select, key]) => {
+    if (!select) return;
     select.addEventListener('change', (event) => {
       filters[key] = event.target.value;
       applyFilters();
@@ -433,4 +626,4 @@ function bindEvents() {
 
 bindEvents();
 persistMarketSelection(currentMarket);
-loadData(currentMarket);
+detectApi().then(() => loadData(currentMarket));

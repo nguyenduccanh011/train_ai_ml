@@ -1,0 +1,65 @@
+# Top 60 VN equities by liquidity (from market profile)
+name: vn_top60
+description: Top 60 most liquid Vietnamese equities
+version: "1.0"
+
+symbols:
+  - ACB
+  - AAS
+  - AAV
+  - ABC
+  - ABI
+  - ABR
+  - ABS
+  - ACM
+  - ACR
+  - ACV
+  - ADG
+  - AGF
+  - AGR
+  - AID
+  - ANV
+  - APG
+  - APS
+  - ASG
+  - ASM
+  - BAB
+  - BCC
+  - BDG
+  - BHA
+  - BID
+  - BMI
+  - BMP
+  - BSI
+  - BTV
+  - BWE
+  - BWI
+  - BXH
+  - CAG
+  - CCI
+  - CDC
+  - CDN
+  - CEE
+  - CGG
+  - CMX
+  - CMD
+  - CMG
+  - CTD
+  - CTF
+  - CTG
+  - CTS
+  - DAH
+  - DBC
+  - DGC
+  - DHC
+  - DHG
+  - DID
+  - DXG
+  - DRC
+  - DRH
+  - DTC
+  - DXL
+  - DZI
+  - EIC
+  - EVE
+  - EVF

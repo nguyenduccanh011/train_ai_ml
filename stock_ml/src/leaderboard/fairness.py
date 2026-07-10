@@ -5,7 +5,7 @@ from typing import Any
 
 import yaml
 
-from src.leaderboard.schema import LeaderboardRow
+from stock_ml.src.leaderboard.schema import LeaderboardRow
 
 DEFAULT_CONFIG = {
     "fairness_dims": ["market_family", "symbols", "window", "cost_profile", "target"],

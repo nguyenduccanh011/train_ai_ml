@@ -1,0 +1,21 @@
+# VN Banking Sector
+name: vn_bank_sector
+description: Vietnamese banking sector stocks
+version: "1.0"
+
+symbols:
+  - ACB    # Asia Commercial Bank
+  - BID    # BIDV
+  - CTG    # Vietinbank
+  - MBB    # MB Bank
+  - TCB    # Techcombank
+  - VCB    # Vietcombank
+  - HDB    # HD Bank
+  - MSB    # Maritime Bank
+  - SHB    # SH Bank
+  - EIB    # Eximbank
+  - STB    # Sacombank
+  - PGB    # PG Bank
+  - TPB    # TPBank
+  - NVB    # Nam Viet Bank
+  - LPB    # Lien Viet Post Bank

@@ -6,7 +6,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from compare_rule_vs_model import backtest_rule
+from archive.compare_rule_vs_model import backtest_rule
 
 import src.data.target as target_module
 import src.features.engine as feature_engine_module

@@ -1,0 +1,44 @@
+{
+  "control_seed42": {
+    "composite": 729.6,
+    "total_pnl": 127.253,
+    "pf": 5.963,
+    "mdd": 0.17455,
+    "trades": 1384
+  },
+  "results": [
+    {
+      "name": "w0_cxlma20",
+      "template_id": 2672,
+      "seed": 42,
+      "composite": 578.4,
+      "total_pnl": 105.71177447799298,
+      "pf": 5.043261833331295,
+      "mdd": 0.21006229405082252,
+      "trades": 1064,
+      "runtime_s": 31.5
+    },
+    {
+      "name": "w0_win20",
+      "template_id": 2679,
+      "seed": 42,
+      "composite": 688.2,
+      "total_pnl": 121.74180886626095,
+      "pf": 5.257000635172341,
+      "mdd": 0.19404681678359947,
+      "trades": 1410,
+      "runtime_s": 39.5
+    },
+    {
+      "name": "w0_reprem04",
+      "template_id": 2680,
+      "seed": 42,
+      "composite": 711.9,
+      "total_pnl": 123.86200124078067,
+      "pf": 5.890994369923186,
+      "mdd": 0.17795420296505723,
+      "trades": 1376,
+      "runtime_s": 48.7
+    }
+  ]
+}

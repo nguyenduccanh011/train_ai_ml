@@ -1,0 +1,51 @@
+﻿name: research_v3_horizon_20
+hypothesis: |
+  Test even longer horizon (20 bars instead of 5).
+  Rationale: Very short horizons may have too much noise.
+  20 bars gives clear trends and reduces false signals.
+strategy: entry_exit_ensemble
+market: vn_stock
+seed: 42
+
+components:
+  features: leading_v2
+  target:
+    type: forward_return_regression
+    horizon: 20
+
+  entry_model:
+    type: lightgbm
+    params:
+      n_estimators: 300
+      learning_rate: 0.05
+      num_leaves: 31
+
+  exit_model:
+    type: lightgbm
+    enabled: false
+
+split:
+  type: purged_kfold
+  n_splits: 6
+  embargo_days: 10
+  label_horizon: 20
+
+engine:
+  max_hold_bars: 20
+  min_hold_bars: 1
+  hard_stop_pct: -0.08
+  costs:
+    commission: 0.0025
+    tax: 0.001
+    slippage: 0.0015
+
+signal_threshold: 0.005
+
+validation:
+  n_seeds: 20
+  bootstrap_iterations: 1000
+  compute_dsr: true
+  compute_pbo: true
+
+strict_audit: true
+

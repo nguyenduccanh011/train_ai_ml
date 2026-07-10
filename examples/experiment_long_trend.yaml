@@ -1,0 +1,37 @@
+name: trend_following_long
+strategy: trend_following
+market: US_large_cap
+direction: long  # Default: long strategy (buy trend, sell pullback)
+seed: 42
+
+components:
+  features: basic_v1
+
+  target:
+    type: forward_return_regression
+    horizon: 5
+
+  entry_model:
+    type: lightgbm
+    params:
+      n_estimators: 100
+      learning_rate: 0.05
+      max_depth: 5
+
+  signal_mode: entry_first
+
+split:
+  type: walk_forward_year
+  gap_bars: 10
+  test_bars: 252
+
+engine:
+  max_hold_bars: 20
+  min_hold_bars: 1
+  hard_stop_pct: -0.08
+  signal_exit_enabled: true
+  exit_priority: [hard_stop, signal, max_hold]
+
+signal_threshold: 0.0
+hypothesis: "Trend following strategy - long equity positions on positive returns"
+strict_audit: true

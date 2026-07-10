@@ -1,9 +1,0 @@
-{"name": "a2_nopb", "template_id": 2682, "run_id": "template/a2_nopb-32a8dfee", "composite": 492.3, "pnl": 104.81787323928002, "pf": 3.0822465550548803, "mdd": 0.33629736916101843, "trades": 1528}
-{"name": "a2_nopb_ss10", "template_id": 2684, "run_id": "template/a2_nopb_ss10-32a8dfee", "composite": 466.4, "pnl": 101.4826466424843, "pf": 2.9101272115854706, "mdd": 0.35336921860044396, "trades": 1622}
-{"name": "a2_nopb_ss20", "template_id": 2687, "run_id": "template/a2_nopb_ss20-32a8dfee", "composite": 479.0, "pnl": 103.0756458151711, "pf": 2.976268029681627, "mdd": 0.3418374242957325, "trades": 1567}
-{"name": "a2_nopb_ss20b1", "template_id": 2690, "run_id": "template/a2_nopb_ss20b1-32a8dfee", "composite": 481.5, "pnl": 103.52662200290679, "pf": 3.0057278660426516, "mdd": 0.34103007617125264, "trades": 1548}
-{"name": "a2_nopb_hs08", "template_id": 2693, "run_id": "template/a2_nopb_hs08-0983a339", "composite": 492.3, "pnl": 104.81787323928002, "pf": 3.0822465550548803, "mdd": 0.33629736916101843, "trades": 1528}
-{"name": "a2_nopb_ta15", "template_id": 2696, "run_id": "template/a2_nopb_ta15-32a8dfee", "composite": 490.8, "pnl": 104.63448002256686, "pf": 3.076499111379635, "mdd": 0.3372679500909268, "trades": 1528}
-{"name": "a2_nopb_hs05", "template_id": 2700, "run_id": "template/a2_nopb_hs05-08b0f3b7", "composite": 492.3, "pnl": 104.81787323928002, "pf": 3.0822465550548803, "mdd": 0.33629736916101843, "trades": 1528}
-{"name": "a2_nopb_mh0", "template_id": 2702, "run_id": "template/a2_nopb_mh0-3f293cf0", "composite": 491.6, "pnl": 104.30245949601695, "pf": 3.0754984220628994, "mdd": 0.3344443711535286, "trades": 1555}
-{"name": "a2_nopb_hs08fix", "template_id": 2706, "run_id": "template/a2_nopb_hs08fix-111578c1", "composite": 469.0, "pnl": 101.41693396001354, "pf": 2.9056344479474134, "mdd": 0.35067962686937315, "trades": 1632}

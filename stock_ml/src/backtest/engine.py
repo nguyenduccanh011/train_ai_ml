@@ -31,7 +31,7 @@ from dataclasses import asdict, dataclass, field
 import numpy as np
 import pandas as pd
 
-from src.backtest.defaults import DEFAULT_TRADING_COST
+from .defaults import DEFAULT_TRADING_COST
 
 _VNI_CACHE: dict = {}
 
@@ -2837,14 +2837,14 @@ def trades_to_dataframe(trades: Iterable[Trade]) -> pd.DataFrame:
 import numpy as _np_compat
 from collections import defaultdict as _defaultdict_compat
 
-from src.backtest.defaults import (
+from .defaults import (
     DEFAULT_PARAMS as _DEFAULT_PARAMS_COMPAT,
     FEATURE_DEFAULTS as _FEATURE_DEFAULTS,
     RULE_PRIORITY_SYMBOLS as _RULE_PRIORITY_SYMBOLS,
     SCORE5_RISKY_SYMBOLS as _SCORE5_RISKY_SYMBOLS,
     SYMBOL_PROFILES as _SYMBOL_PROFILES,
 )
-from src.backtest.indicators import (
+from .indicators import (
     compute_indicators as _compute_indicators,
     detect_trend_strength as _detect_trend_strength,
     get_regime_adapter as _get_regime_adapter,

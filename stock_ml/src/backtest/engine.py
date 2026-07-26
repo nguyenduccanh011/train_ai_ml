@@ -202,6 +202,18 @@ class EngineConfig:
     # Distinct lever from signal_exit_skip_if_entry_z (different head, evaluated independently; both
     # may be set). None = off. Causal. Non-masking: suppresses an exit, drops no trade.
     signal_exit_skip_if_score3_z: float | None = None
+    # MARKET-REGIME signal-exit skip (2026-07-11, shakeout_vs_top forensic hb_60/61): 49% of 'signal'
+    # exits are shakeouts (dip that recovers +13.7%) and the strongest discriminator is broad-market
+    # regime — VNINDEX > MA(N) => AUC 0.78 (overall) / 0.59-0.94 (within-year): a signal-exit fired in
+    # a bull tape is usually a shakeout, in a bear tape a real top. The exit-recombine z-scores the ML
+    # signal so this slow common-factor is washed out at the head; act on it at the ENGINE instead —
+    # SKIP the 'signal' exit (defer to trail/overext/max_hold) while VNINDEX/MA(N) - 1 >= margin. Only
+    # holds in a BULL tape (safe: never holds into a bear-flip, unlike a fixed longer-hold). Optionally
+    # gate on the trade being a winner (skip_if_mkt_winner_only) so losers still cut. None = off. Causal
+    # (VNINDEX up to the bar). Needs the VNINDEX csv.
+    signal_exit_skip_if_mkt_above_ma: int | None = None
+    signal_exit_skip_if_mkt_margin: float = 0.0
+    signal_exit_skip_if_mkt_winner_only: bool = False
     # SLOW-TREND protect (regime-masking 2026-06-17): the signal_exit_protect trend check defaults to
     # the SHORT MA10; a deeper pullback breaking MA10 releases the protect and the signal exit cuts a
     # bull winner whose LONGER trend is intact. Set this to a SLOW MA window (e.g. 50/100) so the
@@ -1347,6 +1359,11 @@ def _run_symbol(
             if _mf == "ma200":
                 _mma = _vc.rolling(200, min_periods=50).mean()
                 _mt = (_vc / _mma - 1.0).to_numpy()
+            elif _mf == "ma50":  # shakeout_vs_top forensic (2026-07-11): mkt>MA50 is the strongest
+                #                  shakeout-vs-top discriminator (AUC 0.78 overall, 0.59-0.94
+                #                  within-year) — faster regime flip than MA100/200.
+                _mma = _vc.rolling(50, min_periods=20).mean()
+                _mt = (_vc / _mma - 1.0).to_numpy()
             elif _mf == "pos120":
                 _hi = _vc.rolling(120, min_periods=40).max()
                 _lo = _vc.rolling(120, min_periods=40).min()
@@ -1357,6 +1374,17 @@ def _run_symbol(
                 _mma = _vc.rolling(100, min_periods=30).mean()
                 _mt = (_vc / _mma - 1.0).to_numpy()
             mkt_trend_arr = np.nan_to_num(_mt, nan=0.0)
+
+    # MARKET-REGIME signal-exit skip (shakeout_vs_top): per-bar VNINDEX/MA(N) - 1 (bull >= 0), causal.
+    mkt_skip_arr = None
+    if cfg.signal_exit_skip_if_mkt_above_ma is not None and n > 1:
+        _vni = _load_vnindex()
+        if _vni is not None:
+            _vd = pd.to_datetime(pd.Series(dates)).dt.normalize()
+            _vc = pd.Series(_vd.map(_vni).to_numpy(dtype=float))
+            _w = int(cfg.signal_exit_skip_if_mkt_above_ma)
+            _mma = _vc.rolling(_w, min_periods=max(2, _w // 2)).mean()
+            mkt_skip_arr = np.nan_to_num((_vc / _mma - 1.0).to_numpy(), nan=-1.0)
 
     # Wave-structure (current-leg age) adaptive hold: causal zigzag leg-age, normalized vs the
     # stock's typical up-leg length. Young leg -> hold deeper; aged leg -> exit sooner.
@@ -2271,6 +2299,14 @@ def _run_symbol(
                     if (cfg.signal_exit_skip_if_score3_z is not None and s3z is not None
                             and not np.isnan(s3z[i])
                             and s3z[i] >= cfg.signal_exit_skip_if_score3_z):
+                        continue
+                    # MARKET-REGIME veto (shakeout_vs_top hard rule): don't sell into a bull-tape
+                    # shakeout — while VNINDEX/MA(N) - 1 >= margin (broad uptrend => dip likely
+                    # recovers, AUC 0.78), defer to trail/overext/max_hold. Only holds in a BULL
+                    # tape so it never rides into a bear-flip; winner_only keeps losers cutting.
+                    if (cfg.signal_exit_skip_if_mkt_above_ma is not None and mkt_skip_arr is not None
+                            and mkt_skip_arr[i] >= cfg.signal_exit_skip_if_mkt_margin
+                            and (not cfg.signal_exit_skip_if_mkt_winner_only or closes[i] > entry_fill)):
                         continue
                     # SNR runner-extension: in a clean-trend universe regime, let winners ride the
                     # trail instead of dumping on the signal (only when the trade is already a winner).

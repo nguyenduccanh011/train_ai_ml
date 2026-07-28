@@ -448,17 +448,10 @@ universe:
   group: bank    # filters profile.symbols.groups where label=="bank"
 ```
 
-### Method 5: CLI Override (Still Supported)
+### Method 5: CLI Override (REMOVED)
 
-```bash
-python stock_ml/scripts/run_experiments.py \
-  --pending config/experiments/pending \
-  --done config/experiments/done \
-  --failed config/experiments/failed \
-  --data-root /path/to/data \
-  --symbols ACB,BID,MBB,TCB \
-  --out results/
-```
+CLI `run_experiments.py` thuộc hệ YAML cũ, đã xóa. Universe giờ chỉ định trong
+`strategy_templates.universe_slug` (DB) và chạy qua `run_template.py`.
 
 ---
 

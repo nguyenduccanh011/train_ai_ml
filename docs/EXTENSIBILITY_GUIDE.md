@@ -1,5 +1,10 @@
 # Extensibility Guide — Thêm Model, Feature, Target, Direction
 
+> ⚠️ **LỖI THỜI MỘT PHẦN (2026-07-29):** các bước CLI trong guide này (`run_v2`,
+> `config/experiments/*.yaml`) thuộc hệ file-based đã xóa. Điểm mở rộng SỐNG hiện tại:
+> target mới → `src/targets/registry.py`; feature → `src/features/catalog.py` + DSL `ops.py`;
+> chạy qua template DB (`run_template.py`). Phần nguyên lý (model/target design) vẫn đọc được.
+
 **Cho nhà phát triển muốn mở rộng Stock ML.**
 
 Hướng dẫn này cung cấp các quy trình rõ ràng, từng bước để thêm:

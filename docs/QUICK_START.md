@@ -25,7 +25,7 @@ docker-compose up -d
 Services sẽ start:
 - **API** (FastAPI) → `http://localhost:8000`
 - **Dashboard** → `http://localhost:9001` hoặc `http://localhost` (via Nginx)
-- **Database** → SQLite at `./results/leaderboard.db`
+- **Database** → Postgres `stockml` (container `stock-ml-postgres`, port 5433)
 - **Nginx** → Proxy `http://localhost`
 
 ### 3. Verify Services
@@ -71,11 +71,9 @@ docker-compose down
 ### Reset Database
 
 ```bash
-# Remove old database
-rm ./results/leaderboard.db
-
-# Restart containers (migrations will re-run)
-docker-compose up -d
+# CẢNH BÁO: Postgres stockml chứa 3k+ template + run đã đăng ký — chỉ reset khi thật sự muốn.
+docker compose down -v      # xóa volume Postgres
+docker compose up -d        # migrations (alembic) chạy lại từ đầu
 ```
 
 ### Seed Data
@@ -107,7 +105,6 @@ curl -X POST http://localhost/api/v1/templates/ \
 ## Next Steps
 
 - 📖 Read [API Documentation](API.md)
-- 🏗️ Read [System Architecture](../ARCHITECTURE.md)
 - 🔧 Read [Development Guide](DEVELOPMENT.md)
 - 🚀 Read [Deployment Guide](DEPLOYMENT.md)
 

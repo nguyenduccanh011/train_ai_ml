@@ -15,8 +15,9 @@ Stock ML Platform - Complete system documentation.
 | Document | Purpose |
 |----------|---------|
 | [Quick Start](QUICK_START.md) | 5-minute setup guide |
-| [System Architecture](ARCHITECTURE.md) | System design, data layer, API architecture |
 | [API Documentation](API.md) | All endpoints, examples, schemas |
+| [Portfolio Layer Unification](refactor/PORTFOLIO_LAYER_UNIFICATION.md) | Tầng danh mục Stage-2 thống nhất + golden guard |
+| [Research Strategy Map](RESEARCH_STRATEGY_MAP.md) | Bản đồ nghiên cứu: champion, lever đã bác, hướng đi |
 | [Troubleshooting](TROUBLESHOOTING.md) | Common issues & solutions |
 
 ### Feature Guides
@@ -35,7 +36,6 @@ Stock ML Platform - Complete system documentation.
 | Document | Purpose |
 |----------|---------|
 | [Development Guide](DEVELOPMENT.md) | Local setup, workflows, debugging |
-| [System Architecture](ARCHITECTURE.md) | Codebase structure & design patterns |
 | [Contributing Guide](CONTRIBUTING.md) | Code standards, testing, PRs |
 | [Extensibility Guide](EXTENSIBILITY_GUIDE.md) | How to add models, features, targets |
 | [API Documentation](API.md) | Endpoint specs & schemas |
@@ -160,10 +160,11 @@ Nginx (port 80)
    ├→ API Server (port 8000)
    └→ Dashboard (port 9001)
    ↓
-   Database (SQLite or PostgreSQL)
+   Database (PostgreSQL — container stock-ml-postgres)
 ```
 
-See [System Architecture](../ARCHITECTURE.md) for details.
+Kiến trúc backtest/portfolio: xem `stock_ml/README.md` +
+[refactor/PORTFOLIO_LAYER_UNIFICATION.md](refactor/PORTFOLIO_LAYER_UNIFICATION.md).
 
 ## Support
 

@@ -280,15 +280,8 @@ sqlite3 stock_ml.db "SELECT * FROM leaderboard_runs WHERE template_id=1;"
    ```
 
 ### **Parallel Execution**
-Currently: Sequential (1 job at a time)
-
-Planned (Phase 0-4): 
-```bash
-# Run multiple templates in parallel
-python -m stock_ml.scripts.run_experiments \
-  --template-ids 1,2,3,4 \
-  --parallel 4
-```
+Sequential (1 template mỗi lần) qua `stock_ml/scripts/run_template.py --id <template_id>`.
+(CLI `run_experiments` của hệ YAML cũ đã bị xóa.)
 
 ---
 

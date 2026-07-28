@@ -1,9 +1,38 @@
-# Research Strategy & Wall Map — Stock ML (snapshot 2026-06-18)
+# Research Strategy & Wall Map — Stock ML
 
 Long-term direction document. Captures the current champion, the **foundational understanding**
 of why the strategy behaves as it does, the complete map of **tested-and-refuted** levers (so we
 stop re-walking them), the **validated winning patterns**, and the **genuine breakthrough
 directions** that lie outside the current frame.
+
+---
+
+## 0. CẬP NHẬT 2026-07-29 (đọc trước — thân doc bên dưới là snapshot 06-18, đã lỗi thời một phần)
+
+**Champion hiện tại**: dòng **dl63size (tmpl 3443)**, retrain trên data Fireant 901-mã (composite ~662,
+WR ~62%, CAGR-NAV Stage-1 ~66%/DD −13.7%). Số deploy Stage-2 chính thức (Sieu Tin Hieu, 3-seed T+2,
+`stat_mode=causal`): **CAGR 138.5% / DD −13.0%** — golden-guarded byte-exact
+(xem [refactor/PORTFOLIO_LAYER_UNIFICATION.md](refactor/PORTFOLIO_LAYER_UNIFICATION.md)).
+
+**Khám phá lớn kể từ snapshot 06-18** (chi tiết trong doc unification + memory phiên):
+- **Tầng danh mục (Stage-2) là nguồn alpha lớn nhất tìm được**: conviction-sizing (tổng vốn≤1) +
+  slot-preemption + meta-priority LGBM + gate SKIP-causal/ret7/overshoot + green-trail/early-cut,
+  K=10. Từ 07-2026 là MỘT module duy nhất `stock_ml/portfolio/` dùng chung backtest ↔ serving.
+- **Panel/universe là siêu-tham-số**: CAGR lồi, đỉnh ~200-300 mã; full-901 nén conviction làm
+  winner bị chiếm slot; universe hindsight thổi phồng CAGR gấp đôi (survivorship); dyn900 cao là do
+  penny; **61-mã champion vẫn thắng Calmar** so mọi universe rộng đã thử.
+- **Data**: Sieu Tin Hieu > DuckDB train (AAS/BSI train chưa back-adjust); snapshot Desktop trễ CA
+  mới (vụ PVD −8.8pp); lớp rights-issue NON_ADJUSTABLE không provider nào adjust.
+- **Nguyên lý audit causal** (chống gắn cờ nhầm): so **mốc-QUYẾT-ĐỊNH** vs **mốc-DATA**. Overshoot
+  filter = causal (+6.1pp, quyết-tại-fill, data quá khứ); short_tilt5 = leak thật (quyết-sớm,
+  data-muộn). Pipeline giờ deterministic tuyệt đối (LGBM deterministic+force_col_wise).
+- **Đã bão hòa** (đừng đi lại): entry-selection + execution per-trade (preemption, meta-prio,
+  entry-bỏ-lỡ, regime-entry-gate, time-stop — bị preempt mask). **Dư địa thật còn lại = quản trị
+  exposure CẤP DANH MỤC**: regime-sizing, breadth-exit, VN30F-hedge — giờ rẻ để test vì mỗi thí
+  nghiệm chỉ là một variant chạy qua `run_portfolio` với golden guard.
+
+> Thân doc dưới đây giữ nguyên làm sử liệu snapshot 2026-06-18 (champion khi đó là t1930,
+> composite 489; các phần "wall" về entry/exit vẫn đúng và đã được các vòng 07-2026 xác nhận thêm).
 
 > To **analyse** a strategy (prediction quality, blind spots, per-trade reasons, feature health),
 > see [`STRATEGY_ANALYSIS_TOOLKIT.md`](STRATEGY_ANALYSIS_TOOLKIT.md) — start with

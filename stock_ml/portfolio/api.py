@@ -51,9 +51,21 @@ def run_portfolio(base_trades: pd.DataFrame, signals: pd.DataFrame, *,
     osm = overshoot_map(rw, DIDX, LO, CLO)
     osthr = os_threshold(osm, C.os_pct)
     cv = [cm.get((r.symbol, r.ed), 0.5) for r in rw.itertuples()]
-    # KNOWN non-causal full-period stats (mu/sd + the `off` recenter below): parity-preserved,
-    # causal-ize post-refactor with a deliberate golden re-pin (design doc §6).
+    # stat_mode="full": KNOWN non-causal full-period stats (mu/sd + the `off` recenter below):
+    # champion parity (design doc §6). stat_mode="causal": expanding per-year, mirrors SKIP.
     mu = statistics.mean(cv) if cv else 0.5; sd = statistics.pstdev(cv) or 1.0
+    mu_by = sd_by = osthr_by = None
+    if C.stat_mode == "causal":
+        yr_conv = [(int(r.ed[:4]), cm.get((r.symbol, r.ed), 0.5)) for r in rw.itertuples()]
+        mu_by, sd_by, osthr_by = {}, {}, {}
+        yr_os = [(int(k[1][:4]), v) for k, v in osm.items()]
+        for y in sorted({y for y, _ in yr_conv}):
+            past = [c for yy, c in yr_conv if yy < y]
+            if len(past) >= 30:
+                mu_by[y] = statistics.mean(past); sd_by[y] = statistics.pstdev(past) or 1.0
+            past_os = [v for yy, v in yr_os if yy < y]
+            if len(past_os) >= 30:
+                osthr_by[y] = float(np.nanpercentile(past_os, C.os_pct))
 
     skip_by_year = skip_by_year_map(rw, cm, C)
 
@@ -78,13 +90,28 @@ def run_portfolio(base_trades: pd.DataFrame, signals: pd.DataFrame, *,
             i1 = oi1; x_raw = float(r.exit_price) / (1.0 - S0)
         net = (x_raw * (1.0 - s_new)) / (e_raw * (1.0 + s_new)) - 1.0 - FEE
         conv = cm.get((s, ed), 0.5); prio = pm.get((s, ed), -9.9)
-        _w = min(max(1.0 + C.kconv * ((conv - mu) / sd), 0.4), 1.8); raw_w.append(_w)
+        if mu_by is None:
+            _w = min(max(1.0 + C.kconv * ((conv - mu) / sd), 0.4), 1.8)
+        else:
+            _y = int(ed[:4])
+            _w = (1.0 if _y not in mu_by
+                  else min(max(1.0 + C.kconv * ((conv - mu_by[_y]) / sd_by[_y]), 0.4), 1.8))
+        raw_w.append(_w)
         legs_src.append(dict(symbol=s, entry_date=ed, exit_date=xd, i0=i0, i1=i1, p0=float(r.entry_price),
                              net=net, prio=prio, conv=conv, _w=_w, reason=r.exit_reason))
-    off = 1.0 - (statistics.mean(raw_w) if raw_w else 1.0)
+    if mu_by is None:
+        off = 1.0 - (statistics.mean(raw_w) if raw_w else 1.0)
+        off_by = None
+    else:
+        yr_w = [(int(l["entry_date"][:4]), l["_w"]) for l in legs_src]
+        off = 0.0
+        off_by = {}
+        for y in sorted({y for y, _ in yr_w}):
+            past = [w for yy, w in yr_w if yy < y]
+            off_by[y] = (1.0 - statistics.mean(past)) if len(past) >= 30 else 0.0
     gated = []
     for leg in legs_src:
-        leg["w"] = max(0.3, leg["_w"] + off)
+        leg["w"] = max(0.3, leg["_w"] + (off if off_by is None else off_by.get(int(leg["entry_date"][:4]), 0.0)))
         conv = leg["conv"]; key = (leg["symbol"], leg["entry_date"])
         if conv < skip_for(skip_by_year, C, leg["entry_date"]):
             skipped.append((leg["symbol"], leg["entry_date"], "conv_skip")); continue
@@ -92,7 +119,8 @@ def run_portfolio(base_trades: pd.DataFrame, signals: pd.DataFrame, *,
         if not np.isnan(v) and v < C.r5thr:
             skipped.append((leg["symbol"], leg["entry_date"], "ret7_gate")); continue
         ov = osm.get(key)
-        if ov is not None and ov > osthr:
+        thr = osthr if osthr_by is None else osthr_by.get(int(leg["entry_date"][:4]), np.inf)
+        if ov is not None and ov > thr:
             skipped.append((leg["symbol"], leg["entry_date"], "overshoot_fallknife")); continue
         gated.append(leg)
 

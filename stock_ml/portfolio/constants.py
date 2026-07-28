@@ -37,3 +37,9 @@ class PortfolioConstants:
     rewrite_on: bool = True        # False = no exit rewrite at all (ret5g/ret7g variants)
     ec_check_bar: int = 2          # early-cut checks close[entry+N] red, cuts at N+1 (gt1 uses 1)
     ret_win: int = 7               # ret-gate momentum window (ret5g variant uses 5)
+    # sizing/overshoot statistics mode:
+    #   full   = mu/sd/off + osthr from the WHOLE period (champion parity; adding a future
+    #            fold retroactively shifts past years' weights — known, deliberate)
+    #   causal = expanding per-year like the SKIP gate (year with <30 prior trades ->
+    #            neutral w=1.0 / no overshoot filter); adding a fold never changes the past
+    stat_mode: str = "full"

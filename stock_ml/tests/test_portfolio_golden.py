@@ -90,3 +90,73 @@ def test_champion_prod_overlay_golden(seed):
     assert _md5(rewritten) == g["rewritten_trades_md5"], (
         f"seed {seed}: rewritten trades CSV differs from golden (byte-parity broken)"
     )
+
+
+# ---------------------------------------------------------------------------
+# Module parity (steps 1-3): stock_ml.portfolio.run_portfolio must reproduce the
+# SAME golden numbers as the _champ_prod_replay.py reference, byte-exact.
+# ---------------------------------------------------------------------------
+SERVING_DUCK = "C:/Users/DUC CANH PC/Desktop/stock-serving/market_data/market.duckdb"
+SERVING_OHLCV = "C:/Users/DUC CANH PC/Desktop/stock-serving/data/ohlcv.db"
+NAVSIM_DATE_HI = "2026-07-08"  # nh_nav2.DB cutoff the golden was pinned on
+
+
+@pytest.mark.skipif(
+    not os.environ.get("RUN_PORTFOLIO_GOLDEN"),
+    reason="slow golden replay; set RUN_PORTFOLIO_GOLDEN=1 to run",
+)
+@pytest.mark.parametrize("seed", ["42", "21", "123"])
+def test_module_parity_golden(seed):
+    import pandas as pd
+
+    from stock_ml.portfolio import DuckDBContext, PortfolioConstants, run_portfolio
+
+    g = GOLDEN["seeds"][seed]
+    for path_str in (SERVING_DUCK, SERVING_OHLCV):
+        if not Path(path_str).exists():
+            pytest.skip(f"serving data store not on this machine: {path_str}")
+
+    base = pd.read_parquet(FIXTURES / g["base"])
+    sig = pd.read_parquet(FIXTURES / g["signals"])
+    ctx = DuckDBContext(SERVING_DUCK, SERVING_OHLCV, date_hi=NAVSIM_DATE_HI)
+
+    r2 = run_portfolio(base, sig, ctx=ctx, C=PortfolioConstants(tplus=2))
+    got2 = {"t2_nav_x": f"{r2['nav']:.2f}", "t2_cagr": f"{100 * r2['cagr']:.1f}",
+            "t2_dd": f"{100 * r2['maxdd']:.1f}"}
+    want2 = {k: g[k] for k in got2}
+    assert got2 == want2, f"seed {seed} T+2 module drifted: got={got2} want={want2}"
+
+    r0 = run_portfolio(base, sig, ctx=ctx, C=PortfolioConstants(tplus=0))
+    got0 = {"t0_nav_x": f"{r0['nav']:.2f}", "t0_cagr": f"{100 * r0['cagr']:.1f}",
+            "t0_dd": f"{100 * r0['maxdd']:.1f}"}
+    want0 = {k: g[k] for k in got0}
+    assert got0 == want0, f"seed {seed} T+0 module drifted: got={got0} want={want0}"
+
+    # rewritten-trades byte parity: reproduce the reference CSV exactly
+    rw = r2["rewritten"]
+    out = rw[["symbol", "entry_date", "exit_date", "entry_price", "exit_price"]].copy()
+    out["entry_date"] = pd.to_datetime(out["entry_date"]).dt.strftime("%Y-%m-%d")
+    out["exit_date"] = pd.to_datetime(out["exit_date"]).dt.strftime("%Y-%m-%d")
+    tmp = REPO / "_champ_src" / "_module_rewritten_parity.csv"
+    out.to_csv(tmp, index=False)
+    try:
+        assert _md5(tmp) == g["rewritten_trades_md5"], (
+            f"seed {seed}: module rewritten trades differ from golden CSV"
+        )
+    finally:
+        tmp.unlink(missing_ok=True)
+
+
+def test_base_output_guard():
+    """OUTPUT trades (already-overlaid) must be rejected loudly — the 151%->73% trap."""
+    import pandas as pd
+
+    from stock_ml.portfolio import run_portfolio
+
+    bad = pd.DataFrame({
+        "symbol": ["AAA"], "entry_date": ["2024-01-05"], "exit_date": ["2024-02-05"],
+        "entry_signal_date": ["2024-01-02"], "entry_price": [10.0], "exit_price": [11.0],
+        "exit_reason": ["preempt"],
+    })
+    with pytest.raises(ValueError, match="overlay-level exit_reason"):
+        run_portfolio(bad, pd.DataFrame(), ctx=None)

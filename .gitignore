@@ -93,3 +93,6 @@ stock_ml/src/results/cache/
 # --- Large regenerable analysis dumps ---
 stock_ml/analysis/**/*_out.txt
 stock_ml/analysis/**/*.csv
+
+# golden fixtures are pinned test inputs - must be tracked
+!stock_ml/tests/goldens/fixtures/*.parquet

@@ -21,8 +21,9 @@
   snapshot guard cho mọi bước.
 - **ĐÃ KIỂM CHỨNG (§9, đừng bác nhầm)**: overshoot filter là CAUSAL (+6.1pp deploy-được, KHÔNG phải leak
   như memory cũ ghi) — GIỮ ON; short_tilt5 (+16pp) mới là look-ahead thật; Sieu Tin Hieu chất lượng data
-  cao hơn DuckDB train. Số production sạch (sau sync PVD) = **142.3% / -10.7%** (trước sync là 151.1%
-  nhưng phồng +8.8pp do 1 mã data cũ — §9.3b). Golden phải PIN snapshot ĐÃ sync mọi CA mới.
+  cao hơn DuckDB train. Số production sạch (sau sync PVD): **golden CHÍNH = 3-seed(42/21/123) T+2
+  140.3% / -10.8%**; single-seed s42 = 142.3% / -10.7% (smoke nhanh). Trước sync là 151.1% nhưng phồng
+  +8.8pp do 1 mã data cũ — §9.3b. Golden phải PIN snapshot ĐÃ sync mọi CA mới.
 
 ---
 
@@ -100,11 +101,14 @@ PortfolioContext (nguồn data trừu tượng hóa):
 ## 4. Kế hoạch 6 bước (mỗi bước có snapshot guard)
 
 ### Bước 0 — Đóng băng chuẩn (BẮT BUỘC trước khi đụng gì)
-- Track **CẢ HAI** bản tham chiếu vào git — hiện cả hai đều UNTRACKED:
-  - `_champ_prod_replay.py` (root repo train_ai_ml).
-  - `serving/portfolio/core.py` (repo `Desktop/stock-serving` — `git ls-files` rỗng).
-- **PIN data snapshot** làm fixture: freeze bản `market.duckdb` + `ohlcv.db` (hoặc export trades/panel
-  ra parquet) + ghi MD5. Golden PHẢI đọc từ snapshot pinned, KHÔNG đọc nguồn Sieu Tin Hieu live —
+- Track bản tham chiếu vào git — **ĐÃ LÀM 2026-07-28**:
+  - `_champ_prod_replay.py` + 10 bản `hb_deploy_*.py` (train_ai_ml, commit 9e37efd7).
+  - `serving/portfolio/` core+runner+store (stock-serving, commit ce520ac).
+  - Legacy `stock_ml/src/portfolio` + `src/execution` (tầng alpha→portfolio→execution cũ, chỉ 3/3198
+    template đã-bác dùng) **ĐÃ XÓA** (commit 7f060fe1) → tên package `stock_ml/portfolio` hết đụng độ.
+- **PIN data snapshot** làm fixture (CHỐT cách pin): ghi MD5 `market.duckdb` + `ohlcv.db` (serving) +
+  copy 6 parquet base/signals per-seed (nhỏ) vào `stock_ml/tests/goldens/`; panel KHÔNG cần export
+  riêng vì derive được từ duck đã pin MD5. Golden PHẢI đọc từ snapshot pinned, KHÔNG đọc nguồn Sieu Tin Hieu live —
   nguồn live cập nhật liên tục (chất lượng data ngày một cao hơn sau các lần fix chia-tách),
   nên khóa golden vào nguồn live = golden vỡ mỗi lần sync mà KHÔNG phải lỗi refactor. Xem §9.
 - Sinh **golden** (2 con số, đúng bản chất 2 pipeline — xem §9 để hiểu tại sao KHÔNG gộp làm 1):
@@ -135,7 +139,8 @@ PortfolioContext (nguồn data trừu tượng hóa):
 ### Bước 3 — Ghép `api.run_portfolio` + `PortfolioContext`
 - Ghép 4 module thành pipeline: base → rewrite → panel → gate → priority → sim.
 - `PortfolioContext` trừu tượng hóa nguồn: `DuckDBContext(duck_path, price_db)` vs `LiveContext(provider)`.
-- Guard: `run_portfolio(DuckDBContext, champion_base)` == golden bước 0 (142.3% / -10.7%, trades MD5).
+- Guard: `run_portfolio(DuckDBContext, champion_base)` == golden bước 0 (3-seed 140.3% / -10.8%,
+  trades MD5 từng seed; s42 142.3% / -10.7% dùng làm smoke nhanh giữa chừng).
 
 ### Bước 4 — Backtest/đăng-ký chuyển sang dùng module
 - Sửa `score_nav`/`hb_deploy`-thay-thế để gọi `stock_ml.portfolio.run_portfolio`.
@@ -165,10 +170,10 @@ PortfolioContext (nguồn data trừu tượng hóa):
 
 | Bước | Test bắt buộc | Ngưỡng |
 |---|---|---|
-| 0 | golden champion (prod STH, sau sync PVD) | cagr 142.3% / dd -10.7% / trades MD5 cố định |
+| 0 | golden champion (prod STH, sau sync PVD) | 3-seed cagr 140.3% / dd -10.8% / trades MD5 từng seed (s42 142.3%/-10.7% smoke) |
 | 1 | sim.py vs inline | NAV series byte-identical trên champion base |
 | 2 | panel/priority/rewrite/gate | mỗi hàm output byte-close vs `_champ_prod_replay` |
-| 3 | run_portfolio == golden | 142.3% / -10.7% / trades MD5 |
+| 3 | run_portfolio == golden | 3-seed 140.3% / -10.8% / trades MD5 từng seed |
 | 4 | re-đăng-ký champion | leaderboard cagr KHÔNG đổi |
 | 5 | serving == backtest | test_trades 8/8, CAGR khớp cùng data |
 
@@ -202,8 +207,18 @@ Nếu bước nào phá byte-parity → dừng, tìm nguyên nhân, KHÔNG "ch�
   golden pin snapshot ĐÃ sync. QUY TRÌNH: chạy detector-jump + refill CA mới TRƯỚC mỗi lần đo/pin.
 - **Rủi ro lớn nhất = Bước 2 (panel)**: nếu build_market_panel khác nhau (thứ tự symbol, NaN-fill,
   ngày cutoff) → conviction dịch → phá golden. Test panel TRƯỚC khi ghép.
-- **CẢ HAI bản tham chiếu untracked** (`_champ_prod_replay.py` + `serving/portfolio/core.py`): track
-  NGAY ở bước 0, kẻo mất bản tham chiếu giữa refactor.
+- **Bản tham chiếu**: ĐÃ track hết ở bước 0 (xem §4) — hết rủi ro mất bản gốc.
+- **KNOWN NON-CAUSAL (giữ nguyên có chủ đích, ĐỪNG gắn cờ leak khi audit lại):** ngoài `osthr` p90
+  in-sample (đã nêu trên), tầng SIZING cũng dùng thống kê FULL-PERIOD: `mu`/`sd` chuẩn hóa z conviction
+  và offset `off` recentering (`core.py` ~dòng 283/333/336). Thêm fold tương lai → mu/sd/off đổi →
+  weight các năm CŨ đổi (cùng lớp vấn đề đã sửa cho SKIP fixed→causal). GIỮ NGUYÊN trong refactor vì
+  byte-parity; causal-ize (expanding per-year như SKIP) là việc SAU refactor, đổi số → golden re-pin riêng.
+- **CHỐT duckdb-in-wheel**: KHÔNG thêm `duckdb` vào dependencies wheel. `PortfolioContext` inject
+  reader (backtest tự import duckdb phía caller; serving đã có duckdb trong env riêng). Wheel giữ
+  inference-only đúng như `test_core_facade.py` verify.
+- **Provenance phía GHI (chặn bẫy base-vs-output tận gốc):** mọi writer OUTPUT-đã-overlay
+  (`prun_track`-style) phải ghi marker `layer=output` (cột/metadata run). Assert exit_reason phía đọc
+  chỉ là defense-in-depth — OUTPUT ngắn không có preempt/green_trail vẫn lọt assert nếu chỉ dựa exit_reason.
 
 ---
 
@@ -321,11 +336,16 @@ So `close` cùng mã quanh ex-date 2024-11-28 giữa 2 DB:
 → API Sieu Tin Hieu đã fix giá chưa chia-tách quá khứ → chất lượng CAO HƠN train. Số production sạch
 (sau sync PVD) = **142.3%** > 132.1% (DuckDB train nhiễu data lỗi). Golden pin snapshot STH ĐÃ sync.
 
-### 9.4 Sự thật hiện trạng đã verify
+### 9.4 Sự thật hiện trạng đã verify (cập nhật 2026-07-28 sau đợt dọn + track)
 
-- `hb_deploy_*.py`: đúng **10 bản** (8 clean: ec/gt/gt1/ret5g/ret7g/dl63/dl63ts/dl63opt + 2 overshoot: gtos/osdef).
-- `_champ_prod_replay.py`: 313 dòng, **UNTRACKED**. `serving/portfolio/core.py`: 357 dòng, **UNTRACKED** (git ls-files rỗng).
-- `stock_ml/portfolio/`, `stock_ml/tests/goldens/`, `serving/tests/test_trades.py`: **CHƯA tồn tại** (tạo mới).
+- `hb_deploy_*.py`: đúng **10 bản** (8 clean: ec/gt/gt1/ret5g/ret7g/dl63/dl63ts/dl63opt + 2 overshoot:
+  gtos/osdef) — **ĐÃ track** (9e37efd7) cùng `_champ_prod_replay.py` (313 dòng) và doc này.
+- `serving/portfolio/` (core 357 dòng + runner + store): **ĐÃ track** bên stock-serving (ce520ac).
+  Repo stock-serving có ~76 file tracked; `tests/test_trades.py` ĐÃ TỒN TẠI (8/8 pass) — đường dẫn
+  là `tests/` không phải `serving/tests/`.
+- `stock_ml/portfolio/`: chưa tồn tại (tạo mới ở bước 1-3). `stock_ml/tests/goldens/`: tạo ở bước 0.
+- Legacy `stock_ml/src/portfolio` + `src/execution` (KHÁC tầng Stage-2 này, trùng tên): ĐÃ XÓA 7f060fe1.
+- Engine hiện **2692 dòng** (sau refactor 9ddbcd62); anchor `Trade:1062`/`_run_symbol:1108`/`run_backtest:2558` vẫn đúng.
 - `stock-serving` là repo GIT RIÊNG ở `C:/Users/DUC CANH PC/Desktop/stock-serving` (không phải subdir train_ai_ml).
 
 ### 9.5 Rà data lỗi thời market.duckdb toàn bộ 488 mã (2026-07-28, ĐÃ FIX)

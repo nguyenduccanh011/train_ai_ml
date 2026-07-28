@@ -24,6 +24,7 @@ from stock_ml.src.targets.early_wave import EarlyWaveExitTarget, EarlyWaveV2Targ
 from stock_ml.src.targets.forward import ForwardReturnTarget
 from stock_ml.src.targets.forward_drawdown import ForwardDrawdownRegressionTarget
 from stock_ml.src.targets.forward_regression import ForwardReturnRegressionTarget
+from stock_ml.src.targets.forward_cross_sectional import ForwardReturnCrossSectionalTarget
 from stock_ml.src.targets.forward_return_penalized import (
     ForwardReturnPenalizedRegressionTarget,
 )
@@ -37,7 +38,14 @@ from stock_ml.src.targets.risk_exit import RiskExitRegressionTarget
 from stock_ml.src.targets.swing_value import SwingValueRegressionTarget
 from stock_ml.src.targets.trend_scanning import TrendScanningExitTarget
 from stock_ml.src.targets.triple_barrier import TripleBarrierTarget
-from stock_ml.src.targets.velocity_exit import VelocityExitRegressionTarget
+from stock_ml.src.targets.velocity_exit import (
+    AmplitudeDirectionEntryTarget,
+    CrossSectionalEntryTarget,
+    CrossSectionalExitTarget,
+    ExitAmplitudeExhaustionTarget,
+    VelocityExitRegimeTarget,
+    VelocityExitRegressionTarget,
+)
 from stock_ml.src.targets.zigzag import ZigzagPivotTarget
 
 
@@ -101,6 +109,7 @@ class TrendRegimeTarget:
 _REGISTRY: dict[str, type] = {
     "forward_return": ForwardReturnTarget,
     "forward_return_regression": ForwardReturnRegressionTarget,
+    "forward_cross_sectional": ForwardReturnCrossSectionalTarget,
     "forward_return_penalized_regression": ForwardReturnPenalizedRegressionTarget,
     "forward_drawdown_regression": ForwardDrawdownRegressionTarget,
     "continuation_entry_regression": ContinuationEntryRegressionTarget,
@@ -110,6 +119,11 @@ _REGISTRY: dict[str, type] = {
     "risk_exit_regression": RiskExitRegressionTarget,
     "swing_value_regression": SwingValueRegressionTarget,
     "velocity_exit_regression": VelocityExitRegressionTarget,
+    "velocity_exit_regime": VelocityExitRegimeTarget,
+    "cross_sectional_exit": CrossSectionalExitTarget,
+    "cross_sectional_entry": CrossSectionalEntryTarget,
+    "exit_amplitude_exhaustion": ExitAmplitudeExhaustionTarget,
+    "amplitude_direction_entry": AmplitudeDirectionEntryTarget,
     "trend_scanning_exit": TrendScanningExitTarget,
     "trend_regime": TrendRegimeTarget,
     "zigzag_pivot": ZigzagPivotTarget,
@@ -137,6 +151,7 @@ ZIGZAG_FORWARD_SPAN = 40
 _HORIZON_TARGETS = frozenset({
     "forward_return",
     "forward_return_regression",
+    "forward_cross_sectional",
     "forward_return_penalized_regression",
     "forward_drawdown_regression",
     "continuation_entry_regression",
@@ -178,6 +193,12 @@ def target_forward_span(config: dict | None) -> int:
         return _i("horizon", 10)
     if ttype == "velocity_exit_regression":
         return max(_i("horizon", 10), _i("upside_horizon", 10))
+    if ttype == "velocity_exit_regime":
+        return max(_i("horizon", 20), _i("upside_horizon_bull", 20), _i("upside_horizon_bear", 5))
+    if ttype in ("cross_sectional_exit", "cross_sectional_entry", "exit_amplitude_exhaustion"):
+        return _i("horizon", 10)
+    if ttype == "amplitude_direction_entry":
+        return _i("horizon", 20)
     if ttype == "trend_scanning_exit":
         ws = cfg.get("windows")
         return max(int(x) for x in ws) if ws else _i("max_window", 20)

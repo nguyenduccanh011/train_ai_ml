@@ -133,9 +133,13 @@ FEATURES: dict[str, str] = {
     "is_limit_lock": "Sign(Delta($close, 1)) * (($high <= $low) * 1.0) * (($volume > 0) * 1.0)",
     # --- volatility_regime ---
     "atr_regime": "ATR($high, $low, $close, 14) / Mean(ATR($high, $low, $close, 14), 50) - 1",
+    # eps in the denominator so a fully-flat window (Mean of band width == 0 over 50
+    # bars, i.e. >=~70 identical closes on thin/price-locked names) yields a finite
+    # ~ -1 (no squeeze anomaly) instead of NaN, which would trip the fail-loud no-NaN
+    # guard. Blue-chips never flatten this long so the eps is inert for them.
     "bb_squeeze": (
         "(Bollinger($close, 20, 2).upper - Bollinger($close, 20, 2).lower) "
-        "/ Mean(Bollinger($close, 20, 2).upper - Bollinger($close, 20, 2).lower, 50) - 1"
+        "/ (Mean(Bollinger($close, 20, 2).upper - Bollinger($close, 20, 2).lower, 50) + 1e-12) - 1"
     ),
     "vol_percentile_60": "TsRank(Std(Pct($close, 1), 10), 60) / 60",
     # --- divergence (rolling corr of price vs oscillator; < 0 = bearish divergence,
@@ -285,6 +289,12 @@ FEATURES: dict[str, str] = {
     "volume_rank": "CSRank($volume)",
     "rsi_rank": "CSRank(#rsi_14)",
     "price_strength_rank": "CSRank(#sma_20_ratio)",
+    # CROSS-SECTIONAL oversold ranks (2026-07-11, mean-rev-as-feature): monetize the decorrelated
+    # mean-rev source as a CROSS-SECTIONAL rank the entry ML can use in ONE book (a separate mean-rev
+    # sleeve failed on slot-displacement). Most-below-MA20 / biggest-recent-drop ranks highest.
+    # Cross-sectional -> survives the recombine z-scoring.
+    "osold_rank_20": "CSRank(0 - #sma_20_ratio)",
+    "osold_rank_ret5": "CSRank(0 - #ret_5d)",
     # --- low-vol x near-52w-high composites (feature_ic_research winners: cross-sectional
     #     rank-IC20 0.076-0.077 full / 0.098-0.110 oos22 — the strongest VN fwd-return
     #     signal found, edge GREW in 2022+; NO market-index dependency. Feeds the
@@ -326,6 +336,11 @@ FEATURES: dict[str, str] = {
     "beta_to_sector": "CSGroupZScore(#ret_1d, by=$sector)",
     # --- market regime (leading_v3 Group C) ---
     "market_trend": "($market_close > Mean($market_close, 200)) * 1.0",
+    # Faster regime gate than market_trend (MA200). shakeout_vs_top forensic (2026-07-11):
+    # mkt>MA50 is the single strongest shakeout-vs-top discriminator (AUC 0.78) — a 'signal'
+    # exit in a bull tape (mkt>MA50) is usually a shakeout that recovers; below MA50 it is a
+    # real top. MA200 is too slow to catch the regime flip that decides which.
+    "market_trend_50": "($market_close > Mean($market_close, 50)) * 1.0",
     "market_volatility_regime": (
         "(Std(Pct($market_close, 1), 20) "
         "> Quantile(Std(Pct($market_close, 1), 20), 200, 0.9)) * 1.0"
@@ -1182,6 +1197,20 @@ SETS: dict[str, tuple[str, list[str]]] = {
                        "dist_10d_low", "range_pos_20", "recov_setup",
                        "dist_63d_high", "sma_200_ratio"],
     ),
+    # THRUST entry (2026-07-11, user hypothesis #3 "signal quality on default universe"): champion
+    # recov + the classic breakout-timing signals never fed as a SET — bb_squeeze (volatility
+    # compression before expansion), volume-thrust (volume_ratio_5/20), consecutive-up (up_days_5/10),
+    # and shakeout lower-wick (rejection candle). Tests whether momentum-continuation entry timing
+    # improves when the head can read squeeze→expansion + volume confirmation natively. Judged by
+    # composite/pnl delta vs entry_lvup126_recov on the SAME 61-sym universe (fair).
+    "entry_lvup126_thrust": (
+        "entry_lvup126_recov + squeeze/volume-thrust/consecutive-up/shakeout-wick",
+        _LEADING_V2 + ["lowvol_rank_60", "nearhigh_rank", "comp_nh_lv",
+                       "comp_lowvol_uptrend", "comp_nh_x_lv126",
+                       "dist_10d_low", "range_pos_20", "recov_setup",
+                       "bb_squeeze", "volume_ratio_5", "volume_ratio_20",
+                       "up_days_5", "up_days_10", "lower_wick_ratio"],
+    ),
     # SMAC-entry fix (2026-06-19): the single-model action classifier's worst losers are 2022
     # bear-market knife-catches (NVL -81%, all entered into a falling tape). entry_recov_knife
     # gives the per-stock knife/structural-decliner axis; this adds the MARKET-regime/tape
@@ -1223,6 +1252,15 @@ SETS: dict[str, tuple[str, list[str]]] = {
                        "comp_lowvol_uptrend", "comp_nh_x_lv126",
                        "dist_10d_low", "range_pos_20", "recov_setup",
                        "momentum_rank", "cs_rank_trend", "price_strength_rank"],
+    ),
+    # co-adaptation test (2026-07-11): pruned 11-feature core, paired with ALTERNATIVE targets to test
+    # whether the 48-feature optimum is target-CONDITIONAL (a different target may prefer a different
+    # feature set/count). Under triple_barrier: 48 >> 11. If a new target flips that, co-adaptation is real.
+    "entry_rs_core11": (
+        "entry_recov_rs pruned to 11 leadership/recovery core features",
+        ["lowvol_rank_60", "nearhigh_rank", "comp_nh_lv", "comp_lowvol_uptrend", "comp_nh_x_lv126",
+         "dist_10d_low", "range_pos_20", "recov_setup", "momentum_rank", "cs_rank_trend",
+         "price_strength_rank"],
     ),
     # SMAC volume-niche (2026-06-19): confirm the bottom with VOLUME — a TA reads capitulation
     # (down_vol_count_10 = selling-climax bars), accumulation (accum_day_25, updown_vol_20,
@@ -1470,6 +1508,42 @@ SETS: dict[str, tuple[str, list[str]]] = {
         "exit_vol_dist + down-volume selling pressure (intensity/count + up:down volume)",
         _EXIT_VOL_DIST + ["down_vol_intensity_5", "down_vol_count_10", "updown_vol_20"],
     ),
+    # REGIME-AWARE exit (2026-07-11, shakeout_vs_top forensic hb_60/61): exit_vol_downpress is
+    # LOCAL price/vol — forensic showed 49% of 'signal' exits are shakeouts (dip recovers +13.7%)
+    # and local features barely separate shakeout from top (AUC~0.5). The strong discriminator is
+    # MARKET REGIME (mkt>MA50 AUC 0.78) + stock trend/RS. The base already carries the WEAK regime
+    # feats (market_trend=MA200, momentum_rank=20d); this adds the STRONG missing ones so the exit
+    # head HOLDS bull-tape shakeouts and SELLS bear-tape tops. Monotone -1 (bullish regime lowers
+    # the sell score) can be added on the exit ML later; start unconstrained.
+    "exit_vol_regime": (
+        "exit_vol_downpress + market regime (mkt>MA50, mkt mom 60) + stock trend MA50 + RS 60d",
+        _EXIT_VOL_DIST + ["down_vol_intensity_5", "down_vol_count_10", "updown_vol_20",
+                          "market_trend_50", "market_mom_60", "sma_50_ratio", "rs_rank_60"],
+    ),
+    # CROSS-SECTIONAL RS exit (2026-07-11): exit_vol_regime (market-regime common-factor) FAILED
+    # because the recombine z-scores the exit signal per-symbol/time and washes out slow common
+    # factors. Cross-sectional RS RANKS are PER-SYMBOL relative (survive z-scoring) — sell weak-RS
+    # names sooner, hold strong-RS names. Pairs with the ft_rs entry RS win (entry_recov_rs). Base
+    # already carries momentum_rank; add the leadership/trend/60d-RS ranks not in it.
+    "exit_vol_rs": (
+        "exit_vol_downpress + cross-sectional RS ranks (cs_rank_trend, price_strength_rank, rs_rank_60)",
+        _EXIT_VOL_DIST + ["down_vol_intensity_5", "down_vol_count_10", "updown_vol_20",
+                          "cs_rank_trend", "price_strength_rank", "rs_rank_60"],
+    ),
+    # PATH-AWARE exit (2026-07-11, root reasoning: the exit is PATH-DEPENDENT — depends on how far
+    # into the move / how old / how much given back — but the exit ML head is STATELESS per-bar, so
+    # the RULES (max_hold/trailing) that DO carry path-state beat it (~2x mask). exit_vol_rs already
+    # has DEPTH/giveback (dist_63d_high, dist_52w_high) + overextension (sma_20_ratio) but LACKS the
+    # AGE + REALIZED-LEG structure: aroon (bars since recent high/low), up_days_10 (up-streak),
+    # dist_63d_low (how far ABOVE the recent trough = realized up-leg amplitude), dist_20d_high
+    # (short-term giveback). These pivot-anchored proxies let the stateless head APPROXIMATE the
+    # path-state the rules hardcode -> raw exit signal may strengthen enough to unmask the rules.
+    "exit_vol_path": (
+        "exit_vol_rs + path-proxy (aroon age, up_days streak, dist_63d_low leg, dist_20d_high giveback)",
+        _EXIT_VOL_DIST + ["down_vol_intensity_5", "down_vol_count_10", "updown_vol_20",
+                          "cs_rank_trend", "price_strength_rank", "rs_rank_60",
+                          "aroon_up", "aroon_down", "up_days_10", "dist_63d_low", "dist_20d_high"],
+    ),
     # PV-CHANNEL probe sets (2026-07-09, OHLCV_VIRGIN_MAP): champion exit set + the surviving
     # price-volume microstructure channel. NEW names (not edits) so the champion's
     # exit_vol_downpress stays byte-identical and its per-feature caches uncollided.
@@ -1626,6 +1700,14 @@ SETS: dict[str, tuple[str, list[str]]] = {
            "dist_52w_low", "dist_126d_low"],
     ),
 }
+
+# MEAN-REV-AS-FEATURE (2026-07-11): ft_rs entry (cross-sectional RS) + cross-sectional oversold
+# ranks — let the entry ML pick oversold-bounce names IN ONE BOOK (a separate mean-rev sleeve
+# failed on slot-displacement; cross-sectional ranks survive z-scoring). Fills momentum-dead years.
+SETS["entry_recov_rs_mr"] = (
+    "entry_recov_rs + cross-sectional oversold ranks (osold_rank_20, osold_rank_ret5)",
+    list(SETS["entry_recov_rs"][1]) + ["osold_rank_20", "osold_rank_ret5"],
+)
 
 # SMAC round-2 niches (2026-06-20): extend the v20_sec winning stack (RS+dynamics+sector)
 # with one more orthogonal niche each (DRY — reuse its column list, no retyping/typos).

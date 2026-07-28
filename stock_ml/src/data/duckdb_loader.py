@@ -12,28 +12,102 @@ _PRICE_COLS = ["open", "high", "low", "close"]
 
 
 def _sanitize_prices(df: pd.DataFrame) -> pd.DataFrame:
-    """Forward-fill non-positive OHLC prices.
+    """Forward-fill non-positive OHLC prices and repair OHLC-coherence violations.
 
-    A handful of rows carry close/open/high/low == 0 (data glitches). Because most
-    features divide by price or a rolling Min/Corr of price, ONE zero poisons the
-    whole trailing window with ±inf (e.g. dist_52w_low = close/Min(close,252)-1 stays
-    inf for 252 bars after a single zero). We mask non-positive OHLC to NaN and
-    forward/back-fill per symbol so the on-disk data is untouched but features stay
-    finite. Volume is left as-is (0 = a legitimate no-trade day).
+    (1) Non-positive prices: a handful of rows carry close/open/high/low == 0 (glitches).
+    Because most features divide by price or a rolling Min/Corr of price, ONE zero poisons
+    the whole trailing window with ±inf. We mask non-positive OHLC to NaN and forward-fill
+    per symbol. Volume is left as-is (0 = a legitimate no-trade day).
+
+    (2) OHLC-coherence: some rows are positive but inconsistent — open/close OUTSIDE
+    [low, high], or high < low (vendor glitches, e.g. HCM 2020-06-05 open 4.80 vs low 6.66;
+    ACV 2021-07 open > high; VTP 2022-05 close < low). These are *finite* so they survive
+    the fail-loud NaN guard while silently corrupting candle-geometry features (clv,
+    wick/body ratios, close_position_in_range). Inspection of the real violations shows the
+    outlier is almost always ONE of open/high/close while the other three prices agree, so
+    the minimal-damage repair is: trust the traded range [low, high] and CLAMP the offending
+    open/close back into it (this pulls HCM's bogus 4.80 open up to the low, and ACV's 44.42
+    open down to the high). Only in the rare high < low case do we swap them first.
+
+    Forward-fill only (no back-fill): back-filling a leading bad bar would pull a FUTURE
+    price into it (look-ahead). A leading NaN survives and is trimmed by feature warmup.
     """
     cols = [c for c in _PRICE_COLS if c in df.columns]
     if df.empty or not cols:
         return df
-    bad = df[cols] <= 0
-    if not bad.to_numpy().any():
-        return df
     df = df.copy()
-    df[cols] = df[cols].mask(bad)
-    if "symbol" in df.columns:
-        df[cols] = df.groupby("symbol")[cols].transform(lambda g: g.ffill().bfill())
-    else:
-        df[cols] = df[cols].ffill().bfill()
+    # (1) non-positive -> NaN -> ffill (per symbol; forward-only to avoid look-ahead)
+    bad = df[cols] <= 0
+    if bad.to_numpy().any():
+        df[cols] = df[cols].mask(bad)
+        if "symbol" in df.columns:
+            df[cols] = df.groupby("symbol")[cols].transform(lambda g: g.ffill())
+        else:
+            df[cols] = df[cols].ffill()
+    # (2) OHLC-coherence: trust [low, high] as the traded range; clamp open/close into it.
+    have = all(c in df.columns for c in _PRICE_COLS)
+    if have:
+        # rare high<low: swap so the range is well-ordered before clamping
+        swap = df["high"] < df["low"]
+        if swap.to_numpy().any():
+            hi_s, lo_s = df.loc[swap, "low"].copy(), df.loc[swap, "high"].copy()
+            df.loc[swap, "high"], df.loc[swap, "low"] = hi_s, lo_s
+        df["open"] = df["open"].clip(lower=df["low"], upper=df["high"])
+        df["close"] = df["close"].clip(lower=df["low"], upper=df["high"])
     return df
+
+
+def _trim_leading_phantom(df: pd.DataFrame) -> pd.DataFrame:
+    """Drop each symbol's leading pre-listing PHANTOM block before real trading begins.
+
+    Some symbols carry a long backfill head of o==h==l==c bars (no intraday range = no real
+    trade) with placeholder volume, stepping the price up level-by-level, then jump to the
+    true IPO price (e.g. VHM: 710 leading flat bars 2011-2014 with vol 0/5000, then a +268%
+    step to the real 2018-05-17 listing at 64.36). These bars are FINITE so they survive the
+    fail-loud NaN guard, yet they poison every rolling feature (std/ret/vol-ratio) and inject
+    a fake +268% one-bar return the moment the symbol enters a train fold.
+
+    A single "high > low" bar is NOT enough to mark the start of trading: the VHM backfill
+    stepped its price with occasional 1-bar ranges while median volume stayed 0 for years.
+    Real continuous trading is when intraday ranges become the NORM, not the exception. So we
+    find the first date from which the next 20 sessions are MAJORITY real-range (>= half have
+    high > low) and drop everything before it, cutting VHM's entire 2011-2018 placeholder head
+    (incl. the +268% IPO seam) while costing a genuinely-listed name at most its warmup rows.
+    Volume is deliberately not used (placeholder volumes are unreliable and legitimately-thin
+    real names must not be trimmed).
+    """
+    need = ["open", "high", "low", "close"]
+    if df.empty or not all(c in df.columns for c in need) or "symbol" not in df.columns:
+        return df
+
+    WIN, FRAC = 20, 0.5
+
+    def _trim(g: pd.DataFrame) -> pd.DataFrame:
+        traded = (g["high"] > g["low"]).to_numpy().astype(float)
+        if traded.sum() == 0:
+            return g.iloc[0:0]  # never actually traded in this window
+        # forward-looking fraction of real-range bars over the next WIN sessions
+        fwd = pd.Series(traded[::-1]).rolling(WIN, min_periods=1).mean().to_numpy()[::-1]
+        ok = fwd >= FRAC
+        g = g.iloc[int(ok.argmax()):] if ok.any() else g.iloc[int(traded.argmax()):]
+        # A backfill head can pass the range-majority test yet still end in an IPO/re-listing
+        # SEAM: a single >40% price jump from the placeholder level to the true opening price
+        # (VHM: 17.47 flat -> 64.36 on 2018-05-17, +268%). If such a jump sits in the first 120
+        # bars, the real listing starts AT the jump — drop everything up to and including it.
+        if len(g) > 1:
+            head = g.head(120)
+            jump = (head["close"].pct_change().abs() > 0.40).to_numpy()
+            if jump.any():
+                last_jump = len(jump) - 1 - int(jump[::-1].argmax())
+                g = g.iloc[last_jump:]
+        return g
+
+    return (
+        df.sort_values(["symbol", "date"])
+        .groupby("symbol", group_keys=False)
+        .apply(_trim)
+        .reset_index(drop=True)
+    )
 
 
 class DuckDBLoader:
@@ -116,6 +190,7 @@ class DuckDBLoader:
 
             result["symbol"] = symbol
             result = _sanitize_prices(result)
+            result = _trim_leading_phantom(result)
             return result[["date", "open", "high", "low", "close", "volume", "symbol"]]
         finally:
             conn.close()
@@ -154,7 +229,7 @@ class DuckDBLoader:
             result = conn.execute(query, params).fetchdf()
             if result.empty:
                 return pd.DataFrame(columns=["date", "open", "high", "low", "close", "volume", "symbol"])
-            return _sanitize_prices(result)
+            return _trim_leading_phantom(_sanitize_prices(result))
         finally:
             conn.close()
 

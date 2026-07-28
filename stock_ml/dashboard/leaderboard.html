@@ -368,15 +368,18 @@
           <th data-sort="backtest_window_key">Window</th>
           <th data-sort="n_symbols" class="num">Symbols</th>
           <th data-sort="cost_commission" class="num">Commission</th>
-          <th data-sort="n_trades" class="num">Trades</th>
-          <th data-sort="win_rate" class="num">Win Rate</th>
-          <th data-sort="profit_factor" class="num">Profit Factor</th>
+          <th data-sort="trades" class="num">Trades</th>
+          <th data-sort="wr" class="num">Win Rate</th>
+          <th data-sort="pf" class="num">Profit Factor</th>
           <th data-sort="avg_pnl" class="num">Avg PnL</th>
           <th data-sort="pnl_pct" class="num">PnL %</th>
-          <th data-sort="cagr" class="num" title="avg annual PnL per symbol = total_pnl / n_symbols / n_years">CAGR~</th>
+          <th data-sort="cagr" class="num" title="avg annual PnL per symbol = total_pnl / n_symbols / n_years — thước tuyến tính cũ, KHÔNG phải CAGR">PnL/mã/năm (linear)</th>
+          <th data-sort="cagr_nav" class="num" title="CAGR NAV sim — LÝ THUYẾT T+0 (bán bất kỳ phiên). Điểm vận hành lý tưởng của model combo offline.">CAGR (NAV·T+0)</th>
+          <th data-sort="cagr_t2" class="num" title="CAGR THỰC TẾ dưới T+2 (VN hiện tại: mua xong giữ ≥2 phiên mới bán). Chỉ có cho các model combo offline; run khác để trống.">CAGR (T+2·thực)</th>
+          <th data-sort="maxdd_nav" class="num" title="MaxDD trung bình của NAV sim (chế độ ứng trước)">MaxDD (NAV)</th>
           <th data-sort="max_win" class="num">Max Win</th>
           <th data-sort="max_loss" class="num">Max Loss</th>
-          <th data-sort="avg_hold_days" class="num">Hold Days</th>
+          <th data-sort="avg_hold" class="num">Hold Days</th>
           <th data-sort="max_drawdown" class="num">Max DD</th>
           <th data-sort="sharpe" class="num">Sharpe</th>
           <th data-sort="audit_status">Audit</th>
@@ -385,7 +388,7 @@
         </tr>
       </thead>
       <tbody id="leaderboardBody">
-        <tr><td colspan="26" class="empty">Loading leaderboard...</td></tr>
+        <tr><td colspan="28" class="empty">Loading leaderboard...</td></tr>
       </tbody>
     </table>
   </main>

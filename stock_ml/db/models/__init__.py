@@ -6,6 +6,7 @@ from .feature import (
     FeatureSetModel,
 )
 from .job import JobModel
+from .portfolio import RunEquityModel, RunPendingModel, RunPortfolioDailyModel, RunSkippedModel
 from .run import LeaderboardRunModel
 from .signal import RunSignalModel
 from .symbol_stat import RunSymbolStatModel
@@ -39,4 +40,8 @@ __all__ = [
     "ModelComponentModel",
     "ComponentSlotModel",
     "StrategyTemplateModel",
+    "RunEquityModel",
+    "RunPortfolioDailyModel",
+    "RunSkippedModel",
+    "RunPendingModel",
 ]

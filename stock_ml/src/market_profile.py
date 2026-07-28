@@ -23,13 +23,10 @@ def _normalize_symbols(value: Any, none_value: Any) -> Any:
 def _registered_strategy_names() -> set[str]:
     global _STRATEGY_NAMES
     if _STRATEGY_NAMES is None:
-        try:
-            import src.components.fusion.strategies  # noqa: F401
-            from src.components.fusion.registry import list_strategies
-
-            _STRATEGY_NAMES = set(list_strategies())
-        except (ImportError, ModuleNotFoundError):
-            _STRATEGY_NAMES = set()
+        # The legacy fusion strategy registry (src/components) was removed with the old
+        # file/CLI system; there is no strategy allowlist to validate against, so this is
+        # empty and the strategy_overrides validation below no-ops (behaviour unchanged).
+        _STRATEGY_NAMES = set()
     return _STRATEGY_NAMES
 
 

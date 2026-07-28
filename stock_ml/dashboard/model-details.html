@@ -189,6 +189,7 @@
         <div class="run-id" id="runIdLabel"></div>
         <div style="display:flex; gap:6px; margin-top:8px;">
           <button id="btnPin" class="btn-mini" style="display:none;">Pin</button>
+          <a id="btnPortfolio" class="btn-mini" href="#" style="display:none;">📊 Danh mục</a>
           <a href="leaderboard.html" class="btn-mini">← Quay lại</a>
         </div>
       </div>
@@ -307,6 +308,16 @@
         document.getElementById('runIdLabel').textContent = model.run_id || runId;
         renderSummary(model);
         setupPin(model.state || 'trained');
+        // Show the "Danh mục" (daily portfolio) tab only when this run has a persisted
+        // portfolio-execution overlay (run_equity populated) — links to the dedicated page.
+        fetchJson(`${API_BASE}/runs/${encodeURIComponent(runId)}/portfolio/equity`)
+          .then(pf => {
+            if (pf && (pf.equity || []).length) {
+              const b = document.getElementById('btnPortfolio');
+              b.href = `portfolio.html?run_id=${encodeURIComponent(runId)}`;
+              b.style.display = '';
+            }
+          }).catch(() => {});
 
         const [tradesRes, symRes, yearRes] = await Promise.all([
           fetchJson(`${API_BASE}/runs/${encodeURIComponent(runId)}/trades`).catch(() => ({ trades: [] })),

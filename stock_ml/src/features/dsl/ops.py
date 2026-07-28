@@ -277,7 +277,22 @@ def _rsi(close: pd.Series, period: int) -> pd.Series:
     avg_loss = loss.ewm(alpha=1.0 / period, adjust=False, min_periods=period).mean()
     rs = avg_gain / avg_loss.replace(0.0, np.nan)
     rsi = 100.0 - (100.0 / (1.0 + rs))
-    return rsi.fillna(50.0)
+    return _rsi_boundary_fill(rsi, avg_gain, avg_loss)
+
+
+def _rsi_boundary_fill(rsi: pd.Series, avg_gain: pd.Series, avg_loss: pd.Series) -> pd.Series:
+    """Fill the two RSI edge cases by their TRUE value, not a blanket 50.
+
+    ``avg_loss == 0`` (past warmup, only up-moves) is maximal strength -> RSI 100, and the
+    symmetric ``avg_gain == 0`` (only down-moves) -> RSI 0. The old ``fillna(50.0)`` collapsed
+    both extremes to neutral, telling the model an all-gains run is 'balanced' — the opposite
+    of the truth. Genuine warmup NaN (before ``min_periods``) is left as NaN so feature-warmup
+    trimming removes it rather than injecting a fabricated 50.
+    """
+    warm = avg_loss.isna() | avg_gain.isna()          # true warmup -> stays NaN
+    rsi = rsi.where(~((avg_loss == 0) & ~warm), 100.0)  # only up-moves -> overbought 100
+    rsi = rsi.where(~((avg_gain == 0) & ~warm), 0.0)    # only down-moves -> oversold 0
+    return rsi
 
 
 @_register("RSI", "symbol")
@@ -299,7 +314,7 @@ def _rsi_sma(close: pd.Series, period: int) -> pd.Series:
     avg_loss = loss.rolling(period, min_periods=period).mean()
     rs = avg_gain / avg_loss.replace(0.0, np.nan)
     rsi = 100.0 - (100.0 / (1.0 + rs))
-    return rsi.fillna(50.0)
+    return _rsi_boundary_fill(rsi, avg_gain, avg_loss)
 
 
 @_register("RSISMA", "symbol")
@@ -404,7 +419,13 @@ def _op_mfi(ctx, args, kwargs):
         pos_sum = pos_mf.rolling(period, min_periods=period).sum()
         neg_sum = neg_mf.rolling(period, min_periods=period).sum()
         mfi = 100.0 - (100.0 / (1.0 + pos_sum / (neg_sum.replace(0.0, np.nan) + 1e-8)))
-        return mfi.fillna(50.0)
+        # neg_sum == 0 past warmup (all money-flow inbound) is overbought -> MFI 100, and the
+        # symmetric pos_sum == 0 -> MFI 0. Blanket fillna(50) would wrongly call an all-inflow
+        # window 'neutral'. Genuine warmup NaN stays NaN for warmup-trim to remove.
+        warm = pos_sum.isna() | neg_sum.isna()
+        mfi = mfi.where(~((neg_sum == 0) & ~warm), 100.0)
+        mfi = mfi.where(~((pos_sum == 0) & ~warm), 0.0)
+        return mfi
 
     return _by_symbol(
         ctx,
@@ -426,7 +447,13 @@ def _op_bollinger(ctx, args, kwargs):
         lower = mid - num_std * std
         rng = upper - lower
         width = rng / mid.replace(0.0, np.nan)
-        pct = (close - lower) / rng.replace(0.0, np.nan)
+        # Flat window (std==0 -> band width 0): %B is undefined by the raw formula.
+        # By TA convention a zero-width band means price sits ON the mid line -> %B = 0.5
+        # (neutral). Emitting NaN here instead breaks the fail-loud no-NaN guard for
+        # thinly-traded names with >=20 identical closes (penny/price-locked), while
+        # 0.5 is the correct neutral reading. Only fires when rng==0 (band collapsed).
+        rng_nz = rng.where(rng != 0.0)
+        pct = ((close - lower) / rng_nz).where(rng != 0.0, 0.5)
         return pd.DataFrame(
             {"mid": mid, "upper": upper, "lower": lower, "width": width, "pct": pct}
         )

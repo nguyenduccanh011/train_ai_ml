@@ -499,6 +499,53 @@ def trim_feature_warmup(
     return out
 
 
+def trim_target_tail(
+    feat: pd.DataFrame, target_cols: list[str], *, name: str = ""
+) -> pd.DataFrame:
+    """Drop each symbol's trailing rows that are NaN in any label column.
+
+    Forward-looking targets (triple_barrier, velocity_exit, ...) are structurally NaN
+    for a symbol's LAST rows: there is no future window to resolve the label. For a
+    fixed universe that lives to the backtest end this tail sits only in the final test
+    fold and is handled elsewhere, but a symbol that DELISTS mid-history (e.g. a name
+    the point-in-time/dynamic universe legitimately includes) has this NaN tail land
+    inside a TRAIN fold, tripping the fail-loud ``require_no_nan``. Trimming the trailing
+    contiguous NaN-label block here is the symmetric counterpart to ``trim_feature_warmup``
+    (which trims the leading feature-warmup block). Only the trailing *contiguous* NaN
+    block is removed per symbol: any NaN that appears mid-series is left in place so the
+    fail-loud guard still catches genuine label bugs.
+    """
+    cols = [c for c in target_cols if c in feat.columns]
+    if not cols:
+        return feat
+
+    # Only trim the NaN-label tail of symbols that END before the panel does — i.e. names
+    # that DELIST mid-history. A symbol still trading at the panel end keeps its natural
+    # forward-window tail (those rows are valid TEST inputs in the final fold; they carry
+    # no label but are predicted on features), so trimming them would drop live test bars.
+    panel_end = feat["date"].max()
+
+    def _trim(g: pd.DataFrame) -> pd.DataFrame:
+        if g["date"].max() >= panel_end:
+            return g  # symbol alive to the end — leave its forward-window tail intact
+        ok = g[cols].notna().all(axis=1).to_numpy()
+        if not ok.any():
+            return g.iloc[0:0]
+        last_ok = len(ok) - 1 - int(ok[::-1].argmax())  # last all-non-NaN row index
+        return g.iloc[: last_ok + 1]
+
+    out = (
+        feat.sort_values(["symbol", "date"])
+        .groupby("symbol", group_keys=False)
+        .apply(_trim)
+    )
+    dropped = len(feat) - len(out)
+    if dropped:
+        print(f"[{name}] target tail trim: dropped {dropped} trailing NaN-label rows "
+              f"(delisted/short symbols' forward-window tail)")
+    return out
+
+
 # Forward-looking targets that are CLASSIFIERS (discrete {-1,0,1}) even though their NaN
 # tail makes them float dtype. forward_return is intentionally excluded — it has always
 # been consumed as a regression ordinal here, and changing it would move every existing run.
@@ -1609,12 +1656,21 @@ def _load_market_breadth(metric: str = "pct_above_ma50", ma_win: int = 50,
     con.close()
     oh["date"] = pd.to_datetime(oh["date"])
     piv = oh.pivot_table(index="date", columns="symbol", values="close", aggfunc="last").sort_index()
+    # A symbol may only cast a breadth vote on a date where it actually TRADES. A NaN price
+    # (not-yet-listed / delisted / halted) compares as ``NaN > ma == False`` in pandas — a
+    # *finite* False that silently counts as a bearish vote AND inflates the denominator,
+    # biasing breadth DOWNWARD (worst in early history when many names are unlisted: up to
+    # -0.195 on 2018-01-11 with 124/488 phantom votes). Mask on a valid price (and valid MA)
+    # so only genuinely-trading symbols vote. Feeds entry_ensemble3 breadth_features and the
+    # exit_force_gate_lowbreadth threshold, so the down-bias falsely fires the low-breadth veto.
+    valid = piv.notna()
     if metric == "adv_pct":
-        ind = piv.pct_change() > 0
+        ind = (piv.pct_change() > 0) & valid
     else:
         ma = piv.rolling(ma_win, min_periods=ma_win).mean()
-        ind = (piv > ma)
-    out = ind.sum(axis=1) / ind.notna().sum(axis=1).clip(lower=1)
+        valid = valid & ma.notna()
+        ind = (piv > ma) & valid
+    out = ind.sum(axis=1) / valid.sum(axis=1).clip(lower=1)
     _BREADTH_CACHE[key] = out
     return out
 
@@ -3077,6 +3133,9 @@ def build_feature_frame(
     # split, so train/test folds don't trip the fail-loud require_no_nan on expected
     # warmup NaN. Mid-series NaN survives and still fails loud (genuine-bug guard).
     feat = trim_feature_warmup(feat, sorted(_all_feat_cols), name=cfg.name)
+    # Symmetric to the warmup trim: drop the trailing NaN-label block of DELISTED symbols
+    # (their forward-window tail lands inside a train fold and would trip require_no_nan).
+    feat = trim_target_tail(feat, ["target_entry", "target_exit", "target"], name=cfg.name)
     return (feat, entry_feat_cols, exit_feat_cols, entry_target_cfg, exit_target_cfg,
             entry2_feat_cols, entry3_feat_cols, entry4_feat_cols, entry5_feat_cols,
             entry6_feat_cols)

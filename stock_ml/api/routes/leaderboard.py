@@ -13,6 +13,40 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1", tags=["leaderboard"])
 
 
+async def _nav_metrics_for(session: AsyncSession, run_ids: list[str]) -> dict[str, dict]:
+    """LEFT-JOIN thu cong voi bang leaderboard_nav (CAGR/NAV that tu NAV sim).
+
+    Bang do script ops/score_nav_leaderboard.py tao rieng (khong co ORM model);
+    neu bang chua ton tai (vd fixture SQLite) thi tra ve rong — cot hien thi '—'.
+    """
+    if not run_ids:
+        return {}
+    from sqlalchemy import bindparam, text
+
+    try:
+        result = await session.execute(
+            text(
+                "SELECT run_id, nav_adv, cagr_adv, maxdd_nav, cagr_t2, maxdd_t2 "
+                "FROM leaderboard_nav WHERE run_id IN :ids"
+            ).bindparams(bindparam("ids", expanding=True)),
+            {"ids": run_ids},
+        )
+        return {
+            r.run_id: {
+                "nav_adv": r.nav_adv,
+                "cagr_adv": r.cagr_adv,
+                "maxdd_nav": r.maxdd_nav,
+                "cagr_t2": r.cagr_t2,
+                "maxdd_t2": r.maxdd_t2,
+            }
+            for r in result.fetchall()
+        }
+    except Exception:  # bang chua duoc tao — khong duoc lam vo endpoint
+        await session.rollback()
+        logger.debug("leaderboard_nav chua kha dung, bo qua NAV metrics")
+        return {}
+
+
 async def _leaderboard_from_db(
     session: AsyncSession,
     market: str | None = None,
@@ -37,6 +71,7 @@ async def _leaderboard_from_db(
         limit=limit,
         offset=offset,
     )
+    nav_map = await _nav_metrics_for(session, [m.run_id for m in models])
     rows = [
         {
             "run_id": m.run_id,
@@ -78,6 +113,13 @@ async def _leaderboard_from_db(
             "experiment_group": m.experiment_group,
             "variant_type": m.variant_type,
             "metadata_notes": m.metadata_notes,
+            # NAV sim metrics (bang leaderboard_nav, cham boi
+            # stock_ml/scripts/ops/score_nav_leaderboard.py) — None neu chua cham.
+            "nav_adv": nav_map.get(m.run_id, {}).get("nav_adv"),
+            "cagr_nav": nav_map.get(m.run_id, {}).get("cagr_adv"),
+            "maxdd_nav": nav_map.get(m.run_id, {}).get("maxdd_nav"),
+            "cagr_t2": nav_map.get(m.run_id, {}).get("cagr_t2"),
+            "maxdd_t2": nav_map.get(m.run_id, {}).get("maxdd_t2"),
         }
         for m in models
     ]

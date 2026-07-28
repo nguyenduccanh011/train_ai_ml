@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Danh mục theo ngày</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #0d1117; color: #e6edf3; font: 13px/1.5 -apple-system, Segoe UI, Roboto, sans-serif; }
+    header { padding: 12px 18px; border-bottom: 1px solid #252b36; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+    h1 { font-size: 16px; margin: 0; }
+    .run-id { color: #7d8590; font-size: 11px; }
+    a.back { color: #58a6ff; text-decoration: none; font-size: 12px; }
+    .wrap { padding: 16px 18px; max-width: 1240px; }
+    .bar { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; }
+    select, input[type=range], input[type=text] { background: #161b22; color: #e6edf3; border: 1px solid #30363d; border-radius: 6px; padding: 6px 8px; font: inherit; }
+    .kpi { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 16px; }
+    .kpi .box { background: #161b22; border: 1px solid #252b36; border-radius: 8px; padding: 10px 14px; min-width: 104px; }
+    .kpi .box .label { color: #7d8590; font-size: 11px; }
+    .kpi .box .val { font-size: 18px; font-weight: 600; font-variant-numeric: tabular-nums; }
+    .grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 16px; }
+    @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+    .card { background: #161b22; border: 1px solid #252b36; border-radius: 8px; padding: 12px 14px; margin-bottom: 14px; }
+    .card h3 { margin: 0 0 8px; font-size: 12px; color: #9aa4b2; font-weight: 600; display:flex; justify-content:space-between; align-items:center; }
+    .card h3 .hint { color:#6e7681; font-weight:400; font-size:10px; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th, td { padding: 5px 6px; text-align: left; border-bottom: 1px solid #21262d; }
+    th { color: #7d8590; font-weight: 500; font-size: 11px; position: sticky; top: 0; background: #161b22; }
+    td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+    .wbar { position: relative; background: #0d1117; border-radius: 3px; height: 14px; min-width: 56px; }
+    .wbar > span { position: absolute; left: 0; top: 0; bottom: 0; background: #2f5fdc; border-radius: 3px; }
+    .wbar > em { position: absolute; right: 4px; top: 0; font-style: normal; font-size: 10px; line-height: 14px; color: #cdd9e5; }
+    .tag { font-size: 10px; padding: 1px 5px; border-radius: 4px; }
+    .tag.new { background: #1f6f43; color: #b7f5cf; }
+    .tag.preempt { background: #8b3a1f; color: #ffd3bf; }
+    .tag.signal { background: #30363d; color: #adbac7; }
+    .tag.fill { background: #1f4f8b; color: #bfe0ff; }
+    .muted { color: #7d8590; }
+    .pos { color: #3fb950; } .neg { color: #f85149; }
+    .scroll { max-height: 360px; overflow: auto; }
+  </style>
+</head>
+<body>
+  <header>
+    <a class="back" href="leaderboard.html">← Bảng xếp hạng</a>
+    <div><h1 id="name">Danh mục theo ngày</h1><div class="run-id" id="rid"></div></div>
+    <a class="back" id="detailLink" href="#">Xem chi tiết mã →</a>
+  </header>
+  <div class="wrap">
+    <div class="bar">
+      <label>Ngày: <select id="dateSel"></select></label>
+      <input type="range" id="dateSlider" min="0" max="0" value="0" style="flex:1; min-width:220px;" />
+    </div>
+    <div class="kpi" id="kpi"></div>
+    <div class="card">
+      <h3>Đường vốn (NAV theo ngày) <span class="hint">thang log · vạch cam = ngày đang xem · phần mờ = tương lai</span></h3>
+      <div id="eqChart" style="min-height:120px"></div>
+    </div>
+    <div class="grid">
+      <div>
+        <div class="card">
+          <h3>Danh mục nắm giữ <span class="hint">tỉ trọng CỐ ĐỊNH lúc vào · lãi/lỗ tính đến ngày</span></h3>
+          <div id="holdings"><span class="muted">Đang tải...</span></div>
+        </div>
+      </div>
+      <div>
+        <div class="card"><h3>🔴 Lệnh BÁN phiên tới <span class="hint">tín hiệu bán đã có T-1</span></h3><div id="sellNext"></div></div>
+        <div class="card"><h3>⏳ Hàng chờ khớp pullback <span class="hint">limit −4.5% · sổ lệnh chờ THỰC (đa số hết hạn)</span></h3><div id="pending" class="scroll"></div></div>
+        <div class="card"><h3>Vào mới hôm nay</h3><div id="entries"></div></div>
+        <div class="card"><h3>Thoát hôm nay</h3><div id="exits"></div></div>
+        <div class="card"><h3>Tín hiệu mua trong ngày <span class="hint">fill = đã vào sổ</span></h3><div id="signals" class="scroll"></div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Đã bỏ qua — lãi/lỗ nếu đã lấy <span class="hint" id="skipStat">(conv-skip: bỏ mã conviction thấp)</span></h3>
+      <div class="scroll"><table id="skipped"><thead><tr>
+        <th>Mã</th><th>Ngày tín hiệu</th><th class="num">Conviction</th><th class="num">Lãi/lỗ nếu lấy</th><th>Lý do bỏ</th>
+      </tr></thead><tbody></tbody></table></div>
+    </div>
+    <div class="card">
+      <h3>Lịch sử giao dịch danh mục <span class="hint" id="ledgerCount"></span></h3>
+      <div class="bar" style="margin-bottom:8px;">
+        <input type="text" id="ledgerSearch" placeholder="Lọc mã..." style="width:140px;" />
+        <label class="muted"><input type="checkbox" id="asOfView" checked style="vertical-align:middle;" /> tính đến ngày đang xem</label>
+        <span class="muted" id="ledgerStat"></span>
+      </div>
+      <div class="scroll"><table id="ledger"><thead><tr>
+        <th>Mã</th><th>Ngày vào</th><th>Ngày ra</th><th class="num">Số ngày</th><th class="num">Lãi/lỗ %</th><th>Lý do thoát</th>
+      </tr></thead><tbody></tbody></table></div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = (window.API_CONFIG?.baseUrl) || '/api/v1';
+    const params = new URLSearchParams(window.location.search);
+    const runId = params.get('run_id');
+    document.getElementById('rid').textContent = runId || '(thiếu run_id)';
+    document.getElementById('detailLink').href = `model-details.html?run_id=${encodeURIComponent(runId || '')}`;
+    let dates = [], equity = {}, allTrades = [], curDate = null;
+
+    async function j(url) { const r = await fetch(url, { cache: 'no-store' }); if (!r.ok) throw new Error(r.status); return r.json(); }
+    const pct = x => (x == null ? '—' : (x * 100).toFixed(1) + '%');
+    const signed = x => (x == null ? '—' : (x >= 0 ? '+' : '') + (x * 100).toFixed(1) + '%');
+    const cls = x => (x == null ? '' : x > 0 ? 'pos' : x < 0 ? 'neg' : '');
+    const esc = s => (s == null ? '' : String(s));
+
+    async function init() {
+      if (!runId) { document.getElementById('holdings').innerHTML = '<span class="neg">Thiếu run_id</span>'; return; }
+      let eq;
+      try { eq = await j(`${API_BASE}/runs/${encodeURIComponent(runId)}/portfolio/equity`); }
+      catch (e) { document.getElementById('holdings').innerHTML = '<span class="neg">Lỗi tải equity</span>'; return; }
+      const rows = (eq.equity || []).filter(r => r.n_positions > 0);
+      if (!rows.length) { document.getElementById('holdings').innerHTML = '<span class="muted">Model này chưa có dữ liệu danh mục (chỉ champion combo có).</span>'; return; }
+      dates = rows.map(r => r.date);
+      rows.forEach(r => equity[r.date] = r);
+      const sel = document.getElementById('dateSel'), sl = document.getElementById('dateSlider');
+      sel.innerHTML = dates.map(d => `<option value="${d}">${d}</option>`).join('');
+      sl.max = dates.length - 1; sl.value = dates.length - 1; sel.value = dates[dates.length - 1];
+      sel.onchange = () => { sl.value = dates.indexOf(sel.value); load(sel.value); };
+      sl.oninput = () => { sel.value = dates[+sl.value]; load(sel.value); };
+      // trade ledger (actual combo trades)
+      try { const tr = await j(`${API_BASE}/runs/${encodeURIComponent(runId)}/trades`); allTrades = tr.trades || []; } catch (e) {}
+      document.getElementById('ledgerSearch').oninput = renderLedger;
+      document.getElementById('asOfView').onchange = renderLedger;
+      renderLedger();
+      renderSkipped();
+      load(dates[dates.length - 1]);
+    }
+
+    async function renderSkipped() {
+      let sk = [];
+      try { sk = (await j(`${API_BASE}/runs/${encodeURIComponent(runId)}/skipped`)).skipped || []; } catch (e) {}
+      const tb = document.querySelector('#skipped tbody');
+      if (!sk.length) { tb.innerHTML = '<tr><td colspan="5" class="muted">Không có lệnh bị bỏ.</td></tr>'; return; }
+      const wins = sk.filter(s => (s.pnl_pct || 0) > 0).length;
+      const avg = sk.reduce((a, s) => a + (s.pnl_pct || 0), 0) / sk.length;
+      document.getElementById('skipStat').textContent = `${sk.length} lệnh bỏ · nếu lấy: thắng ${(wins / sk.length * 100).toFixed(0)}% · TB ${signed(avg)} (bỏ ĐÚNG nếu TB âm/thấp)`;
+      tb.innerHTML = sk.slice(0, 500).map(s => `<tr>
+        <td><b>${esc(s.symbol)}</b></td>
+        <td>${esc(s.signal_date)}</td>
+        <td class="num">${s.conv != null ? (s.conv * 100).toFixed(0) : '—'}</td>
+        <td class="num ${cls(s.pnl_pct)}">${signed(s.pnl_pct)}</td>
+        <td><span class="tag signal">${esc(s.skip_reason)}</span></td></tr>`).join('')
+        + (sk.length > 500 ? `<tr><td colspan="5" class="muted">… 500/${sk.length}</td></tr>` : '');
+    }
+
+    function renderEquityChart() {
+      const el = document.getElementById('eqChart');
+      if (!dates.length) { el.innerHTML = '<span class="muted">—</span>'; return; }
+      const W = 1000, Hh = 200, PADL = 46, PADR = 14, PADT = 10, PADB = 20;
+      const n = dates.length;
+      const navs = dates.map(d => (equity[d] && equity[d].nav) || 1);
+      let lo = Math.min(...navs), hi = Math.max(...navs);
+      if (hi <= lo) hi = lo * 1.01;
+      const Llo = Math.log(lo), Lhi = Math.log(hi);
+      const curIdx = Math.max(0, dates.indexOf(curDate));
+      const xOf = i => PADL + (W - PADL - PADR) * (n > 1 ? i / (n - 1) : 0);
+      const yOf = v => PADT + (Hh - PADT - PADB) * (1 - (Math.log(v) - Llo) / (Lhi - Llo));
+      const ticks = [1, 1.5, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377].filter(v => v >= lo * 0.98 && v <= hi * 1.02);
+      if (!ticks.length) ticks.push(lo, hi);
+      const grid = ticks.map(v => `<line x1="${PADL}" y1="${yOf(v).toFixed(1)}" x2="${W - PADR}" y2="${yOf(v).toFixed(1)}" stroke="#21262d"/><text x="${PADL - 6}" y="${(yOf(v) + 3).toFixed(1)}" fill="#6e7681" font-size="10" text-anchor="end">${v >= 10 ? v.toFixed(0) : v.toFixed(1)}×</text>`).join('');
+      const line = (a, b) => dates.slice(a, b + 1).map((d, k) => `${xOf(a + k).toFixed(1)},${yOf(equity[d].nav).toFixed(1)}`).join(' ');
+      const pastPts = line(0, curIdx), futPts = line(curIdx, n - 1);
+      const area = `${PADL},${(Hh - PADB).toFixed(1)} ${pastPts} ${xOf(curIdx).toFixed(1)},${(Hh - PADB).toFixed(1)}`;
+      const cx = xOf(curIdx), cy = yOf(navs[curIdx]), right = curIdx > n * 0.8;
+      const xlab = i => `<text x="${xOf(i).toFixed(1)}" y="${Hh - 5}" fill="#6e7681" font-size="10" text-anchor="${i === 0 ? 'start' : 'end'}">${dates[i]}</text>`;
+      el.innerHTML = `<svg viewBox="0 0 ${W} ${Hh}" width="100%" style="display:block">
+        ${grid}
+        <polygon points="${area}" fill="#2f5fdc22"/>
+        <polyline points="${futPts}" fill="none" stroke="#30363d" stroke-width="1.5"/>
+        <polyline points="${pastPts}" fill="none" stroke="#58a6ff" stroke-width="1.8"/>
+        <line x1="${cx.toFixed(1)}" y1="${PADT}" x2="${cx.toFixed(1)}" y2="${Hh - PADB}" stroke="#f0883e" stroke-dasharray="3 3"/>
+        <circle cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="3.5" fill="#f0883e"/>
+        <text x="${(cx + (right ? -6 : 6)).toFixed(1)}" y="${(cy - 6).toFixed(1)}" fill="#f0883e" font-size="11" text-anchor="${right ? 'end' : 'start'}">${navs[curIdx].toFixed(2)}×</text>
+        ${xlab(0)}${xlab(n - 1)}
+      </svg>`;
+    }
+
+    async function load(date) {
+      curDate = date;
+      renderEquityChart();
+      renderLedger();
+      const e = equity[date] || {};
+      const cumRet = e.nav != null ? e.nav - 1 : null;
+      let d;
+      try { d = await j(`${API_BASE}/runs/${encodeURIComponent(runId)}/portfolio/day?date=${date}`); }
+      catch (err) { d = {}; }
+      const u = d.unrealized;
+      document.getElementById('kpi').innerHTML = `
+        <div class="box"><div class="label">NAV (×vốn, gồm chưa chốt)</div><div class="val">${e.nav ? e.nav.toFixed(2) : '—'}</div></div>
+        <div class="box"><div class="label">Lãi lũy kế (đã+chưa chốt)</div><div class="val ${cls(cumRet)}">${cumRet == null ? '—' : (cumRet >= 0 ? '+' : '') + (cumRet * 100).toFixed(0) + '%'}</div></div>
+        ${u ? `<div class="box"><div class="label">Lãi CHƯA chốt (MTM)</div><div class="val ${cls(u.unreal_pnl_cost_pct)}">${signed(u.unreal_pnl_cost_pct)}</div><div class="label" style="font-size:9px">so vốn đã mua · ${u.unreal_pnl_nav_pct != null ? (u.unreal_pnl_nav_pct * 100).toFixed(1) : '—'}% NAV</div></div>` : ''}
+        <div class="box"><div class="label">Giải ngân</div><div class="val">${pct(e.exposure)}</div></div>
+        <div class="box"><div class="label">Số vị thế</div><div class="val">${e.n_positions ?? '—'}</div></div>
+        <div class="box"><div class="label">Ngày</div><div class="val" style="font-size:14px">${date}</div></div>`;
+      const H = d.holdings || [];
+      const maxw = Math.max(0.01, ...H.map(h => h.entry_weight || h.weight || 0));
+      document.getElementById('holdings').innerHTML = H.length ? `
+        <table><thead><tr><th>Mã</th><th class="num">Giá mua</th><th style="width:26%">Tỉ trọng vào</th><th class="num">Lãi/lỗ (chưa chốt)</th><th class="num">Phiên giữ</th><th class="num">Conv</th><th></th></tr></thead>
+        <tbody>${H.map(h => { const ew = h.entry_weight != null ? h.entry_weight : h.weight; return `<tr>
+          <td><b>${esc(h.symbol)}</b></td>
+          <td class="num">${h.entry_price != null ? h.entry_price.toFixed(2) : '—'}</td>
+          <td><div class="wbar"><span style="width:${(ew / maxw * 100).toFixed(0)}%"></span><em>${pct(ew)}</em></div></td>
+          <td class="num ${cls(h.unreal_pnl)}">${signed(h.unreal_pnl)}</td>
+          <td class="num">${h.days_held ?? ''}</td>
+          <td class="num">${h.conv != null ? (h.conv * 100).toFixed(0) : '—'}</td>
+          <td>${h.is_new ? '<span class="tag new">MỚI</span>' : ''}</td></tr>`; }).join('')}</tbody></table>` : '<span class="muted">Không có vị thế.</span>';
+      const ent = d.entries || [];
+      document.getElementById('entries').innerHTML = ent.length ? ent.map(x => `<span class="tag new" style="margin:2px;display:inline-block">${esc(x.symbol)} ${pct(x.entry_weight != null ? x.entry_weight : x.weight)}</span>`).join(' ') : '<span class="muted">—</span>';
+      const sn = d.sell_next || [];
+      const rlab = { signal: 'tín hiệu', max_hold: 'hết hạn giữ', trailing_stop: 'trailing', overext: 'quá căng', hard_stop: 'cắt lỗ', preempt: 'bị đuổi', stale: 'chết vốn' };
+      document.getElementById('sellNext').innerHTML = sn.length ? sn.map(x => `<span class="tag ${x.exit_reason === 'preempt' ? 'preempt' : 'signal'}" style="margin:2px;display:inline-block">${esc(x.symbol)} · ${rlab[x.exit_reason] || esc(x.exit_reason)}</span>`).join(' ') + '<div class="hint" style="margin-top:6px">Thoát THỰC ở phiên kế (T+1), quyết định từ dữ liệu đến hôm nay. Không chỉ tín hiệu — còn max_hold/trailing/preempt.</div>' : '<span class="muted">Không có lệnh bán cho phiên tới.</span>';
+      const pn = d.pending || [];
+      const nfill = pn.filter(p => p.outcome === 'fill').length;
+      document.getElementById('pending').innerHTML = pn.length ? `<div class="hint" style="margin-bottom:6px">${pn.length} lệnh chờ · ${nfill} sẽ khớp · ${pn.length - nfill} hết hạn (post-hoc)</div>
+        <table><thead><tr><th>Mã</th><th class="num">Chờ (bar)</th><th class="num">Limit</th><th class="num">% cần giảm</th><th>Kết quả</th></tr></thead>
+        <tbody>${pn.map(p => `<tr>
+          <td><b>${esc(p.symbol)}</b> <span class="muted" style="font-size:10px">${esc(p.signal_date)}</span></td>
+          <td class="num">${p.days_waiting ?? ''}</td>
+          <td class="num">${p.limit_price != null ? p.limit_price.toFixed(2) : '—'}</td>
+          <td class="num ${p.pct_to_limit != null && p.pct_to_limit <= 0 ? 'pos' : ''}">${p.pct_to_limit != null ? (p.pct_to_limit * 100).toFixed(1) + '%' : '—'}</td>
+          <td>${p.outcome === 'fill' ? '<span class="tag fill">sẽ khớp</span>' : '<span class="tag signal">hết hạn</span>'}</td></tr>`).join('')}</tbody></table>` : '<span class="muted">Không có lệnh chờ khớp.</span>';
+      const ex = d.exits || [];
+      document.getElementById('exits').innerHTML = ex.length ? `
+        <table><thead><tr><th>Mã</th><th class="num">Mua</th><th class="num">Bán</th><th class="num">Lãi/lỗ</th><th class="num">Phiên</th><th>Lý do</th></tr></thead>
+        <tbody>${ex.map(x => `<tr>
+          <td><b>${esc(x.symbol)}</b> <span class="muted" style="font-size:10px">${esc(x.entry_date) || ''}</span></td>
+          <td class="num">${x.entry_price != null ? x.entry_price.toFixed(2) : '—'}</td>
+          <td class="num">${x.exit_price != null ? x.exit_price.toFixed(2) : '—'}</td>
+          <td class="num ${cls(x.pnl_pct)}">${signed(x.pnl_pct)}</td>
+          <td class="num">${x.holding_days ?? ''}</td>
+          <td>${x.exit_reason === 'preempt' ? '<span class="tag preempt">bị đuổi</span>' : esc(x.exit_reason)}</td></tr>`).join('')}</tbody></table>` : '<span class="muted">—</span>';
+      const sg = d.signals || [];
+      document.getElementById('signals').innerHTML = sg.length ? `<table><thead><tr><th>Mã</th><th class="num">Score</th><th></th></tr></thead><tbody>${sg.map(s => `<tr><td>${esc(s.symbol)}</td><td class="num">${s.score != null ? s.score.toFixed(3) : '—'}</td><td>${s.filled ? '<span class="tag fill">đã vào</span>' : '<span class="tag signal">bỏ qua</span>'}</td></tr>`).join('')}</tbody></table>` : '<span class="muted">Không có tín hiệu mua.</span>';
+    }
+
+    function renderLedger() {
+      const q = (document.getElementById('ledgerSearch').value || '').trim().toUpperCase();
+      const asOf = document.getElementById('asOfView').checked;
+      let rows = allTrades.filter(t => t.exit_date && t.exit_reason !== 'open');
+      if (asOf && curDate) rows = rows.filter(t => String(t.exit_date) <= String(curDate));
+      if (q) rows = rows.filter(t => (t.symbol || '').toUpperCase().includes(q));
+      rows.sort((a, b) => String(b.exit_date || '').localeCompare(String(a.exit_date || '')));
+      const wins = rows.filter(t => (t.pnl_pct || 0) > 0).length;
+      const avg = rows.length ? rows.reduce((s, t) => s + (t.pnl_pct || 0), 0) / rows.length : 0;
+      document.getElementById('ledgerCount').textContent = `${rows.length} lệnh${asOf && curDate ? ` · đã chốt đến ${curDate}` : ''}`;
+      document.getElementById('ledgerStat').textContent = rows.length ? `Thắng ${(wins / rows.length * 100).toFixed(0)}% · TB ${signed(avg)}` : '';
+      const tb = document.querySelector('#ledger tbody');
+      tb.innerHTML = rows.slice(0, 500).map(t => `<tr>
+        <td><b>${esc(t.symbol)}</b></td>
+        <td>${esc(t.entry_date)}</td>
+        <td>${esc(t.exit_date) || '<span class="muted">đang mở</span>'}</td>
+        <td class="num">${t.holding_days != null ? Math.round(t.holding_days) : ''}</td>
+        <td class="num ${cls(t.pnl_pct)}">${signed(t.pnl_pct)}</td>
+        <td>${t.exit_reason === 'preempt' ? '<span class="tag preempt">bị đuổi</span>' : esc(t.exit_reason)}</td></tr>`).join('')
+        + (rows.length > 500 ? `<tr><td colspan="6" class="muted">… hiển thị 500/${rows.length} (lọc mã để xem thêm)</td></tr>` : '');
+    }
+
+    init();
+  </script>
+</body>
+</html>

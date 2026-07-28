@@ -11,9 +11,9 @@ import pandas as pd
 from stock_ml.portfolio.constants import CS4
 
 
-def build_market_panel(px: pd.DataFrame):
+def build_market_panel(px: pd.DataFrame, ret_win: int = 7):
     """px: columns symbol,date,low,close,high (full market, from market_start).
-    Returns CLO/LO/DIDX/INV price arrays + CSm (conviction) / R5 (ret7) maps."""
+    Returns CLO/LO/DIDX/INV price arrays + CSm (conviction) / R5 (ret-gate) maps."""
     px = px.copy()
     px["date"] = pd.to_datetime(px["date"])
     CLO, LO, DIDX, INV, parts = {}, {}, {}, {}, []
@@ -27,7 +27,7 @@ def build_market_panel(px: pd.DataFrame):
         g["rsi14"] = 100 - 100 / (1 + up / (dn + 1e-9)); g["ret20"] = c / c.shift(20) - 1
         tr_ = pd.concat([h - l, (h - c.shift()).abs(), (l - c.shift()).abs()], axis=1).max(axis=1)
         g["atrpct"] = tr_.rolling(14).mean() / c; g["dist_ma50"] = c / c.rolling(50).mean() - 1
-        g["ret5"] = c / c.shift(7) - 1  # ret7 window
+        g["ret5"] = c / c.shift(ret_win) - 1  # ret-gate window (champion: 7)
         parts.append(g[["symbol", "date"] + CS4 + ["atrpct", "dist_ma50", "ret5"]])
     P = pd.concat(parts, ignore_index=True)
     for col in CS4 + ["atrpct", "dist_ma50"]:

@@ -4,15 +4,16 @@ from __future__ import annotations
 import pandas as pd
 
 
-def rewrite(base_trades: pd.DataFrame, CLO, DIDX, INV, gt: float) -> pd.DataFrame:
+def rewrite(base_trades: pd.DataFrame, CLO, DIDX, INV, gt: float, ec_check_bar: int = 2) -> pd.DataFrame:
+    ecb = ec_check_bar
     ned, nep, nreason = [], [], []
     for r in base_trades.itertuples():
         di = DIDX.get(r.symbol, {}); ei = di.get(str(r.entry_date)[:10]); xi = di.get(str(r.exit_date)[:10])
         if ei is None or xi is None or xi <= ei:
             ned.append(r.exit_date); nep.append(r.exit_price); nreason.append(r.exit_reason); continue
         c = CLO[r.symbol]
-        if xi > ei + 3 and c[ei + 2] / r.entry_price - 1.0 < 0.0:               # red@s2 -> early-cut s3
-            ned.append(INV[r.symbol][ei + 3]); nep.append(float(c[ei + 3])); nreason.append("early_cut")
+        if xi > ei + ecb + 1 and c[ei + ecb] / r.entry_price - 1.0 < 0.0:       # red@s{ecb} -> early-cut next bar
+            ned.append(INV[r.symbol][ei + ecb + 1]); nep.append(float(c[ei + ecb + 1])); nreason.append("early_cut")
         else:                                                                  # green@s2 -> green-trail
             ek, ep_, rs, peak = xi, r.exit_price, r.exit_reason, c[ei]
             for b in range(ei + 2, xi + 1):

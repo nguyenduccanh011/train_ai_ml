@@ -43,8 +43,8 @@ def run_portfolio(base_trades: pd.DataFrame, signals: pd.DataFrame, *,
 
     syms = sorted(closed.symbol.unique().tolist())
     pm = meta_priority(closed, signals, ctx.meta_frame(syms))
-    CLO, LO, DIDX, INV, CSm, R5 = build_market_panel(ctx.market_frame(C.market_start))
-    rw = rewrite(closed, CLO, DIDX, INV, C.gt)
+    CLO, LO, DIDX, INV, CSm, R5 = build_market_panel(ctx.market_frame(C.market_start), ret_win=C.ret_win)
+    rw = rewrite(closed, CLO, DIDX, INV, C.gt, C.ec_check_bar) if C.rewrite_on else closed.copy()
 
     cm = {(r.symbol, r.ed): CSm.get((r.symbol, str(r.sigd.date())), 0.5) for r in rw.itertuples()}
     r5 = {(r.symbol, r.ed): R5.get((r.symbol, str(r.sigd.date())), np.nan) for r in rw.itertuples()}

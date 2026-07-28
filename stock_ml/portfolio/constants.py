@@ -33,3 +33,7 @@ class PortfolioConstants:
                                    # parity-preserved — causal-ize post-refactor, see design doc §6)
     date_lo: str = "2020-01-01"
     market_start: str = "2018-06-01"
+    # research-lever knobs (defaults = champion gtos behaviour, golden-guarded):
+    rewrite_on: bool = True        # False = no exit rewrite at all (ret5g/ret7g variants)
+    ec_check_bar: int = 2          # early-cut checks close[entry+N] red, cuts at N+1 (gt1 uses 1)
+    ret_win: int = 7               # ret-gate momentum window (ret5g variant uses 5)

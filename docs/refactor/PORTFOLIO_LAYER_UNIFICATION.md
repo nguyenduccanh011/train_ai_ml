@@ -142,11 +142,18 @@ PortfolioContext (nguồn data trừu tượng hóa):
 - Guard: `run_portfolio(DuckDBContext, champion_base)` == golden bước 0 (3-seed 140.3% / -10.8%,
   trades MD5 từng seed; s42 142.3% / -10.7% dùng làm smoke nhanh giữa chừng).
 
-### Bước 4 — Backtest/đăng-ký chuyển sang dùng module
-- Sửa `score_nav`/`hb_deploy`-thay-thế để gọi `stock_ml.portfolio.run_portfolio`.
-- Xóa dần 10 bản `hb_deploy_*.py` (chúng chỉ khác ở 1 lever → biến thành `PortfolioConstants` variants).
-- `_champ_prod_replay.py` → thin wrapper gọi module (giữ CLI để so lịch sử), hoặc xóa sau khi golden pass.
-- Guard: re-đăng-ký champion → leaderboard cagr_adv/cagr_t2 KHÔNG đổi.
+### Bước 4 — Backtest/đăng-ký chuyển sang dùng module — **ĐÃ LÀM 2026-07-28**
+- PHÁT HIỆN khi thực hiện: `score_nav_leaderboard.py` KHÔNG chứa overlay — nó chấm NAV K25
+  equal-weight (thước leaderboard CAGR(NAV), nh_nav2 shuffle_stats), một thước ĐO KHÁC với
+  Stage-2 → không sửa gì, leaderboard tự bất biến. Mọi lần populate portfolio-tier MỚI từ nay
+  phải gọi `stock_ml.portfolio.run_portfolio`.
+- 10 bản `hb_deploy_*.py` ĐÃ XÓA; lever chuyển thành `stock_ml/portfolio/variants.py`
+  (os_pct=100 tắt overshoot, gt=1.0 tắt green-trail, rewrite_on/ec_check_bar/ret_win mới —
+  default = gtos, golden re-verify sau khi wire). dl63-family (~150 dòng gate riêng) KHÔNG port —
+  lấy lại từ git 9e37efd7 nếu cần. Chỉ mapping `gtos` là golden-verified; các mapping khác phải
+  verify vs git trước khi dùng cho số đăng ký.
+- `_champ_prod_replay.py` GIỮ NGUYÊN (không wrapper): nó là bản đối chiếu ĐỘC LẬP cho golden test —
+  wrapper hóa sẽ biến test thành module-tự-so-với-mình (mất giá trị cross-implementation).
 
 ### Bước 5 — Serving dùng CÙNG module (qua wheel)
 - Bump `stock_ml_core` wheel gồm `stock_ml/portfolio/`. **BẮT BUỘC sửa `pyproject.stock_ml_core.toml`**:

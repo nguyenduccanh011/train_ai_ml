@@ -155,7 +155,15 @@ PortfolioContext (nguồn data trừu tượng hóa):
 - `_champ_prod_replay.py` GIỮ NGUYÊN (không wrapper): nó là bản đối chiếu ĐỘC LẬP cho golden test —
   wrapper hóa sẽ biến test thành module-tự-so-với-mình (mất giá trị cross-implementation).
 
-### Bước 5 — Serving dùng CÙNG module (qua wheel)
+### Bước 5 — Serving dùng CÙNG module (qua wheel) — **ĐÃ LÀM 2026-07-28**
+- Wheel `stock_ml_core` 0.3.4 → **0.4.0**: thêm `stock_ml.portfolio*` vào include; `duckdb` KHÔNG
+  vào deps (context-injected đúng quyết định §6). Build bằng swap `pyproject.stock_ml_core.toml`
+  → `pyproject.toml` tạm; wheel copy sang `stock-serving/dist/`.
+- `serving/portfolio/core.py` → thin wrapper 19 dòng (giữ nguyên chữ ký + `PortfolioConstants`),
+  xóa 347 dòng viết tay (bản gốc bảo tồn tại stock-serving ce520ac).
+- Guard PASS: serving tests **27/27**; parity qua wrapper+wheel trên fixture s42 =
+  NAV x318.36 / 142.3% / −10.7% byte-exact vs golden.
+- (Kế hoạch gốc bên dưới, giữ để tham chiếu.)
 - Bump `stock_ml_core` wheel gồm `stock_ml/portfolio/`. **BẮT BUỘC sửa `pyproject.stock_ml_core.toml`**:
   - Thêm `"stock_ml.portfolio*"` vào `[tool.setuptools.packages.find].include` (hiện chỉ có
     `stock_ml.core*` + `stock_ml.src*` → package mới sẽ KHÔNG vào wheel, serving import fail).

@@ -3371,8 +3371,9 @@ def run_experiment(
         )
 
     engine_cfg = cfg.engine.copy()
-    # Portfolio sub-config is consumed by the new alpha->portfolio->execution path,
-    # not by EngineConfig — pull it out before building the engine.
+    # Portfolio sub-config belonged to the REMOVED legacy alpha->portfolio->execution
+    # tier. Still popped so old templates carrying the key don't break EngineConfig;
+    # enabled=true now fails loud below.
     portfolio_cfg = engine_cfg.pop("portfolio", {}) or {}
     # entry_gate / entry_raw_threshold are consumed by the dual-ML recombine (buy gate /
     # raw-score buy cutoff), not EngineConfig.
@@ -3431,33 +3432,13 @@ def run_experiment(
 
     equity_curve = None
     if portfolio_cfg.get("enabled"):
-        # New tier: continuous score -> target weights -> capital-aware execution.
-        from stock_ml.src.backtest.defaults import DEFAULT_INITIAL_CAPITAL
-        from stock_ml.src.execution import run_portfolio_backtest
-        from stock_ml.src.portfolio.factory import (
-            build_portfolio_constructor,
-            build_portfolio_context,
+        raise ValueError(
+            f"[{cfg.name}] engine.portfolio.enabled is no longer supported — the legacy "
+            "alpha->portfolio->execution tier (src/portfolio + src/execution) was removed. "
+            "Only refuted xsec top-k templates (629-631) ever enabled it."
         )
-
-        print(f"[{cfg.name}] portfolio backtest ({portfolio_cfg.get('policy', 'threshold_binary')})")
-        alpha_frame = signals_all[["symbol", "date", "score"]].copy()
-        if portfolio_cfg.get("cross_sectional_z"):
-            # Cross-sectional alpha: per-date z of the raw score so it is comparable ACROSS
-            # symbols (raw ML output carries a per-symbol level that makes top-K pick the same
-            # structurally-high-vol names forever -> static bad buy&hold). z-per-date turns it
-            # into a relative-strength rank, which is what top-K selection needs.
-            g = alpha_frame.groupby("date")["score"]
-            alpha_frame["score"] = ((alpha_frame["score"] - g.transform("mean"))
-                                    / (g.transform("std") + 1e-9))
-            print(f"[{cfg.name}] cross-sectional z-normalized alpha (per-date)")
-        constructor = build_portfolio_constructor(portfolio_cfg)
-        pctx = build_portfolio_context(portfolio_cfg, direction=cfg.direction, ohlcv=ohlcv)
-        targets = constructor.build(alpha_frame, pctx)
-        init_cap = portfolio_cfg.get("initial_capital", DEFAULT_INITIAL_CAPITAL)
-        trades, equity_curve = run_portfolio_backtest(targets, ohlcv, engine, init_cap)
-    else:
-        print(f"[{cfg.name}] backtesting {len(signals_all)} signals")
-        trades = run_backtest(signals_all, ohlcv, engine)
+    print(f"[{cfg.name}] backtesting {len(signals_all)} signals")
+    trades = run_backtest(signals_all, ohlcv, engine)
     trades_df = trades_to_dataframe(trades)
 
     # A position still open at the last evaluated bar is a window-end carry, not a real
@@ -3514,7 +3495,7 @@ def run_experiment(
     )
     report = audit_report(
         trades_df, signals_all, windows=audit_windows, min_gap_days=required_gap,
-        portfolio_mode=bool(portfolio_cfg.get("enabled")),
+        portfolio_mode=False,
     )
     print_report(report)
 

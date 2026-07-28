@@ -39,5 +39,15 @@
     }
   },
   "aggregate": { "t2_cagr_mean": "140.3", "t2_dd_mean": "-10.8" },
+  "causal_default": {
+    "description": "stat_mode=causal (deploy DEFAULT since 2026-07-29): expanding per-year sizing mu/sd/off + osthr, mirrors the SKIP gate. Module-only regression pin (no independent reference — the replay is full-mode). Honest backtest of live behaviour: full-history stats at deploy time are expanding by construction.",
+    "pinned_at": "2026-07-29",
+    "seeds": {
+      "42":  { "t2_nav_x": "295.69", "t2_cagr": "139.5", "t2_dd": "-11.8" },
+      "21":  { "t2_nav_x": "282.17", "t2_cagr": "137.8", "t2_dd": "-13.6" },
+      "123": { "t2_nav_x": "284.82", "t2_cagr": "138.2", "t2_dd": "-13.6" }
+    },
+    "aggregate": { "t2_cagr_mean": "138.5", "t2_dd_mean": "-13.0" }
+  },
   "reference": "registered champion DuckDB (train data, AAS/BSI not back-adjusted): T+2 132.1% / -13.8% — lower by data quality, not logic"
 }

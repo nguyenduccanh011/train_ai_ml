@@ -38,8 +38,10 @@ class PortfolioConstants:
     ec_check_bar: int = 2          # early-cut checks close[entry+N] red, cuts at N+1 (gt1 uses 1)
     ret_win: int = 7               # ret-gate momentum window (ret5g variant uses 5)
     # sizing/overshoot statistics mode:
-    #   full   = mu/sd/off + osthr from the WHOLE period (champion parity; adding a future
-    #            fold retroactively shifts past years' weights — known, deliberate)
-    #   causal = expanding per-year like the SKIP gate (year with <30 prior trades ->
-    #            neutral w=1.0 / no overshoot filter); adding a fold never changes the past
-    stat_mode: str = "full"
+    #   causal (DEFAULT, promoted 2026-07-29) = expanding per-year like the SKIP gate (year
+    #            with <30 prior trades -> neutral w=1.0 / no overshoot filter); adding a fold
+    #            never changes the past. At deploy time full-history stats ARE expanding, so
+    #            causal is the honest backtest of live behaviour: 3-seed T+2 138.5% / -13.0%.
+    #   full   = mu/sd/off + osthr from the WHOLE period — kept for parity with the
+    #            _champ_prod_replay reference + the original champion golden (140.3% / -10.8%).
+    stat_mode: str = "causal"

@@ -223,11 +223,13 @@ Nếu bước nào phá byte-parity → dừng, tìm nguyên nhân, KHÔNG "ch�
 - **Rủi ro lớn nhất = Bước 2 (panel)**: nếu build_market_panel khác nhau (thứ tự symbol, NaN-fill,
   ngày cutoff) → conviction dịch → phá golden. Test panel TRƯỚC khi ghép.
 - **Bản tham chiếu**: ĐÃ track hết ở bước 0 (xem §4) — hết rủi ro mất bản gốc.
-- **KNOWN NON-CAUSAL (giữ nguyên có chủ đích, ĐỪNG gắn cờ leak khi audit lại):** ngoài `osthr` p90
-  in-sample (đã nêu trên), tầng SIZING cũng dùng thống kê FULL-PERIOD: `mu`/`sd` chuẩn hóa z conviction
-  và offset `off` recentering (`core.py` ~dòng 283/333/336). Thêm fold tương lai → mu/sd/off đổi →
-  weight các năm CŨ đổi (cùng lớp vấn đề đã sửa cho SKIP fixed→causal). GIỮ NGUYÊN trong refactor vì
-  byte-parity; causal-ize (expanding per-year như SKIP) là việc SAU refactor, đổi số → golden re-pin riêng.
+- **SIZING/OSTHR STATS — ĐÃ CAUSAL-IZE, promote DEFAULT 2026-07-29:** `stat_mode` trong
+  `PortfolioConstants`: `causal` (DEFAULT deploy) = mu/sd/off + osthr expanding per-year như SKIP
+  (<30 trade lịch sử → w=1.0/không lọc os); thêm fold KHÔNG đổi năm cũ. Đo 3-seed T+2:
+  **138.5% / −13.0%** (pin trong golden JSON mục `causal_default`, guard
+  `test_module_causal_default_golden`). `full` giữ lại làm parity-mode với `_champ_prod_replay`
+  (golden gốc 140.3%/−10.8% — số này NỊNH quá khứ vì năm cũ dùng stats tương lai; lúc deploy
+  full-history stats tự nhiên là expanding → causal mới là ước lượng live trung thực).
 - **CHỐT duckdb-in-wheel**: KHÔNG thêm `duckdb` vào dependencies wheel. `PortfolioContext` inject
   reader (backtest tự import duckdb phía caller; serving đã có duckdb trong env riêng). Wheel giữ
   inference-only đúng như `test_core_facade.py` verify.

@@ -2,7 +2,9 @@
 
 > Mục tiêu: model universe-động (top-N thanh khoản point-in-time, khác symbols mỗi fold)
 > chạy trong **1 run walk-forward liền mạch** — thay vì 6 run per-year ghép offline.
-> Ngày lập: 2026-07-28.
+> Ngày lập: 2026-07-28. **Bổ sung 2026-07-29: §7 — 4 yêu cầu phía ĐĂNG KÝ** (bắt buộc đọc
+> cùng 5 bước engine; đăng ký overlay xem thêm
+> [refactor/PORTFOLIO_REGISTRATION_PIPELINE.md](refactor/PORTFOLIO_REGISTRATION_PIPELINE.md)).
 
 ---
 
@@ -137,3 +139,51 @@ Hiện chấm per-run K25 equal-weight. Với run động 1-liền-mạch, nó c
 - Kết quả dynamic-900 mục tiêu tái tạo: CAGR 205.6% / DD −17.6% (K10, full-price, NAV≤1).
 - Snapshot pattern: `stock_ml/tests/test_baseline_snapshot.py`.
 - Cross-sectional hiện tại: `experiment.py:1681` `_load_xsec_features` (docstring: "RANK vs ALL symbols").
+
+---
+
+## 7. Bổ sung 2026-07-29 — 4 yêu cầu phía ĐĂNG KÝ (để lên leaderboard chuẩn)
+
+5 bước §3 mới lo phía ENGINE. Để một run universe-động đăng ký chính thức (leaderboard +
+tab danh mục + tái lập được), cần thêm:
+
+### 7.1 Universe = POLICY có danh tính + snapshot vật chất hóa từng fold
+- `strategy_templates.universe_slug` trỏ vào một POLICY (row trong `universe_sets` với
+  `selector` JSON = `{mode, n, metric, lookback, min_sessions, exclude}`), KHÔNG phải danh
+  sách mã cứng.
+- Mỗi run: sau khi resolver chạy, **materialize danh sách đã resolve của TỪNG fold** vào
+  `universe_versions`/`universe_symbols` (key theo `(slug, fold_year)`) + hash danh sách.
+  Lý do: data sau này được vá CA/refill → ADV đổi → resolve lại có thể lệch mã; snapshot làm
+  run tái lập byte-stable và audit được "fold 2023 gồm đúng những mã nào". Serving đọc CÙNG
+  snapshot (hoặc resolve live với policy y hệt — causal nên hợp lệ, nhưng phải log hash để đối chiếu).
+
+### 7.2 Universe PHẢI vào cache-key (bug đã từng dính — bắt buộc)
+- Sự cố thật 2026-07-26: universe không nằm trong cache-key → run PIT **ghi đè cache của base
+  61-mã** (phải khôi phục). Feature/prediction cache key = hash(config + universe policy +
+  resolved fold lists). Test guard: chạy run 61-mã rồi run dyn200 rồi CHẠY LẠI run 61-mã —
+  kết quả byte-identical lần đầu.
+
+### 7.3 Chốt tường minh chính sách panel cross-sectional (2 tầng, train↔serving khớp)
+- Có 2 tầng rank chịu ảnh hưởng panel: **Stage-1** (`_load_xsec_features` — RS ranks vào model)
+  và **Stage-2** (conviction `cs5_ma50` trong `stock_ml/portfolio` — `ctx.market_frame`).
+- Hai lựa chọn hợp lệ: rank trên **universe của fold** (§3 bước 4 đề xuất) hay trên
+  **full-panel** (dyn400 trước đây cố ý chọn full-488 và serving khớp). Không hard-code —
+  thành field template `xsec_panel: fold_universe | full`, ghi vào cả
+  `overlay_config_hash` (doc PIPELINE), và train↔serving BẮT BUỘC cùng giá trị.
+- Đã đo: panel là siêu-tham-số (CAGR dịch hàng chục pp khi nới panel); SKIP gate causal
+  panel-adaptive trong overlay được thiết kế để hấp thụ — nhưng chỉ khi policy nhất quán.
+
+### 7.4 Hiển thị & so sánh trên leaderboard
+- **ĐÍNH CHÍNH fairness (user, 2026-07-29)**: phán quyết cũ "mở universe = ăn gian" chỉ đúng
+  thời xếp hạng theo tổng-%-cộng-dồn-lệnh. Bảng nay xếp theo **CAGR trên NAV, tổng vốn ≤ 1,
+  K-slot** → universe rộng không cộng return máy móc, chỉ mở tập lựa chọn cạnh tranh cùng vốn
+  = so sánh CÔNG BẰNG mọi cỡ universe trên cột NAV (`cagr_overlay`/`cagr_nav`). KHÔNG cần
+  phân lớp xếp hạng.
+- Còn lại 2 ghi chú: (a) cột linear cũ (`pnl_pct`/`total_pnl`/composite) vẫn nhạy số-mã —
+  đừng dùng so chéo universe; (b) hiện `universe_slug`/`n_symbols` trên bảng làm metadata
+  DIỄN GIẢI risk-profile (universe rộng → beta mid/small, DD sâu hơn — đọc kèm Calmar/DD),
+  không phải rào so sánh.
+
+**Ước lượng thêm cho §7**: ~0.5-1 ngày (7.1 nửa ngày; 7.2 vài giờ nhưng test cẩn thận;
+7.3 là quyết định + field; 7.4 chỉ hiển thị). Thứ tự khuyến nghị: làm SAU B1-B5 của
+PORTFOLIO_REGISTRATION_PIPELINE để `register_overlay.py` có sẵn chỗ ghi config hash.

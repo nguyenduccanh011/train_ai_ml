@@ -26,7 +26,8 @@ async def _nav_metrics_for(session: AsyncSession, run_ids: list[str]) -> dict[st
     try:
         result = await session.execute(
             text(
-                "SELECT run_id, nav_adv, cagr_adv, maxdd_nav, cagr_t2, maxdd_t2 "
+                "SELECT run_id, nav_adv, cagr_adv, maxdd_nav, cagr_t2, maxdd_t2, "
+                "cagr_overlay, maxdd_overlay, overlay_note "
                 "FROM leaderboard_nav WHERE run_id IN :ids"
             ).bindparams(bindparam("ids", expanding=True)),
             {"ids": run_ids},
@@ -38,6 +39,9 @@ async def _nav_metrics_for(session: AsyncSession, run_ids: list[str]) -> dict[st
                 "maxdd_nav": r.maxdd_nav,
                 "cagr_t2": r.cagr_t2,
                 "maxdd_t2": r.maxdd_t2,
+                "cagr_overlay": r.cagr_overlay,
+                "maxdd_overlay": r.maxdd_overlay,
+                "overlay_note": r.overlay_note,
             }
             for r in result.fetchall()
         }
@@ -120,6 +124,10 @@ async def _leaderboard_from_db(
             "maxdd_nav": nav_map.get(m.run_id, {}).get("maxdd_nav"),
             "cagr_t2": nav_map.get(m.run_id, {}).get("cagr_t2"),
             "maxdd_t2": nav_map.get(m.run_id, {}).get("maxdd_t2"),
+            # Stage-2 overlay chinh thuc (stock_ml.portfolio, stat_mode=causal)
+            "cagr_overlay": nav_map.get(m.run_id, {}).get("cagr_overlay"),
+            "maxdd_overlay": nav_map.get(m.run_id, {}).get("maxdd_overlay"),
+            "overlay_note": nav_map.get(m.run_id, {}).get("overlay_note"),
         }
         for m in models
     ]

@@ -391,6 +391,7 @@ function renderTable() {
         <td class="num positive">${row.cagr != null ? formatNum(row.cagr * 100, 1) + '%' : '—'}</td>
         <td class="num ${row.cagr_nav != null ? pnlClass(row.cagr_nav) : 'muted'}" title="${row.nav_adv != null ? 'NAV ×' + formatNum(row.nav_adv, 2) + ' (T+0 lý thuyết)' : 'chưa chấm NAV sim'}">${row.cagr_nav != null ? formatNum(row.cagr_nav * 100, 1) + '%' : '—'}</td>
         <td class="num ${row.cagr_t2 != null ? pnlClass(row.cagr_t2) : 'muted'}" title="${row.cagr_t2 != null ? 'CAGR dưới T+2 thực tế' + (row.maxdd_t2 != null ? ' · DD ' + formatNum(row.maxdd_t2 * 100, 1) + '%' : '') : 'chưa có T+2 (không phải model combo offline)'}">${row.cagr_t2 != null ? formatNum(row.cagr_t2 * 100, 1) + '%' : '—'}</td>
+        <td class="num ${row.cagr_overlay != null ? pnlClass(row.cagr_overlay) : 'muted'}" title="${row.cagr_overlay != null ? 'Stage-2 overlay chính thức (stock_ml.portfolio)' + (row.maxdd_overlay != null ? ' · DD ' + formatNum(row.maxdd_overlay * 100, 1) + '%' : '') + (row.overlay_note ? ' · ' + String(row.overlay_note).replace(/"/g, '') : '') : 'chưa chạy overlay chính thức'}">${row.cagr_overlay != null ? formatNum(row.cagr_overlay * 100, 1) + '%' : '—'}</td>
         <td class="num ${row.maxdd_nav != null ? 'negative' : 'muted'}">${row.maxdd_nav != null ? formatNum(row.maxdd_nav * 100, 1) + '%' : '—'}</td>
         <td class="num">${formatNum(row.max_win * 100, 2)}%</td>
         <td class="num">${formatNum(row.max_loss * 100, 2)}%</td>
@@ -635,7 +636,7 @@ function bindEvents() {
       if (sortCol === col) sortDir *= -1;
       else {
         sortCol = col;
-        sortDir = ['composite_score', 'trades', 'wr', 'avg_pnl', 'total_pnl', 'pf', 'sharpe', 'cagr', 'cagr_nav', 'cagr_t2'].includes(col) ? -1 : 1;
+        sortDir = ['composite_score', 'trades', 'wr', 'avg_pnl', 'total_pnl', 'pf', 'sharpe', 'cagr', 'cagr_nav', 'cagr_t2', 'cagr_overlay'].includes(col) ? -1 : 1;
       }
       applyFilters();
     });

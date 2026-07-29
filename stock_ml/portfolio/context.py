@@ -15,7 +15,9 @@ class PortfolioContext:
     NAV-mark price source, and the date_hi cutoff."""
 
     def market_frame(self, start: str) -> pd.DataFrame:
-        """Full-market OHLC slice: symbol,date,low,close,high — from `start`, no upper cut."""
+        """Full-market OHLC slice: symbol,date,low,close,high — from `start`, no upper cut.
+        `volume` column is OPTIONAL — required only when the liq-collapse filter
+        (PortfolioConstants.liqcol_adv10_ty) is enabled."""
         raise NotImplementedError
 
     def meta_frame(self, symbols: list[str]) -> pd.DataFrame:
@@ -39,7 +41,7 @@ class DuckDBContext(PortfolioContext):
     def market_frame(self, start: str) -> pd.DataFrame:
         import duckdb
         cx = duckdb.connect(self.market_db, read_only=True)
-        px = cx.execute("SELECT symbol,date,low,close,high FROM ohlcv WHERE timeframe='1D' AND date>=? "
+        px = cx.execute("SELECT symbol,date,low,close,high,volume FROM ohlcv WHERE timeframe='1D' AND date>=? "
                         "ORDER BY symbol,date", [start]).fetchdf()
         cx.close()
         return px

@@ -43,7 +43,18 @@ def run_portfolio(base_trades: pd.DataFrame, signals: pd.DataFrame, *,
 
     syms = sorted(closed.symbol.unique().tolist())
     pm = meta_priority(closed, signals, ctx.meta_frame(syms))
-    CLO, LO, DIDX, INV, CSm, R5 = build_market_panel(ctx.market_frame(C.market_start), ret_win=C.ret_win)
+    mf = ctx.market_frame(C.market_start)
+    CLO, LO, DIDX, INV, CSm, R5 = build_market_panel(mf, ret_win=C.ret_win)
+    # liq-collapse veto data (default off): per-symbol traded-value history
+    _tv = None
+    if C.liqcol_adv10_ty is not None or C.w_liq_full_ty is not None:
+        if "volume" not in mf.columns:
+            raise ValueError("liqcol filter needs ctx.market_frame to include a volume column")
+        _m = mf[["symbol", "date", "close", "volume"]].copy()
+        _m["date"] = pd.to_datetime(_m["date"])
+        _m["tvv"] = _m["close"].astype(float) * _m["volume"].astype(float)
+        _tv = {s: (g["date"].to_numpy(), g["tvv"].to_numpy())
+               for s, g in _m.sort_values(["symbol", "date"]).groupby("symbol")}
     rw = rewrite(closed, CLO, DIDX, INV, C.gt, C.ec_check_bar) if C.rewrite_on else closed.copy()
 
     cm = {(r.symbol, r.ed): CSm.get((r.symbol, str(r.sigd.date())), 0.5) for r in rw.itertuples()}
@@ -109,9 +120,52 @@ def run_portfolio(base_trades: pd.DataFrame, signals: pd.DataFrame, *,
         for y in sorted({y for y, _ in yr_w}):
             past = [w for yy, w in yr_w if yy < y]
             off_by[y] = (1.0 - statistics.mean(past)) if len(past) >= 30 else 0.0
+    # slow regime valve (default off): shrink NEW fills' weight while market breadth is weak
+    weak_breadth_dates = None
+    if C.regime_w_scale is not None:
+        # market breadth = fraction of panel symbols above their own 50-bar MA (causal)
+        above, total = {}, {}
+        for s, a in CLO.items():
+            ma = pd.Series(a).rolling(50, min_periods=50).mean().to_numpy()
+            inv = INV[s]
+            for i in range(len(a)):
+                if np.isfinite(ma[i]):
+                    d = inv[i]
+                    total[d] = total.get(d, 0) + 1
+                    if a[i] > ma[i]:
+                        above[d] = above.get(d, 0) + 1
+        weak_breadth_dates = frozenset(
+            d for d, n in total.items() if n >= 30 and above.get(d, 0) / n < C.regime_breadth_thr)
+
+    # sizing-experiment data (default off)
+    _vol20 = None
+    if C.w_invvol is not None:
+        _vol20 = {s: pd.Series(a).pct_change().rolling(20).std().to_numpy()
+                  for s, a in CLO.items()}
+
+    def _adv10_of(leg):
+        arr = _tv.get(leg["symbol"]) if _tv is not None else None
+        if arr is None:
+            return None
+        dts, tvs = arr
+        i = int(np.searchsorted(dts, np.datetime64(pd.Timestamp(leg["entry_date"]))))
+        h = tvs[:i]
+        return float(h[-10:].mean()) if len(h) >= 10 else None
+
     gated = []
     for leg in legs_src:
         leg["w"] = max(0.3, leg["_w"] + (off if off_by is None else off_by.get(int(leg["entry_date"][:4]), 0.0)))
+        if weak_breadth_dates is not None and leg["entry_date"] in weak_breadth_dates:
+            leg["w"] *= C.regime_w_scale
+        if _vol20 is not None:
+            v = _vol20.get(leg["symbol"])
+            i = DIDX.get(leg["symbol"], {}).get(leg["entry_date"])
+            if v is not None and i is not None and i < len(v) and np.isfinite(v[i]) and v[i] > 0:
+                leg["w"] *= float(np.clip(0.025 / v[i], 1.0 / C.w_invvol, C.w_invvol))
+        if C.w_liq_full_ty is not None:
+            a10 = _adv10_of(leg)
+            if a10 is not None:
+                leg["w"] *= float(np.clip(a10 / (C.w_liq_full_ty * 1e6), 0.3, 1.0))
         conv = leg["conv"]; key = (leg["symbol"], leg["entry_date"])
         if conv < skip_for(skip_by_year, C, leg["entry_date"]):
             skipped.append((leg["symbol"], leg["entry_date"], "conv_skip")); continue
@@ -122,9 +176,56 @@ def run_portfolio(base_trades: pd.DataFrame, signals: pd.DataFrame, *,
         thr = osthr if osthr_by is None else osthr_by.get(int(leg["entry_date"][:4]), np.inf)
         if ov is not None and ov > thr:
             skipped.append((leg["symbol"], leg["entry_date"], "overshoot_fallknife")); continue
+        if _tv is not None and C.liqcol_adv10_ty is not None:
+            arr = _tv.get(leg["symbol"])
+            if arr is not None:
+                _dts, _tvs = arr
+                _i = int(np.searchsorted(_dts, np.datetime64(pd.Timestamp(leg["entry_date"]))))
+                _h = _tvs[:_i]
+                if len(_h) >= 20 and float(_h[-10:].mean()) < C.liqcol_adv10_ty * 1e6 \
+                        and float(_h[-252:].mean()) >= C.liqcol_adv252_ty * 1e6:
+                    skipped.append((leg["symbol"], leg["entry_date"], "liq_collapse")); continue
         gated.append(leg)
 
-    eq, holdings, trades, hbd = run_sim(gated, sym_close, sym_idx, calendar, C)
+    # DD-signature valves (loss forensic 2026-07-29). Both OFF by default — this whole
+    # block is skipped and run_sim receives paused=None -> byte-identical to the golden.
+    paused = riskoff = None
+    if C.crash_pause_ret5 is not None or C.vol_cap_q is not None or C.riskoff_ret5 is not None:
+        vol_by_sym = {s: pd.Series(a).pct_change().rolling(20).std().to_numpy()
+                      for s, a in CLO.items()}
+        by_date: dict = {}
+        for s, dmap in DIDX.items():
+            for d, i in dmap.items():
+                by_date.setdefault(d, []).append((s, i))
+    if C.crash_pause_ret5 is not None or C.riskoff_ret5 is not None:
+        # EW market daily return (full market panel, clipped like the engine proxy)
+        mr = {}
+        for d, lst in by_date.items():
+            rs = [CLO[s][i] / CLO[s][i - 1] - 1.0 for s, i in lst if i > 0 and CLO[s][i - 1] > 0]
+            if rs:
+                mr[d] = float(np.mean(np.clip(rs, -0.5, 0.5)))
+        mrs = pd.Series(mr).sort_index()
+        r5s = (1.0 + mrs).rolling(5).apply(np.prod, raw=True) - 1.0
+        if C.crash_pause_ret5 is not None:
+            paused = frozenset(r5s.index[r5s <= C.crash_pause_ret5])
+        if C.riskoff_ret5 is not None:
+            riskoff = frozenset(r5s.index[r5s <= C.riskoff_ret5])
+    if C.vol_cap_q is not None:
+        # high-vol flag: leg's vol20 >= same-day cross-sectional quantile q (causal)
+        thr_by_date: dict = {}
+        for leg in gated:
+            d = leg["entry_date"]
+            if d not in thr_by_date:
+                vals = [vol_by_sym[s][i] for s, i in by_date.get(d, ()) if i >= 20]
+                vals = [v for v in vals if np.isfinite(v)]
+                thr_by_date[d] = float(np.quantile(vals, C.vol_cap_q)) if vals else np.inf
+            i = DIDX.get(leg["symbol"], {}).get(d)
+            v = vol_by_sym.get(leg["symbol"])
+            leg["hv"] = bool(i is not None and v is not None and i < len(v)
+                             and np.isfinite(v[i]) and v[i] >= thr_by_date[d])
+
+    eq, holdings, trades, hbd = run_sim(gated, sym_close, sym_idx, calendar, C,
+                                        paused=paused, riskoff=riskoff)
     nav = eq["nav"]; fin = float(nav.iloc[-1]); yrs = (eq["date"].iloc[-1] - eq["date"].iloc[0]).days / 365.25
     cagr = fin ** (1 / yrs) - 1 if yrs > 0 else 0.0; dd = float((nav / nav.cummax() - 1).min())
     return dict(nav=fin, cagr=cagr, maxdd=dd, years=yrs, osthr=osthr, conv_mu=mu, conv_sd=sd,

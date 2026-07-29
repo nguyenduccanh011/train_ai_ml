@@ -13,8 +13,12 @@ import pandas as pd
 from stock_ml.portfolio.constants import ADVANCE_FEE, PortfolioConstants
 
 
-def run_sim(legs_src, sym_close, sym_idx, calendar, C: PortfolioConstants):
-    """legs: dicts with symbol/entry_date/exit_date/i0/i1/p0/net/prio/conv/w/reason.
+def run_sim(legs_src, sym_close, sym_idx, calendar, C: PortfolioConstants, paused=None,
+            riskoff=None):
+    """legs: dicts with symbol/entry_date/exit_date/i0/i1/p0/net/prio/conv/w/reason (+hv).
+    paused: optional set of dates where NEW fills are suspended (crash-pause valve).
+    riskoff: optional set of dates where HELD legs are force-exited (sell-down valve);
+             new fills are also skipped on those days, but resume the very next day.
     Returns equity df, holdings rows, trades df, held_by_date."""
     tplus, K, MARGIN = C.tplus, C.k, C.margin
 
@@ -30,7 +34,8 @@ def run_sim(legs_src, sym_close, sym_idx, calendar, C: PortfolioConstants):
         s = t["symbol"]; c0, c1 = sym_close[s][t["i0"]], sym_close[s][t["i1"]]; xe = t["p0"] * (1.0 + t["net"])
         return dict(symbol=s, i0=t["i0"], i1=t["i1"], invested=size, net=t["net"], p0=t["p0"],
                     ratio0=t["p0"] / c0, ratio1=xe / c1, last_val=size, exit_date=t["exit_date"],
-                    prio=t["prio"], entry_dt=dt, be_di=di, conv=t["conv"], nav_at=nav_at, reason=t["reason"])
+                    prio=t["prio"], entry_dt=dt, be_di=di, conv=t["conv"], nav_at=nav_at,
+                    reason=t["reason"], hv=t.get("hv", False))
 
     entries = defaultdict(list)
     for t in legs_src:
@@ -40,11 +45,12 @@ def run_sim(legs_src, sym_close, sym_idx, calendar, C: PortfolioConstants):
 
     trades = []
 
-    def emit(leg, exit_dt, exit_di, evicted):
+    def emit(leg, exit_dt, exit_di, evicted, reason_override=None):
         if evicted:
             j = sym_idx[leg["symbol"]].get(exit_dt)
             xp = float(sym_close[leg["symbol"]][j]) if j is not None else leg["p0"] * (1.0 + leg["net"])
-            pnl = xp / leg["p0"] - 1.0 if leg["p0"] else 0.0; reason = "preempt"
+            pnl = xp / leg["p0"] - 1.0 if leg["p0"] else 0.0
+            reason = reason_override or "preempt"
         else:
             xp = leg["p0"] * (1.0 + leg["net"]); pnl = float(leg["net"]); reason = leg["reason"]
         trades.append(dict(symbol=leg["symbol"], entry_date=leg["entry_dt"], entry_price=float(leg["p0"]),
@@ -59,8 +65,31 @@ def run_sim(legs_src, sym_close, sym_idx, calendar, C: PortfolioConstants):
             if leg in legs:
                 cash += leg["invested"] * (1.0 + leg["net"]) * (1.0 - ADVANCE_FEE); legs.remove(leg)
                 emit(leg, dt, di, False)
+        # risk-off sell-down (default off): force-exit sellable held legs on market-stress
+        # days; fills skip today but resume next day (V-bottom entries stay monetized).
+        if riskoff is not None and dt in riskoff:
+            for l in list(legs):
+                if (di - l["be_di"]) < tplus:
+                    continue
+                if C.riskoff_scope == "losers" and lv(l, dt) >= l["invested"]:
+                    continue
+                vnow = lv(l, dt); cash += vnow * (1.0 - ADVANCE_FEE); legs.remove(l)
+                if l in exits.get(l["exit_date"], ()):
+                    exits[l["exit_date"]].remove(l)
+                emit(l, dt, di, True, reason_override="risk_off")
         pos = sum(lv(l, dt) for l in legs); nav_now = cash + pt + pos; new_today = set(); exit_today = {}
         for t in entries.get(dt, ()):
+            # DD valves (default off): market crash-pause + high-vol book cap
+            if paused is not None and dt in paused:
+                continue
+            if riskoff is not None and dt in riskoff:
+                continue
+            if C.vol_cap_q is not None and t.get("hv") and \
+                    sum(1 for l in legs if l.get("hv")) >= C.vol_cap_max:
+                continue
+            if C.max_expo is not None and nav_now > 0 and \
+                    (nav_now - cash - pt) >= C.max_expo * nav_now:
+                continue
             size = (nav_now / K) * t["w"]
             if cash + 1e-12 >= size:
                 cash -= size; leg = mk(t, size, dt, di, nav_now); legs.append(leg)

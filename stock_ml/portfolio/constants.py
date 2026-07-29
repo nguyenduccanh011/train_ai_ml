@@ -45,3 +45,33 @@ class PortfolioConstants:
     #   full   = mu/sd/off + osthr from the WHOLE period — kept for parity with the
     #            _champ_prod_replay reference + the original champion golden (140.3% / -10.8%).
     stat_mode: str = "causal"
+    # DD-signature valves (loss forensic 2026-07-29: the 3 deep-DD episodes had 3 distinct
+    # book signatures — vol-concentration / sequential knife-fills in a crash / full-beta).
+    # Both OFF by default -> code path byte-identical to the golden.
+    vol_cap_q: float | None = None   # cap concurrent HIGH-VOL holdings; a fill is high-vol when
+                                     # its vol20 >= same-day cross-sectional quantile q of the
+                                     # market panel (causal: same-day cross-section only)
+    vol_cap_max: int = 2             # max simultaneous high-vol positions when vol_cap_q is set
+    crash_pause_ret5: float | None = None  # pause NEW fills while EW-market 5d return <= this
+    # exit-side valve (the entry-side valves above were REFUTED: max-DD comes from HELD
+    # positions riding the slide, not from new fills). Force-exit held positions on
+    # market-stress days; new fills on LATER days stay allowed (the V-bottom entries
+    # are profitable — crash_pause showed blocking them costs 9pp CAGR for zero DD).
+    riskoff_ret5: float | None = None  # evict held legs while EW-market 5d return <= this
+    riskoff_scope: str = "all"         # "all" | "losers" (only legs below their entry)
+    # slow state-based valve (event-triggered pause/sell-down both REFUTED — too late,
+    # sells the V-bottom): scale NEW fills' weight while market breadth is weak instead
+    # of blocking anything. Targets the 2022 signature (full 0.99 exposure into a bear).
+    regime_w_scale: float | None = None  # multiply new-fill weight by this when breadth low
+    regime_breadth_thr: float = 0.35     # breadth = pct of market panel above own MA50
+    # liquidity-COLLAPSE veto (2026-07-29 forensic): a formerly-liquid name whose current
+    # traded value has collapsed is in distress (no-bid spiral, 3x limit-chain risk,
+    # worst pnl cohort); chronically-thin names are FINE (best cohort) and must NOT be
+    # cut. Veto entries where trailing-10d ADV < liqcol_adv10_ty AND trailing-1y ADV
+    # >= liqcol_adv252_ty (tỷ VND = traded_value/1e6). None = OFF (golden-identical).
+    liqcol_adv10_ty: float | None = None
+    liqcol_adv252_ty: float = 10.0
+    # capital-allocation experiments (2026-07-29; default None/off = golden-identical):
+    w_invvol: float | None = None    # inverse-vol tilt: w *= clip(0.025/vol20, 1/x, x)
+    w_liq_full_ty: float | None = None  # liquidity-proportional size: w *= clip(adv10/X_ty, 0.3, 1)
+    max_expo: float | None = None    # skip new fills while invested value >= this frac of NAV

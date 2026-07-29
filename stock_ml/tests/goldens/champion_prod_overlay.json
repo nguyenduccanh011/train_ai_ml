@@ -3,8 +3,8 @@
   "pinned_at": "2026-07-28",
   "pipeline": "_champ_prod_replay.py @ 9e37efd7; SKIP_MODE=causal (default), SKIP_GAIN=2.0, overshoot ON (os p90 in-sample), K=10, MARGIN=0.005, KCONV=2.0, GT=0.08, R5THR=0.02",
   "data_md5": {
-    "C:/Users/DUC CANH PC/Desktop/stock-serving/market_data/market.duckdb": "D9B86D17247EF82C01961A5736E080D4",
-    "C:/Users/DUC CANH PC/Desktop/stock-serving/data/ohlcv.db": "2733EDBE8A919433877BF02FC8715743",
+    "C:/Users/DUC CANH PC/Desktop/stock-serving/market_data/market.duckdb": "73ABEB9CD3A2DF0CE2D7F45ED13EB80D",
+    "C:/Users/DUC CANH PC/Desktop/stock-serving/data/ohlcv.db": "C8FA21D37D56EF3BBC3077A1FBE2195A",
     "F:/PROJECTS/hb2943_work/nh_nav2.py": "BA08647C67149E6C80B039FEC4458C95"
   },
   "fixtures_md5": {
@@ -19,35 +19,65 @@
     "42": {
       "base": "prod_base_trades.parquet",
       "signals": "prod_signals.parquet",
-      "t0_nav_x": "271.08", "t0_cagr": "136.4", "t0_dd": "-10.0",
-      "t2_nav_x": "318.36", "t2_cagr": "142.3", "t2_dd": "-10.7",
+      "t0_nav_x": "271.07",
+      "t0_cagr": "136.3",
+      "t0_dd": "-10.0",
+      "t2_nav_x": "318.35",
+      "t2_cagr": "142.3",
+      "t2_dd": "-10.7",
       "rewritten_trades_md5": "F4DEB56D412BE002E261C2F465DEBE71"
     },
     "21": {
       "base": "prod_base_trades_s21.parquet",
       "signals": "prod_signals_s21.parquet",
-      "t0_nav_x": "308.47", "t0_cagr": "141.1", "t0_dd": "-10.6",
-      "t2_nav_x": "300.28", "t2_cagr": "140.1", "t2_dd": "-10.8",
+      "t0_nav_x": "308.47",
+      "t0_cagr": "141.1",
+      "t0_dd": "-10.6",
+      "t2_nav_x": "300.28",
+      "t2_cagr": "140.1",
+      "t2_dd": "-10.8",
       "rewritten_trades_md5": "FA96724CD784A5EC2DB85944BE3282B2"
     },
     "123": {
       "base": "prod_base_trades_s123.parquet",
       "signals": "prod_signals_s123.parquet",
-      "t0_nav_x": "258.11", "t0_cagr": "134.6", "t0_dd": "-10.2",
-      "t2_nav_x": "287.31", "t2_cagr": "138.5", "t2_dd": "-10.8",
+      "t0_nav_x": "258.13",
+      "t0_cagr": "134.6",
+      "t0_dd": "-10.2",
+      "t2_nav_x": "287.30",
+      "t2_cagr": "138.5",
+      "t2_dd": "-10.8",
       "rewritten_trades_md5": "CDFBF160535E0819C22B1161FBAAB14E"
     }
   },
-  "aggregate": { "t2_cagr_mean": "140.3", "t2_dd_mean": "-10.8" },
+  "aggregate": {
+    "t2_cagr_mean": "140.3",
+    "t2_dd_mean": "-10.8"
+  },
   "causal_default": {
     "description": "stat_mode=causal (deploy DEFAULT since 2026-07-29): expanding per-year sizing mu/sd/off + osthr, mirrors the SKIP gate. Module-only regression pin (no independent reference — the replay is full-mode). Honest backtest of live behaviour: full-history stats at deploy time are expanding by construction.",
     "pinned_at": "2026-07-29",
     "seeds": {
-      "42":  { "t2_nav_x": "295.69", "t2_cagr": "139.5", "t2_dd": "-11.8" },
-      "21":  { "t2_nav_x": "282.17", "t2_cagr": "137.8", "t2_dd": "-13.6" },
-      "123": { "t2_nav_x": "284.82", "t2_cagr": "138.2", "t2_dd": "-13.6" }
+      "42": {
+        "t2_nav_x": "295.67",
+        "t2_cagr": "139.5",
+        "t2_dd": "-11.8"
+      },
+      "21": {
+        "t2_nav_x": "283.29",
+        "t2_cagr": "138.0",
+        "t2_dd": "-13.6"
+      },
+      "123": {
+        "t2_nav_x": "284.82",
+        "t2_cagr": "138.2",
+        "t2_dd": "-13.6"
+      }
     },
-    "aggregate": { "t2_cagr_mean": "138.5", "t2_dd_mean": "-13.0" }
+    "aggregate": {
+      "t2_cagr_mean": "138.5",
+      "t2_dd_mean": "-13.0"
+    }
   },
   "reference": "registered champion DuckDB (train data, AAS/BSI not back-adjusted): T+2 132.1% / -13.8% — lower by data quality, not logic"
 }

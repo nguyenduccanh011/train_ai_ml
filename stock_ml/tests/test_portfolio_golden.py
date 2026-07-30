@@ -27,6 +27,9 @@ from pathlib import Path
 import pytest
 
 REPO = Path(__file__).resolve().parents[2]
+# Replay + parity ghi CSV vào _champ_src/ (scratch, untracked) — tự tạo để test không
+# chết oan khi thư mục bị dọn (2026-07-31: cả 6 test đỏ chỉ vì thiếu thư mục này).
+(REPO / "_champ_src").mkdir(exist_ok=True)
 GOLDEN_PATH = Path(__file__).parent / "goldens" / "champion_prod_overlay.json"
 FIXTURES = Path(__file__).parent / "goldens" / "fixtures"
 GOLDEN = json.loads(GOLDEN_PATH.read_text(encoding="utf-8"))
@@ -67,6 +70,8 @@ def test_champion_prod_overlay_golden(seed):
         os.environ,
         REPLAY_BASE=str(FIXTURES / g["base"]),
         REPLAY_SIG=str(FIXTURES / g["signals"]),
+        REPLAY_DUCK=SERVING_DUCK,   # snapshot đóng băng (đầu module) — không dùng store sống
+        NAV2_DB=SERVING_OHLCV,
     )
     out = subprocess.run(
         [sys.executable, str(REPO / "_champ_prod_replay.py")],
@@ -96,8 +101,11 @@ def test_champion_prod_overlay_golden(seed):
 # Module parity (steps 1-3): stock_ml.portfolio.run_portfolio must reproduce the
 # SAME golden numbers as the _champ_prod_replay.py reference, byte-exact.
 # ---------------------------------------------------------------------------
-SERVING_DUCK = "C:/Users/DUC CANH PC/Desktop/stock-serving/market_data/market.duckdb"
-SERVING_OHLCV = "C:/Users/DUC CANH PC/Desktop/stock-serving/data/ohlcv.db"
+# SNAPSHOT ĐÓNG BĂNG vintage 2026-07-29 — KHÔNG phải store sống (store sống được sync
+# hằng ngày nên MD5 đổi liên tục → golden đỏ giả, guard chết vì mỏi). Từ nay §8.4 RUNBOOK
+# "MD5 data fail" chỉ còn nghĩa thật: ai đó đụng vào bản đóng băng.
+SERVING_DUCK = "C:/Users/DUC CANH PC/Desktop/stock-serving/market_data/market_golden_pin_20260729.duckdb"
+SERVING_OHLCV = "C:/Users/DUC CANH PC/Desktop/stock-serving/data/ohlcv_golden_pin_20260729.db"
 NAVSIM_DATE_HI = "2026-07-08"  # nh_nav2.DB cutoff the golden was pinned on
 
 

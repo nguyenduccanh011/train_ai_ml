@@ -3,9 +3,9 @@
   "pinned_at": "2026-07-28",
   "pipeline": "_champ_prod_replay.py @ 9e37efd7; SKIP_MODE=causal (default), SKIP_GAIN=2.0, overshoot ON (os p90 in-sample), K=10, MARGIN=0.005, KCONV=2.0, GT=0.08, R5THR=0.02",
   "data_md5": {
-    "C:/Users/DUC CANH PC/Desktop/stock-serving/market_data/market.duckdb": "73ABEB9CD3A2DF0CE2D7F45ED13EB80D",
-    "C:/Users/DUC CANH PC/Desktop/stock-serving/data/ohlcv.db": "C8FA21D37D56EF3BBC3077A1FBE2195A",
-    "F:/PROJECTS/hb2943_work/nh_nav2.py": "BA08647C67149E6C80B039FEC4458C95"
+    "C:/Users/DUC CANH PC/Desktop/stock-serving/market_data/market_golden_pin_20260729.duckdb": "73ABEB9CD3A2DF0CE2D7F45ED13EB80D",
+    "C:/Users/DUC CANH PC/Desktop/stock-serving/data/ohlcv_golden_pin_20260729.db": "C8FA21D37D56EF3BBC3077A1FBE2195A",
+    "F:/PROJECTS/hb2943_work/nh_nav2.py": "09ABBF0FDD847B423CE76A98C3EB0FCD"
   },
   "fixtures_md5": {
     "prod_base_trades.parquet": "79C984693262900C494BAEDB6723766D",

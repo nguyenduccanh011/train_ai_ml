@@ -13,7 +13,7 @@ sys.path.insert(0, str(ROOT))
 import numpy as np
 import pandas as pd
 from src.data.loader import DataLoader
-from src.env import resolve_data_dir
+from src.utils.env import resolve_data_dir
 
 
 def load_v34() -> pd.DataFrame:

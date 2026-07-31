@@ -1716,3 +1716,39 @@ Phase 0a** (`PRUNE_BUNDLES=0`, đã đánh dấu XONG bên đó); **serving D4 t
 - 🔄 **Đang chạy:** redo sạch cả 6 model (fresh + persist). Sau đó: export 6 `--fold-models-from-run` + attest
   **container** PASS + deploy. Liên quan memory: `rebaseline-restored-stale-checkpoints-invalid`,
   `phase4-11-9-fold-model-attestation-state`.
+
+### Phase 5 — Danh tính + di sản + migrations — 🔄 (bắt đầu 2026-08-01, chủ dự án authorize trọn: backup+apply+xóa)
+
+> Kỷ luật: mỗi unit INCREMENTAL + verify riêng. Đảo-được làm trước; identity migration (368M dòng + sổ live)
+> để sau cùng, bắt buộc dry-run trên bản-sao-restore + checkpoint trước khi apply live.
+
+- ✅ **§0b. Backup Postgres (safety-net cho MỌI migration).** `pg_dump -Fc` DB 99GB →
+  `/f/pg_backups/stockml_preP5_20260801.dump` **6.3GB**, verified (26 bảng, có run_signals + leaderboard_runs).
+  Restore-copy để dry-run: `docker exec -i stock-ml-postgres pg_restore -d <copydb> < dump`.
+- ✅ **§4.1 Migration 0030 — codify `leaderboard_nav` 18-cột.** Live drift 18 vs 11 DDL (cagr_t2/maxdd_t2 +
+  overlay_* thêm ad-hoc, KHÔNG migration nào bắt) ⇒ fresh-DB rebuild từ script hụt 7 cột. `0030_leaderboard_nav_shape.py`:
+  CREATE/ADD COLUMN **IF NOT EXISTS** (additive, no-op live). Validate fresh-DB (chuỗi 0001→0030 = 18 cột) rồi
+  apply live (head 0029→**0030**). downgrade = no-op có chủ đích (không xoá đường cong NAV đã publish).
+- ✅ **§10.2 Xóa engine thực thi #2 chết.** `src/backtest/portfolio_engine.py` (486 dòng) + test (393) — verified
+  chết (chỉ 2 self-ref, 0 live importer, `__init__` không export). Suite **319 passed / 0 failed** (hết 13 fail
+  biết-trước). `test_pnl_calculator.py` cùng dir độc lập → GIỮ.
+- ✅ **§4.5/§4.6 (phần rời-rạc, rủi-ro-thấp) — dọn danh tính module.** Map thực tế: mọi importer LIVE (api, export,
+  run_template, cache_gc, evaluation, experiments) + repo serving đều dùng bản **`utils/*`**; root
+  `stock_ml/src/{config_loader,env}.py` = **fork CHẾT** (chỉ tự-tham-chiếu + 1 file analysis scratch; serving 0 import;
+  `utils/__init__` import bản utils). ⇒ **xoá 2 fork root** + repoint scratch (`src.env`→`src.utils.env`). **§4.6:** sửa
+  `parents[1]→parents[2]` cho 4 script ops (cache_gc/api_server/build_leaderboard/export_derivatives_ohlcv) — lazy
+  import `from src.*` trước đó **raise runtime** (ROOT=`stock_ml/scripts` thiếu `stock_ml` trên path). **Verify:**
+  suite 319/0, smoke import serving-critical (pipeline.experiment/backtest.engine/data.splitter/utils.*) sạch, 3 lazy
+  import ops resolve với `stock_ml` on path.
+- ⏳ **§4.5 (phần couple + đổi-hành-vi — HOÃN, cần checkpoint):**
+  - **Bug env arithmetic (đã đo lại):** `utils/env.py` dirname×2 = `stock_ml/src` ⇒ `get_results_dir()` trả
+    `stock_ml/src/results` (cây 93MB tình cờ), TRÁI docstring "stock_ml/results" (cây 8.6GB thật). Sửa = +1 dirname,
+    NHƯNG đổi nơi api/export đọc results (có thể bị `STOCK_RESULTS_DIR` che trong prod) ⇒ cần soát env-var-usage +
+    chọn cây canonical trước khi flip.
+  - **Convergence trọn `src.*`→`stock_ml.src.*`** (bỏ double-cache class/module): đòi MỌI entry có repo_root trên
+    path (đổi run_template sys.path + convert model_dashboard/data/pipeline…) — thay đổi phối hợp, verify bằng chạy
+    pipeline thật, không chỉ pytest. **fix-vs-xoá 3 script** cache_gc/api_server/build_leaderboard (có bị `stock_ml/api`
+    thay chưa?) = quyết định kiến trúc, hiện chọn "fix" (bảo thủ, đảo được), delete để sau.
+- ⏳ **CÒN (liên-kết/nguy hiểm):** drop 8 cột chết `leaderboard_runs` = cơ chế **fairness cũ** §4.4 (ripple ORM/adapter/
+  schema/API) · **⚠️ §3 config_hash re-identity** (368M dòng run_signals + 5043 fold dir + sổ tier live — D2 + dry-run
+  bản-sao + checkpoint) · §4.7 FeatureCacheManager (partial-file). Liên quan memory: `phase5-progress-and-identity-danger`.

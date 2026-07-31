@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pandas as pd
 
-REPO_ROOT = Path(__file__).resolve().parents[1]
+REPO_ROOT = Path(__file__).resolve().parents[2]
 WORKSPACE_ROOT = REPO_ROOT.parent
 DATASET_ROOT = WORKSPACE_ROOT / "portable_data" / "derivatives_ai_dataset"
 VIZ_DIR = REPO_ROOT / "visualization"

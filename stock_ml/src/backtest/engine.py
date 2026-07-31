@@ -36,12 +36,29 @@ from .defaults import DEFAULT_TRADING_COST
 _VNI_CACHE: dict = {}
 
 
+def _market_context_required() -> bool:
+    """True when a missing market-context source (VNINDEX / runscore) must FAIL LOUD instead of
+    silently degrading a load-bearing knob to None/0.0. Default OFF (legacy + host research where the
+    source can be absent by design); set env ``MARKET_CONTEXT_REQUIRED=1`` in the serving container so
+    an absent source RAISES rather than serving signals on a code path the workshop never ran.
+    (ENGINE_UPGRADE §1.1 / §9.3.1 — opt-in fail-loud, one semantics shared by both readers.)"""
+    import os
+
+    return os.environ.get("MARKET_CONTEXT_REQUIRED", "").strip().lower() in ("1", "true", "yes")
+
+
 def _load_vnindex(path="portable_data/vn_stock_ai_dataset_cleaned/context_features/symbol=VNINDEX/timeframe=1D/data.csv"):
-    """VNINDEX daily close (date->close), for RS-vs-market (close/VNINDEX). Cached. None if absent."""
+    """VNINDEX daily close (date->close), for RS-vs-market (close/VNINDEX). Cached.
+    Returns None if the source is absent — UNLESS ``MARKET_CONTEXT_REQUIRED`` is set, then RAISES."""
     if "vni" in _VNI_CACHE:
         return _VNI_CACHE["vni"]
     import os
     if not os.path.exists(path):
+        if _market_context_required():
+            raise RuntimeError(
+                f"VNINDEX market-context absent at {path!r} but MARKET_CONTEXT_REQUIRED is set — "
+                "refusing to run with rs / mkt-trend / mkt-skip knobs silently inert (ENGINE_UPGRADE §1.1)"
+            )
         _VNI_CACHE["vni"] = None
         return None
     v = pd.read_csv(path)
@@ -56,11 +73,17 @@ _RUNSCORE_CACHE: dict = {}
 
 def _load_runscore(path="results/_research_2429/runscore.parquet"):
     """Causal OOF 'remaining-run' head predictions (walk-forward, leg+momentum+volume features),
-    per-symbol Series of runscore_z indexed by date. Cached. None if absent. See train_runscore.py."""
+    per-symbol Series of runscore_z indexed by date. Cached. Returns None if absent — UNLESS
+    ``MARKET_CONTEXT_REQUIRED`` is set, then RAISES (see _market_context_required)."""
     if "rs" in _RUNSCORE_CACHE:
         return _RUNSCORE_CACHE["rs"]
     import os
     if not os.path.exists(path):
+        if _market_context_required():
+            raise RuntimeError(
+                f"runscore modulator absent at {path!r} but MARKET_CONTEXT_REQUIRED is set — "
+                "refusing to run with the run-score hold modulator silently inert (ENGINE_UPGRADE §1.1)"
+            )
         _RUNSCORE_CACHE["rs"] = None
         return None
     df = pd.read_parquet(path)
@@ -1056,6 +1079,52 @@ class EngineConfig:
     entry_market_chop_enabled: bool = False
     entry_market_chop_window: int = 20
     entry_market_chop_threshold: float = 0.30
+
+
+# Keys that appear in a config's ``engine:`` block but are NOT ``EngineConfig`` fields: they are
+# consumed by the SIGNAL/recombine layer (dual-ML buy/sell gates, ensemble heads, xsec, regime) or are
+# pipeline flags — never by the backtest engine. They are stripped before constructing EngineConfig so
+# a config can carry them without the dataclass rejecting them. Keeping ONE authoritative set (vs the
+# 3 hand-maintained pop-lists that used to "match by luck", §11 R3) means the train pipeline and the
+# serving trade path strip EXACTLY the same keys (§10.3: train used to raise on strays, serving to drop
+# silently). Anything NOT in this set and NOT an EngineConfig field reaches EngineConfig and raises
+# TypeError — loudly, on BOTH sides.
+_RECOMBINE_KEYS: frozenset[str] = frozenset({
+    "entry_gate", "entry_xs_mom_pct", "exit_gate", "entry_raw_threshold", "rule_only_no_ml",
+    "entry_z_low_threshold", "z_norm_window", "z_norm_min_periods", "exit_force_gate",
+    "exit_force_gate_nonbull", "exit_force_gate_lowbreadth", "exit_force_gate_vn30", "exit_rs_drop",
+    "exit_xsec_features", "entry_xsec_features", "exit_force_suppress", "nonbull_ma_win",
+    "nonbull_persist", "entry_skip_nonbull_persist", "regime_index_symbol", "early_entry_reversal",
+    "top_reversal_exit", "entry_zX_floor", "entry_rollover_exit", "entry_ensemble", "entry_ensemble2",
+    "entry_ensemble3", "entry_ensemble4", "entry_ensemble5", "entry_breadth_gate", "entry_rs_gate",
+    "downleg_skip_bull", "entry_head_csrank_gate", "exit_ensemble", "xsec_rank",
+})
+
+
+def engine_config_from_dict(engine_cfg: dict) -> tuple[EngineConfig, dict]:
+    """Deserialize a config's ``engine:`` block into ``(EngineConfig, portfolio_cfg)``.
+
+    THREE-way partition of the keys (§11 R3), the single shared deserializer for train + serving:
+      1. cost keys (``costs:`` nested, or flat ``commission``/``tax``/``slippage``) -> ``CostModel``;
+      2. recombine/pipeline keys (``_RECOMBINE_KEYS``) -> stripped (consumed by the signal layer);
+      3. everything else -> ``EngineConfig`` fields.
+    ``portfolio_cfg`` (the removed legacy tier's sub-block) is returned so the caller can fail loud on
+    ``enabled=true``. Unknown keys (in none of the buckets) reach EngineConfig and raise TypeError.
+    """
+    engine_cfg = dict(engine_cfg)
+    portfolio_cfg = engine_cfg.pop("portfolio", {}) or {}
+    for _k in _RECOMBINE_KEYS:
+        engine_cfg.pop(_k, None)
+    # costs: nested dict and/or flat keys (backward compat); slippage_model is doc-only, not a CostModel arg.
+    costs_dict = engine_cfg.pop("costs", {})
+    cost_kw = dict(costs_dict) if costs_dict else {}
+    cost_kw.pop("slippage_model", None)
+    for _k in ("commission", "tax", "slippage"):
+        if _k in engine_cfg:
+            cost_kw[_k] = engine_cfg.pop(_k)
+    engine_cfg.pop("slippage_model", None)
+    cost = CostModel(**cost_kw) if cost_kw else CostModel()
+    return EngineConfig(cost=cost, **engine_cfg), portfolio_cfg
 
 
 @dataclass

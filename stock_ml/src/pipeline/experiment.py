@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import functools
 import json
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -15,7 +16,11 @@ import numpy as np
 import pandas as pd
 import yaml
 
-from stock_ml.src.backtest.engine import CostModel, EngineConfig, run_backtest, trades_to_dataframe
+from stock_ml.src.backtest.engine import (
+    engine_config_from_dict,
+    run_backtest,
+    trades_to_dataframe,
+)
 from stock_ml.src.backtest.integrity import audit_report, print_report
 from stock_ml.src.backtest.stats import (
     aggregate_stats,
@@ -24,6 +29,7 @@ from stock_ml.src.backtest.stats import (
     per_year_stats,
 )
 from stock_ml.src.data.splitter import PurgedKFoldSplitter, YearSplitter
+from stock_ml.src.data.universe_resolver import parse_universe_policy_slug as _parse_policy_slug
 from stock_ml.src.features.market import build_equal_weight_index
 from stock_ml.src.features.resolver import FeatureResolver
 from stock_ml.src.features.sectors import build_sector_map
@@ -74,6 +80,12 @@ class ExperimentConfig:
     metadata: dict | None = None
     data_source_dir: str | None = None
     universe: dict | None = None
+    # Dynamic point-in-time universe (docs/UPGRADE_DYNAMIC_UNIVERSE.md). None → legacy
+    # fixed-symbols behavior (byte-identical). When set, run_experiment resolves the
+    # per-fold top-N universe causally and ignores the incoming symbols list.
+    # e.g. {"mode": "dynamic_topn", "n": 900, "metric": "adv",
+    #       "lookback": "prior_year", "min_sessions": 100}
+    universe_policy: dict | None = None
     # Per-slot features/targets (Phase 0.4) — None means use global
     entry_features: str | None = None
     entry_target: dict | None = None
@@ -204,6 +216,7 @@ class ExperimentConfig:
             metadata=metadata_cfg or {},
             data_source_dir=raw.get("data", {}).get("source_dir"),
             universe=raw.get("universe"),
+            universe_policy=raw.get("universe_policy"),
             entry_features=entry_features,
             entry_target=entry_target_override,
             exit_features=exit_features,
@@ -362,6 +375,9 @@ class ExperimentConfig:
             universe={"slug": template.universe_slug, "mode": "db"}
             if template.universe_slug
             else None,
+            # Dynamic point-in-time universe: a 'dyn_topn:...' universe_slug IS the policy
+            # (interim §7.1 persistence — reproducible from the DB template alone).
+            universe_policy=_parse_policy_slug(template.universe_slug),
             entry_features=entry_features,
             entry_target=entry_target,
             exit_features=exit_features,
@@ -1701,19 +1717,21 @@ def _load_xsec_features(metrics: list[str], duck: str = "market_data/market.duck
               "cs_rank_trend": r20 - r20.shift(10), "cs_rank_trend_long": r60 - r60.shift(20)}
     # RS-vs-MARKET (vs VNINDEX, 2026-06-21): the strongest per-trade separator found (corr +0.16; strong-
     # RS dips win 72%% vs weak 52%%). RS line = close/VNINDEX; slope/vs-trend/dist-to-high. Causal.
-    import os as _os
-    _vp = "portable_data/vn_stock_ai_dataset_cleaned/context_features/symbol=VNINDEX/timeframe=1D/data.csv"
-    if any(m.startswith("rs_") for m in metrics) and _os.path.exists(_vp):
-        _v = pd.read_csv(_vp)
-        _v["date"] = pd.to_datetime(_v["timestamp"]).dt.tz_localize(None).dt.normalize()
-        _vni = _v.drop_duplicates("date", keep="last").set_index("date")["close"].astype(float)
-        _vni.index = _vni.index.normalize()
-        _vni_a = pd.Series(piv.index.normalize().map(_vni).values, index=piv.index)
-        _rs = piv.div(_vni_a.values, axis=0)
-        series["rs_sl5"] = _rs / _rs.shift(5) - 1.0
-        series["rs_sl20"] = _rs / _rs.shift(20) - 1.0
-        series["rs_vsma"] = _rs / _rs.rolling(50, min_periods=20).mean() - 1.0
-        series["rs_nh"] = _rs / _rs.rolling(60, min_periods=20).max() - 1.0
+    # Unified with engine._load_vnindex (ENGINE_UPGRADE §1.1): one reader, one fail-loud semantics.
+    # Under MARKET_CONTEXT_REQUIRED an absent source RAISES there; else returns None → rs_ skipped
+    # (a downstream KeyError for a requested rs_ metric preserves the prior fail-if-requested behavior).
+    if any(m.startswith("rs_") for m in metrics):
+        from stock_ml.src.backtest.engine import _load_vnindex
+        _vni = _load_vnindex()
+        if _vni is not None:
+            _vni = _vni.copy()
+            _vni.index = _vni.index.normalize()
+            _vni_a = pd.Series(piv.index.normalize().map(_vni).values, index=piv.index)
+            _rs = piv.div(_vni_a.values, axis=0)
+            series["rs_sl5"] = _rs / _rs.shift(5) - 1.0
+            series["rs_sl20"] = _rs / _rs.shift(20) - 1.0
+            series["rs_vsma"] = _rs / _rs.rolling(50, min_periods=20).mean() - 1.0
+            series["rs_nh"] = _rs / _rs.rolling(60, min_periods=20).max() - 1.0
     long = None
     for m in metrics:
         s = series[m].stack().rename(f"xsec_{m}")
@@ -3189,6 +3207,42 @@ def run_experiment(
     else:
         print(f"  [debug] all_symbols exists: {(data_path / 'all_symbols').exists()}")
 
+    # Dynamic point-in-time universe (docs/UPGRADE_DYNAMIC_UNIVERSE.md): resolve every
+    # fold's top-N universe ONCE (causal, prior-year ADV), load the UNION of all fold
+    # lists so each fold has its bars, and let the splitter mask each fold down to its
+    # own year's list. None → legacy fixed symbols (byte-identical).
+    universe_by_year: dict[int, list[str]] | None = None
+    if cfg.universe_policy:
+        _sp = cfg.split
+        if _sp.get("type", "walk_forward_year") != "walk_forward_year" or not (
+            "first_test_year" in _sp and "last_test_year" in _sp
+        ):
+            raise ValueError(
+                "universe_policy requires a walk_forward_year split with explicit "
+                "first_test_year/last_test_year"
+            )
+        if data_path.suffix != ".duckdb":
+            raise ValueError("universe_policy requires a DuckDB data source")
+        from stock_ml.src.data.universe_resolver import resolve_universes
+
+        _u_years = list(
+            range(_sp["first_test_year"], _sp["last_test_year"] + 1, _sp.get("test_years", 1))
+        )
+        universe_by_year = resolve_universes(cfg.universe_policy, _u_years, str(data_path))
+        symbols = sorted(set().union(*universe_by_year.values()))
+        print(
+            f"[{cfg.name}] universe_policy {cfg.universe_policy.get('mode')}: "
+            + ", ".join(f"{y}={len(universe_by_year[y])}" for y in _u_years)
+            + f"; union={len(symbols)} symbols"
+        )
+        # §13.3.1 fetch-on-miss: the corrected universe (§13.9) surfaces survivorship-correct names
+        # the local cache never had (ROS, delisted tickers). Fetch + upsert them so they are NOT
+        # silently dropped below — which would re-shrink the universe to survivors, the exact bias the
+        # §13.9 fix removes. Only the dynamic path needs it (static sets are pre-registered/cached).
+        from stock_ml.src.data.duckdb_loader import ensure_symbols_cached
+
+        ensure_symbols_cached(str(data_path), symbols)
+
     from stock_ml.src.data.loader import get_loader
 
     loader = get_loader(str(data_path))
@@ -3282,7 +3336,10 @@ def run_experiment(
 
     signal_frames: list[pd.DataFrame] = []
     windows_list = []  # Collect windows during split for purged_kfold
-    for w, train_df, test_df in splitter.split(feat):
+    # universe_policy is guarded to walk_forward_year above; only YearSplitter.split
+    # accepts the kwarg, so pass it conditionally to leave purged_kfold untouched.
+    _split_kwargs = {"universe_by_year": universe_by_year} if universe_by_year else {}
+    for w, train_df, test_df in splitter.split(feat, **_split_kwargs):
         windows_list.append(w)
         if train_df.empty or test_df.empty:
             print(f"  [fold {w.label}] empty — skipped")
@@ -3290,7 +3347,13 @@ def run_experiment(
 
         fold_cache_path = fold_cache_dir / f"{w.label}.parquet" if fold_cache_dir else None
 
-        if fold_cache_path and fold_cache_path.exists():
+        # A fold checkpoint is keyed only by the CONFIG fingerprint (run_id), NOT by engine-wheel
+        # or data fingerprint — so an engine upgrade or a data refresh leaves stale parquets that a
+        # naive restore would silently reuse (the §11.1 re-baseline would recompute NOTHING). Callers
+        # that recompute the catalogue (rebaseline.py) set STOCKML_FRESH_FOLDS=1 to bypass restore and
+        # retrain+overwrite every fold. Iterative research runs (no flag) keep the fast restore.
+        _fresh_folds = bool(os.environ.get("STOCKML_FRESH_FOLDS"))
+        if fold_cache_path and fold_cache_path.exists() and not _fresh_folds:
             signals = pd.read_parquet(fold_cache_path)
             n_buys = (signals["signal"] > 0).sum()
             n_sells = (signals["signal"] < 0).sum()
@@ -3302,6 +3365,7 @@ def run_experiment(
 
         # No try/except swallow here: a fold that errors out must abort the run rather
         # than silently drop part of the backtest window and produce partial results.
+        _fold_om: dict[str, Any] = {}
         entry_model, exit_model, signals = train_fold(
             train_df,
             test_df,
@@ -3321,6 +3385,7 @@ def run_experiment(
             entry5_feat_cols=entry5_feat_cols,
             entry6_target_col="target_entry6" if "target_entry6" in train_df.columns else None,
             entry6_feat_cols=entry6_feat_cols,
+            out_models=_fold_om,
         )
         if signals.empty:
             raise ValueError(
@@ -3339,6 +3404,23 @@ def run_experiment(
 
         if fold_cache_path:
             signals.to_parquet(fold_cache_path, index=False, compression="snappy")
+
+        # §11.9: persist the EXACT per-fold model set that produced these signals, so a bundle can ship it
+        # verbatim (export_bundle --fold-models-from-run) and serving replays the same models — reproducing
+        # THIS backtest by construction (attest 100%). Opt-in via env so ordinary runs pay no disk cost;
+        # the re-baseline runner sets it. Export re-training a fold-model differs by ~0.01 in score and
+        # flips band-edge signals, which is why the model must come from here, not be refitted downstream.
+        if fold_cache_path and os.environ.get("STOCKML_PERSIST_FOLD_MODELS") and hasattr(w, "test_year"):
+            import joblib
+
+            fold_model_set: dict[str, Any] = {"entry": entry_model}
+            if exit_model is not None:
+                fold_model_set["exit"] = exit_model
+            fold_model_set.update(_fold_om)  # entry2..6 / exit2 (xsec also sets 'entry', identical)
+            joblib.dump(
+                {"test_year": int(w.test_year), "models": fold_model_set},
+                fold_cache_path.with_suffix(".models.joblib"),
+            )
 
         signal_frames.append(signals)
 
@@ -3370,65 +3452,11 @@ def run_experiment(
             f"{sig_max_date.date()} — open positions lock at window end, not dataset end"
         )
 
-    engine_cfg = cfg.engine.copy()
-    # Portfolio sub-config belonged to the REMOVED legacy alpha->portfolio->execution
-    # tier. Still popped so old templates carrying the key don't break EngineConfig;
-    # enabled=true now fails loud below.
-    portfolio_cfg = engine_cfg.pop("portfolio", {}) or {}
-    # entry_gate / entry_raw_threshold are consumed by the dual-ML recombine (buy gate /
-    # raw-score buy cutoff), not EngineConfig.
-    engine_cfg.pop("entry_gate", None)
-    engine_cfg.pop("entry_xs_mom_pct", None)
-    engine_cfg.pop("exit_gate", None)
-    engine_cfg.pop("entry_raw_threshold", None)
-    engine_cfg.pop("rule_only_no_ml", None)  # pipeline flag (skip ML fit), not an engine field
-    engine_cfg.pop("entry_z_low_threshold", None)
-    engine_cfg.pop("z_norm_window", None)
-    engine_cfg.pop("z_norm_min_periods", None)
-    engine_cfg.pop("exit_force_gate", None)
-    engine_cfg.pop("exit_force_gate_nonbull", None)
-    engine_cfg.pop("exit_force_gate_lowbreadth", None)
-    engine_cfg.pop("exit_force_gate_vn30", None)
-    engine_cfg.pop("exit_rs_drop", None)
-    engine_cfg.pop("exit_xsec_features", None)
-    engine_cfg.pop("entry_xsec_features", None)
-    engine_cfg.pop("exit_force_suppress", None)
-    engine_cfg.pop("nonbull_ma_win", None)
-    engine_cfg.pop("nonbull_persist", None)
-    engine_cfg.pop("entry_skip_nonbull_persist", None)
-    engine_cfg.pop("regime_index_symbol", None)
-    engine_cfg.pop("early_entry_reversal", None)
-    engine_cfg.pop("top_reversal_exit", None)
-    engine_cfg.pop("entry_zX_floor", None)
-    engine_cfg.pop("entry_rollover_exit", None)
-    engine_cfg.pop("entry_ensemble", None)
-    engine_cfg.pop("entry_ensemble2", None)
-    engine_cfg.pop("entry_ensemble3", None)
-    engine_cfg.pop("entry_ensemble4", None)
-    engine_cfg.pop("entry_ensemble5", None)
-    engine_cfg.pop("entry_breadth_gate", None)
-    engine_cfg.pop("entry_rs_gate", None)
-    engine_cfg.pop("downleg_skip_bull", None)
-    engine_cfg.pop("entry_head_csrank_gate", None)
-    engine_cfg.pop("exit_ensemble", None)
-    # P1-E2: consumed by the xsec_rank_topk membership branch (and its breadth append),
-    # never by EngineConfig. Absent from every pre-existing template, so this pop is a
-    # no-op on all old paths.
-    engine_cfg.pop("xsec_rank", None)
-    # Handle nested costs dict from YAML (costs: {commission: 0.0025, tax: 0.001, ...})
-    costs_dict = engine_cfg.pop("costs", {})
-    # Also handle flat keys for backward compatibility
-    cost_kw = costs_dict.copy() if costs_dict else {}
-    # Remove slippage_model if present (not used by CostModel, but may be in YAML for doc)
-    cost_kw.pop("slippage_model", None)
-    # Also allow flat-level cost keys
-    for k in ["commission", "tax", "slippage"]:
-        if k in engine_cfg:
-            cost_kw[k] = engine_cfg.pop(k)
-    # Remove slippage_model from engine_cfg if present
-    engine_cfg.pop("slippage_model", None)
-    cost = CostModel(**cost_kw) if cost_kw else CostModel()
-    engine = EngineConfig(cost=cost, **engine_cfg)
+    # Single shared deserializer (§11 R3): 3-way partition of the `engine:` block into EngineConfig
+    # fields / recombine-pipeline keys / cost keys. The recombine keys (entry_gate, ensemble heads,
+    # xsec, regime, …) are consumed by the signal layer, not EngineConfig; portfolio_cfg is the removed
+    # legacy tier's sub-block, checked for enabled=true just below.
+    engine, portfolio_cfg = engine_config_from_dict(cfg.engine)
 
     equity_curve = None
     if portfolio_cfg.get("enabled"):

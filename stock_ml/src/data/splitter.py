@@ -133,14 +133,26 @@ class YearSplitter:
         return out
 
     def split(
-        self, df: pd.DataFrame, date_col: str = "date"
+        self,
+        df: pd.DataFrame,
+        date_col: str = "date",
+        universe_by_year: dict[int, list[str]] | None = None,
     ) -> Iterator[tuple[SplitWindow, pd.DataFrame, pd.DataFrame]]:
+        """Walk-forward split. `universe_by_year` (dynamic point-in-time universe,
+        docs/UPGRADE_DYNAMIC_UNIVERSE.md Bước 3): when set, BOTH train and test of
+        each fold are masked down to that fold's test-year universe — the splitter
+        stays pure (dict is pre-resolved by the caller, no DB access here).
+        None → legacy time-only masking, byte-identical."""
         if date_col not in df.columns:
             raise ValueError(f"DataFrame missing '{date_col}' column")
         dates = pd.to_datetime(df[date_col])
         for w in self.windows():
             train_mask = (dates >= w.train_start) & (dates < w.train_end)
             test_mask = (dates >= w.test_start) & (dates < w.test_end)
+            if universe_by_year is not None:
+                sym_in = df["symbol"].isin(universe_by_year[w.test_year])
+                train_mask &= sym_in
+                test_mask &= sym_in
             yield w, df.loc[train_mask].copy(), df.loc[test_mask].copy()
 
 

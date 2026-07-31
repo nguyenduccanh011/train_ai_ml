@@ -110,6 +110,77 @@ def _trim_leading_phantom(df: pd.DataFrame) -> pd.DataFrame:
     )
 
 
+def ensure_symbols_cached(
+    db_path: str | Path, symbols: list[str], *, timeframe: str = "1D"
+) -> list[str]:
+    """§13.3.1 fetch-on-miss: make sure every requested symbol has bars in the local cache.
+
+    The corrected universe (§13.9) surfaces survivorship-correct names (ROS, delisted tickers) the
+    local back-adjusted cache never had. Without this they'd be SILENTLY dropped at load time
+    (``requested = [s for s in symbols if s in available]``), quietly shrinking the universe back to
+    the survivors — the exact bias the fix removes. So: find the symbols missing from the cache, fetch
+    their full back-adjusted history from the source, and upsert into the ``ohlcv`` table (the local
+    file is a cache of the source, §13.3.1). Fail-loud inside the client if the source is unreachable.
+
+    Returns the list of symbols actually fetched (empty when the cache already had everything).
+    """
+    db_path = Path(db_path)
+    if not db_path.exists():
+        raise FileNotFoundError(f"ensure_symbols_cached: DuckDB file not found: {db_path}")
+    con = duckdb.connect(str(db_path), read_only=True)
+    try:
+        have = {r[0] for r in con.execute(
+            "SELECT DISTINCT symbol FROM ohlcv WHERE timeframe = ?", [timeframe]).fetchall()}
+    finally:
+        con.close()
+    missing = [s for s in dict.fromkeys(symbols) if s not in have]
+    if not missing:
+        return []
+
+    from src.data.sieutinhieu import fetch_history
+
+    # Per-symbol tolerant: a symbol the universe endpoint ranks (it has matched-flow) but whose /ohlcv/
+    # 500s has NO price series on the source — it is UNTRADEABLE (no bars to backtest), so drop it with
+    # a loud warning rather than aborting the whole universe. Only a fully-unreachable source (nothing
+    # fetched) is fatal, matching the fail-loud contract (§1.1) without punishing fringe data gaps.
+    frames, failed = [], []
+    for sym in missing:
+        try:
+            frames.append(fetch_history(sym))
+        except Exception as e:  # noqa: BLE001 — collect, decide after the loop
+            failed.append((sym, str(e)[:80]))
+    if failed:
+        print(f"[cache] WARNING {len(failed)}/{len(missing)} symbol(s) have NO OHLCV on source "
+              f"(untradeable → dropped): {[s for s, _ in failed]}")
+    if not frames:
+        # Nothing fetched. Distinguish a DOWN source (connection error → abort, we must not run on a
+        # silently-shrunk universe) from "every missing symbol genuinely has no price series"
+        # (per-symbol HTTP error → they are untradeable; proceed with zero fetched, they drop at load).
+        conn_errs = [f for f in failed if "HTTP Error" not in f[1]]
+        if conn_errs:
+            raise RuntimeError(
+                f"ensure_symbols_cached: source unreachable — {len(conn_errs)} connection failure(s) "
+                f"(e.g. {conn_errs[:3]})")
+        return []
+    df = pd.concat(frames, ignore_index=True)
+    df["timeframe"] = timeframe
+    # Local convention: traded_value = volume*close (the endpoint doesn't ship it, and the universe
+    # resolver no longer relies on it — it reads matched ADTV from the source).
+    df["traded_value"] = df["volume"] * df["close"]
+    cols = ["symbol", "timeframe", "date", "open", "high", "low", "close", "volume", "traded_value"]
+    con = duckdb.connect(str(db_path))  # write connection
+    try:
+        con.register("_incoming", df[cols])
+        con.execute(f"INSERT INTO ohlcv ({', '.join(cols)}) SELECT {', '.join(cols)} FROM _incoming")
+        con.unregister("_incoming")
+    finally:
+        con.close()
+    fetched = sorted(df["symbol"].unique())
+    print(f"[cache] fetched-on-miss {len(fetched)} symbol(s) into {db_path.name}: {fetched[:8]}"
+          + ("…" if len(fetched) > 8 else ""))
+    return fetched
+
+
 class DuckDBLoader:
     """Load OHLCV data from DuckDB files.
 

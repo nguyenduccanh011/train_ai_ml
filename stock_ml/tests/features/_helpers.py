@@ -32,9 +32,7 @@ def make_ohlcv(n_per: int = 160, symbols=("AAA", "BBB", "CCC")) -> pd.DataFrame:
         vol = rng.integers(100_000, 1_000_000, n_per).astype(float)
         for i in range(n_per):
             rows.append((sym, dates[i], open_[i], high[i], low[i], closes[i], vol[i]))
-    return pd.DataFrame(
-        rows, columns=["symbol", "date", "open", "high", "low", "close", "volume"]
-    )
+    return pd.DataFrame(rows, columns=["symbol", "date", "open", "high", "low", "close", "volume"])
 
 
 def dsl_series(df: pd.DataFrame, expr: str, features=None) -> pd.Series:
@@ -57,11 +55,42 @@ def golden_series(col: str) -> pd.Series:
 
 
 def assert_close(a: pd.Series, b: pd.Series, tol: float = 1e-9) -> None:
+    """DSL vs legacy-builder parity.
+
+    Where the DSL emits a value it must equal the golden to ``tol`` (strict). The one accepted
+    divergence: the DSL leaves the leading warmup as NaN while the legacy builder fabricated a
+    neutral fill there (e.g. RSI/MFI -> 50.0). That is an intentional honesty improvement — the
+    training pipeline drops NaN-feature rows anyway (subsumed by the longer sma_200 warmup), so the
+    fabricated warmup never reached the model. We still guard it tightly: a DSL NaN that the golden
+    fills is allowed ONLY as a contiguous leading run per symbol; a DSL NaN mid-series (a real gap)
+    or a DSL value where the golden is NaN both fail.
+    """
     a2, b2 = a.align(b, join="inner")
     assert len(a2) > 0, "no overlapping rows to compare"
     av = a2.to_numpy(dtype="float64")
     bv = b2.to_numpy(dtype="float64")
-    ok = np.allclose(av, bv, rtol=tol, atol=tol, equal_nan=True)
-    if not ok:
-        diff = np.nanmax(np.abs(av - bv))
-        raise AssertionError(f"series differ; max abs diff={diff:g}")
+    na, nb = np.isnan(av), np.isnan(bv)
+
+    both = ~na & ~nb
+    assert both.any(), "no finite overlap to compare"
+    if not np.allclose(av[both], bv[both], rtol=tol, atol=tol):
+        diff = np.nanmax(np.abs(av[both] - bv[both]))
+        raise AssertionError(f"finite values differ; max abs diff={diff:g}")
+
+    # DSL value where the golden withheld one -> DSL fabricating; never allowed.
+    dsl_extra = ~na & nb
+    assert not dsl_extra.any(), (
+        f"DSL emits {int(dsl_extra.sum())} value(s) where the legacy builder is NaN"
+    )
+
+    # DSL NaN where the golden has a value: allowed only as each symbol's leading warmup run.
+    dsl_only_nan = na & ~nb
+    if dsl_only_nan.any():
+        syms = a2.index.get_level_values(0).to_numpy()
+        for sym in pd.unique(syms):
+            m = dsl_only_nan[syms == sym]
+            if m.any():
+                last = int(np.max(np.nonzero(m)[0]))
+                assert m[: last + 1].all(), (
+                    f"{sym}: DSL NaN appears mid-series (not leading warmup) — a real gap, not a fill diff"
+                )

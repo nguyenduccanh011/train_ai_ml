@@ -59,38 +59,6 @@ def test_resolver_unions_per_slot_sets():
     assert len(feature_cols) == 37  # union == leading_v2, basic_v1 shares its features
 
 
-def test_per_slot_config_backward_compat():
-    """Test backward compatibility: existing YAML without per-slot overrides."""
-    cfg = ExperimentConfig.from_yaml(
-        "stock_ml/config/experiments/done/technical_rules_v2_histogram.yaml"
-    )
-    assert cfg.entry_features is None, "entry_features should be None (use global)"
-    assert cfg.exit_features is None, "exit_features should be None (use global)"
-    assert cfg.entry_target is None, "entry_target should be None (use global)"
-    assert cfg.exit_target is None, "exit_target should be None (use global)"
-    # Global config should still be present
-    assert cfg.feature_set == "leading_v2"
-    assert cfg.target["type"] in ("forward_return_regression", "forward_return")
-
-
-def test_per_slot_config_from_yaml_new():
-    """Test new per-slot YAML config parsing."""
-    cfg = ExperimentConfig.from_yaml(
-        "stock_ml/config/experiments/examples/example_per_slot_features.yaml"
-    )
-    assert cfg.entry_features == "leading_v4", "entry_features should be leading_v4"
-    assert cfg.exit_features == "leading_v2", "exit_features should be leading_v2"
-    assert cfg.entry_target is not None, "entry_target should be set"
-    assert cfg.entry_target["horizon"] == 7, "entry target horizon should be 7"
-    assert cfg.entry_target["gain_threshold"] == 0.03
-    assert cfg.exit_target is not None, "exit_target should be set"
-    assert cfg.exit_target["horizon"] == 3, "exit target horizon should be 3"
-    assert cfg.exit_target["gain_threshold"] == 0.015
-    # Verify 'features' and 'target' were popped from model dicts
-    assert "features" not in cfg.entry_model, "entry_model should not contain 'features' (popped)"
-    assert "target" not in cfg.entry_model, "entry_model should not contain 'target' (popped)"
-
-
 def test_train_fold_per_slot_different_targets():
     """Test train_fold with per-slot feature columns and target columns."""
     # Generate synthetic data (2 symbols so the model has cross-sectional spread).

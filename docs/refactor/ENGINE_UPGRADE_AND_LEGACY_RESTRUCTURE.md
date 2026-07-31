@@ -1740,11 +1740,14 @@ Phase 0a** (`PRUNE_BUNDLES=0`, đã đánh dấu XONG bên đó); **serving D4 t
   import `from src.*` trước đó **raise runtime** (ROOT=`stock_ml/scripts` thiếu `stock_ml` trên path). **Verify:**
   suite 319/0, smoke import serving-critical (pipeline.experiment/backtest.engine/data.splitter/utils.*) sạch, 3 lazy
   import ops resolve với `stock_ml` on path.
-- ⏳ **§4.5 (phần couple + đổi-hành-vi — HOÃN, cần checkpoint):**
-  - **Bug env arithmetic (đã đo lại):** `utils/env.py` dirname×2 = `stock_ml/src` ⇒ `get_results_dir()` trả
-    `stock_ml/src/results` (cây 93MB tình cờ), TRÁI docstring "stock_ml/results" (cây 8.6GB thật). Sửa = +1 dirname,
-    NHƯNG đổi nơi api/export đọc results (có thể bị `STOCK_RESULTS_DIR` che trong prod) ⇒ cần soát env-var-usage +
-    chọn cây canonical trước khi flip.
+- ✅ **§4.5 Bug env arithmetic — FIX (audit xong, an toàn).** Audit: `STOCK_RESULTS_DIR` **KHÔNG set** ở prod
+  (chỉ 1 test monkeypatch) ⇒ bug LIVE không bị che; `stock_ml/results` (8.6GB: experiments/research/alpha_gate/
+  live_sim…) = cây THẬT, `stock_ml/src/results` (93MB: chỉ `cache/`) = tình cờ do chính bug đẩy vào; serving KHÔNG
+  import `utils.env` ⇒ an toàn. `utils/env.py`: thêm `_stock_ml_dir()` (dirname×**3** = stock_ml, sửa off-by-one di
+  sản khi copy `env.py`→`utils/env.py`), thay 2 site. Nay `get_results_dir()→stock_ml/results`,
+  `resolve_data_dir("../portable_data/x")→repo_root/portable_data/x`. Suite 319/0. (CÒN: xoá cây orphan
+  `stock_ml/src/results/cache` 93MB — gộp vào "một results root" §4.5, là data gitignore nên hoãn cùng convergence.)
+- ⏳ **§4.5 (phần couple còn lại — HOÃN, cần verify chạy thật):**
   - **Convergence trọn `src.*`→`stock_ml.src.*`** (bỏ double-cache class/module): đòi MỌI entry có repo_root trên
     path (đổi run_template sys.path + convert model_dashboard/data/pipeline…) — thay đổi phối hợp, verify bằng chạy
     pipeline thật, không chỉ pytest. **fix-vs-xoá 3 script** cache_gc/api_server/build_leaderboard (có bị `stock_ml/api`

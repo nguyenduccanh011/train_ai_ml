@@ -259,6 +259,7 @@ async def get_run(run_id: str, session: AsyncSession = Depends(get_db)) -> dict:
         "cost_slippage": model.cost_slippage,
         "experiment_group": model.experiment_group,
         "variant_type": model.variant_type,
+        "parent_run_id": model.parent_run_id,
         "metadata_notes": model.metadata_notes,
         "generated_at": model.generated_at.isoformat() if model.generated_at else None,
     }

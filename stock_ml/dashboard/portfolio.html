@@ -38,6 +38,26 @@
     .muted { color: #7d8590; }
     .pos { color: #3fb950; } .neg { color: #f85149; }
     .scroll { max-height: 360px; overflow: auto; }
+    /* dual-range: 2 input range chồng lên nhau, thumb nhận chuột, track vẽ riêng */
+    .dualrange { position: relative; flex: 1; min-width: 280px; height: 24px; }
+    .dualrange input[type=range] {
+      position: absolute; left: 0; top: 0; width: 100%; height: 24px; margin: 0;
+      background: none; -webkit-appearance: none; appearance: none; pointer-events: none;
+    }
+    .dualrange input[type=range]::-webkit-slider-runnable-track { background: transparent; height: 24px; }
+    .dualrange input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none; pointer-events: auto; width: 15px; height: 15px; margin-top: 4px;
+      border-radius: 50%; background: #f0883e; border: 2px solid #0d1117; cursor: grab;
+    }
+    .dualrange #startSlider::-webkit-slider-thumb { background: #2ea043; }
+    .dualrange input[type=range]::-moz-range-track { background: transparent; height: 24px; }
+    .dualrange input[type=range]::-moz-range-thumb {
+      pointer-events: auto; width: 13px; height: 13px; border-radius: 50%;
+      background: #f0883e; border: 2px solid #0d1117; cursor: grab;
+    }
+    .dualrange #startSlider::-moz-range-thumb { background: #2ea043; }
+    .dr-track { position: absolute; left: 0; right: 0; top: 10px; height: 4px; background: #30363d; border-radius: 2px; }
+    .dr-fill { position: absolute; top: 10px; height: 4px; background: #1f6feb; border-radius: 2px; }
   </style>
 </head>
 <body>
@@ -48,13 +68,29 @@
   </header>
   <div class="wrap">
     <div class="bar">
-      <label>Ngày: <select id="dateSel"></select></label>
-      <input type="range" id="dateSlider" min="0" max="0" value="0" style="flex:1; min-width:220px;" />
+      <label style="color:#2ea043">Vào: <select id="startSel"></select></label>
+      <div class="dualrange">
+        <div class="dr-track"></div>
+        <div id="drFill" class="dr-fill"></div>
+        <input type="range" id="startSlider" min="0" max="0" value="0" />
+        <input type="range" id="dateSlider" min="0" max="0" value="0" />
+      </div>
+      <label style="color:#f0883e">Ngày xem: <select id="dateSel"></select></label>
+      <span class="hint">nút xanh = ngày bắt đầu đầu tư (NAV/lãi/DD rebase) · nút cam = ngày đang xem</span>
     </div>
     <div class="kpi" id="kpi"></div>
     <div class="card">
-      <h3>Đường vốn (NAV theo ngày) <span class="hint">thang log · vạch cam = ngày đang xem · phần mờ = tương lai</span></h3>
+      <h3>Đường vốn (NAV theo ngày)
+        <span class="hint">vạch cam = ngày đang xem · phần mờ = tương lai</span>
+        <span style="float:right">
+          <button id="scLog" style="padding:2px 10px;border:1px solid #30363d;background:#1f6feb;color:#fff;border-radius:4px 0 0 4px;cursor:pointer;font-size:11px">log</button><button id="scLin" style="padding:2px 10px;border:1px solid #30363d;background:transparent;color:#8b949e;border-radius:0 4px 4px 0;cursor:pointer;font-size:11px">tuyến tính</button>
+        </span>
+      </h3>
       <div id="eqChart" style="min-height:120px"></div>
+    </div>
+    <div class="card">
+      <h3>Drawdown (% sụt so với đỉnh NAV) <span class="hint">thang log nén mọi cú sụt trên đường vốn — pane này là thước rủi ro thật; giá đóng cửa (đáy trong phiên có thể sâu hơn ~2-3pp)</span></h3>
+      <div id="ddChart" style="min-height:90px"></div>
     </div>
     <div class="grid">
       <div>
@@ -97,6 +133,19 @@
     document.getElementById('rid').textContent = runId || '(thiếu run_id)';
     document.getElementById('detailLink').href = `model-details.html?run_id=${encodeURIComponent(runId || '')}`;
     let dates = [], equity = {}, allTrades = [], curDate = null;
+    let startIdx = 0;      // mốc "bắt đầu đầu tư" — NAV/KPI/chart rebase từ đây
+    let eqScale = 'log';   // 'log' | 'lin' — toggle trên card đường vốn
+    const baseNav = () => (equity[dates[startIdx]] && equity[dates[startIdx]].nav) || 1;
+    function setScale(s) {
+      eqScale = s;
+      const on = 'padding:2px 10px;border:1px solid #30363d;background:#1f6feb;color:#fff;cursor:pointer;font-size:11px';
+      const off = 'padding:2px 10px;border:1px solid #30363d;background:transparent;color:#8b949e;cursor:pointer;font-size:11px';
+      document.getElementById('scLog').style.cssText = (s === 'log' ? on : off) + ';border-radius:4px 0 0 4px';
+      document.getElementById('scLin').style.cssText = (s === 'lin' ? on : off) + ';border-radius:0 4px 4px 0';
+      renderEquityChart();
+    }
+    document.getElementById('scLog').onclick = () => setScale('log');
+    document.getElementById('scLin').onclick = () => setScale('lin');
 
     async function j(url) { const r = await fetch(url, { cache: 'no-store' }); if (!r.ok) throw new Error(r.status); return r.json(); }
     const pct = x => (x == null ? '—' : (x * 100).toFixed(1) + '%');
@@ -114,10 +163,25 @@
       dates = rows.map(r => r.date);
       rows.forEach(r => equity[r.date] = r);
       const sel = document.getElementById('dateSel'), sl = document.getElementById('dateSlider');
+      const ssel = document.getElementById('startSel'), ssl = document.getElementById('startSlider');
       sel.innerHTML = dates.map(d => `<option value="${d}">${d}</option>`).join('');
-      sl.max = dates.length - 1; sl.value = dates.length - 1; sel.value = dates[dates.length - 1];
-      sel.onchange = () => { sl.value = dates.indexOf(sel.value); load(sel.value); };
-      sl.oninput = () => { sel.value = dates[+sl.value]; load(sel.value); };
+      ssel.innerHTML = dates.map(d => `<option value="${d}">${d}</option>`).join('');
+      sl.max = ssl.max = dates.length - 1;
+      sl.value = dates.length - 1; ssl.value = 0;
+      const fill = document.getElementById('drFill');
+      const syncUI = () => {
+        const n1 = Math.max(1, dates.length - 1);
+        const a = +ssl.value / n1 * 100, bp = +sl.value / n1 * 100;
+        fill.style.left = a + '%'; fill.style.width = Math.max(0, bp - a) + '%';
+        ssel.value = dates[+ssl.value]; sel.value = dates[+sl.value];
+      };
+      const apply = () => { startIdx = +ssl.value; syncUI(); load(dates[+sl.value]); };
+      // 2 thumb ràng nhau: nút xanh không vượt nút cam và ngược lại
+      ssl.oninput = () => { if (+ssl.value > +sl.value) ssl.value = sl.value; apply(); };
+      sl.oninput = () => { if (+sl.value < +ssl.value) sl.value = ssl.value; apply(); };
+      ssel.onchange = () => { ssl.value = Math.min(Math.max(0, dates.indexOf(ssel.value)), +sl.value); apply(); };
+      sel.onchange = () => { sl.value = Math.max(Math.max(0, dates.indexOf(sel.value)), +ssl.value); apply(); };
+      syncUI();
       // trade ledger (actual combo trades)
       try { const tr = await j(`${API_BASE}/runs/${encodeURIComponent(runId)}/trades`); allTrades = tr.trades || []; } catch (e) {}
       document.getElementById('ledgerSearch').oninput = renderLedger;
@@ -148,22 +212,36 @@
       const el = document.getElementById('eqChart');
       if (!dates.length) { el.innerHTML = '<span class="muted">—</span>'; return; }
       const W = 1000, Hh = 200, PADL = 46, PADR = 14, PADT = 10, PADB = 20;
-      const n = dates.length;
-      const navs = dates.map(d => (equity[d] && equity[d].nav) || 1);
+      const vDates = dates.slice(startIdx);            // cửa sổ từ mốc "bắt đầu"
+      const b = baseNav();
+      const n = vDates.length;
+      const navs = vDates.map(d => ((equity[d] && equity[d].nav) || 1) / b);
       let lo = Math.min(...navs), hi = Math.max(...navs);
       if (hi <= lo) hi = lo * 1.01;
       const Llo = Math.log(lo), Lhi = Math.log(hi);
-      const curIdx = Math.max(0, dates.indexOf(curDate));
+      const curIdx = Math.max(0, dates.indexOf(curDate) - startIdx);
       const xOf = i => PADL + (W - PADL - PADR) * (n > 1 ? i / (n - 1) : 0);
-      const yOf = v => PADT + (Hh - PADT - PADB) * (1 - (Math.log(v) - Llo) / (Lhi - Llo));
-      const ticks = [1, 1.5, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377].filter(v => v >= lo * 0.98 && v <= hi * 1.02);
+      const isLog = eqScale === 'log';
+      const yOf = v => PADT + (Hh - PADT - PADB) * (isLog
+        ? 1 - (Math.log(v) - Llo) / (Lhi - Llo)
+        : 1 - (v - lo) / (hi - lo));
+      let ticks;
+      if (isLog) {
+        ticks = [1, 1.5, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610].filter(v => v >= lo * 0.98 && v <= hi * 1.02);
+      } else {
+        // bước "đẹp" 1/2/5×10^k để có ~5-6 vạch tuyến tính
+        const raw = (hi - lo) / 5, mag = Math.pow(10, Math.floor(Math.log10(raw)));
+        const step = raw / mag >= 5 ? 5 * mag : raw / mag >= 2 ? 2 * mag : mag;
+        ticks = [];
+        for (let t = Math.ceil(lo / step) * step; t <= hi; t += step) ticks.push(t);
+      }
       if (!ticks.length) ticks.push(lo, hi);
       const grid = ticks.map(v => `<line x1="${PADL}" y1="${yOf(v).toFixed(1)}" x2="${W - PADR}" y2="${yOf(v).toFixed(1)}" stroke="#21262d"/><text x="${PADL - 6}" y="${(yOf(v) + 3).toFixed(1)}" fill="#6e7681" font-size="10" text-anchor="end">${v >= 10 ? v.toFixed(0) : v.toFixed(1)}×</text>`).join('');
-      const line = (a, b) => dates.slice(a, b + 1).map((d, k) => `${xOf(a + k).toFixed(1)},${yOf(equity[d].nav).toFixed(1)}`).join(' ');
+      const line = (a, bb) => navs.slice(a, bb + 1).map((v, k) => `${xOf(a + k).toFixed(1)},${yOf(v).toFixed(1)}`).join(' ');
       const pastPts = line(0, curIdx), futPts = line(curIdx, n - 1);
       const area = `${PADL},${(Hh - PADB).toFixed(1)} ${pastPts} ${xOf(curIdx).toFixed(1)},${(Hh - PADB).toFixed(1)}`;
       const cx = xOf(curIdx), cy = yOf(navs[curIdx]), right = curIdx > n * 0.8;
-      const xlab = i => `<text x="${xOf(i).toFixed(1)}" y="${Hh - 5}" fill="#6e7681" font-size="10" text-anchor="${i === 0 ? 'start' : 'end'}">${dates[i]}</text>`;
+      const xlab = i => `<text x="${xOf(i).toFixed(1)}" y="${Hh - 5}" fill="#6e7681" font-size="10" text-anchor="${i === 0 ? 'start' : 'end'}">${vDates[i]}</text>`;
       el.innerHTML = `<svg viewBox="0 0 ${W} ${Hh}" width="100%" style="display:block">
         ${grid}
         <polygon points="${area}" fill="#2f5fdc22"/>
@@ -176,19 +254,57 @@
       </svg>`;
     }
 
+    function renderDDChart() {
+      const el = document.getElementById('ddChart');
+      if (!dates.length) { el.innerHTML = '<span class="muted">—</span>'; return; }
+      const W = 1000, Hh = 130, PADL = 46, PADR = 14, PADT = 8, PADB = 20;
+      const vDates = dates.slice(startIdx);   // DD tính lại TRONG cửa sổ từ mốc bắt đầu
+      const n = vDates.length;
+      const navs = vDates.map(d => (equity[d] && equity[d].nav) || 1);
+      let peak = -Infinity;
+      const dd = navs.map(v => { peak = Math.max(peak, v); return v / peak - 1; });
+      const worst = Math.min(...dd);
+      const lo = Math.min(-0.05, Math.floor(worst * 20) / 20 - 0.025); // đáy trục, bội 5%
+      const curIdx = Math.max(0, dates.indexOf(curDate) - startIdx);
+      const xOf = i => PADL + (W - PADL - PADR) * (n > 1 ? i / (n - 1) : 0);
+      const yOf = v => PADT + (Hh - PADT - PADB) * (v / lo);   // 0 trên cùng, lo dưới cùng
+      const ticks = [];
+      for (let t = -0.05; t >= lo + 1e-9; t -= 0.05) ticks.push(t);
+      const grid = ticks.map(t => `<line x1="${PADL}" y1="${yOf(t).toFixed(1)}" x2="${W - PADR}" y2="${yOf(t).toFixed(1)}" stroke="#21262d"/><text x="${PADL - 6}" y="${(yOf(t) + 3).toFixed(1)}" fill="#6e7681" font-size="10" text-anchor="end">${(t * 100).toFixed(0)}%</text>`).join('');
+      const pts = dd.map((v, i) => `${xOf(i).toFixed(1)},${yOf(v).toFixed(1)}`).join(' ');
+      const area = `${PADL},${yOf(0).toFixed(1)} ${pts} ${xOf(n - 1).toFixed(1)},${yOf(0).toFixed(1)}`;
+      // đánh dấu điểm sâu nhất + vạch ngày đang xem
+      const wIdx = dd.indexOf(worst);
+      const cx = xOf(curIdx);
+      const wRight = wIdx > n * 0.8;
+      el.innerHTML = `<svg viewBox="0 0 ${W} ${Hh}" width="100%" style="display:block">
+        <line x1="${PADL}" y1="${yOf(0).toFixed(1)}" x2="${W - PADR}" y2="${yOf(0).toFixed(1)}" stroke="#30363d"/>
+        ${grid}
+        <polygon points="${area}" fill="#f8514922"/>
+        <polyline points="${pts}" fill="none" stroke="#f85149" stroke-width="1.4"/>
+        <line x1="${cx.toFixed(1)}" y1="${PADT}" x2="${cx.toFixed(1)}" y2="${Hh - PADB}" stroke="#f0883e" stroke-dasharray="3 3"/>
+        <circle cx="${xOf(wIdx).toFixed(1)}" cy="${yOf(worst).toFixed(1)}" r="3.5" fill="#f85149"/>
+        <text x="${(xOf(wIdx) + (wRight ? -6 : 6)).toFixed(1)}" y="${(yOf(worst) - 6).toFixed(1)}" fill="#f85149" font-size="11" text-anchor="${wRight ? 'end' : 'start'}">max DD ${(worst * 100).toFixed(1)}% · ${vDates[wIdx]}</text>
+        <text x="${(cx + 6).toFixed(1)}" y="${PADT + 10}" fill="#f0883e" font-size="10">${(dd[curIdx] * 100).toFixed(1)}%</text>
+      </svg>`;
+    }
+
     async function load(date) {
       curDate = date;
       renderEquityChart();
+      renderDDChart();
       renderLedger();
       const e = equity[date] || {};
-      const cumRet = e.nav != null ? e.nav - 1 : null;
+      const b0 = baseNav();
+      const navX = e.nav != null ? e.nav / b0 : null;   // ×vốn TỪ MỐC BẮT ĐẦU
+      const cumRet = navX != null ? navX - 1 : null;
       let d;
       try { d = await j(`${API_BASE}/runs/${encodeURIComponent(runId)}/portfolio/day?date=${date}`); }
       catch (err) { d = {}; }
       const u = d.unrealized;
       document.getElementById('kpi').innerHTML = `
-        <div class="box"><div class="label">NAV (×vốn, gồm chưa chốt)</div><div class="val">${e.nav ? e.nav.toFixed(2) : '—'}</div></div>
-        <div class="box"><div class="label">Lãi lũy kế (đã+chưa chốt)</div><div class="val ${cls(cumRet)}">${cumRet == null ? '—' : (cumRet >= 0 ? '+' : '') + (cumRet * 100).toFixed(0) + '%'}</div></div>
+        <div class="box"><div class="label">NAV (×vốn từ mốc bắt đầu)</div><div class="val">${navX ? navX.toFixed(2) : '—'}</div><div class="label" style="font-size:9px">vào ${dates[startIdx]}${startIdx > 0 ? ` · toàn kỳ ×${e.nav ? e.nav.toFixed(1) : '—'}` : ''}</div></div>
+        <div class="box"><div class="label">Lãi lũy kế (đã+chưa chốt)</div><div class="val ${cls(cumRet)}">${cumRet == null ? '—' : (cumRet >= 0 ? '+' : '') + (cumRet * 100).toFixed(0) + '%'}</div><div class="label" style="font-size:9px">từ ${dates[startIdx]}</div></div>
         ${u ? `<div class="box"><div class="label">Lãi CHƯA chốt (MTM)</div><div class="val ${cls(u.unreal_pnl_cost_pct)}">${signed(u.unreal_pnl_cost_pct)}</div><div class="label" style="font-size:9px">so vốn đã mua · ${u.unreal_pnl_nav_pct != null ? (u.unreal_pnl_nav_pct * 100).toFixed(1) : '—'}% NAV</div></div>` : ''}
         <div class="box"><div class="label">Giải ngân</div><div class="val">${pct(e.exposure)}</div></div>
         <div class="box"><div class="label">Số vị thế</div><div class="val">${e.n_positions ?? '—'}</div></div>

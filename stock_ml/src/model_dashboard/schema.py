@@ -130,7 +130,10 @@ def leaderboard_row_to_dashboard_bundle(
         strategy=row.strategy,
         feature_set=row.feature_set,
         entry_model=row.entry_model,
-        exit_model=row.exit_model_type,
+        # LeaderboardRow no longer carries a separate exit-model column; the entry/exit composition
+        # now lives in `model_mode` (ml_only | rule_only | hybrid_ml_entry_rule_exit |
+        # hybrid_rule_entry_ml_exit), which is the truthful exit descriptor.
+        exit_model=row.model_mode,
         market=row.market,
         priority=0,
         visible_in_dashboard=bool(row.score_mode == "live" and not row.superseded),
@@ -190,7 +193,7 @@ def model_id_for_row(row: LeaderboardRow) -> str:
             row.strategy,
             row.feature_set,
             row.entry_model,
-            row.exit_model_type,
+            row.model_mode,  # exit composition (exit_model_type column removed from LeaderboardRow)
             row.market,
             row.timeframe,
         ]

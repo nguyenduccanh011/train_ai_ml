@@ -96,11 +96,53 @@ async def get_run_state(run_id: str, session: AsyncSession = Depends(get_db)) ->
 
 @router.get("/runs/{run_id:path}/trades")
 async def get_run_trades(run_id: str, session: AsyncSession = Depends(get_db)) -> dict:
+    """B4 (PORTFOLIO_REGISTRATION_PIPELINE.md): prefer the PORTFOLIO layer
+    (run_trades_overlay) when this run has one; fall back to engine BASE trades.
+    `layer` tells the UI which one it is looking at."""
     await _resolve(session, run_id)  # 404 for unknown run, consistent with /state
+    from sqlalchemy import text
+
+    try:
+        ov = (
+            await session.execute(
+                text(
+                    "SELECT symbol, entry_date, exit_date, entry_price, exit_price, "
+                    "holding_days, pnl_pct, exit_reason FROM run_trades_overlay "
+                    "WHERE run_id=:rid ORDER BY entry_date"
+                ),
+                {"rid": run_id},
+            )
+        ).fetchall()
+    except Exception:
+        await session.rollback()
+        ov = []
+    if ov:
+        return {
+            "run_id": run_id,
+            "layer": "overlay",
+            "trades": [
+                {
+                    "symbol": t[0],
+                    "entry_date": str(t[1]) if t[1] else None,
+                    "exit_date": str(t[2]) if t[2] else None,
+                    "entry_price": t[3],
+                    "exit_price": t[4],
+                    "entry_ts": None,
+                    "exit_ts": None,
+                    "holding_days": t[5],
+                    "pnl_pct": t[6],
+                    "direction": None,
+                    "exit_reason": t[7],
+                }
+                for t in ov
+            ],
+            "total_trades": len(ov),
+        }
     repo = RunTradeRepository(session)
     trades = await repo.get_by_run_id(run_id)
     return {
         "run_id": run_id,
+        "layer": "base",
         "trades": [
             {
                 "symbol": t.symbol,
@@ -254,6 +296,15 @@ async def get_run_portfolio_day(
     try:
         # asyncpg binds date columns to datetime.date objects, not strings -> parse first.
         d_obj = datetime.strptime(date, "%Y-%m-%d").date()
+        # B4: per-day trade enrichment reads the PORTFOLIO layer when persisted
+        try:
+            _has_ov = bool((await session.execute(
+                text("SELECT 1 FROM run_trades_overlay WHERE run_id=:rid LIMIT 1"),
+                {"rid": run_id})).fetchone())
+        except Exception:
+            await session.rollback()
+            _has_ov = False
+        _ttbl = "run_trades_overlay" if _has_ov else "run_trades"
         rows = (
             await session.execute(
                 text(
@@ -282,7 +333,7 @@ async def get_run_portfolio_day(
         sells = (
             await session.execute(
                 text(
-                    "SELECT symbol, exit_reason FROM run_trades WHERE run_id=:rid "
+                    f"SELECT symbol, exit_reason FROM {_ttbl} WHERE run_id=:rid "
                     "AND entry_date <= :d AND exit_date > :d "
                     "AND exit_date = (SELECT min(date) FROM run_equity WHERE run_id=:rid AND date > :d)"
                 ),
@@ -311,8 +362,8 @@ async def get_run_portfolio_day(
         exit_tr = (
             await session.execute(
                 text(
-                    "SELECT symbol, entry_date, entry_price, exit_price, pnl_pct, holding_days, exit_reason "
-                    "FROM run_trades WHERE run_id=:rid AND exit_date=:d"
+                    f"SELECT symbol, entry_date, entry_price, exit_price, pnl_pct, holding_days, exit_reason "
+                    f"FROM {_ttbl} WHERE run_id=:rid AND exit_date=:d"
                 ),
                 {"rid": run_id, "d": d_obj},
             )
@@ -321,8 +372,8 @@ async def get_run_portfolio_day(
         open_tr = (
             await session.execute(
                 text(
-                    "SELECT symbol, entry_date, entry_price FROM run_trades "
-                    "WHERE run_id=:rid AND entry_date<=:d AND exit_date>:d"
+                    f"SELECT symbol, entry_date, entry_price FROM {_ttbl} "
+                    f"WHERE run_id=:rid AND entry_date<=:d AND exit_date>:d"
                 ),
                 {"rid": run_id, "d": d_obj},
             )
@@ -399,6 +450,144 @@ async def get_run_portfolio_day(
         "sell_next": sell_next,
         "pending": pending,
         "unrealized": unrealized,
+    }
+
+
+# Exit reasons that only the PORTFOLIO overlay produces (slot-preemption / green-trail /
+# early-cut levers). run_trades rows carrying these are overlay OUTPUT, not engine BASE
+# trades — the provenance detector of PORTFOLIO_REGISTRATION_PIPELINE.md (B2/B7).
+_OVERLAY_EXIT_REASONS = ("preempt", "green_trail", "early_cut")
+
+
+@router.get("/runs/{run_id:path}/signal-symbols")
+async def get_run_signal_symbols(run_id: str, session: AsyncSession = Depends(get_db)) -> dict:
+    """Per-symbol FIRED-signal counts from run_signals — the run's full signal universe.
+    A symbol can fire many signals yet never reach the (portfolio) trade list; sidebars built
+    from trades/symbol-stats hide it entirely. Empty when the run persisted no signals."""
+    from sqlalchemy import text
+
+    try:
+        rows = (
+            await session.execute(
+                text(
+                    "SELECT symbol, "
+                    "count(*) FILTER (WHERE signal = 1) AS buys, "
+                    "count(*) FILTER (WHERE signal = -1) AS sells "
+                    "FROM run_signals WHERE run_id=:rid GROUP BY symbol "
+                    "HAVING count(*) FILTER (WHERE signal <> 0) > 0 "
+                    "ORDER BY 2 DESC, 1"
+                ),
+                {"rid": run_id},
+            )
+        ).fetchall()
+    except Exception:
+        await session.rollback()
+        return {"run_id": run_id, "symbols": []}
+    return {
+        "run_id": run_id,
+        "symbols": [{"symbol": r[0], "buys": r[1], "sells": r[2]} for r in rows],
+    }
+
+
+@router.get("/runs/{run_id:path}/symbol/{symbol}/portfolio-fate")
+async def get_symbol_portfolio_fate(
+    run_id: str, symbol: str, session: AsyncSession = Depends(get_db)
+) -> dict:
+    """B7 (PORTFOLIO_REGISTRATION_PIPELINE.md): one row per fired BUY signal of `symbol`,
+    joined to its fate — became a base trade? filled into the portfolio? skipped why?
+
+    Layer-aware: if this run's run_trades rows carry overlay-only exit reasons
+    (pre-B2 OUTPUT runs, e.g. _static900) they ARE the portfolio trades → became_base
+    is unknowable (null). Post-B2, base lives in run_trades and the portfolio layer in
+    run_trades_overlay; either table may be absent/empty and the endpoint degrades to
+    nulls instead of failing. Guard: n_signals == no_base + base (or filled when layer
+    is overlay)."""
+    from sqlalchemy import text
+
+    async def _rows(sql: str, params: dict) -> list:
+        try:
+            return (await session.execute(text(sql), params)).fetchall()
+        except Exception:
+            await session.rollback()
+            return []
+
+    p = {"rid": run_id, "sym": symbol}
+    sig = await _rows(
+        "SELECT date, score FROM run_signals "
+        "WHERE run_id=:rid AND symbol=:sym AND signal=1 ORDER BY date", p)
+    base = await _rows(
+        "SELECT entry_signal_date, entry_date, exit_date, pnl_pct, exit_reason "
+        "FROM run_trades WHERE run_id=:rid AND symbol=:sym ORDER BY entry_date", p)
+    overlay = await _rows(
+        "SELECT entry_date, exit_date, pnl_pct, exit_reason "
+        "FROM run_trades_overlay WHERE run_id=:rid AND symbol=:sym ORDER BY entry_date", p)
+    skipped = await _rows(
+        "SELECT signal_date, entry_date, skip_reason FROM run_skipped "
+        "WHERE run_id=:rid AND symbol=:sym", p)
+
+    # Layer is a property of the RUN, not the symbol — a signals-only symbol has no
+    # run_trades rows of its own, yet its run may still be an OUTPUT run.
+    run_is_output = bool(await _rows(
+        "SELECT 1 FROM run_trades WHERE run_id=:rid "
+        "AND exit_reason IN ('preempt', 'green_trail', 'early_cut') LIMIT 1",
+        {"rid": run_id}))
+    layer = "overlay" if run_is_output else "base"
+    base_by_sig = {str(r[0]): r for r in base if r[0] is not None}
+    overlay_entry_dates = {str(r[0]) for r in overlay}
+    skip_by_sig = {str(r[0]): r[2] for r in skipped if r[0] is not None}
+    skip_by_entry = {str(r[1]): r[2] for r in skipped if r[1] is not None}
+
+    out, skip_hist = [], {}
+    n_base = n_filled = n_no_base = n_skipped = 0
+    for d, score in sig:
+        ds = str(d)
+        t = base_by_sig.get(ds)
+        skip_reason = skip_by_sig.get(ds) or (t and skip_by_entry.get(str(t[1])))
+        if layer == "overlay":
+            # run_trades rows ARE portfolio trades; base layer was never persisted.
+            became_base, filled = None, t is not None
+        else:
+            became_base = t is not None
+            if not t:
+                filled = False
+            elif overlay:
+                filled = str(t[1]) in overlay_entry_dates
+            else:
+                filled = None  # base trade exists but no overlay layer persisted yet
+        if became_base:
+            n_base += 1
+        if not t:
+            n_no_base += 1
+        if filled:
+            n_filled += 1
+        if skip_reason:
+            n_skipped += 1
+            skip_hist[skip_reason] = skip_hist.get(skip_reason, 0) + 1
+        out.append({
+            "signal_date": ds,
+            "score": score,
+            "became_base_trade": became_base,
+            "base_entry_date": str(t[1]) if t else None,
+            "filled": filled,
+            "exit_reason": t[4] if t else None,
+            "pnl_pct": t[3] if t else None,
+            "skip_reason": skip_reason,
+        })
+
+    return {
+        "run_id": run_id,
+        "symbol": symbol,
+        "layer_run_trades": layer,
+        "has_overlay_table": bool(overlay),
+        "counts": {
+            "signals": len(sig),
+            "base_trades": (n_base if layer == "base" else None),
+            "portfolio_trades": n_filled,
+            "skipped": n_skipped,
+            "no_base": n_no_base,
+        },
+        "skip_reasons": skip_hist,
+        "rows": out,
     }
 
 

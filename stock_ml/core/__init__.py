@@ -27,6 +27,13 @@ from __future__ import annotations
 #        4-head (n2_4h_*) / 5-head (n2_5h_*) champions identically; ≤3-head unchanged.
 __version__ = "0.3.0"
 
+from stock_ml.src.backtest.engine import (
+    CostModel,
+    EngineConfig,
+    engine_config_from_dict,
+    run_backtest,
+    trades_to_dataframe,
+)
 from stock_ml.src.pipeline.experiment import (
     ExperimentConfig,
     build_feature_frame,
@@ -45,4 +52,11 @@ __all__ = [
     "load_bundle",
     "LoadedBundle",
     "generate_signals_from_bundle",
+    # Backtest / trade path (R3/R9 facade — the serving trade layer builds its EngineConfig here so it
+    # strips the same recombine keys as train, instead of importing stock_ml.src.backtest directly).
+    "EngineConfig",
+    "CostModel",
+    "engine_config_from_dict",
+    "run_backtest",
+    "trades_to_dataframe",
 ]

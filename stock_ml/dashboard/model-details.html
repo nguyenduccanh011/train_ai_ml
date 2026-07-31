@@ -100,6 +100,10 @@
       background: #ffca2822; color: #ffca28; font-weight: 600;
     }
     .topbar .status { color: #8f9bad; font-size: 12px; margin-left: auto; }
+    .topbar .fate-tag {
+      font-size: 11px; padding: 3px 8px; border-radius: 4px;
+      background: #1b2433; color: #9aa4b2; white-space: nowrap;
+    }
     .scope-toggle { display: flex; gap: 3px; background: #1b2130; border-radius: 5px; padding: 2px; }
     .scope-toggle button {
       padding: 4px 10px; border: none; background: transparent; color: #8f9bad;
@@ -211,6 +215,7 @@
       <div class="topbar">
         <div class="title" id="currentSymbol">Chọn mã</div>
         <span id="openTag" class="open-tag" style="display:none"></span>
+        <span id="fateTag" class="fate-tag" style="display:none"></span>
         <div class="scope-toggle" style="margin-left:12px;">
           <button id="scopeSymbol" class="active">Mã này</button>
           <button id="scopeAll">Toàn danh mục</button>
@@ -273,6 +278,8 @@
 
     // ---- State ----
     let modelCfg = null;
+    let stage1Id = null;           // overlay-variant rows: Stage-1 data (signals/stats/candles
+                                   // context) lives on the PARENT run; trades/portfolio stay own
     let isIntraday = false;        // intraday model (15m/1H) -> bar-level candles + markers
     let allTrades = [];
     let symbolStats = [];
@@ -283,6 +290,9 @@
     let equityMode = 'pct';        // pct | money
     const ohlcvCache = {};
     const signalsCache = {};
+    let signalSymbols = [];        // per-symbol fired-signal counts — the FULL universe,
+                                   // including symbols that never produced a (portfolio) trade
+    const fateCache = {};          // symbol -> /portfolio-fate response
 
     // ---- Chart handles ----
     let comboChart, candleSeries, volSeries, entryLine, exitLine, legSeries;
@@ -301,11 +311,13 @@
       try {
         const model = await fetchJson(`${API_BASE}/leaderboard/${encodeURIComponent(runId)}`);
         modelCfg = model;
+        stage1Id = model.parent_run_id || runId;
         // Minute ('15m') / hour ('1H') timeframes trade intraday -> draw bar-level candles and
         // place markers at the exact entry/exit bar (epoch) instead of collapsing to one daily candle.
         isIntraday = !!(model.timeframe && /[0-9](m|H|h)$/.test(model.timeframe));
         document.getElementById('modelName').textContent = model.name || model.run_id;
-        document.getElementById('runIdLabel').textContent = model.run_id || runId;
+        document.getElementById('runIdLabel').textContent = (model.run_id || runId) +
+          (model.parent_run_id ? ` — biến thể overlay, tín hiệu từ run gốc` : '');
         renderSummary(model);
         setupPin(model.state || 'trained');
         // Show the "Danh mục" (daily portfolio) tab only when this run has a persisted
@@ -319,14 +331,16 @@
             }
           }).catch(() => {});
 
-        const [tradesRes, symRes, yearRes] = await Promise.all([
+        const [tradesRes, symRes, yearRes, sigSymRes] = await Promise.all([
           fetchJson(`${API_BASE}/runs/${encodeURIComponent(runId)}/trades`).catch(() => ({ trades: [] })),
-          fetchJson(`${API_BASE}/runs/${encodeURIComponent(runId)}/symbol-stats`).catch(() => ({ symbol_stats: [] })),
-          fetchJson(`${API_BASE}/runs/${encodeURIComponent(runId)}/yearly-stats`).catch(() => ({ yearly_stats: [] })),
+          fetchJson(`${API_BASE}/runs/${encodeURIComponent(stage1Id)}/symbol-stats`).catch(() => ({ symbol_stats: [] })),
+          fetchJson(`${API_BASE}/runs/${encodeURIComponent(stage1Id)}/yearly-stats`).catch(() => ({ yearly_stats: [] })),
+          fetchJson(`${API_BASE}/runs/${encodeURIComponent(stage1Id)}/signal-symbols`).catch(() => ({ symbols: [] })),
         ]);
         allTrades = (tradesRes.trades || []).map(t => ({ ...t, pnl_pct: numOrNull(t.pnl_pct) }));
         symbolStats = symRes.symbol_stats || [];
         yearlyStats = yearRes.yearly_stats || [];
+        signalSymbols = sigSymRes.symbols || [];
 
         buildComboChart();
         buildAnalyticsChart();
@@ -407,15 +421,35 @@
       else if (mode === 'wr') syms.sort((a, b) => dir(a, b, 'wr'));
       else if (mode === 'trades') syms.sort((a, b) => dir(a, b, 'trades'));
       else syms.sort((a, b) => dir(a, b, 'pnl'));
-      return syms;
+      // Signal-only symbols (fired signals but zero trades in this run's trade table) — the
+      // part of the universe a trade-derived list hides. Appended after the traded symbols,
+      // most-signals first; A→Z mode keeps one alphabetical list.
+      const have = new Set(syms.map(s => s.symbol));
+      const extra = signalSymbols
+        .filter(s => !have.has(s.symbol) && s.buys > 0)
+        .map(s => ({ symbol: s.symbol, trades: 0, wr: null, pnl: null, buys: s.buys, signalOnly: true }));
+      if (mode === 'az') {
+        const all = syms.concat(extra);
+        all.sort((a, b) => a.symbol.localeCompare(b.symbol));
+        return all;
+      }
+      extra.sort((a, b) => b.buys - a.buys);
+      return syms.concat(extra);
     }
     function renderSymbolList() {
       const q = (document.getElementById('search').value || '').trim().toUpperCase();
       const rows = sortedSymbols().filter(r => r.symbol.includes(q));
       document.getElementById('symbols').innerHTML = rows.map(r => {
+        const active = r.symbol === selectedSymbol ? 'active' : '';
+        if (r.signalOnly) {
+          return `<div class="symbol-row ${active}" data-symbol="${r.symbol}">
+            <div><div class="name">${r.symbol}</div><div class="sub">0 lệnh · ${fmtInt(r.buys)} tín hiệu</div></div>
+            <div class="pnl muted">—</div>
+          </div>`;
+        }
         const pnl = Number(r.pnl || 0) * 100;
         const cls = pnl > 0 ? 'positive' : pnl < 0 ? 'negative' : 'muted';
-        return `<div class="symbol-row ${r.symbol === selectedSymbol ? 'active' : ''}" data-symbol="${r.symbol}">
+        return `<div class="symbol-row ${active}" data-symbol="${r.symbol}">
           <div><div class="name">${r.symbol}</div><div class="sub">${fmtInt(r.trades)} lệnh · WR ${fmt(r.wr * 100, 0)}%</div></div>
           <div class="pnl ${cls}">${pnl > 0 ? '+' : ''}${fmt(pnl, 1)}%</div>
         </div>`;
@@ -470,12 +504,13 @@
           ohlcvCache[symbol] = o.ohlcv || [];
         }
         if (!signalsCache[symbol]) {
-          const s = await fetchJson(`${API_BASE}/runs/${encodeURIComponent(runId)}/signals?symbol=${encodeURIComponent(symbol)}&limit=5000`)
+          const s = await fetchJson(`${API_BASE}/runs/${encodeURIComponent(stage1Id)}/signals?symbol=${encodeURIComponent(symbol)}&limit=5000`)
             .catch(() => ({ signals: [] }));
           signalsCache[symbol] = s.signals || [];
         }
         renderPriceChart(symbol);
         renderStats(); renderAnalytics(); renderTrades(); updateOpenTag();
+        renderFate(symbol); // async, không chặn chart
         const n = allTrades.filter(t => t.symbol === symbol).length;
         setStatus(`${symbol}: ${n} lệnh · ${ohlcvCache[symbol].length} nến`);
       } catch (err) {
@@ -483,6 +518,34 @@
       } finally {
         showOverlay(false);
       }
+    }
+
+    // Fate strip (B7): per-signal fate of the current symbol — how many fired signals
+    // became base trades / entered the portfolio / were skipped and why.
+    async function renderFate(symbol) {
+      const tag = document.getElementById('fateTag');
+      try {
+        if (!fateCache[symbol]) {
+          fateCache[symbol] = await fetchJson(
+            `${API_BASE}/runs/${encodeURIComponent(stage1Id)}/symbol/${encodeURIComponent(symbol)}/portfolio-fate`);
+        }
+        if (selectedSymbol !== symbol) return; // user already moved on
+        const f = fateCache[symbol];
+        const c = f.counts || {};
+        if (!c.signals) { tag.style.display = 'none'; return; }
+        const bits = [`${fmtInt(c.signals)} tín hiệu mua`];
+        if (f.layer_run_trades === 'overlay') {
+          bits.push(`${fmtInt(c.portfolio_trades)} vào danh mục`);
+        } else {
+          bits.push(`${fmtInt(c.base_trades)} thành lệnh base`);
+          if (f.has_overlay_table) bits.push(`${fmtInt(c.portfolio_trades)} vào danh mục`);
+        }
+        const skips = Object.entries(f.skip_reasons || {}).map(([k, v]) => `${k} ${v}`).join(', ');
+        if (skips) bits.push(`bỏ: ${skips}`);
+        tag.textContent = bits.join(' → ');
+        tag.title = `Số phận tín hiệu của mã này (tầng lệnh: ${f.layer_run_trades})`;
+        tag.style.display = '';
+      } catch (e) { tag.style.display = 'none'; }
     }
 
     function updateOpenTag() {

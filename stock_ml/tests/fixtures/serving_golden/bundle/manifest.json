@@ -1,0 +1,39 @@
+{
+  "checksums": {
+    "config.json": "3c82ed936bd532cb44ff6583312bea371247b26219865ab99a6fa522be3bcbe8",
+    "feature_spec.json": "3f1136b2ff78e4e2c3fde273fde88d5f96c0c4d737ec4d2c28c49402cce31d4f",
+    "models/entry.joblib": "38276ac53100218173c4c969b506a59cee5eef0b776235726eb4a10207b7d267",
+    "models/exit.joblib": "b97be147edf1e8823d763ebfaf29a746807955e922bdb3ce65b6ee1a9e13bea6"
+  },
+  "cutoff_date": "2024-01-01",
+  "feature_scope": "traded",
+  "format_version": "1.0",
+  "git_sha": "cb5e82fea85a9b6871aa545b4994e5519c8ba123",
+  "history_mode": "single",
+  "lib_versions": {
+    "joblib": "1.5.3",
+    "lightgbm": "4.6.0",
+    "numpy": "1.26.4",
+    "pandas": "2.1.4",
+    "scikit-learn": "1.8.0",
+    "xgboost": "3.2.0"
+  },
+  "min_warmup_bars": 260,
+  "model_names": [
+    "entry",
+    "exit"
+  ],
+  "retrain_schedule": "yearly",
+  "seed": 42,
+  "strategy": "regression_dual_ml_recombine",
+  "template_id": 112,
+  "template_name": "sumEX_thr15",
+  "universe": [
+    "FPT",
+    "SSI",
+    "HPG",
+    "MWG",
+    "VCI",
+    "VND"
+  ]
+}

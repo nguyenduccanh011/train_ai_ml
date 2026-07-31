@@ -1,0 +1,94 @@
+{
+  "data_source_dir": null,
+  "direction": "long",
+  "engine": {
+    "costs": {
+      "commission": 0.0015,
+      "slippage": 0.0015,
+      "tax": 0.001
+    },
+    "entry_bar_fill_type": "close_next",
+    "exit_priority": [
+      "signal"
+    ],
+    "hard_stop_pct": null,
+    "max_hold_bars": 10000,
+    "min_hold_bars": 1,
+    "signal_exit_enabled": true
+  },
+  "entry_features": null,
+  "entry_model": {
+    "params": {
+      "bagging_fraction": 0.7,
+      "bagging_freq": 5,
+      "feature_fraction": 0.6,
+      "lambda_l1": 1.0,
+      "lambda_l2": 1.0,
+      "learning_rate": 0.02,
+      "min_data_in_leaf": 200,
+      "n_estimators": 300,
+      "num_leaves": 7
+    },
+    "type": "lightgbm"
+  },
+  "entry_target": null,
+  "entry_threshold": 1.5,
+  "exit_features": null,
+  "exit_model": {
+    "enabled": true,
+    "params": {
+      "bagging_fraction": 0.7,
+      "bagging_freq": 5,
+      "feature_fraction": 0.6,
+      "lambda_l1": 1.0,
+      "lambda_l2": 1.0,
+      "learning_rate": 0.02,
+      "min_data_in_leaf": 200,
+      "n_estimators": 300,
+      "num_leaves": 7
+    },
+    "type": "lightgbm"
+  },
+  "exit_target": {
+    "horizon": 10,
+    "type": "forward_drawdown_regression"
+  },
+  "exit_threshold": 0.07,
+  "feature_set": "leading_v2",
+  "hypothesis": "z-sum analysis: buy band raise improves per-trade edge; the raw exit_score>0.07 sell fires at +1.8% fwd10 (too early) \u2014 a symmetric lower z-band sells nearer 0% fwd10.",
+  "market": "vn_stock",
+  "metadata": {},
+  "model_mode": "ml_only",
+  "name": "sumEX_thr15",
+  "regime_model": {
+    "enabled": false,
+    "type": "none"
+  },
+  "seed": 42,
+  "signal_mode": "entry_first",
+  "signal_threshold": 0.0,
+  "size_model": {
+    "enabled": false,
+    "type": "none"
+  },
+  "split": {
+    "first_test_year": 2020,
+    "gap_days": 25,
+    "last_test_year": 2025,
+    "test_years": 1,
+    "train_years": 2,
+    "type": "walk_forward_year"
+  },
+  "strategy": "regression_dual_ml_recombine",
+  "strict_audit": true,
+  "target": {
+    "horizon": 10,
+    "type": "forward_return_regression"
+  },
+  "universe": null,
+  "universe_policy": null,
+  "validation": {
+    "n_seeds": 1
+  },
+  "yaml_schema_version": 2
+}

@@ -87,48 +87,58 @@ def generate_signals_from_bundle(bundle: LoadedBundle, ohlcv: pd.DataFrame) -> p
         if feat.empty:
             raise ValueError("generate_signals_from_bundle: all bars NaN after isolation")
 
-    # ENSEMBLE heads (N-head champions n2_3h_/4h_/5h_*): a bundle carries entry2..entryN and
-    # optional exit2.. models. Build the head lists generically from whatever the bundle holds
-    # (entryK -> scoreK, exitK -> exit_scoreK) so ANY head count serves identically to the
-    # backtest — no per-head wiring. A 2-head bundle yields empty lists (unchanged behaviour).
-    entry_ensemble = [
-        (f"score{int(m.group(1))}", bundle.models[name], _entry_head_feat.get(int(m.group(1))))
-        for name in sorted(bundle.models)
-        if (m := _ENTRY_HEAD_RE.fullmatch(name))
-    ]
-    exit_ensemble = [
-        (f"exit_score{int(m.group(1))}", bundle.models[name], exit_feat_cols)
-        for name in sorted(bundle.models)
-        if (m := _EXIT_HEAD_RE.fullmatch(name))
-    ]
-    raw = predict_slot_signals(
-        bundle.models["entry"],
-        bundle.models.get("exit"),
-        feat,
-        entry_feat_cols,
-        cfg,
-        exit_feat_cols=exit_feat_cols,
-        entry_ensemble=entry_ensemble,
-        exit_ensemble=exit_ensemble,
-    )
+    # ENSEMBLE heads (N-head champions n2_3h_/4h_/5h_*): a model set carries entry2..entryN and optional
+    # exit2. Build the head lists generically (entryK -> scoreK, exitK -> exit_scoreK) so ANY head count
+    # serves identically to the backtest. Then score `frame` with that model set.
+    def _score(model_set: dict, frame: pd.DataFrame) -> pd.DataFrame:
+        entry_ensemble = [
+            (f"score{int(m.group(1))}", model_set[name], _entry_head_feat.get(int(m.group(1))))
+            for name in sorted(model_set) if (m := _ENTRY_HEAD_RE.fullmatch(name))
+        ]
+        exit_ensemble = [
+            (f"exit_score{int(m.group(1))}", model_set[name], exit_feat_cols)
+            for name in sorted(model_set) if (m := _EXIT_HEAD_RE.fullmatch(name))
+        ]
+        return predict_slot_signals(
+            model_set["entry"], model_set.get("exit"), frame, entry_feat_cols, cfg,
+            exit_feat_cols=exit_feat_cols, entry_ensemble=entry_ensemble, exit_ensemble=exit_ensemble,
+        )
 
-    # z-window seed: for past bars, use the walk-forward predictions that the model which
-    # actually owned that segment produced (carried in the bundle), instead of re-predicting
-    # them with the current model. This makes the trailing 252-bar z-score — and therefore
-    # the decoupled buy band — match the backtest. Only score/exit_score are overridden;
-    # OHLCV (downleg gate) and the new (post-history) bars stay as the current model's.
+    if bundle.fold_models:
+        # §11.9: replay the walk-forward — each bar scored by the model that OWNED its year (mapped by
+        # calendar year, matching how the backtest keys universe_by_year; years beyond the last fold use
+        # the last fold-model, before the first use the first). History reproduces the backtest by
+        # construction, so NO z-window seed is needed. This is the exact per-fold predict the backtest ran.
+        fm = bundle.fold_models
+        # Per-fold universe mask: the backtest masks each fold's test to universe_by_year[Y] (a symbol
+        # only carries signals for the years it was IN the universe). Serving must mask identically, or a
+        # symbol's trailing z-window would include bars from years it wasn't traded — flipping band-edge
+        # signals. Features stay computed over the full union (CSRank parity); only the kept symbols differ.
+        uby = bundle.manifest.get("universe_by_year") or {}
+        years = sorted(fm)
+        fold_year = feat["date"].dt.year.clip(years[0], years[-1])
+        parts = []
+        for y in years:
+            sub = feat[fold_year == y]
+            allowed = uby.get(str(y), uby.get(y)) if uby else None
+            if allowed is not None:
+                sub = sub[sub["symbol"].isin(set(allowed))]
+            if not sub.empty:
+                parts.append(_score(fm[y], sub))
+        raw = pd.concat(parts, ignore_index=True).sort_values(["symbol", "date"]).reset_index(drop=True)
+        return recombine_signals(raw, cfg)
+
+    # Legacy single-model bundle: score with the one model, then (optionally) seed the z-window from the
+    # exported walk-forward predictions so past bars' trailing z-score matches the backtest (§11.9 deprecates
+    # this — a single model cannot reproduce history without the seed; fold-model bundles do it by construction).
+    raw = _score(bundle.models, feat)
     ph = bundle.prediction_history
     if ph is not None and not ph.empty:
         ph = ph.copy()
         ph["date"] = pd.to_datetime(ph["date"]).dt.normalize()
         raw = raw.copy()
         raw["date"] = pd.to_datetime(raw["date"]).dt.normalize()
-        # Seed every prediction column the history carries AND the current frame has
-        # (score/exit_score always; scoreK/exit_scoreK for N-head bundles whose pred-history
-        # was exported with them). Past bars use the walk-forward predictions that owned that
-        # segment so the trailing z-window matches the backtest, for ANY head count.
-        seed_cols = [c for c in ph.columns
-                     if c not in ("symbol", "date") and c in raw.columns]
+        seed_cols = [c for c in ph.columns if c not in ("symbol", "date") and c in raw.columns]
         raw = raw.merge(
             ph[["symbol", "date", *seed_cols]],
             on=["symbol", "date"], how="left", suffixes=("", "_hist"),

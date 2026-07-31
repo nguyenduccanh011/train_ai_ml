@@ -1,0 +1,23 @@
+{
+ "_doc": "Snapshot config.json cua 6 bundle SONG (ENGINE_UPGRADE Phase 2c / §11.5.5). Refresh khi re-export bundle. Test: engine phai nap ExperimentConfig(**config) cho MOI file nay.",
+ "bundles": {
+  "dyn300": {
+   "source_bundle": "bundle__dyn300_onerun_2025-01-01_wf"
+  },
+  "dyn61a2hy": {
+   "source_bundle": "bundle__dyn61a2hy_onerun_2025-01-01_wf"
+  },
+  "dyn900": {
+   "source_bundle": "bundle__dyn900_onerun_2025-01-01_wf"
+  },
+  "wavestruct": {
+   "source_bundle": "bundle_n2_2643_wavestruct_la05_lamp02_top150_2025-01-01_wf"
+  },
+  "consw20": {
+   "source_bundle": "bundle_n2_consw20_conv04_vg_combo_hb_nbpbw_top150_2025-01-01_wf"
+  },
+  "velov": {
+   "source_bundle": "bundle_n2_velov_univ150c_2025-01-01_wf"
+  }
+ }
+}

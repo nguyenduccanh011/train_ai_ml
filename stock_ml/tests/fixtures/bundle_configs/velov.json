@@ -1,0 +1,200 @@
+{
+ "data_source_dir": null,
+ "direction": "long",
+ "engine": {
+  "costs": {
+   "commission": 0.0015,
+   "slippage": 0.0015,
+   "tax": 0.001
+  },
+  "entry_bar_fill_type": "close_next",
+  "entry_ensemble": {
+   "target": {
+    "dip_window": 50,
+    "horizon": 10,
+    "min_fwd_rally": 0.1,
+    "penalty": 1.0,
+    "type": "reversal_entry_regression"
+   },
+   "z_threshold": 0.9
+  },
+  "entry_ensemble2": {
+   "target": {
+    "horizon": 10,
+    "penalty": 0.5,
+    "trend_window": 50,
+    "type": "continuation_entry_regression"
+   },
+   "z_threshold": 0.7
+  },
+  "entry_ensemble3": {
+   "breadth_features": [
+    "pct_above_ma50",
+    "adv_pct"
+   ],
+   "target": {
+    "horizon": 20,
+    "type": "mfe_regression"
+   },
+   "z_threshold": 0.7
+  },
+  "entry_ensemble4": {
+   "target": {
+    "horizon": 20,
+    "type": "forward_return_penalized_regression"
+   },
+   "z_threshold": 0.7
+  },
+  "entry_gate": "upleg_abovema20",
+  "entry_market_abs_floor": -0.04,
+  "entry_market_gate_enabled": true,
+  "entry_market_mode": "zscore",
+  "entry_market_threshold": -1.1,
+  "entry_market_window": 5,
+  "entry_market_z_lookback": 60,
+  "entry_pullback_pct": 0.045,
+  "entry_pullback_window": 50,
+  "exit_force_gate": "downleg12",
+  "exit_force_gate_lowbreadth": {
+   "gate": "downleg6",
+   "ma_win": 50,
+   "metric": "pct_above_ma50",
+   "mode": "level",
+   "threshold": 0.25
+  },
+  "exit_force_gate_nonbull": "belowma20p2",
+  "exit_market_drop_mode": "zscore",
+  "exit_market_drop_threshold": -1.75,
+  "exit_market_drop_window": 5,
+  "exit_market_gate_enabled": true,
+  "exit_market_z_lookback": 60,
+  "exit_priority": [
+   "trailing_stop",
+   "overext",
+   "signal"
+  ],
+  "hard_stop_pct": null,
+  "max_hold_bars": 10000,
+  "min_hold_bars": 2,
+  "nonbull_ma_win": 40,
+  "nonbull_persist": 3,
+  "overext_bull_mode": "zscore",
+  "overext_bull_threshold": 0.35,
+  "overext_bull_window": 10,
+  "overext_bull_z_lookback": 40,
+  "overext_ma_window": 20,
+  "overext_pct": 0.12,
+  "overext_reversal": false,
+  "overext_skip_bull_enabled": true,
+  "overext_trail_pct": 0.04,
+  "reentry_cooldown_bars": 4,
+  "signal_exit_enabled": true,
+  "signal_exit_incubate_floor": null,
+  "signal_exit_min_age": 0,
+  "signal_exit_protect_hi": 0.99,
+  "signal_exit_protect_lo": 0.08,
+  "signal_exit_protect_require_trend": true,
+  "trailing_activate_pct": 0.27,
+  "trailing_atr_mult": 2.0,
+  "trailing_skip_above_ma": 10,
+  "trailing_skip_ma_slope_lb": 3,
+  "trailing_stop_pct": 0.08
+ },
+ "entry_features": "entry_lvup126_recov",
+ "entry_model": {
+  "params": {
+   "bagging_fraction": 0.7,
+   "bagging_freq": 5,
+   "feature_fraction": 0.6,
+   "lambda_l1": 1.0,
+   "lambda_l2": 1.0,
+   "learning_rate": 0.02,
+   "min_data_in_leaf": 200,
+   "n_estimators": 300,
+   "num_leaves": 7
+  },
+  "type": "lightgbm"
+ },
+ "entry_target": {
+  "direction": "long",
+  "horizon": 30,
+  "pt": 0.15,
+  "sl": 0.08,
+  "type": "triple_barrier"
+ },
+ "entry_threshold": -1.9,
+ "exit_features": "exit_vol_market",
+ "exit_model": {
+  "enabled": true,
+  "params": {
+   "bagging_fraction": 0.7,
+   "bagging_freq": 5,
+   "feature_fraction": 0.6,
+   "lambda_l1": 1.0,
+   "lambda_l2": 1.0,
+   "learning_rate": 0.02,
+   "min_data_in_leaf": 200,
+   "monotone_map": {
+    "div_rank_macd": 1,
+    "ha_trend": -1,
+    "ma10_slope": -1,
+    "ma20_slope": -1,
+    "ma5_accel": -1,
+    "ma5_slope": -1,
+    "ma_align": -1,
+    "minus_di_14": 1,
+    "upper_wick_ratio": 1
+   },
+   "n_estimators": 300,
+   "num_leaves": 7
+  },
+  "type": "lightgbm"
+ },
+ "exit_target": {
+  "horizon": 20,
+  "type": "velocity_exit_regression",
+  "upside_horizon": 8,
+  "vol_normalize": true,
+  "vol_window": 40
+ },
+ "exit_threshold": 0.07,
+ "feature_set": "leading_v2",
+ "hypothesis": "unmask ML head dev on t1844",
+ "market": "vn_stock",
+ "metadata": {},
+ "model_mode": "ml_only",
+ "name": "n2_velov_univ150c",
+ "regime_model": {
+  "enabled": false,
+  "type": "none"
+ },
+ "seed": 42,
+ "signal_mode": "entry_first",
+ "signal_threshold": 2.0,
+ "size_model": {
+  "enabled": false,
+  "type": "none"
+ },
+ "split": {
+  "first_test_year": 2020,
+  "gap_days": 85,
+  "last_test_year": 2025,
+  "test_years": 1,
+  "train_years": 2,
+  "type": "walk_forward_year"
+ },
+ "strategy": "regression_dual_ml_recombine_decoupled",
+ "strict_audit": true,
+ "target": {
+  "horizon": 10,
+  "type": "forward_return_regression"
+ },
+ "universe": {
+  "mode": "db",
+  "slug": "vn_stock_default"
+ },
+ "validation": {
+  "n_seeds": 1
+ },
+ "yaml_schema_version": 2
+}

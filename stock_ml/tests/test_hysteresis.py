@@ -43,9 +43,7 @@ def test_hysteresis_dead_band():
     # Asymmetric band: enter long only above 0.02, exit only below -0.01.
     preds = np.array([0.03, 0.015, 0.0, -0.005, -0.02], dtype=np.float32)
     df = _frame(len(preds))
-    out = generate_signals_from_predictions(
-        preds, df, entry_threshold=0.02, exit_threshold=-0.01
-    )
+    out = generate_signals_from_predictions(preds, df, entry_threshold=0.02, exit_threshold=-0.01)
     # 0.03 > 0.02 → 1 ; 0.015 in band → 0 ; 0.0 in band → 0 ;
     # -0.005 in band → 0 ; -0.02 < -0.01 → -1
     assert out["signal"].tolist() == [1, 0, 0, 0, -1]

@@ -14,6 +14,7 @@ Each variant clones v1 (tmpl 2459), only the entry target's cut_drawdown changes
 
 Usage: python stock_ml/scripts/build_smac_v4_cut.py
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -58,13 +59,15 @@ async def make_template(new_name: str, cut: float) -> int:
             if sl.slot_type == "entry":
                 tc = dict(tc)
                 tc["cut_drawdown"] = cut
-            slots.append({
-                "slot_type": sl.slot_type,
-                "ml_component_id": sl.ml_component_id,
-                "rule_component_id": sl.rule_component_id,
-                "feature_set_name": sl.feature_set_name,
-                "target_config": tc,
-            })
+            slots.append(
+                {
+                    "slot_type": sl.slot_type,
+                    "ml_component_id": sl.ml_component_id,
+                    "rule_component_id": sl.rule_component_id,
+                    "feature_set_name": sl.feature_set_name,
+                    "target_config": tc,
+                }
+            )
         t = await repo.create(
             name=new_name,
             market=base.market,
@@ -82,11 +85,11 @@ async def make_template(new_name: str, cut: float) -> int:
             validation_config=base.validation_config,
             seed=42,
             description=f"SMAC v4: 5-class oracle with CUT loss-cut (cut_drawdown={cut}). CUT "
-                        "labels the down-leg bars >= X below the prior peak; the model sells "
-                        "there (CUT=exit). Pure-ML calibrated loss-cut, no stop-loss rule.",
+            "labels the down-leg bars >= X below the prior peak; the model sells "
+            "there (CUT=exit). Pure-ML calibrated loss-cut, no stop-loss rule.",
             hypothesis="v1 holds losers 45d because EXIT=upside-peak only; v2's blanket OUT "
-                       "over-churns. A CUT class on real declines teaches a calibrated exit that "
-                       "cuts knives without clipping healthy up-leg pullbacks.",
+            "over-churns. A CUT class on real declines teaches a calibrated exit that "
+            "cuts knives without clipping healthy up-leg pullbacks.",
             universe_slug=base.universe_slug,
             model_mode="ml_only",
         )
@@ -131,7 +134,9 @@ def main():
             mean = statistics.mean(comps)
             std = statistics.pstdev(comps) if len(comps) > 1 else 0.0
             print(f"== {new_name} (cut={cut}): MEAN={mean:.1f} std={std:.1f} seeds={seeds}\n")
-    print("== vs SMAC v1 (no cut) MEAN=-201.0 mdd0.518 WR0.62 hold28 ; baselines 197.4/397.8 ; champ 704")
+    print(
+        "== vs SMAC v1 (no cut) MEAN=-201.0 mdd0.518 WR0.62 hold28 ; baselines 197.4/397.8 ; champ 704"
+    )
     print("BUILD_SMAC_V4_DONE")
 
 

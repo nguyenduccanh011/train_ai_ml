@@ -110,7 +110,8 @@ class CrossSectionalExitTarget:
             raise ValueError("df must contain 'symbol' and 'date'")
         out = df.copy()
         out["_fwd"] = out.groupby("symbol")[close_col].transform(
-            lambda c: c.shift(-self.horizon) / c - 1.0)
+            lambda c: c.shift(-self.horizon) / c - 1.0
+        )
         mkt = out.groupby("date")["_fwd"].transform("mean")
         out["target"] = -(out["_fwd"] - mkt)
         return out.drop(columns=["_fwd"])
@@ -149,7 +150,9 @@ class ExitAmplitudeExhaustionTarget:
         def _label(g: pd.DataFrame) -> pd.Series:
             c = g[close_col]
             observable = c.shift(-self.horizon).notna()
-            fmax = pd.concat([g[high_col].shift(-k) for k in range(1, self.horizon + 1)], axis=1).max(axis=1)
+            fmax = pd.concat(
+                [g[high_col].shift(-k) for k in range(1, self.horizon + 1)], axis=1
+            ).max(axis=1)
             mfe = (fmax / c - 1.0).where(observable)
             lab = -mfe
             if self.vol_normalize:
@@ -188,7 +191,8 @@ class CrossSectionalEntryTarget:
             raise ValueError("df must contain 'symbol' and 'date'")
         out = df.copy()
         out["_fwd"] = out.groupby("symbol")[close_col].transform(
-            lambda c: c.shift(-self.horizon) / c - 1.0)
+            lambda c: c.shift(-self.horizon) / c - 1.0
+        )
         mkt = out.groupby("date")["_fwd"].transform("mean")
         out["target"] = out["_fwd"] - mkt
         return out.drop(columns=["_fwd"])
@@ -216,7 +220,9 @@ class AmplitudeDirectionEntryTarget:
     """
 
     horizon: int = 20
-    scale: float = 0.05  # cs excess-return scale for the tanh soft-sign (~5% relative move → ~tanh(1))
+    scale: float = (
+        0.05  # cs excess-return scale for the tanh soft-sign (~5% relative move → ~tanh(1))
+    )
 
     def __post_init__(self) -> None:
         if self.horizon < 1:
@@ -233,12 +239,15 @@ class AmplitudeDirectionEntryTarget:
         def _mfe(g: pd.DataFrame) -> pd.Series:
             c = g[close_col]
             observable = c.shift(-self.horizon).notna()
-            fmax = pd.concat([g[high_col].shift(-k) for k in range(1, self.horizon + 1)], axis=1).max(axis=1)
+            fmax = pd.concat(
+                [g[high_col].shift(-k) for k in range(1, self.horizon + 1)], axis=1
+            ).max(axis=1)
             return (fmax / c - 1.0).where(observable)
 
         out["_mfe"] = out.groupby("symbol", group_keys=False).apply(_mfe)
         out["_fwd"] = out.groupby("symbol")[close_col].transform(
-            lambda c: c.shift(-self.horizon) / c - 1.0)
+            lambda c: c.shift(-self.horizon) / c - 1.0
+        )
         cs = out["_fwd"] - out.groupby("date")["_fwd"].transform("mean")
         out["target"] = out["_mfe"] * np.tanh(cs / self.scale)
         return out.drop(columns=["_mfe", "_fwd"])
@@ -261,9 +270,9 @@ class VelocityExitRegimeTarget:
     """
 
     horizon: int = 20
-    upside_horizon_bull: int = 20   # bull tape: long near-window -> hold recoverable dips
-    upside_horizon_bear: int = 5    # bear tape: short near-window -> sell into coming downside
-    regime_ma: int = 50             # index > MA(regime_ma) = bull (forensic: MA50, AUC 0.78)
+    upside_horizon_bull: int = 20  # bull tape: long near-window -> hold recoverable dips
+    upside_horizon_bear: int = 5  # bear tape: short near-window -> sell into coming downside
+    regime_ma: int = 50  # index > MA(regime_ma) = bull (forensic: MA50, AUC 0.78)
     vol_normalize: bool = True
     vol_window: int = 40
 
@@ -276,12 +285,20 @@ class VelocityExitRegimeTarget:
 
     def _downside(self, close: pd.Series) -> pd.Series:
         observable = close.shift(-self.horizon).notna()
-        fwd_min = pd.concat([close.shift(-k) for k in range(1, self.horizon + 1)], axis=1).min(axis=1).where(observable)
+        fwd_min = (
+            pd.concat([close.shift(-k) for k in range(1, self.horizon + 1)], axis=1)
+            .min(axis=1)
+            .where(observable)
+        )
         return 1.0 - fwd_min / close
 
     def _upside_near(self, close: pd.Series, u: int) -> pd.Series:
         observable = close.shift(-self.horizon).notna()
-        fwd_max = pd.concat([close.shift(-k) for k in range(1, u + 1)], axis=1).max(axis=1).where(observable)
+        fwd_max = (
+            pd.concat([close.shift(-k) for k in range(1, u + 1)], axis=1)
+            .max(axis=1)
+            .where(observable)
+        )
         return fwd_max / close - 1.0
 
     def apply(self, df: pd.DataFrame, close_col: str = "close") -> pd.DataFrame:
@@ -291,7 +308,7 @@ class VelocityExitRegimeTarget:
         # Causal equal-weight market regime (bull = index > its own MA(regime_ma)).
         piv = out.pivot_table(index="date", columns="symbol", values=close_col).sort_index()
         idx = (1.0 + piv.pct_change().mean(axis=1)).cumprod()
-        bull = (idx > idx.rolling(self.regime_ma, min_periods=self.regime_ma // 2).mean())
+        bull = idx > idx.rolling(self.regime_ma, min_periods=self.regime_ma // 2).mean()
         bull_map = bull.reindex(out["date"]).to_numpy()  # per-row regime aligned by date
 
         g = out.groupby("symbol")[close_col]
@@ -301,7 +318,9 @@ class VelocityExitRegimeTarget:
         up = up_bull.where(pd.Series(bull_map, index=out.index).fillna(False), up_bear)
         label = down - up
         if self.vol_normalize:
-            vol = g.transform(lambda c: c.pct_change().rolling(self.vol_window, min_periods=2).std())
+            vol = g.transform(
+                lambda c: c.pct_change().rolling(self.vol_window, min_periods=2).std()
+            )
             label = label / (vol + 1e-4)
         out["target"] = label
         return out

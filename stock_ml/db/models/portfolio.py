@@ -50,9 +50,15 @@ class RunPortfolioDailyModel(Base):
     )
     date: Mapped[str] = mapped_column(Date(), nullable=False)
     symbol: Mapped[str] = mapped_column(String(32), nullable=False)
-    weight: Mapped[float | None] = mapped_column(Double(), nullable=True)  # current market value / nav (drifts)
-    entry_weight: Mapped[float | None] = mapped_column(Double(), nullable=True)  # FIXED allocation at entry (invested / nav_at_entry)
-    unreal_pnl: Mapped[float | None] = mapped_column(Double(), nullable=True)  # mark-to-market P&L of this holding as of the day
+    weight: Mapped[float | None] = mapped_column(
+        Double(), nullable=True
+    )  # current market value / nav (drifts)
+    entry_weight: Mapped[float | None] = mapped_column(
+        Double(), nullable=True
+    )  # FIXED allocation at entry (invested / nav_at_entry)
+    unreal_pnl: Mapped[float | None] = mapped_column(
+        Double(), nullable=True
+    )  # mark-to-market P&L of this holding as of the day
     entry_date: Mapped[str | None] = mapped_column(Date(), nullable=True)
     days_held: Mapped[int | None] = mapped_column(Integer(), nullable=True)
     is_new: Mapped[bool | None] = mapped_column(Boolean(), nullable=True)  # entered today
@@ -81,9 +87,13 @@ class RunSkippedModel(Base):
     symbol: Mapped[str] = mapped_column(String(32), nullable=False)
     signal_date: Mapped[str | None] = mapped_column(Date(), nullable=True)
     entry_date: Mapped[str | None] = mapped_column(Date(), nullable=True)
-    pnl_pct: Mapped[float | None] = mapped_column(Double(), nullable=True)  # base backtest return if taken
+    pnl_pct: Mapped[float | None] = mapped_column(
+        Double(), nullable=True
+    )  # base backtest return if taken
     conv: Mapped[float | None] = mapped_column(Double(), nullable=True)
-    skip_reason: Mapped[str | None] = mapped_column(String(32), nullable=True)  # 'conv_skip' | 'capacity'
+    skip_reason: Mapped[str | None] = mapped_column(
+        String(32), nullable=True
+    )  # 'conv_skip' | 'capacity'
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=datetime.now
     )
@@ -136,13 +146,25 @@ class RunPendingModel(Base):
     )
     date: Mapped[str] = mapped_column(Date(), nullable=False)
     symbol: Mapped[str] = mapped_column(String(32), nullable=False)
-    signal_date: Mapped[str | None] = mapped_column(Date(), nullable=True)  # bar the buy signal fired
-    days_waiting: Mapped[int | None] = mapped_column(Integer(), nullable=True)  # trading bars since signal
-    limit_price: Mapped[float | None] = mapped_column(Double(), nullable=True)  # pullback limit target
+    signal_date: Mapped[str | None] = mapped_column(
+        Date(), nullable=True
+    )  # bar the buy signal fired
+    days_waiting: Mapped[int | None] = mapped_column(
+        Integer(), nullable=True
+    )  # trading bars since signal
+    limit_price: Mapped[float | None] = mapped_column(
+        Double(), nullable=True
+    )  # pullback limit target
     ref_price: Mapped[float | None] = mapped_column(Double(), nullable=True)  # close on `date`
-    pct_to_limit: Mapped[float | None] = mapped_column(Double(), nullable=True)  # (limit/ref - 1); <=0 = at/through
-    outcome: Mapped[str | None] = mapped_column(String(16), nullable=True)  # 'fill' | 'expire' (post-hoc)
-    result_date: Mapped[str | None] = mapped_column(Date(), nullable=True)  # fill/expire date (post-hoc)
+    pct_to_limit: Mapped[float | None] = mapped_column(
+        Double(), nullable=True
+    )  # (limit/ref - 1); <=0 = at/through
+    outcome: Mapped[str | None] = mapped_column(
+        String(16), nullable=True
+    )  # 'fill' | 'expire' (post-hoc)
+    result_date: Mapped[str | None] = mapped_column(
+        Date(), nullable=True
+    )  # fill/expire date (post-hoc)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=datetime.now
     )

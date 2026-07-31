@@ -398,14 +398,14 @@ FEATURES: dict[str, str] = {
     # reads fast-vs-slow momentum + EMA fanning, not one value. All causal.
     "rsi_21": "RSI($close, 21)",
     "rsi_50": "RSI($close, 50)",
-    "rsi_fastslow": "RSI($close, 7) - RSI($close, 21)",          # multi-period RSI spread (accel/decel)
-    "rsi_smooth_slope": "Delta(EMA(RSI($close, 14), 3), 3)",     # smoothed RSI slope (less whipsaw)
+    "rsi_fastslow": "RSI($close, 7) - RSI($close, 21)",  # multi-period RSI spread (accel/decel)
+    "rsi_smooth_slope": "Delta(EMA(RSI($close, 14), 3), 3)",  # smoothed RSI slope (less whipsaw)
     "ema_5_ratio": "$close / EMA($close, 5) - 1",
     "ema_20_ratio": "$close / EMA($close, 20) - 1",
     "ema_50_ratio": "$close / EMA($close, 50) - 1",
-    "ema_stretch_5_50": "EMA($close, 5) / EMA($close, 50) - 1",   # short-vs-long EMA distance
+    "ema_stretch_5_50": "EMA($close, 5) / EMA($close, 50) - 1",  # short-vs-long EMA distance
     "ema_ribbon_width": "(EMA($close, 5) - EMA($close, 50)) / $close",  # EMA-ribbon fan width
-    "ema_ribbon_expand": "Delta(#ema_ribbon_width, 5)",          # ribbon expanding(+)/contracting(-)
+    "ema_ribbon_expand": "Delta(#ema_ribbon_width, 5)",  # ribbon expanding(+)/contracting(-)
     "macd_hist_smooth_slope": "Delta(EMA(MACD($close, 12, 26, 9).hist, 3), 3)",  # smoothed hist slope
     "williams_r": (
         "0 - 100 * (Max($high, 14) - $close) "
@@ -501,40 +501,97 @@ FEATURES: dict[str, str] = {
 
 
 _LEADING_V2 = [
-    "ret_1d", "ret_5d", "ret_10d", "ret_20d", "close_to_open",
-    "sma_5_ratio", "sma_20_ratio", "sma_50_ratio", "ema_10_ratio", "sma5_cross_sma20",
-    "rsi_14", "rsi_7", "macd_line", "macd_hist", "roc_10",
-    "adx_14", "plus_di_14", "minus_di_14",
-    "atr_14_ratio", "bb_width_20", "bb_pct_20", "realized_vol_10",
-    "volume_ratio_5", "volume_ratio_20", "obv_slope_10", "mfi_14",
-    "dist_52w_high", "dist_52w_low", "high_low_pct_5d",
-    "upper_wick_ratio", "lower_wick_ratio", "body_ratio", "high_low_pct",
-    "atr_regime", "bb_squeeze", "vol_percentile_60",
+    "ret_1d",
+    "ret_5d",
+    "ret_10d",
+    "ret_20d",
+    "close_to_open",
+    "sma_5_ratio",
+    "sma_20_ratio",
+    "sma_50_ratio",
+    "ema_10_ratio",
+    "sma5_cross_sma20",
+    "rsi_14",
+    "rsi_7",
+    "macd_line",
+    "macd_hist",
+    "roc_10",
+    "adx_14",
+    "plus_di_14",
+    "minus_di_14",
+    "atr_14_ratio",
+    "bb_width_20",
+    "bb_pct_20",
+    "realized_vol_10",
+    "volume_ratio_5",
+    "volume_ratio_20",
+    "obv_slope_10",
+    "mfi_14",
+    "dist_52w_high",
+    "dist_52w_low",
+    "high_low_pct_5d",
+    "upper_wick_ratio",
+    "lower_wick_ratio",
+    "body_ratio",
+    "high_low_pct",
+    "atr_regime",
+    "bb_squeeze",
+    "vol_percentile_60",
     "is_limit_lock",
 ]
 
 # The robust exit_vol_dist base (2369, nopullback line best): vol/dist magnitude + market context +
 # distribution-day volume. Supply-axis exit sets extend this (the one axis not realizability-walled).
 _EXIT_VOL_DIST = [
-    "atr_14_ratio", "realized_vol_10", "vol_percentile_60", "bb_width_20",
-    "volatility_rank", "high_low_pct_5d", "ma5_accel",
-    "dist_63d_high", "dist_52w_high", "sma_20_ratio", "bb_pct_20",
-    "market_volatility_regime", "market_trend", "momentum_rank",
-    "dist_day_25", "dist_day_vol20_25",
+    "atr_14_ratio",
+    "realized_vol_10",
+    "vol_percentile_60",
+    "bb_width_20",
+    "volatility_rank",
+    "high_low_pct_5d",
+    "ma5_accel",
+    "dist_63d_high",
+    "dist_52w_high",
+    "sma_20_ratio",
+    "bb_pct_20",
+    "market_volatility_regime",
+    "market_trend",
+    "momentum_rank",
+    "dist_day_25",
+    "dist_day_vol20_25",
 ]
 
 _LEADING_V3_EXTRA = [
-    "momentum_rank", "volatility_rank", "volume_rank", "rsi_rank", "price_strength_rank",
-    "return_vs_sector", "momentum_vs_sector", "volume_vs_sector", "volatility_vs_sector",
-    "strength_vs_sector", "beta_to_sector",
-    "market_trend", "market_volatility_regime",
-    "regime_interaction_momentum", "regime_interaction_strength",
-    "volume_20d_avg", "volume_rank_20d", "price_level", "volume_stability",
+    "momentum_rank",
+    "volatility_rank",
+    "volume_rank",
+    "rsi_rank",
+    "price_strength_rank",
+    "return_vs_sector",
+    "momentum_vs_sector",
+    "volume_vs_sector",
+    "volatility_vs_sector",
+    "strength_vs_sector",
+    "beta_to_sector",
+    "market_trend",
+    "market_volatility_regime",
+    "regime_interaction_momentum",
+    "regime_interaction_strength",
+    "volume_20d_avg",
+    "volume_rank_20d",
+    "price_level",
+    "volume_stability",
 ]
 
 _BASIC_V1 = [
-    "ret_1d", "ret_5d", "sma_5_ratio", "sma_20_ratio",
-    "rsi_14", "volume_ratio_20", "high_low_pct", "atr_14_ratio",
+    "ret_1d",
+    "ret_5d",
+    "sma_5_ratio",
+    "sma_20_ratio",
+    "rsi_14",
+    "volume_ratio_20",
+    "high_low_pct",
+    "atr_14_ratio",
 ]
 
 # The "leading" indicators present in the early_wave guide but absent from leading_v2:
@@ -542,23 +599,45 @@ _BASIC_V1 = [
 # entry-cascade signals (vol surge, breakout setup, range position, support/resistance
 # distance, higher-lows, OBV divergence, bb-width percentile).
 _LEADING_EW_EXTRA = [
-    "stoch_k", "stoch_d", "williams_r", "cci_20",
-    "aroon_up", "aroon_down", "cmf_20", "vwap_ratio",
-    "vol_surge_ratio", "pv_divergence", "atr_contraction", "bb_width_percentile",
-    "close_position_in_range", "close_pos_ma5", "obv_price_divergence",
-    "dist_to_resistance", "dist_to_support", "range_position_20d",
-    "higher_lows_count", "consolidation_score", "rsi_slope_5d",
+    "stoch_k",
+    "stoch_d",
+    "williams_r",
+    "cci_20",
+    "aroon_up",
+    "aroon_down",
+    "cmf_20",
+    "vwap_ratio",
+    "vol_surge_ratio",
+    "pv_divergence",
+    "atr_contraction",
+    "bb_width_percentile",
+    "close_position_in_range",
+    "close_pos_ma5",
+    "obv_price_divergence",
+    "dist_to_resistance",
+    "dist_to_support",
+    "range_position_20d",
+    "higher_lows_count",
+    "consolidation_score",
+    "rsi_slope_5d",
     "breakout_setup_score",
 ]
 
 _MA_SLOPE = ["ma5_slope", "ma10_slope", "ma20_slope", "ma5_accel", "ma_align"]
 
 _ZZ_SWING = [
-    "zz_last_dir", "zz_last_leg_return", "zz_last_leg_dur",
-    "zz_prev_leg_return", "zz_prev_leg_dur",
-    "zz_bars_since_pivot", "zz_return_since_pivot",
-    "zz_progress_to_deviation", "zz_dist_to_confirm",
-    "zz_price_pos_in_swing", "zz_max_adverse_since_pivot", "zz_n_pivots",
+    "zz_last_dir",
+    "zz_last_leg_return",
+    "zz_last_leg_dur",
+    "zz_prev_leg_return",
+    "zz_prev_leg_dur",
+    "zz_bars_since_pivot",
+    "zz_return_since_pivot",
+    "zz_progress_to_deviation",
+    "zz_dist_to_confirm",
+    "zz_price_pos_in_swing",
+    "zz_max_adverse_since_pivot",
+    "zz_n_pivots",
 ]
 
 # Curated "reversal/context" extras tested on the zigzag champion (round-9): the
@@ -566,9 +645,14 @@ _ZZ_SWING = [
 # position, up-day streaks. (Confirmed-pivot distance & swing position are already
 # covered by zz_return_since_pivot / zz_price_pos_in_swing.)
 _REVERSAL_EXTRA = [
-    "rsi_div_20", "macd_div_20",
-    "dist_63d_high", "dist_63d_low", "dist_126d_high", "dist_126d_low",
-    "up_days_5", "up_days_10",
+    "rsi_div_20",
+    "macd_div_20",
+    "dist_63d_high",
+    "dist_63d_low",
+    "dist_126d_high",
+    "dist_126d_low",
+    "up_days_5",
+    "up_days_10",
 ]
 
 _HA = ["ha_color", "ha_body", "ha_trend"]
@@ -580,10 +664,21 @@ _ENTRY_BASE = ["breakout_20", "breakout_60", "volume_ratio_60"]
 
 # Exit peak/exhaustion core (the exit_peak_v1 content) — factored out so v2/v3 extend it.
 _EXIT_PEAK_CORE = [
-    "dist_52w_high", "sma_20_ratio", "sma_50_ratio",
-    "rsi_14", "rsi_7", "bb_pct_20",
-    "macd_hist", "roc_10", "ret_5d", "ret_10d",
-    "atr_regime", "atr_14_ratio", "mfi_14", "volume_ratio_20", "obv_slope_10",
+    "dist_52w_high",
+    "sma_20_ratio",
+    "sma_50_ratio",
+    "rsi_14",
+    "rsi_7",
+    "bb_pct_20",
+    "macd_hist",
+    "roc_10",
+    "ret_5d",
+    "ret_10d",
+    "atr_regime",
+    "atr_14_ratio",
+    "mfi_14",
+    "volume_ratio_20",
+    "obv_slope_10",
     *_MA_SLOPE,
     *_ZZ_SWING,
 ]
@@ -592,8 +687,16 @@ _EXIT_PEAK_V2_EXTRA = ["rsi_div_20", "macd_div_20", "dist_63d_high", "dist_126d_
 # Zero/near-zero-gain features on the zigzag-peak-post exit target (LightGBM gain
 # importance, measured 2026-06-04). Dropped by the exit_peak_lean ablation sets.
 _EXIT_DEAD = {
-    "ret_10d", "zz_n_pivots", "ha_color", "mfi_14", "macd_div_20",
-    "obv_slope_10", "rsi_div_20", "zz_prev_leg_dur", "lower_wick_ratio", "sma_50_ratio",
+    "ret_10d",
+    "zz_n_pivots",
+    "ha_color",
+    "mfi_14",
+    "macd_div_20",
+    "obv_slope_10",
+    "rsi_div_20",
+    "zz_prev_leg_dur",
+    "lower_wick_ratio",
+    "sma_50_ratio",
 }
 
 # set name -> (description, ordered member feature names)
@@ -644,7 +747,8 @@ SETS: dict[str, tuple[str, list[str]]] = {
     # rejects. The 3 kept extras are NaN-free after warmup-trim.
     "rs_regime_v1": (
         "leading_v2 + train-clean cross-sectional momentum & market-regime features (39)",
-        _LEADING_V2 + [
+        _LEADING_V2
+        + [
             "momentum_rank",
             "market_trend",
             "market_volatility_regime",
@@ -723,7 +827,9 @@ SETS: dict[str, tuple[str, list[str]]] = {
     # blind spot: small-body, long-wick warning candles the v3 set was blind to).
     "exit_peak_v5": (
         "exit_peak_v3 + candle exhaustion: upper/lower wick + body ratio (43)",
-        _EXIT_PEAK_CORE + _EXIT_PEAK_V2_EXTRA + _HA
+        _EXIT_PEAK_CORE
+        + _EXIT_PEAK_V2_EXTRA
+        + _HA
         + ["upper_wick_ratio", "lower_wick_ratio", "body_ratio"],
     ),
     # Entry set with the FAST same-bar direction signals (close_to_open, ret_1d) the
@@ -740,23 +846,40 @@ SETS: dict[str, tuple[str, list[str]]] = {
     # split-subsample then samples useful features more often (de-noise).
     "exit_peak_lean": (
         "exit_peak_v5 minus 10 dead-gain features (33)",
-        [c for c in (_EXIT_PEAK_CORE + _EXIT_PEAK_V2_EXTRA + _HA
-                     + ["upper_wick_ratio", "lower_wick_ratio", "body_ratio"])
-         if c not in _EXIT_DEAD],
+        [
+            c
+            for c in (
+                _EXIT_PEAK_CORE
+                + _EXIT_PEAK_V2_EXTRA
+                + _HA
+                + ["upper_wick_ratio", "lower_wick_ratio", "body_ratio"]
+            )
+            if c not in _EXIT_DEAD
+        ],
     ),
     # exit_peak_lean + ADX trend-strength & -DI directional (untested on the exit; a
     # weakening trend = falling ADX / rising -DI — info the dead divergence feats lacked).
     "exit_peak_lean_adx": (
         "exit_peak_lean + adx_14 + minus_di_14 (35)",
-        [c for c in (_EXIT_PEAK_CORE + _EXIT_PEAK_V2_EXTRA + _HA
-                     + ["upper_wick_ratio", "lower_wick_ratio", "body_ratio"])
-         if c not in _EXIT_DEAD] + ["adx_14", "minus_di_14"],
+        [
+            c
+            for c in (
+                _EXIT_PEAK_CORE
+                + _EXIT_PEAK_V2_EXTRA
+                + _HA
+                + ["upper_wick_ratio", "lower_wick_ratio", "body_ratio"]
+            )
+            if c not in _EXIT_DEAD
+        ]
+        + ["adx_14", "minus_di_14"],
     ),
     # exit_peak_v5 + ADX/-DI, WITHOUT dropping anything (ablation showed dropping the
     # dead-gain feats HURT -3 via bagging, but adding adx/-DI helped). Add-only variant.
     "exit_peak_v6": (
         "exit_peak_v5 + adx_14 + minus_di_14 (45)",
-        _EXIT_PEAK_CORE + _EXIT_PEAK_V2_EXTRA + _HA
+        _EXIT_PEAK_CORE
+        + _EXIT_PEAK_V2_EXTRA
+        + _HA
         + ["upper_wick_ratio", "lower_wick_ratio", "body_ratio", "adx_14", "minus_di_14"],
     ),
     # Best ablation set (lean_adx) + CLEAN directional divergence (replaces the broken
@@ -764,9 +887,16 @@ SETS: dict[str, tuple[str, list[str]]] = {
     # condensed, finally carries signal the exit head will use.
     "exit_peak_div": (
         "exit_peak_lean_adx + div_rank_rsi + div_rank_macd (37)",
-        [c for c in (_EXIT_PEAK_CORE + _EXIT_PEAK_V2_EXTRA + _HA
-                     + ["upper_wick_ratio", "lower_wick_ratio", "body_ratio"])
-         if c not in _EXIT_DEAD]
+        [
+            c
+            for c in (
+                _EXIT_PEAK_CORE
+                + _EXIT_PEAK_V2_EXTRA
+                + _HA
+                + ["upper_wick_ratio", "lower_wick_ratio", "body_ratio"]
+            )
+            if c not in _EXIT_DEAD
+        ]
         + ["adx_14", "minus_di_14", "div_rank_rsi", "div_rank_macd"],
     ),
     # exit_peak_div + the VOLATILITY features that exit_ic_research found are the strongest
@@ -776,17 +906,38 @@ SETS: dict[str, tuple[str, list[str]]] = {
     # whether adding the absent high-IC vol legs sharpens the sell (downside-aware exit).
     "exit_peak_div_vol": (
         "exit_peak_div + realized_vol_10 + bb_width_20 + vol_percentile_60 (40)",
-        [c for c in (_EXIT_PEAK_CORE + _EXIT_PEAK_V2_EXTRA + _HA
-                     + ["upper_wick_ratio", "lower_wick_ratio", "body_ratio"])
-         if c not in _EXIT_DEAD]
-        + ["adx_14", "minus_di_14", "div_rank_rsi", "div_rank_macd",
-           "realized_vol_10", "bb_width_20", "vol_percentile_60"],
+        [
+            c
+            for c in (
+                _EXIT_PEAK_CORE
+                + _EXIT_PEAK_V2_EXTRA
+                + _HA
+                + ["upper_wick_ratio", "lower_wick_ratio", "body_ratio"]
+            )
+            if c not in _EXIT_DEAD
+        ]
+        + [
+            "adx_14",
+            "minus_di_14",
+            "div_rank_rsi",
+            "div_rank_macd",
+            "realized_vol_10",
+            "bb_width_20",
+            "vol_percentile_60",
+        ],
     ),
     "exit_peak_div_rvol": (
         "exit_peak_div + realized_vol_10 only (the #2 exit-IC feature, absent) (38)",
-        [c for c in (_EXIT_PEAK_CORE + _EXIT_PEAK_V2_EXTRA + _HA
-                     + ["upper_wick_ratio", "lower_wick_ratio", "body_ratio"])
-         if c not in _EXIT_DEAD]
+        [
+            c
+            for c in (
+                _EXIT_PEAK_CORE
+                + _EXIT_PEAK_V2_EXTRA
+                + _HA
+                + ["upper_wick_ratio", "lower_wick_ratio", "body_ratio"]
+            )
+            if c not in _EXIT_DEAD
+        ]
         + ["adx_14", "minus_di_14", "div_rank_rsi", "div_rank_macd", "realized_vol_10"],
     ),
     # LEAN downside-vol exit set (conditional_exit_ic.py 2026-06-08): the champion's
@@ -797,19 +948,41 @@ SETS: dict[str, tuple[str, list[str]]] = {
     # predictors + near-high proximity (where the edge concentrates), nothing diluting.
     "exit_vol_lean": (
         "lean downside-vol exit: vol magnitude + near-high proximity, no dead overextension (11)",
-        ["atr_14_ratio", "realized_vol_10", "vol_percentile_60", "bb_width_20",
-         "volatility_rank", "high_low_pct_5d", "ma5_accel",
-         "dist_63d_high", "dist_52w_high", "sma_20_ratio", "bb_pct_20"],
+        [
+            "atr_14_ratio",
+            "realized_vol_10",
+            "vol_percentile_60",
+            "bb_width_20",
+            "volatility_rank",
+            "high_low_pct_5d",
+            "ma5_accel",
+            "dist_63d_high",
+            "dist_52w_high",
+            "sma_20_ratio",
+            "bb_pct_20",
+        ],
     ),
     # exit_vol_lean + train-clean market-context legs (the UNTRIED lever: tops are market-
     # driven; single-stock price can't see the index/breadth rollover). Same 3 clean
     # cross-sectional/regime features used by rs_regime_v1 (NaN-safe after warmup-trim).
     "exit_vol_market": (
         "exit_vol_lean + market regime/breadth context (14)",
-        ["atr_14_ratio", "realized_vol_10", "vol_percentile_60", "bb_width_20",
-         "volatility_rank", "high_low_pct_5d", "ma5_accel",
-         "dist_63d_high", "dist_52w_high", "sma_20_ratio", "bb_pct_20",
-         "market_volatility_regime", "market_trend", "momentum_rank"],
+        [
+            "atr_14_ratio",
+            "realized_vol_10",
+            "vol_percentile_60",
+            "bb_width_20",
+            "volatility_rank",
+            "high_low_pct_5d",
+            "ma5_accel",
+            "dist_63d_high",
+            "dist_52w_high",
+            "sma_20_ratio",
+            "bb_pct_20",
+            "market_volatility_regime",
+            "market_trend",
+            "momentum_rank",
+        ],
     ),
     # EXIT + MACD-HIST SHAPE (user temporal-pattern insight 2026-06-18): the rollover SHAPE the
     # hand-coded MACD shield read, given to the EXIT head as raw + percentile + slope/accel/lags so it
@@ -817,13 +990,32 @@ SETS: dict[str, tuple[str, list[str]]] = {
     # by using a 5-bar MEAN = shape-destroying).
     "exit_vol_market_shape": (
         "exit_vol_market + MACD-hist SHAPE family (raw+pctile+slope/accel/lags) for rollover timing (24)",
-        ["atr_14_ratio", "realized_vol_10", "vol_percentile_60", "bb_width_20",
-         "volatility_rank", "high_low_pct_5d", "ma5_accel",
-         "dist_63d_high", "dist_52w_high", "sma_20_ratio", "bb_pct_20",
-         "market_volatility_regime", "market_trend", "momentum_rank",
-         "macd_hist_sh", "macd_hist_pctile_252_sh", "macd_hist_slope_sh", "macd_hist_accel_sh",
-         "macd_hist_l1_sh", "macd_hist_l2_sh", "macd_hist_slope_l1_sh", "macd_hist_slope_l2_sh",
-         "macd_hist_slope_pctile_252_sh", "macd_line_sh"],
+        [
+            "atr_14_ratio",
+            "realized_vol_10",
+            "vol_percentile_60",
+            "bb_width_20",
+            "volatility_rank",
+            "high_low_pct_5d",
+            "ma5_accel",
+            "dist_63d_high",
+            "dist_52w_high",
+            "sma_20_ratio",
+            "bb_pct_20",
+            "market_volatility_regime",
+            "market_trend",
+            "momentum_rank",
+            "macd_hist_sh",
+            "macd_hist_pctile_252_sh",
+            "macd_hist_slope_sh",
+            "macd_hist_accel_sh",
+            "macd_hist_l1_sh",
+            "macd_hist_l2_sh",
+            "macd_hist_slope_l1_sh",
+            "macd_hist_slope_l2_sh",
+            "macd_hist_slope_pctile_252_sh",
+            "macd_line_sh",
+        ],
     ),
     # BRANCH A: exit_vol_market + same-wave DOWNLEG STRUCTURE (the untested cut-timing axis,
     # project_t1804). The reward_risk head on vol-magnitude features is direction-symmetric and
@@ -835,58 +1027,138 @@ SETS: dict[str, tuple[str, list[str]]] = {
     # the leg has already run rather than firing symmetrically at tops AND bottoms.
     "exit_vol_downleg": (
         "exit_vol_market + downleg structure (depth/age/persistence/leg, 22)",
-        ["atr_14_ratio", "realized_vol_10", "vol_percentile_60", "bb_width_20",
-         "volatility_rank", "high_low_pct_5d", "ma5_accel",
-         "dist_63d_high", "dist_52w_high", "sma_20_ratio", "bb_pct_20",
-         "market_volatility_regime", "market_trend", "momentum_rank",
-         "dist_20d_high", "aroon_up", "aroon_down", "down_days_5", "down_days_10",
-         "higher_lows_count", "rsi_div_20", "macd_div_20"],
+        [
+            "atr_14_ratio",
+            "realized_vol_10",
+            "vol_percentile_60",
+            "bb_width_20",
+            "volatility_rank",
+            "high_low_pct_5d",
+            "ma5_accel",
+            "dist_63d_high",
+            "dist_52w_high",
+            "sma_20_ratio",
+            "bb_pct_20",
+            "market_volatility_regime",
+            "market_trend",
+            "momentum_rank",
+            "dist_20d_high",
+            "aroon_up",
+            "aroon_down",
+            "down_days_5",
+            "down_days_10",
+            "higher_lows_count",
+            "rsi_div_20",
+            "macd_div_20",
+        ],
     ),
     # exit_vol_market + DISTRIBUTION-day pressure (volume-confirmed selling). Tests whether
     # "số ngày phân phối" lets the reward_risk exit head see downside the volatility features miss.
     "exit_vol_dist": (
         "exit_vol_market + distribution-day counts (volume-confirmed selling)",
-        ["atr_14_ratio", "realized_vol_10", "vol_percentile_60", "bb_width_20",
-         "volatility_rank", "high_low_pct_5d", "ma5_accel",
-         "dist_63d_high", "dist_52w_high", "sma_20_ratio", "bb_pct_20",
-         "market_volatility_regime", "market_trend", "momentum_rank",
-         "dist_day_25", "dist_day_vol20_25"],
+        [
+            "atr_14_ratio",
+            "realized_vol_10",
+            "vol_percentile_60",
+            "bb_width_20",
+            "volatility_rank",
+            "high_low_pct_5d",
+            "ma5_accel",
+            "dist_63d_high",
+            "dist_52w_high",
+            "sma_20_ratio",
+            "bb_pct_20",
+            "market_volatility_regime",
+            "market_trend",
+            "momentum_rank",
+            "dist_day_25",
+            "dist_day_vol20_25",
+        ],
     ),
     # exit_vol_dist (the robust volume head, 2369) + MACD-hist TEMPORAL SHAPE (user insight): give the
     # head the lagged slope SEQUENCE + acceleration (curvature) + percentile so it reads top-vs-bottom
     # SHAPE, not a point-in-time slope. Tests whether sequence info un-sticks the phase-noise result.
     "exit_vol_dist_shape": (
         "exit_vol_dist + MACD-hist temporal shape (lagged slope seq + accel + percentile, 26)",
-        ["atr_14_ratio", "realized_vol_10", "vol_percentile_60", "bb_width_20",
-         "volatility_rank", "high_low_pct_5d", "ma5_accel",
-         "dist_63d_high", "dist_52w_high", "sma_20_ratio", "bb_pct_20",
-         "market_volatility_regime", "market_trend", "momentum_rank",
-         "dist_day_25", "dist_day_vol20_25",
-         "macd_hist_chg_1", "macd_hist_slope_l1", "macd_hist_slope_l2", "macd_hist_slope_l3",
-         "macd_hist_slope_l4", "macd_hist_slope_l5", "macd_hist_accel", "macd_hist_accel_3",
-         "macd_hist_pctile_252", "macd_hist_slope_pctile_252"],
+        [
+            "atr_14_ratio",
+            "realized_vol_10",
+            "vol_percentile_60",
+            "bb_width_20",
+            "volatility_rank",
+            "high_low_pct_5d",
+            "ma5_accel",
+            "dist_63d_high",
+            "dist_52w_high",
+            "sma_20_ratio",
+            "bb_pct_20",
+            "market_volatility_regime",
+            "market_trend",
+            "momentum_rank",
+            "dist_day_25",
+            "dist_day_vol20_25",
+            "macd_hist_chg_1",
+            "macd_hist_slope_l1",
+            "macd_hist_slope_l2",
+            "macd_hist_slope_l3",
+            "macd_hist_slope_l4",
+            "macd_hist_slope_l5",
+            "macd_hist_accel",
+            "macd_hist_accel_3",
+            "macd_hist_pctile_252",
+            "macd_hist_slope_pctile_252",
+        ],
     ),
     # Lean shape: the minimal sequence that carries curvature — level slope + acceleration + 2 lags +
     # percentile (guards against the 26-feat full set overfitting the small exit-target signal).
     "exit_vol_dist_shape_lean": (
         "exit_vol_dist + MACD-hist core shape (slope + accel + 2 lags + percentile, 21)",
-        ["atr_14_ratio", "realized_vol_10", "vol_percentile_60", "bb_width_20",
-         "volatility_rank", "high_low_pct_5d", "ma5_accel",
-         "dist_63d_high", "dist_52w_high", "sma_20_ratio", "bb_pct_20",
-         "market_volatility_regime", "market_trend", "momentum_rank",
-         "dist_day_25", "dist_day_vol20_25",
-         "macd_hist_chg_1", "macd_hist_accel", "macd_hist_slope_l1", "macd_hist_slope_l2",
-         "macd_hist_pctile_252"],
+        [
+            "atr_14_ratio",
+            "realized_vol_10",
+            "vol_percentile_60",
+            "bb_width_20",
+            "volatility_rank",
+            "high_low_pct_5d",
+            "ma5_accel",
+            "dist_63d_high",
+            "dist_52w_high",
+            "sma_20_ratio",
+            "bb_pct_20",
+            "market_volatility_regime",
+            "market_trend",
+            "momentum_rank",
+            "dist_day_25",
+            "dist_day_vol20_25",
+            "macd_hist_chg_1",
+            "macd_hist_accel",
+            "macd_hist_slope_l1",
+            "macd_hist_slope_l2",
+            "macd_hist_pctile_252",
+        ],
     ),
     # exit_vol_market + 2-candle bearish engulfing + doji-cluster (the candle-pattern axis the
     # exit head currently has zero features for).
     "exit_vol_candle": (
         "exit_vol_market + bearish engulfing + doji-cluster",
-        ["atr_14_ratio", "realized_vol_10", "vol_percentile_60", "bb_width_20",
-         "volatility_rank", "high_low_pct_5d", "ma5_accel",
-         "dist_63d_high", "dist_52w_high", "sma_20_ratio", "bb_pct_20",
-         "market_volatility_regime", "market_trend", "momentum_rank",
-         "bear_engulf", "doji_count_10"],
+        [
+            "atr_14_ratio",
+            "realized_vol_10",
+            "vol_percentile_60",
+            "bb_width_20",
+            "volatility_rank",
+            "high_low_pct_5d",
+            "ma5_accel",
+            "dist_63d_high",
+            "dist_52w_high",
+            "sma_20_ratio",
+            "bb_pct_20",
+            "market_volatility_regime",
+            "market_trend",
+            "momentum_rank",
+            "bear_engulf",
+            "doji_count_10",
+        ],
     ),
     # exit_vol_market (MAGNITUDE: vol/dist + market context) UNION momentum-DECELERATION /
     # divergence (PHASE). Phase diagnosis (project_exit_leadlag_frontier): the reward_risk head
@@ -896,13 +1168,31 @@ SETS: dict[str, tuple[str, list[str]]] = {
     # the principled in-model fix (not a bolted-on rollover OR-rule). A/B vs 958 (comp 455.5).
     "exit_vol_phase": (
         "exit_vol_market + momentum deceleration / divergence / extension (PHASE, 23)",
-        ["atr_14_ratio", "realized_vol_10", "vol_percentile_60", "bb_width_20",
-         "volatility_rank", "high_low_pct_5d", "ma5_accel",
-         "dist_63d_high", "dist_52w_high", "sma_20_ratio", "bb_pct_20",
-         "market_volatility_regime", "market_trend", "momentum_rank",
-         "macd_hist_chg_1", "macd_hist_chg_3", "macd_hist_chg_5",
-         "ma10_slope", "ma20_slope", "rsi_div_20", "macd_div_20",
-         "dist_126d_high", "up_days_10"],
+        [
+            "atr_14_ratio",
+            "realized_vol_10",
+            "vol_percentile_60",
+            "bb_width_20",
+            "volatility_rank",
+            "high_low_pct_5d",
+            "ma5_accel",
+            "dist_63d_high",
+            "dist_52w_high",
+            "sma_20_ratio",
+            "bb_pct_20",
+            "market_volatility_regime",
+            "market_trend",
+            "momentum_rank",
+            "macd_hist_chg_1",
+            "macd_hist_chg_3",
+            "macd_hist_chg_5",
+            "ma10_slope",
+            "ma20_slope",
+            "rsi_div_20",
+            "macd_div_20",
+            "dist_126d_high",
+            "up_days_10",
+        ],
     ),
     # FULL velocity-DYNAMICS exit (user 2026-06-20, "tốc độ thay đổi hist" = sell when momentum
     # DECELERATES at a top): exit_vol_market base + the complete rate-of-change stack — macd-hist
@@ -910,13 +1200,32 @@ SETS: dict[str, tuple[str, list[str]]] = {
     # %R velocity, MA slopes. Adds the deceleration sequence the vol-magnitude base is blind to.
     "exit_vol_dyn": (
         "exit_vol_market + full momentum-deceleration velocity stack (accel + %R + ribbon-contract, 24)",
-        ["atr_14_ratio", "realized_vol_10", "vol_percentile_60", "bb_width_20",
-         "volatility_rank", "high_low_pct_5d", "ma5_accel",
-         "dist_63d_high", "dist_52w_high", "sma_20_ratio", "bb_pct_20",
-         "market_volatility_regime", "market_trend", "momentum_rank",
-         "macd_hist_chg_3", "macd_hist_chg_5", "macd_hist_accel", "macd_hist_smooth_slope",
-         "rsi_14_slope10", "rsi_smooth_slope", "ema_ribbon_expand",
-         "williams_r_slope5", "ma10_slope", "ma20_slope"],
+        [
+            "atr_14_ratio",
+            "realized_vol_10",
+            "vol_percentile_60",
+            "bb_width_20",
+            "volatility_rank",
+            "high_low_pct_5d",
+            "ma5_accel",
+            "dist_63d_high",
+            "dist_52w_high",
+            "sma_20_ratio",
+            "bb_pct_20",
+            "market_volatility_regime",
+            "market_trend",
+            "momentum_rank",
+            "macd_hist_chg_3",
+            "macd_hist_chg_5",
+            "macd_hist_accel",
+            "macd_hist_smooth_slope",
+            "rsi_14_slope10",
+            "rsi_smooth_slope",
+            "ema_ribbon_expand",
+            "williams_r_slope5",
+            "ma10_slope",
+            "ma20_slope",
+        ],
     ),
     # exit_directional (top-timing, NO symmetric vol) + the user's velocity ADDITIONS the directional
     # base lacks: macd-hist 2nd-derivative (accel), %R level+velocity, EMA-ribbon contraction. The
@@ -924,11 +1233,28 @@ SETS: dict[str, tuple[str, list[str]]] = {
     # the rate-of-change the original directional set only had as 1st-derivative.
     "exit_dir_dyn": (
         "exit_directional + macd-hist accel + %R + ribbon-contract (20, directional deceleration)",
-        ["sma_20_ratio", "bb_pct_20", "dist_63d_high", "dist_52w_high", "dist_126d_high",
-         "macd_hist_chg_1", "macd_hist_chg_3", "macd_hist_chg_5",
-         "ma10_slope", "ma20_slope", "ma5_accel", "rsi_div_20", "macd_div_20", "up_days_10",
-         "macd_hist_accel", "macd_hist_smooth_slope", "rsi_14_slope10",
-         "williams_r_14", "williams_r_slope5", "ema_ribbon_expand"],
+        [
+            "sma_20_ratio",
+            "bb_pct_20",
+            "dist_63d_high",
+            "dist_52w_high",
+            "dist_126d_high",
+            "macd_hist_chg_1",
+            "macd_hist_chg_3",
+            "macd_hist_chg_5",
+            "ma10_slope",
+            "ma20_slope",
+            "ma5_accel",
+            "rsi_div_20",
+            "macd_div_20",
+            "up_days_10",
+            "macd_hist_accel",
+            "macd_hist_smooth_slope",
+            "rsi_14_slope10",
+            "williams_r_14",
+            "williams_r_slope5",
+            "ema_ribbon_expand",
+        ],
     ),
     # No-cross ablation: exit_vol_market stripped of ALL cross-sectional / market
     # context (volatility_rank, momentum_rank, market_trend, market_volatility_regime)
@@ -936,9 +1262,18 @@ SETS: dict[str, tuple[str, list[str]]] = {
     # the entry slot to make a fully per-symbol (no-universe-dependency) champion.
     "exit_vol_nocross": (
         "exit_vol_market minus cross-sectional/market context (10, per-symbol only)",
-        ["atr_14_ratio", "realized_vol_10", "vol_percentile_60", "bb_width_20",
-         "high_low_pct_5d", "ma5_accel",
-         "dist_63d_high", "dist_52w_high", "sma_20_ratio", "bb_pct_20"],
+        [
+            "atr_14_ratio",
+            "realized_vol_10",
+            "vol_percentile_60",
+            "bb_width_20",
+            "high_low_pct_5d",
+            "ma5_accel",
+            "dist_63d_high",
+            "dist_52w_high",
+            "sma_20_ratio",
+            "bb_pct_20",
+        ],
     ),
     # DIRECTIONAL-ONLY exit (top-vs-bottom timing): proof (exit_head_shape_cmp.py +
     # feature top/bottom separation) that the head fires at BOTTOMS not tops because the
@@ -951,18 +1286,45 @@ SETS: dict[str, tuple[str, list[str]]] = {
     # how BIG a drop is, not WHEN — wrong tool for exit TIMING. Subtractive fix.
     "exit_directional": (
         "directional top-timing features only — NO symmetric vol magnitude (14)",
-        ["sma_20_ratio", "bb_pct_20", "dist_63d_high", "dist_52w_high", "dist_126d_high",
-         "macd_hist_chg_1", "macd_hist_chg_3", "macd_hist_chg_5",
-         "ma10_slope", "ma20_slope", "ma5_accel", "rsi_div_20", "macd_div_20", "up_days_10"],
+        [
+            "sma_20_ratio",
+            "bb_pct_20",
+            "dist_63d_high",
+            "dist_52w_high",
+            "dist_126d_high",
+            "macd_hist_chg_1",
+            "macd_hist_chg_3",
+            "macd_hist_chg_5",
+            "ma10_slope",
+            "ma20_slope",
+            "ma5_accel",
+            "rsi_div_20",
+            "macd_div_20",
+            "up_days_10",
+        ],
     ),
     # exit_directional + directional MARKET context (trend + xsec momentum rank), dropping
     # the symmetric market_volatility_regime.
     "exit_directional_mkt": (
         "exit_directional + directional market context (trend + momentum rank, 16)",
-        ["sma_20_ratio", "bb_pct_20", "dist_63d_high", "dist_52w_high", "dist_126d_high",
-         "macd_hist_chg_1", "macd_hist_chg_3", "macd_hist_chg_5",
-         "ma10_slope", "ma20_slope", "ma5_accel", "rsi_div_20", "macd_div_20", "up_days_10",
-         "market_trend", "momentum_rank"],
+        [
+            "sma_20_ratio",
+            "bb_pct_20",
+            "dist_63d_high",
+            "dist_52w_high",
+            "dist_126d_high",
+            "macd_hist_chg_1",
+            "macd_hist_chg_3",
+            "macd_hist_chg_5",
+            "ma10_slope",
+            "ma20_slope",
+            "ma5_accel",
+            "rsi_div_20",
+            "macd_div_20",
+            "up_days_10",
+            "market_trend",
+            "momentum_rank",
+        ],
     ),
     # TOP-TELLS exit: the user's explicit sell signals — heavy-volume down bars
     # (down_vol_*), distribution-day counts (dist_day_*), CLEAN directional divergence
@@ -972,11 +1334,24 @@ SETS: dict[str, tuple[str, list[str]]] = {
     # quality actually drives exits — the fair test the masked champion hides.
     "exit_toptells": (
         "user top-tells: down-volume bars + distribution days + clean divergence + extension (16)",
-        ["down_vol_spike", "down_vol_count_10", "down_vol_intensity_5",
-         "dist_day_25", "dist_day_vol20_25", "div_rank_rsi", "div_rank_macd",
-         "macd_hist_chg_3", "macd_hist_chg_5", "bear_engulf",
-         "sma_20_ratio", "bb_pct_20", "dist_63d_high", "dist_126d_high", "up_days_10",
-         "market_trend"],
+        [
+            "down_vol_spike",
+            "down_vol_count_10",
+            "down_vol_intensity_5",
+            "dist_day_25",
+            "dist_day_vol20_25",
+            "div_rank_rsi",
+            "div_rank_macd",
+            "macd_hist_chg_3",
+            "macd_hist_chg_5",
+            "bear_engulf",
+            "sma_20_ratio",
+            "bb_pct_20",
+            "dist_63d_high",
+            "dist_126d_high",
+            "up_days_10",
+            "market_trend",
+        ],
     ),
     # exit_peak_div + distance-above-base (dist_*_low) — RE-tested after the loader
     # zero-close fix made these finite (they were inf-poisoned in R14, hence useless).
@@ -990,7 +1365,9 @@ SETS: dict[str, tuple[str, list[str]]] = {
     # (hist falling hard on a red bar -> entry forced low) where slow ma_slope couldn't.
     "entry_mom_v1": (
         "exit_peak_v3 + macd_hist_chg 2/5 + div_rank_macd (43)",
-        _EXIT_PEAK_CORE + _EXIT_PEAK_V2_EXTRA + _HA
+        _EXIT_PEAK_CORE
+        + _EXIT_PEAK_V2_EXTRA
+        + _HA
         + ["macd_hist_chg_2", "macd_hist_chg_5", "div_rank_macd"],
     ),
     # Entry WITHOUT the discrete zigzag-state features (which flip violently on the
@@ -1012,60 +1389,125 @@ SETS: dict[str, tuple[str, list[str]]] = {
     # fire at the 4/8-type breakout, not the 29/8 dump.
     "entry_breakout_v1": (
         "volume-breakout + accumulation + MA-trend + HA, no zz/atr (22)",
-        ["breakout_20", "breakout_60", "volume_ratio_20", "volume_ratio_60",
-         "bb_squeeze", "bb_width_20", "bb_pct_20",
-         "sma_5_ratio", "sma_20_ratio", "sma_50_ratio",
-         "ma5_slope", "ma10_slope", "ma_align",
-         "rsi_14", "macd_hist", "macd_hist_chg_5",
-         "ha_color", "ha_body", "ha_trend",
-         "close_to_open", "ret_5d", "up_days_5"],
+        [
+            "breakout_20",
+            "breakout_60",
+            "volume_ratio_20",
+            "volume_ratio_60",
+            "bb_squeeze",
+            "bb_width_20",
+            "bb_pct_20",
+            "sma_5_ratio",
+            "sma_20_ratio",
+            "sma_50_ratio",
+            "ma5_slope",
+            "ma10_slope",
+            "ma_align",
+            "rsi_14",
+            "macd_hist",
+            "macd_hist_chg_5",
+            "ha_color",
+            "ha_body",
+            "ha_trend",
+            "close_to_open",
+            "ret_5d",
+            "up_days_5",
+        ],
     ),
     "entry_nozz_noatr": (
         "entry_nozz minus atr_14_ratio + atr_regime kept (32)",
-        [c for c in (_EXIT_PEAK_CORE + _EXIT_PEAK_V2_EXTRA + _HA)
-         if c not in _ZZ_SWING and c != "atr_14_ratio"]
+        [
+            c
+            for c in (_EXIT_PEAK_CORE + _EXIT_PEAK_V2_EXTRA + _HA)
+            if c not in _ZZ_SWING and c != "atr_14_ratio"
+        ]
         + ["macd_hist_chg_2", "macd_hist_chg_5", "div_rank_macd"],
     ),
     "exit_peak_mom": (
         "exit_peak_div + macd_hist_chg 2/5/10 (40)",
-        [c for c in (_EXIT_PEAK_CORE + _EXIT_PEAK_V2_EXTRA + _HA
-                     + ["upper_wick_ratio", "lower_wick_ratio", "body_ratio"])
-         if c not in _EXIT_DEAD]
-        + ["adx_14", "minus_di_14", "div_rank_rsi", "div_rank_macd",
-           "macd_hist_chg_2", "macd_hist_chg_5", "macd_hist_chg_10"],
+        [
+            c
+            for c in (
+                _EXIT_PEAK_CORE
+                + _EXIT_PEAK_V2_EXTRA
+                + _HA
+                + ["upper_wick_ratio", "lower_wick_ratio", "body_ratio"]
+            )
+            if c not in _EXIT_DEAD
+        ]
+        + [
+            "adx_14",
+            "minus_di_14",
+            "div_rank_rsi",
+            "div_rank_macd",
+            "macd_hist_chg_2",
+            "macd_hist_chg_5",
+            "macd_hist_chg_10",
+        ],
     ),
     # exit_peak_div + the user's macd-hist acceleration over 1/2/3/5 bars (full short-
     # horizon momentum-of-momentum). Test whether shorter horizons add over the existing.
     "exit_peak_mom2": (
         "exit_peak_div + macd_hist_chg 1/2/3/5 (40)",
-        [c for c in (_EXIT_PEAK_CORE + _EXIT_PEAK_V2_EXTRA + _HA
-                     + ["upper_wick_ratio", "lower_wick_ratio", "body_ratio"])
-         if c not in _EXIT_DEAD]
-        + ["adx_14", "minus_di_14", "div_rank_rsi", "div_rank_macd",
-           "macd_hist_chg_1", "macd_hist_chg_2", "macd_hist_chg_3", "macd_hist_chg_5"],
+        [
+            c
+            for c in (
+                _EXIT_PEAK_CORE
+                + _EXIT_PEAK_V2_EXTRA
+                + _HA
+                + ["upper_wick_ratio", "lower_wick_ratio", "body_ratio"]
+            )
+            if c not in _EXIT_DEAD
+        ]
+        + [
+            "adx_14",
+            "minus_di_14",
+            "div_rank_rsi",
+            "div_rank_macd",
+            "macd_hist_chg_1",
+            "macd_hist_chg_2",
+            "macd_hist_chg_3",
+            "macd_hist_chg_5",
+        ],
     ),
     # Entry with CROSS-SECTIONAL rank info (this stock vs all others each day) on top of
     # price — the genuinely-new information that RAISES the entry model's forward-IC
     # (price-only 0.059 -> +xsec 0.073, +24%). Not a mask: the model predicts better.
     "entry_xsec_v1": (
         "leading_v2 + cross-sectional ranks (momentum/rsi/strength/vol/volume) (42)",
-        _LEADING_V2 + ["momentum_rank", "rsi_rank", "price_strength_rank",
-                       "volatility_rank", "volume_rank"],
+        _LEADING_V2
+        + ["momentum_rank", "rsi_rank", "price_strength_rank", "volatility_rank", "volume_rank"],
     ),
     # entry_xsec_v1 + the low-vol x near-52w-high IC winners (rank legs + their product).
     # Tests whether the strongest measured cross-sectional fwd-return signal lifts the
     # honest swing entry (IC 0.073 -> the lvnh composite measured 0.076-0.110 oos).
     "entry_xsec_lvnh": (
         "entry_xsec_v1 + low-vol60/near-high ranks + product (IC winner)",
-        _LEADING_V2 + ["momentum_rank", "rsi_rank", "price_strength_rank",
-                       "volatility_rank", "volume_rank",
-                       "lowvol_rank_60", "nearhigh_rank", "comp_nh_lv"],
+        _LEADING_V2
+        + [
+            "momentum_rank",
+            "rsi_rank",
+            "price_strength_rank",
+            "volatility_rank",
+            "volume_rank",
+            "lowvol_rank_60",
+            "nearhigh_rank",
+            "comp_nh_lv",
+        ],
     ),
     "entry_xsec_park": (
         "entry_xsec_v1 + parkinson-lowvol/near-high ranks + product",
-        _LEADING_V2 + ["momentum_rank", "rsi_rank", "price_strength_rank",
-                       "volatility_rank", "volume_rank",
-                       "lowvol_park_rank", "nearhigh_rank", "comp_park_nh"],
+        _LEADING_V2
+        + [
+            "momentum_rank",
+            "rsi_rank",
+            "price_strength_rank",
+            "volatility_rank",
+            "volume_rank",
+            "lowvol_park_rank",
+            "nearhigh_rank",
+            "comp_park_nh",
+        ],
     ),
     "entry_lvnh_lean": (
         "leading_v2 + ONLY the low-vol x near-high IC winners (no other xsec ranks)",
@@ -1091,33 +1533,61 @@ SETS: dict[str, tuple[str, list[str]]] = {
     ),
     "entry_lvup126_lean": (
         "entry_lvnh_lean + uptrend-gated + 126d-near-high composites",
-        _LEADING_V2 + ["lowvol_rank_60", "nearhigh_rank", "comp_nh_lv",
-                       "comp_lowvol_uptrend", "comp_nh_x_lv126"],
+        _LEADING_V2
+        + [
+            "lowvol_rank_60",
+            "nearhigh_rank",
+            "comp_nh_lv",
+            "comp_lowvol_uptrend",
+            "comp_nh_x_lv126",
+        ],
     ),
     # Champion entry + ACCUMULATION/DISTRIBUTION-day counts (volume-confirmed buying vs selling
     # pressure over 25 sessions) — feed the entry head the "đang được gom hay đang bị phân phối" read.
     "entry_lvup126_accdist": (
         "entry_lvup126_lean + accumulation/distribution-day counts",
-        _LEADING_V2 + ["lowvol_rank_60", "nearhigh_rank", "comp_nh_lv",
-                       "comp_lowvol_uptrend", "comp_nh_x_lv126",
-                       "accum_day_25", "dist_day_25"],
+        _LEADING_V2
+        + [
+            "lowvol_rank_60",
+            "nearhigh_rank",
+            "comp_nh_lv",
+            "comp_lowvol_uptrend",
+            "comp_nh_x_lv126",
+            "accum_day_25",
+            "dist_day_25",
+        ],
     ),
     # Champion entry + bullish engulfing (2-candle bottom-reversal confirm).
     "entry_lvup126_engulf": (
         "entry_lvup126_lean + bullish engulfing (bottom-reversal confirm)",
-        _LEADING_V2 + ["lowvol_rank_60", "nearhigh_rank", "comp_nh_lv",
-                       "comp_lowvol_uptrend", "comp_nh_x_lv126",
-                       "bull_engulf"],
+        _LEADING_V2
+        + [
+            "lowvol_rank_60",
+            "nearhigh_rank",
+            "comp_nh_lv",
+            "comp_lowvol_uptrend",
+            "comp_nh_x_lv126",
+            "bull_engulf",
+        ],
     ),
     # Champion entry (lvup126) + the CROSS-SECTIONAL ranks (this stock vs all others each day) —
     # genuinely-new info that RAISES the entry model's forward-IC (price-only 0.059 -> +xsec 0.073,
     # +24%; entry_xsec_v1 note). Isolates the xsec contribution on top of the exact t518 features.
     "entry_lvup126_xsec": (
         "entry_lvup126_lean + cross-sectional ranks (momentum/rsi/strength/vol/volume)",
-        _LEADING_V2 + ["lowvol_rank_60", "nearhigh_rank", "comp_nh_lv",
-                       "comp_lowvol_uptrend", "comp_nh_x_lv126",
-                       "momentum_rank", "rsi_rank", "price_strength_rank",
-                       "volatility_rank", "volume_rank"],
+        _LEADING_V2
+        + [
+            "lowvol_rank_60",
+            "nearhigh_rank",
+            "comp_nh_lv",
+            "comp_lowvol_uptrend",
+            "comp_nh_x_lv126",
+            "momentum_rank",
+            "rsi_rank",
+            "price_strength_rank",
+            "volatility_rank",
+            "volume_rank",
+        ],
     ),
     # Champion entry + the missing CHEAPNESS legs (sma_200_ratio, dist_126d_low, dist_63d_low).
     # tail_signature.py showed tail winners are bought below 200MA / deep below longer-term levels;
@@ -1125,9 +1595,17 @@ SETS: dict[str, tuple[str, list[str]]] = {
     # can LEARN the cheapness edge (rank-IC 0.238 on realized trades) instead of gating (which cuts trades).
     "entry_lvup126_cheap": (
         "entry_lvup126_lean + sma_200_ratio + dist_126d_low + dist_63d_low (cheapness legs)",
-        _LEADING_V2 + ["lowvol_rank_60", "nearhigh_rank", "comp_nh_lv",
-                       "comp_lowvol_uptrend", "comp_nh_x_lv126",
-                       "sma_200_ratio", "dist_126d_low", "dist_63d_low"],
+        _LEADING_V2
+        + [
+            "lowvol_rank_60",
+            "nearhigh_rank",
+            "comp_nh_lv",
+            "comp_lowvol_uptrend",
+            "comp_nh_x_lv126",
+            "sma_200_ratio",
+            "dist_126d_low",
+            "dist_63d_low",
+        ],
     ),
     # Champion entry + MARKET-CONTEXT legs (the per-symbol head is blind to the tape — the
     # entry_market_gate binary win +6 came from exactly this gap; young_loser_hunt: market 5d
@@ -1135,9 +1613,16 @@ SETS: dict[str, tuple[str, list[str]]] = {
     # can LEARN the market-regime conditioning (graded) instead of only the binary date-gate.
     "entry_lvup126_mkt": (
         "entry_lvup126_lean + market_trend + market_volatility_regime (tape context)",
-        _LEADING_V2 + ["lowvol_rank_60", "nearhigh_rank", "comp_nh_lv",
-                       "comp_lowvol_uptrend", "comp_nh_x_lv126",
-                       "market_trend", "market_volatility_regime"],
+        _LEADING_V2
+        + [
+            "lowvol_rank_60",
+            "nearhigh_rank",
+            "comp_nh_lv",
+            "comp_lowvol_uptrend",
+            "comp_nh_x_lv126",
+            "market_trend",
+            "market_volatility_regime",
+        ],
     ),
     "entry_parkup_lean": (
         "leading_v2 + parkinson low-vol/near-high + parkinson-uptrend (OOS IC 0.101)",
@@ -1148,10 +1633,30 @@ SETS: dict[str, tuple[str, list[str]]] = {
     # negative-IC vol/low-vol features are KEPT (they encode the low-vol edge, not noise).
     "entry_lvup126_clean": (
         "entry_lvup126_lean minus near-zero-IC noise (minus_di/obv_slope/ret_10d/roc_10/rsi_14/rsi_7/bb_pct_20/vol_pct_60)",
-        [c for c in (_LEADING_V2 + ["lowvol_rank_60", "nearhigh_rank", "comp_nh_lv",
-                                    "comp_lowvol_uptrend", "comp_nh_x_lv126"])
-         if c not in {"minus_di_14", "obv_slope_10", "ret_10d", "roc_10",
-                      "rsi_14", "rsi_7", "bb_pct_20", "vol_percentile_60"}],
+        [
+            c
+            for c in (
+                _LEADING_V2
+                + [
+                    "lowvol_rank_60",
+                    "nearhigh_rank",
+                    "comp_nh_lv",
+                    "comp_lowvol_uptrend",
+                    "comp_nh_x_lv126",
+                ]
+            )
+            if c
+            not in {
+                "minus_di_14",
+                "obv_slope_10",
+                "ret_10d",
+                "roc_10",
+                "rsi_14",
+                "rsi_7",
+                "bb_pct_20",
+                "vol_percentile_60",
+            }
+        ],
     ),
     # Champion entry (lvup126) + short-horizon recovery-from-washout proxies. Tests the
     # this-session finding that "recently washed out, now recovering" carries fwd-return
@@ -1159,29 +1664,58 @@ SETS: dict[str, tuple[str, list[str]]] = {
     # the ingredients so it can upweight confirmed reversals instead of scoring them coincidently.
     "entry_lvup126_recov": (
         "entry_lvup126_lean + short-horizon recovery (dist_10d_low, range_pos_20, recov_setup)",
-        _LEADING_V2 + ["lowvol_rank_60", "nearhigh_rank", "comp_nh_lv",
-                       "comp_lowvol_uptrend", "comp_nh_x_lv126",
-                       "dist_10d_low", "range_pos_20", "recov_setup"],
+        _LEADING_V2
+        + [
+            "lowvol_rank_60",
+            "nearhigh_rank",
+            "comp_nh_lv",
+            "comp_lowvol_uptrend",
+            "comp_nh_x_lv126",
+            "dist_10d_low",
+            "range_pos_20",
+            "recov_setup",
+        ],
     ),
     # TOP-AWARE entry retrain (C-arc 2026-06-18): recov + the structural TOP signals the head is blind to,
     # so the entry head learns to down-score du-dinh/right-shoulder entries instead of a post-hoc gate.
     "entry_lvup126_topaware": (
         "entry_lvup126_recov + top-structure (upper_wick_5, lower_high_20)",
-        _LEADING_V2 + ["lowvol_rank_60", "nearhigh_rank", "comp_nh_lv",
-                       "comp_lowvol_uptrend", "comp_nh_x_lv126",
-                       "dist_10d_low", "range_pos_20", "recov_setup",
-                       "upper_wick_5", "lower_high_20"],
+        _LEADING_V2
+        + [
+            "lowvol_rank_60",
+            "nearhigh_rank",
+            "comp_nh_lv",
+            "comp_lowvol_uptrend",
+            "comp_nh_x_lv126",
+            "dist_10d_low",
+            "range_pos_20",
+            "recov_setup",
+            "upper_wick_5",
+            "lower_high_20",
+        ],
     ),
     # SHAPE entry (research 2026-06-18, user shape>point insight): recov + the STRONGEST researched shape
     # signals (rsi_slope_5 IC -0.155, ext_ma20_slope5 -0.146, rsi/macd pctile + macd-hist) so the entry head
     # can read momentum-rollover SHAPE (knife-dip vs bottoming-dip), not the inert single point.
     "entry_lvup126_recov_shape": (
         "entry_lvup126_recov + RSI/ext/MACD SHAPE (slope+pctile, the strongest researched top-signals)",
-        _LEADING_V2 + ["lowvol_rank_60", "nearhigh_rank", "comp_nh_lv",
-                       "comp_lowvol_uptrend", "comp_nh_x_lv126",
-                       "dist_10d_low", "range_pos_20", "recov_setup",
-                       "rsi_14_slope5_sh", "rsi_14_pctile_252_sh", "ext_ma20_slope5_sh",
-                       "macd_hist_sh", "macd_hist_slope_sh", "macd_hist_pctile_252_sh"],
+        _LEADING_V2
+        + [
+            "lowvol_rank_60",
+            "nearhigh_rank",
+            "comp_nh_lv",
+            "comp_lowvol_uptrend",
+            "comp_nh_x_lv126",
+            "dist_10d_low",
+            "range_pos_20",
+            "recov_setup",
+            "rsi_14_slope5_sh",
+            "rsi_14_pctile_252_sh",
+            "ext_ma20_slope5_sh",
+            "macd_hist_sh",
+            "macd_hist_slope_sh",
+            "macd_hist_pctile_252_sh",
+        ],
     ),
     # KNIFE-AXIS entry (2026-06-18, decouple_oracle + trade_dump_cohorts): the HEAVY_LOSS cohort is a
     # falling-knife profile the recov set is blind to — bought ~30% below the 63d high (dist_63d_high)
@@ -1192,10 +1726,19 @@ SETS: dict[str, tuple[str, list[str]]] = {
     # judged by sandbox delta vs entry_lvup126_recov (NOT the crutch-loaded composite, which masks it).
     "entry_recov_knife": (
         "entry_lvup126_recov + dist_63d_high + sma_200_ratio (falling-knife / structural-decliner axis)",
-        _LEADING_V2 + ["lowvol_rank_60", "nearhigh_rank", "comp_nh_lv",
-                       "comp_lowvol_uptrend", "comp_nh_x_lv126",
-                       "dist_10d_low", "range_pos_20", "recov_setup",
-                       "dist_63d_high", "sma_200_ratio"],
+        _LEADING_V2
+        + [
+            "lowvol_rank_60",
+            "nearhigh_rank",
+            "comp_nh_lv",
+            "comp_lowvol_uptrend",
+            "comp_nh_x_lv126",
+            "dist_10d_low",
+            "range_pos_20",
+            "recov_setup",
+            "dist_63d_high",
+            "sma_200_ratio",
+        ],
     ),
     # THRUST entry (2026-07-11, user hypothesis #3 "signal quality on default universe"): champion
     # recov + the classic breakout-timing signals never fed as a SET — bb_squeeze (volatility
@@ -1205,11 +1748,23 @@ SETS: dict[str, tuple[str, list[str]]] = {
     # composite/pnl delta vs entry_lvup126_recov on the SAME 61-sym universe (fair).
     "entry_lvup126_thrust": (
         "entry_lvup126_recov + squeeze/volume-thrust/consecutive-up/shakeout-wick",
-        _LEADING_V2 + ["lowvol_rank_60", "nearhigh_rank", "comp_nh_lv",
-                       "comp_lowvol_uptrend", "comp_nh_x_lv126",
-                       "dist_10d_low", "range_pos_20", "recov_setup",
-                       "bb_squeeze", "volume_ratio_5", "volume_ratio_20",
-                       "up_days_5", "up_days_10", "lower_wick_ratio"],
+        _LEADING_V2
+        + [
+            "lowvol_rank_60",
+            "nearhigh_rank",
+            "comp_nh_lv",
+            "comp_lowvol_uptrend",
+            "comp_nh_x_lv126",
+            "dist_10d_low",
+            "range_pos_20",
+            "recov_setup",
+            "bb_squeeze",
+            "volume_ratio_5",
+            "volume_ratio_20",
+            "up_days_5",
+            "up_days_10",
+            "lower_wick_ratio",
+        ],
     ),
     # SMAC-entry fix (2026-06-19): the single-model action classifier's worst losers are 2022
     # bear-market knife-catches (NVL -81%, all entered into a falling tape). entry_recov_knife
@@ -1219,11 +1774,21 @@ SETS: dict[str, tuple[str, list[str]]] = {
     # enter) rather than via an exit rule. Judged by sandbox delta vs entry_lvup126_recov.
     "entry_recov_knife_mkt": (
         "entry_recov_knife + market_trend + market_volatility_regime (knife profile + tape regime)",
-        _LEADING_V2 + ["lowvol_rank_60", "nearhigh_rank", "comp_nh_lv",
-                       "comp_lowvol_uptrend", "comp_nh_x_lv126",
-                       "dist_10d_low", "range_pos_20", "recov_setup",
-                       "dist_63d_high", "sma_200_ratio",
-                       "market_trend", "market_volatility_regime"],
+        _LEADING_V2
+        + [
+            "lowvol_rank_60",
+            "nearhigh_rank",
+            "comp_nh_lv",
+            "comp_lowvol_uptrend",
+            "comp_nh_x_lv126",
+            "dist_10d_low",
+            "range_pos_20",
+            "recov_setup",
+            "dist_63d_high",
+            "sma_200_ratio",
+            "market_trend",
+            "market_volatility_regime",
+        ],
     ),
     # SMAC stage-1 STRUCTURE/POSITION-STATE proxies (2026-06-19, TA-forensic): give the single
     # action model the price-structure a TA reads but it was blind to — DEPTH (dist_20d_high =
@@ -1234,12 +1799,26 @@ SETS: dict[str, tuple[str, list[str]]] = {
     # (Stage 1: validate the signal before the interactive-engine rewrite).
     "entry_struct": (
         "entry_lvup126_recov + structure/position-state proxies + divergence (TA blind spots)",
-        _LEADING_V2 + ["lowvol_rank_60", "nearhigh_rank", "comp_nh_lv",
-                       "comp_lowvol_uptrend", "comp_nh_x_lv126",
-                       "dist_10d_low", "range_pos_20", "recov_setup",
-                       "dist_20d_high", "aroon_up", "aroon_down", "down_days_10",
-                       "higher_lows_count", "lower_high_20", "broke_support_20",
-                       "rsi_div_20", "macd_div_20"],
+        _LEADING_V2
+        + [
+            "lowvol_rank_60",
+            "nearhigh_rank",
+            "comp_nh_lv",
+            "comp_lowvol_uptrend",
+            "comp_nh_x_lv126",
+            "dist_10d_low",
+            "range_pos_20",
+            "recov_setup",
+            "dist_20d_high",
+            "aroon_up",
+            "aroon_down",
+            "down_days_10",
+            "higher_lows_count",
+            "lower_high_20",
+            "broke_support_20",
+            "rsi_div_20",
+            "macd_div_20",
+        ],
     ),
     # SMAC new-angle (2026-06-19): cross-sectional RELATIVE STRENGTH / leadership — buy the
     # dips of LEADERS (stocks outperforming the universe), not laggards (a core TA edge the
@@ -1248,19 +1827,39 @@ SETS: dict[str, tuple[str, list[str]]] = {
     # strongest per-symbol signal in prior research); price_strength_rank = trend-strength rank.
     "entry_recov_rs": (
         "entry_lvup126_recov + cross-sectional relative-strength/leadership (momentum_rank, cs_rank_trend, price_strength_rank)",
-        _LEADING_V2 + ["lowvol_rank_60", "nearhigh_rank", "comp_nh_lv",
-                       "comp_lowvol_uptrend", "comp_nh_x_lv126",
-                       "dist_10d_low", "range_pos_20", "recov_setup",
-                       "momentum_rank", "cs_rank_trend", "price_strength_rank"],
+        _LEADING_V2
+        + [
+            "lowvol_rank_60",
+            "nearhigh_rank",
+            "comp_nh_lv",
+            "comp_lowvol_uptrend",
+            "comp_nh_x_lv126",
+            "dist_10d_low",
+            "range_pos_20",
+            "recov_setup",
+            "momentum_rank",
+            "cs_rank_trend",
+            "price_strength_rank",
+        ],
     ),
     # co-adaptation test (2026-07-11): pruned 11-feature core, paired with ALTERNATIVE targets to test
     # whether the 48-feature optimum is target-CONDITIONAL (a different target may prefer a different
     # feature set/count). Under triple_barrier: 48 >> 11. If a new target flips that, co-adaptation is real.
     "entry_rs_core11": (
         "entry_recov_rs pruned to 11 leadership/recovery core features",
-        ["lowvol_rank_60", "nearhigh_rank", "comp_nh_lv", "comp_lowvol_uptrend", "comp_nh_x_lv126",
-         "dist_10d_low", "range_pos_20", "recov_setup", "momentum_rank", "cs_rank_trend",
-         "price_strength_rank"],
+        [
+            "lowvol_rank_60",
+            "nearhigh_rank",
+            "comp_nh_lv",
+            "comp_lowvol_uptrend",
+            "comp_nh_x_lv126",
+            "dist_10d_low",
+            "range_pos_20",
+            "recov_setup",
+            "momentum_rank",
+            "cs_rank_trend",
+            "price_strength_rank",
+        ],
     ),
     # SMAC volume-niche (2026-06-19): confirm the bottom with VOLUME — a TA reads capitulation
     # (down_vol_count_10 = selling-climax bars), accumulation (accum_day_25, updown_vol_20,
@@ -1273,110 +1872,261 @@ SETS: dict[str, tuple[str, list[str]]] = {
     # histogram rate-of-change + acceleration. The dynamics/sequence axis, on the v15 RS base.
     "entry_recov_rs_dyn": (
         "entry_recov_rs + indicator dynamics (MA/EMA ribbon spread+expansion, %R+vel, RSI vel/vs-MA, MACD hist chg+accel)",
-        _LEADING_V2 + ["lowvol_rank_60", "nearhigh_rank", "comp_nh_lv",
-                       "comp_lowvol_uptrend", "comp_nh_x_lv126",
-                       "dist_10d_low", "range_pos_20", "recov_setup",
-                       "momentum_rank", "cs_rank_trend", "price_strength_rank",
-                       "ma_spread_10_50", "ma_spread_expand5", "ema_spread_8_21",
-                       "ema_spread_expand5", "williams_r_14", "williams_r_slope5",
-                       "rsi_14_slope10", "rsi_vs_ma5", "macd_hist_chg_5", "macd_hist_accel"],
+        _LEADING_V2
+        + [
+            "lowvol_rank_60",
+            "nearhigh_rank",
+            "comp_nh_lv",
+            "comp_lowvol_uptrend",
+            "comp_nh_x_lv126",
+            "dist_10d_low",
+            "range_pos_20",
+            "recov_setup",
+            "momentum_rank",
+            "cs_rank_trend",
+            "price_strength_rank",
+            "ma_spread_10_50",
+            "ma_spread_expand5",
+            "ema_spread_8_21",
+            "ema_spread_expand5",
+            "williams_r_14",
+            "williams_r_slope5",
+            "rsi_14_slope10",
+            "rsi_vs_ma5",
+            "macd_hist_chg_5",
+            "macd_hist_accel",
+        ],
     ),
     # SMAC new niches (2026-06-20) on the v18 dynamics base. SQUEEZE = volatility contraction
     # (coiling) precedes expansion — directly relevant to the model's big-swing selection.
     "entry_dyn_sqz": (
         "entry_recov_rs_dyn + volatility squeeze/contraction (bb_squeeze, bb_width_percentile, atr_contraction, consolidation_score)",
-        _LEADING_V2 + ["lowvol_rank_60", "nearhigh_rank", "comp_nh_lv",
-                       "comp_lowvol_uptrend", "comp_nh_x_lv126",
-                       "dist_10d_low", "range_pos_20", "recov_setup",
-                       "momentum_rank", "cs_rank_trend", "price_strength_rank",
-                       "ma_spread_10_50", "ma_spread_expand5", "ema_spread_8_21",
-                       "ema_spread_expand5", "williams_r_14", "williams_r_slope5",
-                       "rsi_14_slope10", "rsi_vs_ma5", "macd_hist_chg_5", "macd_hist_accel",
-                       "bb_squeeze", "bb_width_percentile", "atr_contraction", "consolidation_score"],
+        _LEADING_V2
+        + [
+            "lowvol_rank_60",
+            "nearhigh_rank",
+            "comp_nh_lv",
+            "comp_lowvol_uptrend",
+            "comp_nh_x_lv126",
+            "dist_10d_low",
+            "range_pos_20",
+            "recov_setup",
+            "momentum_rank",
+            "cs_rank_trend",
+            "price_strength_rank",
+            "ma_spread_10_50",
+            "ma_spread_expand5",
+            "ema_spread_8_21",
+            "ema_spread_expand5",
+            "williams_r_14",
+            "williams_r_slope5",
+            "rsi_14_slope10",
+            "rsi_vs_ma5",
+            "macd_hist_chg_5",
+            "macd_hist_accel",
+            "bb_squeeze",
+            "bb_width_percentile",
+            "atr_contraction",
+            "consolidation_score",
+        ],
     ),
     # TREND EFFICIENCY = clean trend vs chop (Kaufman ER) + ADX trend strength.
     "entry_dyn_eff": (
         "entry_recov_rs_dyn + trend efficiency (efficiency_ratio_10/20, adx_14)",
-        _LEADING_V2 + ["lowvol_rank_60", "nearhigh_rank", "comp_nh_lv",
-                       "comp_lowvol_uptrend", "comp_nh_x_lv126",
-                       "dist_10d_low", "range_pos_20", "recov_setup",
-                       "momentum_rank", "cs_rank_trend", "price_strength_rank",
-                       "ma_spread_10_50", "ma_spread_expand5", "ema_spread_8_21",
-                       "ema_spread_expand5", "williams_r_14", "williams_r_slope5",
-                       "rsi_14_slope10", "rsi_vs_ma5", "macd_hist_chg_5", "macd_hist_accel",
-                       "efficiency_ratio_10", "efficiency_ratio_20", "adx_14"],
+        _LEADING_V2
+        + [
+            "lowvol_rank_60",
+            "nearhigh_rank",
+            "comp_nh_lv",
+            "comp_lowvol_uptrend",
+            "comp_nh_x_lv126",
+            "dist_10d_low",
+            "range_pos_20",
+            "recov_setup",
+            "momentum_rank",
+            "cs_rank_trend",
+            "price_strength_rank",
+            "ma_spread_10_50",
+            "ma_spread_expand5",
+            "ema_spread_8_21",
+            "ema_spread_expand5",
+            "williams_r_14",
+            "williams_r_slope5",
+            "rsi_14_slope10",
+            "rsi_vs_ma5",
+            "macd_hist_chg_5",
+            "macd_hist_accel",
+            "efficiency_ratio_10",
+            "efficiency_ratio_20",
+            "adx_14",
+        ],
     ),
     # SECTOR-RELATIVE strength (strong WITHIN sector) — robust subset (beta_to_sector excluded: NaN-prone).
     "entry_dyn_sec": (
         "entry_recov_rs_dyn + sector-relative (return/momentum/volume/strength vs sector)",
-        _LEADING_V2 + ["lowvol_rank_60", "nearhigh_rank", "comp_nh_lv",
-                       "comp_lowvol_uptrend", "comp_nh_x_lv126",
-                       "dist_10d_low", "range_pos_20", "recov_setup",
-                       "momentum_rank", "cs_rank_trend", "price_strength_rank",
-                       "ma_spread_10_50", "ma_spread_expand5", "ema_spread_8_21",
-                       "ema_spread_expand5", "williams_r_14", "williams_r_slope5",
-                       "rsi_14_slope10", "rsi_vs_ma5", "macd_hist_chg_5", "macd_hist_accel",
-                       "return_vs_sector", "momentum_vs_sector", "volume_vs_sector", "strength_vs_sector"],
+        _LEADING_V2
+        + [
+            "lowvol_rank_60",
+            "nearhigh_rank",
+            "comp_nh_lv",
+            "comp_lowvol_uptrend",
+            "comp_nh_x_lv126",
+            "dist_10d_low",
+            "range_pos_20",
+            "recov_setup",
+            "momentum_rank",
+            "cs_rank_trend",
+            "price_strength_rank",
+            "ma_spread_10_50",
+            "ma_spread_expand5",
+            "ema_spread_8_21",
+            "ema_spread_expand5",
+            "williams_r_14",
+            "williams_r_slope5",
+            "rsi_14_slope10",
+            "rsi_vs_ma5",
+            "macd_hist_chg_5",
+            "macd_hist_accel",
+            "return_vs_sector",
+            "momentum_vs_sector",
+            "volume_vs_sector",
+            "strength_vs_sector",
+        ],
     ),
     # De-diluted: just the SINGLE strongest volume feature (dist_vwap_20) on the RS base.
     "entry_recov_rs_vwap": (
         "entry_recov_rs + dist_vwap_20 (volume-at-price support, strongest single volume feature)",
-        _LEADING_V2 + ["lowvol_rank_60", "nearhigh_rank", "comp_nh_lv",
-                       "comp_lowvol_uptrend", "comp_nh_x_lv126",
-                       "dist_10d_low", "range_pos_20", "recov_setup",
-                       "momentum_rank", "cs_rank_trend", "price_strength_rank",
-                       "dist_vwap_20"],
+        _LEADING_V2
+        + [
+            "lowvol_rank_60",
+            "nearhigh_rank",
+            "comp_nh_lv",
+            "comp_lowvol_uptrend",
+            "comp_nh_x_lv126",
+            "dist_10d_low",
+            "range_pos_20",
+            "recov_setup",
+            "momentum_rank",
+            "cs_rank_trend",
+            "price_strength_rank",
+            "dist_vwap_20",
+        ],
     ),
     "entry_recov_rs_vol": (
         "entry_recov_rs + volume confirmation (dist_vwap_20, net_acc_vol_30, obv_price_divergence, accum_day_25, updown_vol_20, down_vol_count_10, cmf_20)",
-        _LEADING_V2 + ["lowvol_rank_60", "nearhigh_rank", "comp_nh_lv",
-                       "comp_lowvol_uptrend", "comp_nh_x_lv126",
-                       "dist_10d_low", "range_pos_20", "recov_setup",
-                       "momentum_rank", "cs_rank_trend", "price_strength_rank",
-                       "dist_vwap_20", "net_acc_vol_30", "obv_price_divergence",
-                       "accum_day_25", "updown_vol_20", "down_vol_count_10", "cmf_20"],
+        _LEADING_V2
+        + [
+            "lowvol_rank_60",
+            "nearhigh_rank",
+            "comp_nh_lv",
+            "comp_lowvol_uptrend",
+            "comp_nh_x_lv126",
+            "dist_10d_low",
+            "range_pos_20",
+            "recov_setup",
+            "momentum_rank",
+            "cs_rank_trend",
+            "price_strength_rank",
+            "dist_vwap_20",
+            "net_acc_vol_30",
+            "obv_price_divergence",
+            "accum_day_25",
+            "updown_vol_20",
+            "down_vol_count_10",
+            "cmf_20",
+        ],
     ),
     # DERIVED-SIGNAL HUNT (2026-06-17): champion entry (recov) + genuinely-NEW daily-OHLCV families,
     # isolated per family so the harness can attribute any lift. Base = entry_lvup126_recov.
     "entry_recov_eff": (
         "recov + Kaufman efficiency ratio 10/20 (trend QUALITY: clean-trend vs chop)",
-        _LEADING_V2 + ["lowvol_rank_60", "nearhigh_rank", "comp_nh_lv",
-                       "comp_lowvol_uptrend", "comp_nh_x_lv126",
-                       "dist_10d_low", "range_pos_20", "recov_setup",
-                       "efficiency_ratio_10", "efficiency_ratio_20"],
+        _LEADING_V2
+        + [
+            "lowvol_rank_60",
+            "nearhigh_rank",
+            "comp_nh_lv",
+            "comp_lowvol_uptrend",
+            "comp_nh_x_lv126",
+            "dist_10d_low",
+            "range_pos_20",
+            "recov_setup",
+            "efficiency_ratio_10",
+            "efficiency_ratio_20",
+        ],
     ),
     "entry_recov_micro": (
         "recov + compression/expansion microstructure (nr7, inside_bar, gap_oc)",
-        _LEADING_V2 + ["lowvol_rank_60", "nearhigh_rank", "comp_nh_lv",
-                       "comp_lowvol_uptrend", "comp_nh_x_lv126",
-                       "dist_10d_low", "range_pos_20", "recov_setup",
-                       "nr7", "inside_bar", "gap_oc"],
+        _LEADING_V2
+        + [
+            "lowvol_rank_60",
+            "nearhigh_rank",
+            "comp_nh_lv",
+            "comp_lowvol_uptrend",
+            "comp_nh_x_lv126",
+            "dist_10d_low",
+            "range_pos_20",
+            "recov_setup",
+            "nr7",
+            "inside_bar",
+            "gap_oc",
+        ],
     ),
     "entry_recov_kelt": (
         "recov + Keltner channel position (ATR-channel, orthogonal to std-based bb_pct)",
-        _LEADING_V2 + ["lowvol_rank_60", "nearhigh_rank", "comp_nh_lv",
-                       "comp_lowvol_uptrend", "comp_nh_x_lv126",
-                       "dist_10d_low", "range_pos_20", "recov_setup",
-                       "keltner_pct_20"],
+        _LEADING_V2
+        + [
+            "lowvol_rank_60",
+            "nearhigh_rank",
+            "comp_nh_lv",
+            "comp_lowvol_uptrend",
+            "comp_nh_x_lv126",
+            "dist_10d_low",
+            "range_pos_20",
+            "recov_setup",
+            "keltner_pct_20",
+        ],
     ),
     # MULTI-PERIOD / RIBBON entry (user 2026-06-18): give the entry heads the fast-vs-slow momentum +
     # EMA-fanning the knife cohort (causally near-identical to winners on single features) DOES separate
     # on (rsi_fastslow +0.213, ribbon +0.189, smooth-slope +0.181). Goal: pick fewer late-stage knives.
     "entry_recov_mp": (
         "recov + multi-period RSI/EMA-ribbon/smoothed momentum (fast-vs-slow + fanning + co-giãn)",
-        _LEADING_V2 + ["lowvol_rank_60", "nearhigh_rank", "comp_nh_lv",
-                       "comp_lowvol_uptrend", "comp_nh_x_lv126",
-                       "dist_10d_low", "range_pos_20", "recov_setup",
-                       "rsi_fastslow", "rsi_21", "rsi_50", "rsi_smooth_slope",
-                       "ema_ribbon_width", "ema_ribbon_expand", "ema_stretch_5_50",
-                       "macd_hist_smooth_slope"],
+        _LEADING_V2
+        + [
+            "lowvol_rank_60",
+            "nearhigh_rank",
+            "comp_nh_lv",
+            "comp_lowvol_uptrend",
+            "comp_nh_x_lv126",
+            "dist_10d_low",
+            "range_pos_20",
+            "recov_setup",
+            "rsi_fastslow",
+            "rsi_21",
+            "rsi_50",
+            "rsi_smooth_slope",
+            "ema_ribbon_width",
+            "ema_ribbon_expand",
+            "ema_stretch_5_50",
+            "macd_hist_smooth_slope",
+        ],
     ),
     "entry_recov_mp_lean": (
         "recov + the 3 best knife-vs-winner separators (rsi_fastslow + smooth-slope + ribbon)",
-        _LEADING_V2 + ["lowvol_rank_60", "nearhigh_rank", "comp_nh_lv",
-                       "comp_lowvol_uptrend", "comp_nh_x_lv126",
-                       "dist_10d_low", "range_pos_20", "recov_setup",
-                       "rsi_fastslow", "rsi_smooth_slope", "ema_ribbon_width"],
+        _LEADING_V2
+        + [
+            "lowvol_rank_60",
+            "nearhigh_rank",
+            "comp_nh_lv",
+            "comp_lowvol_uptrend",
+            "comp_nh_x_lv126",
+            "dist_10d_low",
+            "range_pos_20",
+            "recov_setup",
+            "rsi_fastslow",
+            "rsi_smooth_slope",
+            "ema_ribbon_width",
+        ],
     ),
     # FULL INDICATOR-DYNAMICS set (user 2026-06-20): give the entry head the EXPANSION/CONTRACTION +
     # VELOCITY + multi-day SEQUENCE of every momentum tool — MA slopes/accel/align, MA-spread width +
@@ -1385,16 +2135,40 @@ SETS: dict[str, tuple[str, list[str]]] = {
     # this adds the rate-of-change / co-giãn it is blind to.
     "entry_recov_dyn": (
         "recov + full indicator DYNAMICS (MA/RSI/%R/MACD-hist velocity + expansion + lagged sequence)",
-        _LEADING_V2 + ["lowvol_rank_60", "nearhigh_rank", "comp_nh_lv",
-                       "comp_lowvol_uptrend", "comp_nh_x_lv126",
-                       "dist_10d_low", "range_pos_20", "recov_setup",
-                       "ma5_slope", "ma10_slope", "ma20_slope", "ma5_accel", "ma_align",
-                       "ma_spread_10_50", "ma_spread_expand5", "ma_spread_20_100",
-                       "rsi_fastslow", "rsi_21", "rsi_50", "rsi_smooth_slope", "rsi_14_slope10",
-                       "ema_ribbon_width", "ema_ribbon_expand", "ema_stretch_5_50",
-                       "macd_hist_chg_3", "macd_hist_chg_5", "macd_hist_accel",
-                       "macd_hist_slope_l1", "macd_hist_slope_l2",
-                       "williams_r_14", "williams_r_slope5"],
+        _LEADING_V2
+        + [
+            "lowvol_rank_60",
+            "nearhigh_rank",
+            "comp_nh_lv",
+            "comp_lowvol_uptrend",
+            "comp_nh_x_lv126",
+            "dist_10d_low",
+            "range_pos_20",
+            "recov_setup",
+            "ma5_slope",
+            "ma10_slope",
+            "ma20_slope",
+            "ma5_accel",
+            "ma_align",
+            "ma_spread_10_50",
+            "ma_spread_expand5",
+            "ma_spread_20_100",
+            "rsi_fastslow",
+            "rsi_21",
+            "rsi_50",
+            "rsi_smooth_slope",
+            "rsi_14_slope10",
+            "ema_ribbon_width",
+            "ema_ribbon_expand",
+            "ema_stretch_5_50",
+            "macd_hist_chg_3",
+            "macd_hist_chg_5",
+            "macd_hist_accel",
+            "macd_hist_slope_l1",
+            "macd_hist_slope_l2",
+            "williams_r_14",
+            "williams_r_slope5",
+        ],
     ),
     # PURE indicator-DYNAMICS (user 2026-06-20, "raw un-mask" path): ONLY the expansion/velocity/accel
     # signals, NO recov/price-level base. Used as a SEPARATE csrank ensemble head — its cross-sectional
@@ -1403,12 +2177,29 @@ SETS: dict[str, tuple[str, list[str]]] = {
     # dynamics-strength ranking, not diluted by the point-level features the main head already carries.
     "entry_dyn_pure": (
         "PURE dynamics: MA/RSI/%R/MACD-hist velocity + expansion + accel (no price-level base) for a csrank head",
-        ["ema_ribbon_width", "ema_ribbon_expand", "ema_stretch_5_50",
-         "ma_spread_10_50", "ma_spread_expand5", "ma_spread_20_100",
-         "ma5_slope", "ma10_slope", "ma20_slope", "ma5_accel",
-         "rsi_fastslow", "rsi_14_slope10", "rsi_smooth_slope", "rsi_21", "rsi_50",
-         "macd_hist_chg_3", "macd_hist_chg_5", "macd_hist_accel", "macd_hist_smooth_slope",
-         "williams_r_14", "williams_r_slope5"],
+        [
+            "ema_ribbon_width",
+            "ema_ribbon_expand",
+            "ema_stretch_5_50",
+            "ma_spread_10_50",
+            "ma_spread_expand5",
+            "ma_spread_20_100",
+            "ma5_slope",
+            "ma10_slope",
+            "ma20_slope",
+            "ma5_accel",
+            "rsi_fastslow",
+            "rsi_14_slope10",
+            "rsi_smooth_slope",
+            "rsi_21",
+            "rsi_50",
+            "macd_hist_chg_3",
+            "macd_hist_chg_5",
+            "macd_hist_accel",
+            "macd_hist_smooth_slope",
+            "williams_r_14",
+            "williams_r_slope5",
+        ],
     ),
     # PURE cross-sectional RELATIVE-STRENGTH / leadership (user 2026-06-20, "RS vs index" axis): the
     # strongest per-symbol signal found (cs_rank_trend IC_winner +0.17 vs dynamics ~0.05-0.11). A
@@ -1417,66 +2208,140 @@ SETS: dict[str, tuple[str, list[str]]] = {
     # flatten the rank's cross-sectional meaning; the rank IS already cross-sectional, csrank keeps it).
     "entry_rs_pure": (
         "PURE cross-sectional leadership / relative-strength ranks for a csrank head",
-        ["momentum_rank", "cs_rank_trend", "price_strength_rank",
-         "nearhigh_rank", "nearhigh126_rank", "volume_rank_20d", "strength_vs_sector"],
+        [
+            "momentum_rank",
+            "cs_rank_trend",
+            "price_strength_rank",
+            "nearhigh_rank",
+            "nearhigh126_rank",
+            "volume_rank_20d",
+            "strength_vs_sector",
+        ],
     ),
     "entry_recov_deriv": (
         "recov + ALL new derived signals (eff ratio + micro nr7/inside/gap + keltner)",
-        _LEADING_V2 + ["lowvol_rank_60", "nearhigh_rank", "comp_nh_lv",
-                       "comp_lowvol_uptrend", "comp_nh_x_lv126",
-                       "dist_10d_low", "range_pos_20", "recov_setup",
-                       "efficiency_ratio_10", "efficiency_ratio_20",
-                       "nr7", "inside_bar", "gap_oc", "keltner_pct_20"],
+        _LEADING_V2
+        + [
+            "lowvol_rank_60",
+            "nearhigh_rank",
+            "comp_nh_lv",
+            "comp_lowvol_uptrend",
+            "comp_nh_x_lv126",
+            "dist_10d_low",
+            "range_pos_20",
+            "recov_setup",
+            "efficiency_ratio_10",
+            "efficiency_ratio_20",
+            "nr7",
+            "inside_bar",
+            "gap_oc",
+            "keltner_pct_20",
+        ],
     ),
     # Champion entry (recov) + VOLUME-STRUCTURE (volume-at-price/VWAP-distance + net-accumulation).
     # shape_probe gate: dist_vwap_20 IC_pnl +0.195 (>score3), net_acc_vol_30 IC_mae +0.094 (drawdown).
     # GENUINELY new vs the catalog point-features (reads WHERE money traded, not accum-day counts).
     "entry_lvup126_volstruct": (
         "entry_lvup126_recov + volume-at-price (dist_vwap_20/40) + net-accumulation-vol_30",
-        _LEADING_V2 + ["lowvol_rank_60", "nearhigh_rank", "comp_nh_lv",
-                       "comp_lowvol_uptrend", "comp_nh_x_lv126",
-                       "dist_10d_low", "range_pos_20", "recov_setup",
-                       "dist_vwap_20", "dist_vwap_40", "net_acc_vol_30"],
+        _LEADING_V2
+        + [
+            "lowvol_rank_60",
+            "nearhigh_rank",
+            "comp_nh_lv",
+            "comp_lowvol_uptrend",
+            "comp_nh_x_lv126",
+            "dist_10d_low",
+            "range_pos_20",
+            "recov_setup",
+            "dist_vwap_20",
+            "dist_vwap_40",
+            "net_acc_vol_30",
+        ],
     ),
     # Isolate the single strongest new feature (dist_vwap_20) on top of recov.
     "entry_lvup126_vwap": (
         "entry_lvup126_recov + dist_vwap_20 only (isolate the strongest new feature)",
-        _LEADING_V2 + ["lowvol_rank_60", "nearhigh_rank", "comp_nh_lv",
-                       "comp_lowvol_uptrend", "comp_nh_x_lv126",
-                       "dist_10d_low", "range_pos_20", "recov_setup",
-                       "dist_vwap_20"],
+        _LEADING_V2
+        + [
+            "lowvol_rank_60",
+            "nearhigh_rank",
+            "comp_nh_lv",
+            "comp_lowvol_uptrend",
+            "comp_nh_x_lv126",
+            "dist_10d_low",
+            "range_pos_20",
+            "recov_setup",
+            "dist_vwap_20",
+        ],
     ),
     # NEW-SIGNAL entry (2026-06-17 feature audit): recov + the 3 genuinely-untried features the audit
     # surfaced — dist_vwap_20 (volume-at-price, IC_pnl +0.195>score3), ma5_accel (acceleration, exit had
     # it, entry didn't), cs_rank_trend (DERIVATIVE of the xsec rank, the +0.17 leadership-rotation signal).
     "entry_recov_newsig": (
         "entry_lvup126_recov + dist_vwap_20 + ma5_accel + cs_rank_trend (audit's new signals)",
-        _LEADING_V2 + ["lowvol_rank_60", "nearhigh_rank", "comp_nh_lv",
-                       "comp_lowvol_uptrend", "comp_nh_x_lv126",
-                       "dist_10d_low", "range_pos_20", "recov_setup",
-                       "dist_vwap_20", "ma5_accel", "cs_rank_trend"],
+        _LEADING_V2
+        + [
+            "lowvol_rank_60",
+            "nearhigh_rank",
+            "comp_nh_lv",
+            "comp_lowvol_uptrend",
+            "comp_nh_x_lv126",
+            "dist_10d_low",
+            "range_pos_20",
+            "recov_setup",
+            "dist_vwap_20",
+            "ma5_accel",
+            "cs_rank_trend",
+        ],
     ),
     # USER FEATURE PROPOSAL (2026-06-19): money-flow at events + price vs volume-breakout zone +
     # crossovers — all 3 ideas on the champion entry. dist_vwap (price vs where money traded),
     # net_acc_vol (signed money-flow accumulation), ma/px/vol/macd cross state.
     "entry_recov_flowcross": (
         "entry_lvup126_recov + money-flow (net_acc) + volume-zone (dist_vwap) + crossovers (ma/px/vol/macd)",
-        _LEADING_V2 + ["lowvol_rank_60", "nearhigh_rank", "comp_nh_lv",
-                       "comp_lowvol_uptrend", "comp_nh_x_lv126",
-                       "dist_10d_low", "range_pos_20", "recov_setup",
-                       "dist_vwap_20", "dist_vwap_40", "net_acc_vol_30",
-                       "ma_cross_20_50", "px_cross_ma20", "vol_breakout_20", "macd_cross"],
+        _LEADING_V2
+        + [
+            "lowvol_rank_60",
+            "nearhigh_rank",
+            "comp_nh_lv",
+            "comp_lowvol_uptrend",
+            "comp_nh_x_lv126",
+            "dist_10d_low",
+            "range_pos_20",
+            "recov_setup",
+            "dist_vwap_20",
+            "dist_vwap_40",
+            "net_acc_vol_30",
+            "ma_cross_20_50",
+            "px_cross_ma20",
+            "vol_breakout_20",
+            "macd_cross",
+        ],
     ),
     # NEW-SIGNAL exit: vol-norm magnitude head + momentum-DERIVATIVE rollover (rsi_slope_5d,
     # macd_hist_chg_3 = how fast momentum is rolling over) + cs_rank_trend (relative-strength rollover).
     # The pure derivative-rollover set the audit found missing from exit_vol_market.
     "exit_volnorm_deriv": (
         "exit_vol_market + rsi_slope_5d + macd_hist_chg_3 + cs_rank_trend (momentum-derivative rollover)",
-        ["atr_14_ratio", "realized_vol_10", "vol_percentile_60", "bb_width_20",
-         "volatility_rank", "high_low_pct_5d", "ma5_accel",
-         "dist_63d_high", "dist_52w_high", "sma_20_ratio", "bb_pct_20",
-         "market_volatility_regime", "market_trend", "momentum_rank",
-         "rsi_slope_5d", "macd_hist_chg_3", "cs_rank_trend"],
+        [
+            "atr_14_ratio",
+            "realized_vol_10",
+            "vol_percentile_60",
+            "bb_width_20",
+            "volatility_rank",
+            "high_low_pct_5d",
+            "ma5_accel",
+            "dist_63d_high",
+            "dist_52w_high",
+            "sma_20_ratio",
+            "bb_pct_20",
+            "market_volatility_regime",
+            "market_trend",
+            "momentum_rank",
+            "rsi_slope_5d",
+            "macd_hist_chg_3",
+            "cs_rank_trend",
+        ],
     ),
     # DISTRIBUTION-AWARE exit (2026-06-18, exit_struct_discriminate.py): exit_vol_market + the 3 signals
     # that POSITIVELY separate a real top from a premature (SOLD_THEN_RAN) exit — consolidation_score
@@ -1486,11 +2351,25 @@ SETS: dict[str, tuple[str, list[str]]] = {
     # distribution tops natively. Pair with exit_gate=cons2 for the feature+gate synergy test.
     "exit_vol_dist2": (
         "exit_vol_market + consolidation_score + macd_hist_chg_5 + dist_day_25 (distribution-aware)",
-        ["atr_14_ratio", "realized_vol_10", "vol_percentile_60", "bb_width_20",
-         "volatility_rank", "high_low_pct_5d", "ma5_accel",
-         "dist_63d_high", "dist_52w_high", "sma_20_ratio", "bb_pct_20",
-         "market_volatility_regime", "market_trend", "momentum_rank",
-         "consolidation_score", "macd_hist_chg_5", "dist_day_25"],
+        [
+            "atr_14_ratio",
+            "realized_vol_10",
+            "vol_percentile_60",
+            "bb_width_20",
+            "volatility_rank",
+            "high_low_pct_5d",
+            "ma5_accel",
+            "dist_63d_high",
+            "dist_52w_high",
+            "sma_20_ratio",
+            "bb_pct_20",
+            "market_volatility_regime",
+            "market_trend",
+            "momentum_rank",
+            "consolidation_score",
+            "macd_hist_chg_5",
+            "dist_day_25",
+        ],
     ),
     # SUPPLY/VOLUME-AXIS exit sets (2026-06-18, user: the volume axis is the one NOT realizability-walled
     # — exit_vol_dist (volume-distribution-days) won robust +2.78; PRICE-shape lost. Lean further into
@@ -1517,8 +2396,16 @@ SETS: dict[str, tuple[str, list[str]]] = {
     # the sell score) can be added on the exit ML later; start unconstrained.
     "exit_vol_regime": (
         "exit_vol_downpress + market regime (mkt>MA50, mkt mom 60) + stock trend MA50 + RS 60d",
-        _EXIT_VOL_DIST + ["down_vol_intensity_5", "down_vol_count_10", "updown_vol_20",
-                          "market_trend_50", "market_mom_60", "sma_50_ratio", "rs_rank_60"],
+        _EXIT_VOL_DIST
+        + [
+            "down_vol_intensity_5",
+            "down_vol_count_10",
+            "updown_vol_20",
+            "market_trend_50",
+            "market_mom_60",
+            "sma_50_ratio",
+            "rs_rank_60",
+        ],
     ),
     # CROSS-SECTIONAL RS exit (2026-07-11): exit_vol_regime (market-regime common-factor) FAILED
     # because the recombine z-scores the exit signal per-symbol/time and washes out slow common
@@ -1527,8 +2414,15 @@ SETS: dict[str, tuple[str, list[str]]] = {
     # already carries momentum_rank; add the leadership/trend/60d-RS ranks not in it.
     "exit_vol_rs": (
         "exit_vol_downpress + cross-sectional RS ranks (cs_rank_trend, price_strength_rank, rs_rank_60)",
-        _EXIT_VOL_DIST + ["down_vol_intensity_5", "down_vol_count_10", "updown_vol_20",
-                          "cs_rank_trend", "price_strength_rank", "rs_rank_60"],
+        _EXIT_VOL_DIST
+        + [
+            "down_vol_intensity_5",
+            "down_vol_count_10",
+            "updown_vol_20",
+            "cs_rank_trend",
+            "price_strength_rank",
+            "rs_rank_60",
+        ],
     ),
     # PATH-AWARE exit (2026-07-11, root reasoning: the exit is PATH-DEPENDENT — depends on how far
     # into the move / how old / how much given back — but the exit ML head is STATELESS per-bar, so
@@ -1540,22 +2434,40 @@ SETS: dict[str, tuple[str, list[str]]] = {
     # path-state the rules hardcode -> raw exit signal may strengthen enough to unmask the rules.
     "exit_vol_path": (
         "exit_vol_rs + path-proxy (aroon age, up_days streak, dist_63d_low leg, dist_20d_high giveback)",
-        _EXIT_VOL_DIST + ["down_vol_intensity_5", "down_vol_count_10", "updown_vol_20",
-                          "cs_rank_trend", "price_strength_rank", "rs_rank_60",
-                          "aroon_up", "aroon_down", "up_days_10", "dist_63d_low", "dist_20d_high"],
+        _EXIT_VOL_DIST
+        + [
+            "down_vol_intensity_5",
+            "down_vol_count_10",
+            "updown_vol_20",
+            "cs_rank_trend",
+            "price_strength_rank",
+            "rs_rank_60",
+            "aroon_up",
+            "aroon_down",
+            "up_days_10",
+            "dist_63d_low",
+            "dist_20d_high",
+        ],
     ),
     # PV-CHANNEL probe sets (2026-07-09, OHLCV_VIRGIN_MAP): champion exit set + the surviving
     # price-volume microstructure channel. NEW names (not edits) so the champion's
     # exit_vol_downpress stays byte-identical and its per-feature caches uncollided.
     "exit_vol_downpress_pv": (
         "exit_vol_downpress + pv_corr_10 + clv + nr_pos_7 (pv-channel probe, full)",
-        _EXIT_VOL_DIST + ["down_vol_intensity_5", "down_vol_count_10", "updown_vol_20",
-                          "pv_corr_10", "clv", "nr_pos_7"],
+        _EXIT_VOL_DIST
+        + [
+            "down_vol_intensity_5",
+            "down_vol_count_10",
+            "updown_vol_20",
+            "pv_corr_10",
+            "clv",
+            "nr_pos_7",
+        ],
     ),
     "exit_vol_downpress_pvonly": (
         "exit_vol_downpress + pv_corr_10 only (isolate the main pv channel)",
-        _EXIT_VOL_DIST + ["down_vol_intensity_5", "down_vol_count_10", "updown_vol_20",
-                          "pv_corr_10"],
+        _EXIT_VOL_DIST
+        + ["down_vol_intensity_5", "down_vol_count_10", "updown_vol_20", "pv_corr_10"],
     ),
     "exit_vol_vwap": (
         "exit_vol_dist + anchored-VWAP value (price vs where volume traded)",
@@ -1567,14 +2479,16 @@ SETS: dict[str, tuple[str, list[str]]] = {
     ),
     "exit_vol_supplymix": (
         "exit_vol_dist + curated best-of supply (obv-div + cmf + down-vol + ad-balance)",
-        _EXIT_VOL_DIST + ["obv_price_divergence", "cmf_20", "down_vol_intensity_5", "ad_balance_20"],
+        _EXIT_VOL_DIST
+        + ["obv_price_divergence", "cmf_20", "down_vol_intensity_5", "ad_balance_20"],
     ),
     # FORGOTTEN-SEQUENCE exit sets (2026-06-18 feature audit): undeployed SEQUENCE features encoding
     # WHERE-IN-THE-SWING (pivot-anchored) + leadership ROTATION + proper Corr-divergence + Dow structure
     # — a DIFFERENT kind of sequence than the (walled) MACD-momentum-shape.
     "exit_vol_swing": (
         "exit_vol_dist + zigzag swing-position (return/bars/max-adverse since pivot)",
-        _EXIT_VOL_DIST + ["zz_return_since_pivot", "zz_bars_since_pivot", "zz_max_adverse_since_pivot"],
+        _EXIT_VOL_DIST
+        + ["zz_return_since_pivot", "zz_bars_since_pivot", "zz_max_adverse_since_pivot"],
     ),
     "exit_vol_csrt": (
         "exit_vol_dist + cs_rank_trend (cross-sectional leadership rotation, untested on exit)",
@@ -1582,8 +2496,13 @@ SETS: dict[str, tuple[str, list[str]]] = {
     ),
     "exit_vol_swing_csrt": (
         "exit_vol_dist + swing-position + leadership rotation (forgotten-sequence combo)",
-        _EXIT_VOL_DIST + ["zz_return_since_pivot", "zz_bars_since_pivot", "zz_max_adverse_since_pivot",
-                          "cs_rank_trend"],
+        _EXIT_VOL_DIST
+        + [
+            "zz_return_since_pivot",
+            "zz_bars_since_pivot",
+            "zz_max_adverse_since_pivot",
+            "cs_rank_trend",
+        ],
     ),
     "exit_vol_dowstruct": (
         "exit_vol_dist + Dow structure (lower_high/higher_lows) + trend age (Aroon)",
@@ -1599,12 +2518,32 @@ SETS: dict[str, tuple[str, list[str]]] = {
     # age (Aroon) + pivot-anchored swing-position + volume-distribution confirmation.
     "exit_topclf": (
         "top-classifier inputs: shape+divergence+Dow+swing-position+volume (for a zigzag-peak target)",
-        ["dist_63d_high", "dist_52w_high", "sma_20_ratio", "rsi_14", "atr_14_ratio",
-         "macd_hist_chg_1", "macd_hist_accel", "macd_hist_slope_l1", "macd_hist_slope_l2",
-         "macd_hist_pctile_252", "ma10_slope", "ma20_slope", "macd_div_20", "rsi_div_20",
-         "div_rank_macd", "lower_high_20", "higher_lows_count", "aroon_up", "aroon_down",
-         "zz_return_since_pivot", "zz_bars_since_pivot", "zz_max_adverse_since_pivot",
-         "dist_day_25", "down_vol_intensity_5"],
+        [
+            "dist_63d_high",
+            "dist_52w_high",
+            "sma_20_ratio",
+            "rsi_14",
+            "atr_14_ratio",
+            "macd_hist_chg_1",
+            "macd_hist_accel",
+            "macd_hist_slope_l1",
+            "macd_hist_slope_l2",
+            "macd_hist_pctile_252",
+            "ma10_slope",
+            "ma20_slope",
+            "macd_div_20",
+            "rsi_div_20",
+            "div_rank_macd",
+            "lower_high_20",
+            "higher_lows_count",
+            "aroon_up",
+            "aroon_down",
+            "zz_return_since_pivot",
+            "zz_bars_since_pivot",
+            "zz_max_adverse_since_pivot",
+            "dist_day_25",
+            "down_vol_intensity_5",
+        ],
     ),
     "entry_lvnhrev_lean": (
         "entry_lvnh_lean + comp_lv_nh_rev 3-factor (highest ic5 -> earlier/more trades)",
@@ -1619,14 +2558,36 @@ SETS: dict[str, tuple[str, list[str]]] = {
     # to the 5 heads' targets (resIC vs winner +0.19, 7/7 yrs). The "ADD a head" wall-clearing lever.
     "entry_volbalance": (
         "leading_v2 + volume-region balance (updown_vol, ad_balance, cmf, accum/dist days, obv-div)",
-        _LEADING_V2 + ["updown_vol_20", "ad_balance_20", "cmf_20", "accum_day_25", "dist_day_25",
-                       "obv_slope_10", "obv_price_divergence", "mfi_14", "up_days_10", "down_days_10"],
+        _LEADING_V2
+        + [
+            "updown_vol_20",
+            "ad_balance_20",
+            "cmf_20",
+            "accum_day_25",
+            "dist_day_25",
+            "obv_slope_10",
+            "obv_price_divergence",
+            "mfi_14",
+            "up_days_10",
+            "down_days_10",
+        ],
     ),
     "entry_breakout": (
         "leading_v2 + breakout/continuation structure (range-break, resistance, MA-slope, vol-thrust)",
-        _LEADING_V2 + ["breakout_20", "breakout_60", "dist_20d_high", "dist_to_resistance",
-                       "range_pos_20", "ma5_slope", "ma20_slope", "ma_align",
-                       "vol_surge_ratio", "close_pos_ma5", "breakout_setup_score"],
+        _LEADING_V2
+        + [
+            "breakout_20",
+            "breakout_60",
+            "dist_20d_high",
+            "dist_to_resistance",
+            "range_pos_20",
+            "ma5_slope",
+            "ma20_slope",
+            "ma_align",
+            "vol_surge_ratio",
+            "close_pos_ma5",
+            "breakout_setup_score",
+        ],
     ),
     # Reversal-CONFIRMATION entry: lvup126 quality composites + the signals that tell a
     # reversal_entry-trained model WHEN a dip has actually turned (so it stops buying knives and
@@ -1636,14 +2597,30 @@ SETS: dict[str, tuple[str, list[str]]] = {
     # max_adverse). Paired with the reversal_entry target (dip-gate + min_fwd_rally confirmation).
     "entry_reversal_confirm": (
         "lvup126 quality + recovery/divergence/zigzag-bottom reversal-confirmation features",
-        _LEADING_V2 + ["lowvol_rank_60", "nearhigh_rank", "comp_nh_lv",
-                       "comp_lowvol_uptrend", "comp_nh_x_lv126",
-                       "dist_10d_low", "dist_63d_low", "range_pos_20", "recov_setup",
-                       "macd_hist_chg_2", "macd_hist_chg_5", "div_rank_macd",
-                       "rsi_div_20", "macd_div_20", "up_days_10",
-                       "zz_last_dir", "zz_return_since_pivot", "zz_bars_since_pivot",
-                       "zz_price_pos_in_swing", "zz_dist_to_confirm",
-                       "zz_max_adverse_since_pivot"],
+        _LEADING_V2
+        + [
+            "lowvol_rank_60",
+            "nearhigh_rank",
+            "comp_nh_lv",
+            "comp_lowvol_uptrend",
+            "comp_nh_x_lv126",
+            "dist_10d_low",
+            "dist_63d_low",
+            "range_pos_20",
+            "recov_setup",
+            "macd_hist_chg_2",
+            "macd_hist_chg_5",
+            "div_rank_macd",
+            "rsi_div_20",
+            "macd_div_20",
+            "up_days_10",
+            "zz_last_dir",
+            "zz_return_since_pivot",
+            "zz_bars_since_pivot",
+            "zz_price_pos_in_swing",
+            "zz_dist_to_confirm",
+            "zz_max_adverse_since_pivot",
+        ],
     ),
     # LEAN reversal-confirm for the ensemble 2nd head: entry_reversal_confirm MINUS the 6 zigzag
     # zz_* features (which added NOISE — t1805 with the full set scored below the shared-feature
@@ -1651,36 +2628,69 @@ SETS: dict[str, tuple[str, list[str]]] = {
     # + up-days/higher-lows, dropping the zigzag-structure noise.
     "entry_reversal_lean": (
         "entry_reversal_confirm minus zigzag-structure (lean reversal separators only)",
-        _LEADING_V2 + ["lowvol_rank_60", "nearhigh_rank", "comp_nh_lv",
-                       "comp_lowvol_uptrend", "comp_nh_x_lv126",
-                       "dist_10d_low", "dist_63d_low", "range_pos_20", "recov_setup",
-                       "macd_hist_chg_5", "rsi_div_20", "macd_div_20",
-                       "up_days_10", "higher_lows_count"],
+        _LEADING_V2
+        + [
+            "lowvol_rank_60",
+            "nearhigh_rank",
+            "comp_nh_lv",
+            "comp_lowvol_uptrend",
+            "comp_nh_x_lv126",
+            "dist_10d_low",
+            "dist_63d_low",
+            "range_pos_20",
+            "recov_setup",
+            "macd_hist_chg_5",
+            "rsi_div_20",
+            "macd_div_20",
+            "up_days_10",
+            "higher_lows_count",
+        ],
     ),
     # R44: stack the three R43 winners (lvup126 comp 138.2 + lvnhrev's reversal leg) — combine
     # the best-OOS quality composites with the high-ic5 volume leg in one entry head.
     "entry_lvup126rev_lean": (
         "entry_lvup126_lean + comp_lv_nh_rev (stack all R43 winners)",
-        _LEADING_V2 + ["lowvol_rank_60", "nearhigh_rank", "comp_nh_lv",
-                       "comp_lowvol_uptrend", "comp_nh_x_lv126", "comp_lv_nh_rev"],
+        _LEADING_V2
+        + [
+            "lowvol_rank_60",
+            "nearhigh_rank",
+            "comp_nh_lv",
+            "comp_lowvol_uptrend",
+            "comp_nh_x_lv126",
+            "comp_lv_nh_rev",
+        ],
     ),
     # R47: add a 12-1 momentum dimension to the champion entry (entry_lvup126_lean).
     "entry_lvup126tri_lean": (
         "entry_lvup126_lean + comp_tri_and (momentum-gated triple)",
-        _LEADING_V2 + ["lowvol_rank_60", "nearhigh_rank", "comp_nh_lv",
-                       "comp_lowvol_uptrend", "comp_nh_x_lv126", "comp_tri_and"],
+        _LEADING_V2
+        + [
+            "lowvol_rank_60",
+            "nearhigh_rank",
+            "comp_nh_lv",
+            "comp_lowvol_uptrend",
+            "comp_nh_x_lv126",
+            "comp_tri_and",
+        ],
     ),
     # R47: swap the 126d leg for the momentum-gated triple (replacement, not stack).
     "entry_lvup_tri_lean": (
         "entry_lvnh_lean + comp_lowvol_uptrend + comp_tri_and (momentum instead of 126)",
-        _LEADING_V2 + ["lowvol_rank_60", "nearhigh_rank", "comp_nh_lv",
-                       "comp_lowvol_uptrend", "comp_tri_and"],
+        _LEADING_V2
+        + ["lowvol_rank_60", "nearhigh_rank", "comp_nh_lv", "comp_lowvol_uptrend", "comp_tri_and"],
     ),
     # R47: vol-weighted additive composite added to the champion.
     "entry_lvup126_v2h1_lean": (
         "entry_lvup126_lean + comp_v2h1 (vol-weighted additive)",
-        _LEADING_V2 + ["lowvol_rank_60", "nearhigh_rank", "comp_nh_lv",
-                       "comp_lowvol_uptrend", "comp_nh_x_lv126", "comp_v2h1"],
+        _LEADING_V2
+        + [
+            "lowvol_rank_60",
+            "nearhigh_rank",
+            "comp_nh_lv",
+            "comp_lowvol_uptrend",
+            "comp_nh_x_lv126",
+            "comp_v2h1",
+        ],
     ),
     "entry_lvnh_mom": (
         "lvnh lean + momentum_rank (research 3-factor comp_lv_nh_mom)",
@@ -1693,11 +2703,24 @@ SETS: dict[str, tuple[str, list[str]]] = {
     ),
     "exit_peak_div_ext": (
         "exit_peak_div + dist_52w_low + dist_126d_low (clean extension-from-base) (39)",
-        [c for c in (_EXIT_PEAK_CORE + _EXIT_PEAK_V2_EXTRA + _HA
-                     + ["upper_wick_ratio", "lower_wick_ratio", "body_ratio"])
-         if c not in _EXIT_DEAD]
-        + ["adx_14", "minus_di_14", "div_rank_rsi", "div_rank_macd",
-           "dist_52w_low", "dist_126d_low"],
+        [
+            c
+            for c in (
+                _EXIT_PEAK_CORE
+                + _EXIT_PEAK_V2_EXTRA
+                + _HA
+                + ["upper_wick_ratio", "lower_wick_ratio", "body_ratio"]
+            )
+            if c not in _EXIT_DEAD
+        ]
+        + [
+            "adx_14",
+            "minus_di_14",
+            "div_rank_rsi",
+            "div_rank_macd",
+            "dist_52w_low",
+            "dist_126d_low",
+        ],
     ),
 }
 
@@ -1726,8 +2749,18 @@ SETS["entry_sec_liq"] = (
 )
 SETS["entry_sec_rsdyn"] = (
     "v20_sec + RS DYNAMICS (multi-horizon RS, RS spread/expansion, RS slope/accel, EMA-RS)",
-    _V20SEC + ["rs_rank_5", "rs_rank_60", "rs_spread_5_60", "rs_spread_5_20",
-               "rs_trend_5", "rs_trend_20", "rs_accel", "rs_ema5", "rs_vs_ema5"],
+    _V20SEC
+    + [
+        "rs_rank_5",
+        "rs_rank_60",
+        "rs_spread_5_60",
+        "rs_spread_5_20",
+        "rs_trend_5",
+        "rs_trend_20",
+        "rs_accel",
+        "rs_ema5",
+        "rs_vs_ema5",
+    ],
 )
 # De-diluted: only the NOVEL RS-dynamics (multi-period RS expansion + RS-vs-its-EMA), the user's
 # 'co giãn RS nhiều chu kỳ' — distinct from cs_rank_trend (already the Δ10 RS slope).
@@ -1761,11 +2794,24 @@ SETS["entry_sec_secdyn"] = (
 # GRU-on-engineered-features failure (v48) was a wrong-input artifact vs a real no-signal.
 SETS["seq_raw"] = (
     "raw per-bar primitives for sequence models (returns/shape/volume/vol/level)",
-    ["ret_1d", "ret_5d", "ret_10d", "close_to_open",
-     "high_low_pct", "upper_wick_ratio", "lower_wick_ratio", "body_ratio",
-     "volume_ratio_5", "volume_ratio_20",
-     "atr_14_ratio", "realized_vol_10",
-     "rsi_14", "bb_pct_20", "dist_52w_high", "dist_52w_low"],
+    [
+        "ret_1d",
+        "ret_5d",
+        "ret_10d",
+        "close_to_open",
+        "high_low_pct",
+        "upper_wick_ratio",
+        "lower_wick_ratio",
+        "body_ratio",
+        "volume_ratio_5",
+        "volume_ratio_20",
+        "atr_14_ratio",
+        "realized_vol_10",
+        "rsi_14",
+        "bb_pct_20",
+        "dist_52w_high",
+        "dist_52w_low",
+    ],
 )
 # seq_raw + cross-sectional/sector CONTEXT (ranks + sector-relative LEVELS, the info the
 # lightgbm snapshot has) but deliberately NO pre-engineered slopes/spreads (those HURT the
@@ -1773,10 +2819,21 @@ SETS["seq_raw"] = (
 # (i.e. is the v49 gap architecture, or just missing cross-sectional inputs?).
 SETS["seq_rich"] = (
     "seq_raw + cross-sectional/sector context (ranks + relative levels, no slopes)",
-    SETS["seq_raw"][1] + ["rs_rank_5", "rs_rank_60", "momentum_rank", "cs_rank_trend",
-                          "price_strength_rank", "nearhigh_rank", "lowvol_rank_60",
-                          "range_pos_20", "dist_10d_low",
-                          "return_vs_sector", "strength_vs_sector", "momentum_vs_sector"],
+    SETS["seq_raw"][1]
+    + [
+        "rs_rank_5",
+        "rs_rank_60",
+        "momentum_rank",
+        "cs_rank_trend",
+        "price_strength_rank",
+        "nearhigh_rank",
+        "lowvol_rank_60",
+        "range_pos_20",
+        "dist_10d_low",
+        "return_vs_sector",
+        "strength_vs_sector",
+        "momentum_vs_sector",
+    ],
 )
 
 

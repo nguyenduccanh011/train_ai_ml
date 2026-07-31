@@ -21,7 +21,7 @@ from stock_ml.src.serving.bundle import LoadedBundle
 
 _OHLCV_COLS = ["symbol", "date", "open", "high", "low", "close", "volume"]
 _ENTRY_HEAD_RE = re.compile(r"entry(\d+)$")  # entry2, entry3, ... ensemble heads
-_EXIT_HEAD_RE = re.compile(r"exit(\d+)$")    # exit2, ... ensemble exit heads
+_EXIT_HEAD_RE = re.compile(r"exit(\d+)$")  # exit2, ... ensemble exit heads
 
 
 def generate_signals_from_bundle(bundle: LoadedBundle, ohlcv: pd.DataFrame) -> pd.DataFrame:
@@ -45,9 +45,18 @@ def generate_signals_from_bundle(bundle: LoadedBundle, ohlcv: pd.DataFrame) -> p
         raise ValueError(f"generate_signals_from_bundle: ohlcv missing columns {missing}")
 
     cfg = ExperimentConfig(**bundle.config)
-    (feat, entry_feat_cols, exit_feat_cols, _et, _xt,
-     entry2_feat_cols, entry3_feat_cols,
-     entry4_feat_cols, entry5_feat_cols, entry6_feat_cols) = build_feature_frame(
+    (
+        feat,
+        entry_feat_cols,
+        exit_feat_cols,
+        _et,
+        _xt,
+        entry2_feat_cols,
+        entry3_feat_cols,
+        entry4_feat_cols,
+        entry5_feat_cols,
+        entry6_feat_cols,
+    ) = build_feature_frame(
         ohlcv[_OHLCV_COLS].copy(),
         cfg,
         requested_symbols=sorted(ohlcv["symbol"].unique()),
@@ -57,8 +66,11 @@ def generate_signals_from_bundle(bundle: LoadedBundle, ohlcv: pd.DataFrame) -> p
     # Per-head entry feature columns (None = shares the primary entry features). Indexed by
     # the head number k so entryK -> entryK_feat_cols, for any head count the bundle carries.
     _entry_head_feat = {
-        2: entry2_feat_cols, 3: entry3_feat_cols,
-        4: entry4_feat_cols, 5: entry5_feat_cols, 6: entry6_feat_cols,
+        2: entry2_feat_cols,
+        3: entry3_feat_cols,
+        4: entry4_feat_cols,
+        5: entry5_feat_cols,
+        6: entry6_feat_cols,
     }
 
     # Guard against silent feature-pipeline drift between export host and serving.
@@ -81,8 +93,10 @@ def generate_signals_from_bundle(bundle: LoadedBundle, ohlcv: pd.DataFrame) -> p
     if nan_rows.any():
         n = int(nan_rows.sum())
         syms = feat.loc[nan_rows, "symbol"].nunique()
-        print(f"[serving] dropping {n} NaN-feature bar(s) across {syms} symbol(s) "
-              f"(std==0 / data gaps) — they carry no signal")
+        print(
+            f"[serving] dropping {n} NaN-feature bar(s) across {syms} symbol(s) "
+            f"(std==0 / data gaps) — they carry no signal"
+        )
         feat = feat[~nan_rows].copy()
         if feat.empty:
             raise ValueError("generate_signals_from_bundle: all bars NaN after isolation")
@@ -93,15 +107,23 @@ def generate_signals_from_bundle(bundle: LoadedBundle, ohlcv: pd.DataFrame) -> p
     def _score(model_set: dict, frame: pd.DataFrame) -> pd.DataFrame:
         entry_ensemble = [
             (f"score{int(m.group(1))}", model_set[name], _entry_head_feat.get(int(m.group(1))))
-            for name in sorted(model_set) if (m := _ENTRY_HEAD_RE.fullmatch(name))
+            for name in sorted(model_set)
+            if (m := _ENTRY_HEAD_RE.fullmatch(name))
         ]
         exit_ensemble = [
             (f"exit_score{int(m.group(1))}", model_set[name], exit_feat_cols)
-            for name in sorted(model_set) if (m := _EXIT_HEAD_RE.fullmatch(name))
+            for name in sorted(model_set)
+            if (m := _EXIT_HEAD_RE.fullmatch(name))
         ]
         return predict_slot_signals(
-            model_set["entry"], model_set.get("exit"), frame, entry_feat_cols, cfg,
-            exit_feat_cols=exit_feat_cols, entry_ensemble=entry_ensemble, exit_ensemble=exit_ensemble,
+            model_set["entry"],
+            model_set.get("exit"),
+            frame,
+            entry_feat_cols,
+            cfg,
+            exit_feat_cols=exit_feat_cols,
+            entry_ensemble=entry_ensemble,
+            exit_ensemble=exit_ensemble,
         )
 
     if bundle.fold_models:
@@ -125,7 +147,11 @@ def generate_signals_from_bundle(bundle: LoadedBundle, ohlcv: pd.DataFrame) -> p
                 sub = sub[sub["symbol"].isin(set(allowed))]
             if not sub.empty:
                 parts.append(_score(fm[y], sub))
-        raw = pd.concat(parts, ignore_index=True).sort_values(["symbol", "date"]).reset_index(drop=True)
+        raw = (
+            pd.concat(parts, ignore_index=True)
+            .sort_values(["symbol", "date"])
+            .reset_index(drop=True)
+        )
         return recombine_signals(raw, cfg)
 
     # Legacy single-model bundle: score with the one model, then (optionally) seed the z-window from the
@@ -141,7 +167,9 @@ def generate_signals_from_bundle(bundle: LoadedBundle, ohlcv: pd.DataFrame) -> p
         seed_cols = [c for c in ph.columns if c not in ("symbol", "date") and c in raw.columns]
         raw = raw.merge(
             ph[["symbol", "date", *seed_cols]],
-            on=["symbol", "date"], how="left", suffixes=("", "_hist"),
+            on=["symbol", "date"],
+            how="left",
+            suffixes=("", "_hist"),
         )
         seed = raw["score_hist"].notna()
         for c in seed_cols:

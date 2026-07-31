@@ -19,6 +19,7 @@ pool is now precisely quantified — net effect is a genuine open question -> A/
 Clone t1378, keep EVERYTHING (slots, targets, market-gate, incubation, overext,
 trailing) and inject ONLY pop_lock_*. Compare comp vs FRESH t1378 (re-run, not stale).
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -40,15 +41,43 @@ BASE_ID = 1378
 
 # (tag, pop_lock overrides) — arm an early protective trail at a low pop, ext-gated.
 GRID = [
-    ("pl_a05_t05", {"pop_lock_arm_pct": 0.05, "pop_lock_trail_pct": 0.05,
-                    "pop_lock_ext_window": 10, "pop_lock_ext_threshold": 0.0}),
-    ("pl_a06_t05", {"pop_lock_arm_pct": 0.06, "pop_lock_trail_pct": 0.05,
-                    "pop_lock_ext_window": 10, "pop_lock_ext_threshold": 0.0}),
-    ("pl_a05_t06", {"pop_lock_arm_pct": 0.05, "pop_lock_trail_pct": 0.06,
-                    "pop_lock_ext_window": 10, "pop_lock_ext_threshold": 0.0}),
+    (
+        "pl_a05_t05",
+        {
+            "pop_lock_arm_pct": 0.05,
+            "pop_lock_trail_pct": 0.05,
+            "pop_lock_ext_window": 10,
+            "pop_lock_ext_threshold": 0.0,
+        },
+    ),
+    (
+        "pl_a06_t05",
+        {
+            "pop_lock_arm_pct": 0.06,
+            "pop_lock_trail_pct": 0.05,
+            "pop_lock_ext_window": 10,
+            "pop_lock_ext_threshold": 0.0,
+        },
+    ),
+    (
+        "pl_a05_t06",
+        {
+            "pop_lock_arm_pct": 0.05,
+            "pop_lock_trail_pct": 0.06,
+            "pop_lock_ext_window": 10,
+            "pop_lock_ext_threshold": 0.0,
+        },
+    ),
     # only lock the WEAKEST pops (already >2% below MA10) -> let more run, less clip
-    ("pl_a06_t06_xn2", {"pop_lock_arm_pct": 0.06, "pop_lock_trail_pct": 0.06,
-                        "pop_lock_ext_window": 10, "pop_lock_ext_threshold": -0.02}),
+    (
+        "pl_a06_t06_xn2",
+        {
+            "pop_lock_arm_pct": 0.06,
+            "pop_lock_trail_pct": 0.06,
+            "pop_lock_ext_window": 10,
+            "pop_lock_ext_threshold": -0.02,
+        },
+    ),
 ]
 
 
@@ -79,28 +108,40 @@ async def main():
             ec = copy.deepcopy(base_ec)
             ec.update(ov)
             new_slots = [
-                {"slot_type": s.slot_type, "ml_component_id": s.ml_component_id,
-                 "rule_component_id": s.rule_component_id, "feature_set_name": s.feature_set_name,
-                 "target_config": _tc(s)}
+                {
+                    "slot_type": s.slot_type,
+                    "ml_component_id": s.ml_component_id,
+                    "rule_component_id": s.rule_component_id,
+                    "feature_set_name": s.feature_set_name,
+                    "target_config": _tc(s),
+                }
                 for s in slots
             ]
             tmpl = await repo.create(
-                name=name, market=base.market, strategy=base.strategy,
-                feature_set_id=base.feature_set_id, target_id=base.target_id,
-                component_slots=new_slots, direction=base.direction,
-                signal_mode=base.signal_mode, signal_threshold=base.signal_threshold,
-                entry_threshold=base.entry_threshold, exit_threshold=base.exit_threshold,
-                split_config=base.split_config, engine_config=ec,
-                validation_config=base.validation_config, seed=base.seed,
+                name=name,
+                market=base.market,
+                strategy=base.strategy,
+                feature_set_id=base.feature_set_id,
+                target_id=base.target_id,
+                component_slots=new_slots,
+                direction=base.direction,
+                signal_mode=base.signal_mode,
+                signal_threshold=base.signal_threshold,
+                entry_threshold=base.entry_threshold,
+                exit_threshold=base.exit_threshold,
+                split_config=base.split_config,
+                engine_config=ec,
+                validation_config=base.validation_config,
+                seed=base.seed,
                 description=(
                     f"Faded-mid-winner pop-lock {tag} on t1378: early protective trail "
                     f"arm={ov['pop_lock_arm_pct']} trail={ov['pop_lock_trail_pct']} "
                     f"ext_thr={ov['pop_lock_ext_threshold']}; everything else = t1378."
                 ),
                 hypothesis="723 signal-exit trades peak +9.3% then give back ~9.6% (lag 7.4 bars), "
-                           "falling below both the +15% trail and +14% overext. An ext-gated early "
-                           "trail at +5-6% should lock the faded band near its peak without clipping "
-                           "strong runners. Test vs fresh t1378.",
+                "falling below both the +15% trail and +14% overext. An ext-gated early "
+                "trail at +5-6% should lock the faded band near its peak without clipping "
+                "strong runners. Test vs fresh t1378.",
                 universe_slug=base.universe_slug,
             )
             print(f"* {name} created (id={tmpl.id})")

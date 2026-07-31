@@ -83,9 +83,9 @@ def test_uptrend_gate_clips_dip_in_downtrend():
     gated = ReversalEntryRegressionTarget(
         horizon=3, penalty=0.0, dip_window=3, trend_window=6
     ).apply(_series_df(close))
-    ungated = ReversalEntryRegressionTarget(
-        horizon=3, penalty=0.0, dip_window=3
-    ).apply(_series_df(close))
+    ungated = ReversalEntryRegressionTarget(horizon=3, penalty=0.0, dip_window=3).apply(
+        _series_df(close)
+    )
     assert gated["target"].iloc[5] <= 1e-9
     assert ungated["target"].iloc[5] > 0
 
@@ -93,9 +93,9 @@ def test_uptrend_gate_clips_dip_in_downtrend():
 def test_uptrend_gate_keeps_pullback_in_uptrend():
     # Rising trend with a one-bar pullback that rebounds: below short MA but above long MA -> reward.
     close = [80, 82, 84, 86, 88, 90, 88, 94, 94, 94]
-    out = ReversalEntryRegressionTarget(
-        horizon=3, penalty=0.0, dip_window=2, trend_window=6
-    ).apply(_series_df(close))
+    out = ReversalEntryRegressionTarget(horizon=3, penalty=0.0, dip_window=2, trend_window=6).apply(
+        _series_df(close)
+    )
     assert out["target"].iloc[6] > 0
 
 

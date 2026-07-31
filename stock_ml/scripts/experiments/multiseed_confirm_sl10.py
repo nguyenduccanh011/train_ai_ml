@@ -2,24 +2,38 @@
 run_id, so we READ composite from the DB right after each run (before the next overwrites it).
 Seed 42 is run LAST for each template to restore the canonical leaderboard row.
 """
+
 from __future__ import annotations
 import subprocess, sys
 from pathlib import Path
+
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT))
 from stock_ml.scripts.run_template import run_template_experiment  # noqa: E402
 
-SEEDS = [7, 99, 314, 42]   # 42 last -> leaves canonical row correct
+SEEDS = [7, 99, 314, 42]  # 42 last -> leaves canonical row correct
 TEMPLATES = {1586: "champ", 1674: "sl10"}
 
 
 def read_composite(run_id: str) -> float:
     out = subprocess.run(
-        ["docker", "exec", "stock-ml-postgres", "psql", "-U", "stockml", "-d", "stockml",
-         "-t", "-A", "-c",
-         f"SELECT composite_score||','||trades||','||round(total_pnl::numeric,1)||','||round(sharpe::numeric,3) "
-         f"FROM leaderboard_runs WHERE run_id='{run_id}'"],
-        capture_output=True, text=True,
+        [
+            "docker",
+            "exec",
+            "stock-ml-postgres",
+            "psql",
+            "-U",
+            "stockml",
+            "-d",
+            "stockml",
+            "-t",
+            "-A",
+            "-c",
+            f"SELECT composite_score||','||trades||','||round(total_pnl::numeric,1)||','||round(sharpe::numeric,3) "
+            f"FROM leaderboard_runs WHERE run_id='{run_id}'",
+        ],
+        capture_output=True,
+        text=True,
     )
     return out.stdout.strip()
 

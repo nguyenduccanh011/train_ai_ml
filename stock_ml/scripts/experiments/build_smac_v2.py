@@ -15,6 +15,7 @@ bleed after this, the next step is a CUT class in the oracle.
 
 Usage: python stock_ml/scripts/build_smac_v2.py
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -82,12 +83,12 @@ async def make_template() -> int:
             validation_config=base.validation_config,
             seed=42,
             description="SMAC v2: state-machine exit — sell when the model LEAVES the HOLD "
-                        "state (argmax in {OUT,EXIT}), not only on EXIT. Pure-ML fix using "
-                        "the model's own OUT prediction to cut losers (v1 ignored it). No rule.",
+            "state (argmax in {OUT,EXIT}), not only on EXIT. Pure-ML fix using "
+            "the model's own OUT prediction to cut losers (v1 ignored it). No rule.",
             hypothesis="v1 forensic: losers held 45d to -12.8% because EXIT=upside-peak only; "
-                       "a failing trade never peaks. The oracle labels down-legs OUT and the "
-                       "model predicts OUT there, so acting on OUT cuts losers early without a "
-                       "stop-loss rule (which would mask the ML).",
+            "a failing trade never peaks. The oracle labels down-legs OUT and the "
+            "model predicts OUT there, so acting on OUT cuts losers early without a "
+            "stop-loss rule (which would mask the ML).",
             universe_slug=base.universe_slug,
             model_mode="ml_only",
         )

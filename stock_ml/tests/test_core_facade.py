@@ -32,7 +32,7 @@ def test_core_imports_clean_no_db_or_web():
     )
     assert proc.returncode == 0, f"import stock_ml.core failed:\n{proc.stderr}"
     line = [ln for ln in proc.stdout.splitlines() if ln.startswith("HEAVY=")][-1]
-    heavy = line[len("HEAVY="):].strip()
+    heavy = line[len("HEAVY=") :].strip()
     assert heavy == "", f"stock_ml.core pulled heavy deps: {heavy}"
 
 

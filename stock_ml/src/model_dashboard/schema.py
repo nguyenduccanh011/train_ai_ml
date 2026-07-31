@@ -155,7 +155,12 @@ def leaderboard_row_to_dashboard_bundle(
 
     artifacts = [
         ArtifactRecord(
-            id=_stable_id("artifact", row.run_id, kind, _path_to_str(canonical_artifact_path(row, kind, root=root))),
+            id=_stable_id(
+                "artifact",
+                row.run_id,
+                kind,
+                _path_to_str(canonical_artifact_path(row, kind, root=root)),
+            ),
             run_id=row.run_id,
             kind=kind,
             path=_path_to_str(canonical_artifact_path(row, kind, root=root)),

@@ -14,6 +14,7 @@ If a data-store MD5 mismatches, the snapshot drifted (e.g. a new corporate-actio
 sync): that invalidates the golden — re-pin DELIBERATELY (re-run the 3 seeds,
 update the JSON in its own commit), never loosen the assert.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -70,12 +71,16 @@ def test_champion_prod_overlay_golden(seed):
         os.environ,
         REPLAY_BASE=str(FIXTURES / g["base"]),
         REPLAY_SIG=str(FIXTURES / g["signals"]),
-        REPLAY_DUCK=SERVING_DUCK,   # snapshot đóng băng (đầu module) — không dùng store sống
+        REPLAY_DUCK=SERVING_DUCK,  # snapshot đóng băng (đầu module) — không dùng store sống
         NAV2_DB=SERVING_OHLCV,
     )
     out = subprocess.run(
         [sys.executable, str(REPO / "_champ_prod_replay.py")],
-        capture_output=True, text=True, env=env, cwd=REPO, timeout=1800,
+        capture_output=True,
+        text=True,
+        env=env,
+        cwd=REPO,
+        timeout=1800,
     )
     assert "PROD_REPLAY_DONE" in out.stdout, (
         f"replay did not complete:\n{out.stdout[-2000:]}\n{out.stderr[-2000:]}"
@@ -85,8 +90,12 @@ def test_champion_prod_overlay_golden(seed):
     m2 = re.search(r"T\+2: NAV x([\d.]+)\s+CAGR ([\d.]+)%\s+DD (-[\d.]+)%", out.stdout)
     assert m0 and m2, f"could not parse replay output:\n{out.stdout[-2000:]}"
     got = {
-        "t0_nav_x": m0.group(1), "t0_cagr": m0.group(2), "t0_dd": m0.group(3),
-        "t2_nav_x": m2.group(1), "t2_cagr": m2.group(2), "t2_dd": m2.group(3),
+        "t0_nav_x": m0.group(1),
+        "t0_cagr": m0.group(2),
+        "t0_dd": m0.group(3),
+        "t2_nav_x": m2.group(1),
+        "t2_cagr": m2.group(2),
+        "t2_dd": m2.group(3),
     }
     want = {k: g[k] for k in got}
     assert got == want, f"seed {seed} drifted from golden: got={got} want={want}"
@@ -104,7 +113,9 @@ def test_champion_prod_overlay_golden(seed):
 # SNAPSHOT ĐÓNG BĂNG vintage 2026-07-29 — KHÔNG phải store sống (store sống được sync
 # hằng ngày nên MD5 đổi liên tục → golden đỏ giả, guard chết vì mỏi). Từ nay §8.4 RUNBOOK
 # "MD5 data fail" chỉ còn nghĩa thật: ai đó đụng vào bản đóng băng.
-SERVING_DUCK = "C:/Users/DUC CANH PC/Desktop/stock-serving/market_data/market_golden_pin_20260729.duckdb"
+SERVING_DUCK = (
+    "C:/Users/DUC CANH PC/Desktop/stock-serving/market_data/market_golden_pin_20260729.duckdb"
+)
 SERVING_OHLCV = "C:/Users/DUC CANH PC/Desktop/stock-serving/data/ohlcv_golden_pin_20260729.db"
 NAVSIM_DATE_HI = "2026-07-08"  # nh_nav2.DB cutoff the golden was pinned on
 
@@ -132,14 +143,20 @@ def test_module_parity_golden(seed):
     # full-mode _champ_prod_replay reference (the deploy DEFAULT is causal since 2026-07-29,
     # guarded separately by test_module_causal_default_golden).
     r2 = run_portfolio(base, sig, ctx=ctx, C=PortfolioConstants(tplus=2, stat_mode="full"))
-    got2 = {"t2_nav_x": f"{r2['nav']:.2f}", "t2_cagr": f"{100 * r2['cagr']:.1f}",
-            "t2_dd": f"{100 * r2['maxdd']:.1f}"}
+    got2 = {
+        "t2_nav_x": f"{r2['nav']:.2f}",
+        "t2_cagr": f"{100 * r2['cagr']:.1f}",
+        "t2_dd": f"{100 * r2['maxdd']:.1f}",
+    }
     want2 = {k: g[k] for k in got2}
     assert got2 == want2, f"seed {seed} T+2 module drifted: got={got2} want={want2}"
 
     r0 = run_portfolio(base, sig, ctx=ctx, C=PortfolioConstants(tplus=0, stat_mode="full"))
-    got0 = {"t0_nav_x": f"{r0['nav']:.2f}", "t0_cagr": f"{100 * r0['cagr']:.1f}",
-            "t0_dd": f"{100 * r0['maxdd']:.1f}"}
+    got0 = {
+        "t0_nav_x": f"{r0['nav']:.2f}",
+        "t0_cagr": f"{100 * r0['cagr']:.1f}",
+        "t0_dd": f"{100 * r0['maxdd']:.1f}",
+    }
     want0 = {k: g[k] for k in got0}
     assert got0 == want0, f"seed {seed} T+0 module drifted: got={got0} want={want0}"
 
@@ -181,8 +198,11 @@ def test_module_causal_default_golden(seed):
     sig = pd.read_parquet(FIXTURES / sig_name)
     ctx = DuckDBContext(SERVING_DUCK, SERVING_OHLCV, date_hi=NAVSIM_DATE_HI)
     r = run_portfolio(base, sig, ctx=ctx, C=PortfolioConstants(tplus=2))
-    got = {"t2_nav_x": f"{r['nav']:.2f}", "t2_cagr": f"{100 * r['cagr']:.1f}",
-           "t2_dd": f"{100 * r['maxdd']:.1f}"}
+    got = {
+        "t2_nav_x": f"{r['nav']:.2f}",
+        "t2_cagr": f"{100 * r['cagr']:.1f}",
+        "t2_dd": f"{100 * r['maxdd']:.1f}",
+    }
     want = {k: g[k] for k in got}
     assert got == want, f"seed {seed} causal-default drifted: got={got} want={want}"
 
@@ -193,10 +213,16 @@ def test_base_output_guard():
 
     from stock_ml.portfolio import run_portfolio
 
-    bad = pd.DataFrame({
-        "symbol": ["AAA"], "entry_date": ["2024-01-05"], "exit_date": ["2024-02-05"],
-        "entry_signal_date": ["2024-01-02"], "entry_price": [10.0], "exit_price": [11.0],
-        "exit_reason": ["preempt"],
-    })
+    bad = pd.DataFrame(
+        {
+            "symbol": ["AAA"],
+            "entry_date": ["2024-01-05"],
+            "exit_date": ["2024-02-05"],
+            "entry_signal_date": ["2024-01-02"],
+            "entry_price": [10.0],
+            "exit_price": [11.0],
+            "exit_reason": ["preempt"],
+        }
+    )
     with pytest.raises(ValueError, match="overlay-level exit_reason"):
         run_portfolio(bad, pd.DataFrame(), ctx=None)

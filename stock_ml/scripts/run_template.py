@@ -200,9 +200,7 @@ async def _persist_run_detail(run_id: str, frames: dict) -> None:
                         "date": date_val,
                         "signal": int(float(row.get("signal", 0))),
                         "score": float(score_raw) if score_raw not in (None, "") else None,
-                        "exit_score": float(exit_raw)
-                        if exit_raw not in (None, "")
-                        else None,
+                        "exit_score": float(exit_raw) if exit_raw not in (None, "") else None,
                     }
                 )
             signal_repo = RunSignalRepository(session)
@@ -298,9 +296,9 @@ def run_template_experiment(
             "entry_model": config.entry_model,
             "exit_model": config.exit_model,
         }
-        _fp = hashlib.sha256(
-            json.dumps(_fp_src, sort_keys=True, default=str).encode()
-        ).hexdigest()[:10]
+        _fp = hashlib.sha256(json.dumps(_fp_src, sort_keys=True, default=str).encode()).hexdigest()[
+            :10
+        ]
         result_dict = run_experiment(
             cfg=config,
             data_root=str(data_root),
@@ -345,15 +343,11 @@ def run_template_experiment(
             _global_fs = summary.get("feature_set", "unknown")
             _entry_fs = cfg.get("entry_features") or _global_fs
             _exit_fs = cfg.get("exit_features") or _global_fs
-            feature_set_label = (
-                _entry_fs if _entry_fs == _exit_fs else f"{_entry_fs}+{_exit_fs}"
-            )
+            feature_set_label = _entry_fs if _entry_fs == _exit_fs else f"{_entry_fs}+{_exit_fs}"
             _global_tt = cfg.get("target", {}).get("type", "unknown")
             _entry_tt = (cfg.get("entry_target") or {}).get("type") or _global_tt
             _exit_tt = (cfg.get("exit_target") or {}).get("type") or _entry_tt
-            target_type_label = (
-                _entry_tt if _entry_tt == _exit_tt else f"{_entry_tt}+{_exit_tt}"
-            )
+            target_type_label = _entry_tt if _entry_tt == _exit_tt else f"{_entry_tt}+{_exit_tt}"
 
             run_name = summary.get("name", "unknown")
             bundle = "template"
@@ -373,9 +367,12 @@ def run_template_experiment(
             _trades_list = None
             if _tr_df is not None and not _tr_df.empty:
                 _trades_list = [
-                    {"symbol": rec.get("symbol"), "entry_date": str(rec.get("entry_date")),
-                     "pnl_pct": float(rec.get("pnl_pct", 0) or 0),
-                     "holding_days": float(rec.get("holding_days", 0) or 0)}
+                    {
+                        "symbol": rec.get("symbol"),
+                        "entry_date": str(rec.get("entry_date")),
+                        "pnl_pct": float(rec.get("pnl_pct", 0) or 0),
+                        "holding_days": float(rec.get("holding_days", 0) or 0),
+                    }
                     for rec in _tr_df.to_dict("records")
                 ]
             score = composite_score(

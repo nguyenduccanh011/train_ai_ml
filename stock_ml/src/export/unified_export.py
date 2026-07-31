@@ -20,15 +20,14 @@ import pandas as pd
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 
+import stock_ml.src.utils.safe_io  # noqa: F401 — fix UnicodeEncodeError on Windows console
+from stock_ml.src.evaluation.scoring import calc_metrics, composite_score
 from stock_ml.src.utils.config_loader import (
     get_all_models,
     get_exit_abbreviations,
     get_model_config,
 )
 from stock_ml.src.utils.env import get_experiment_dir, get_results_dir
-
-import stock_ml.src.utils.safe_io  # noqa: F401 — fix UnicodeEncodeError on Windows console
-from stock_ml.src.evaluation.scoring import calc_metrics, composite_score
 
 
 def _format_chart_time(value):

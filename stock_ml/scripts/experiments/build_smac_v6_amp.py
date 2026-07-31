@@ -12,6 +12,7 @@ Each variant clones v1 (tmpl 2459); only the entry target changes; same exit pol
 
 Usage: python stock_ml/scripts/build_smac_v6_amp.py
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -56,13 +57,15 @@ async def make_template(new_name: str, fee: float) -> int:
                 tc = {"type": "amplitude_oracle", "fee": fee}
             else:
                 tc = copy.deepcopy(sl.target_config)
-            slots.append({
-                "slot_type": sl.slot_type,
-                "ml_component_id": sl.ml_component_id,
-                "rule_component_id": sl.rule_component_id,
-                "feature_set_name": sl.feature_set_name,
-                "target_config": tc,
-            })
+            slots.append(
+                {
+                    "slot_type": sl.slot_type,
+                    "ml_component_id": sl.ml_component_id,
+                    "rule_component_id": sl.rule_component_id,
+                    "feature_set_name": sl.feature_set_name,
+                    "target_config": tc,
+                }
+            )
         t = await repo.create(
             name=new_name,
             market=base.market,
@@ -80,11 +83,11 @@ async def make_template(new_name: str, fee: float) -> int:
             validation_config=base.validation_config,
             seed=42,
             description=f"SMAC v6: max-amplitude target (amplitude_oracle fee={fee}) — the "
-                        "perfect-foresight optimal long-only policy maximizing realized swing "
-                        "amplitude (joint entry+exit). Same v1 exit policy, sandbox. Pure-ML.",
+            "perfect-foresight optimal long-only policy maximizing realized swing "
+            "amplitude (joint entry+exit). Same v1 exit policy, sandbox. Pure-ML.",
             hypothesis="A target that directly maximizes realized amplitude (DP optimal entry/exit) "
-                       "teaches good entry WITH good exit and natively avoids downtrends — should "
-                       "beat the zigzag-geometry oracle on two-way profit capture.",
+            "teaches good entry WITH good exit and natively avoids downtrends — should "
+            "beat the zigzag-geometry oracle on two-way profit capture.",
             universe_slug=base.universe_slug,
             model_mode="ml_only",
         )
@@ -129,7 +132,9 @@ def main():
             mean = statistics.mean(comps)
             std = statistics.pstdev(comps) if len(comps) > 1 else 0.0
             print(f"== {new_name} (fee={fee}): MEAN={mean:.1f} std={std:.1f} seeds={seeds}\n")
-    print("== vs v1 -201 / v5_reg10 -46.7 (pnl+21.5 pf1.53 mdd0.341) ; baselines 197.4/397.8 ; champ 704")
+    print(
+        "== vs v1 -201 / v5_reg10 -46.7 (pnl+21.5 pf1.53 mdd0.341) ; baselines 197.4/397.8 ; champ 704"
+    )
     print("BUILD_SMAC_V6_DONE")
 
 

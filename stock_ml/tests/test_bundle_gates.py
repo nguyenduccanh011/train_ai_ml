@@ -82,7 +82,9 @@ def test_fold_models_roundtrip(tmp_path: Path) -> None:
     assert load_bundle(_make_bundle(tmp_path / "legacy")).fold_models is None
 
 
-def test_engine_pin_refuses_when_wheel_not_recorded(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_engine_pin_refuses_when_wheel_not_recorded(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """A bundle with no baked stock_ml_core can't be attested → refuse under the pin (re-export it)."""
     b = _make_bundle(tmp_path)
     m = json.loads((b / _MANIFEST_NAME).read_text(encoding="utf-8"))

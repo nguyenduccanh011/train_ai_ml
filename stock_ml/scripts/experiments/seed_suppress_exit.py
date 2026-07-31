@@ -6,9 +6,11 @@ exits provide occupancy/turnover value and the lever is elsewhere (target rebuil
 
 Variants on champion 1327 (exit_threshold 0.07, signal_exit_min_age 8):
 """
+
 from __future__ import annotations
 import asyncio, copy, json, sys
 from pathlib import Path
+
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT))
 from sqlalchemy.ext.asyncio import AsyncSession  # noqa: E402
@@ -24,7 +26,11 @@ GRID = [
     ("n2_af04_xthr15", 1.5, {}),
     ("n2_af04_sigoff", None, {"signal_exit_enabled": False}),
     ("n2_af04_minage14", None, {"signal_exit_min_age": 14}),
-    ("n2_af04_minage20_fl06", None, {"signal_exit_min_age": 20, "signal_exit_incubate_floor": -0.06}),
+    (
+        "n2_af04_minage20_fl06",
+        None,
+        {"signal_exit_min_age": 20, "signal_exit_incubate_floor": -0.06},
+    ),
 ]
 
 
@@ -46,28 +52,49 @@ async def main():
         for name, xthr, ov in GRID:
             ex = await repo.get_by_name(name)
             if ex:
-                print(f"= {name} ({ex.id})"); created.append((ex.id, name)); continue
-            eng = copy.deepcopy(be); eng.update(ov)
+                print(f"= {name} ({ex.id})")
+                created.append((ex.id, name))
+                continue
+            eng = copy.deepcopy(be)
+            eng.update(ov)
             slots = [
-                {"slot_type": "entry", "ml_component_id": es.ml_component_id, "rule_component_id": None,
-                 "feature_set_name": es.feature_set_name, "target_config": tc(es)},
-                {"slot_type": "exit", "ml_component_id": xs.ml_component_id, "rule_component_id": None,
-                 "feature_set_name": xs.feature_set_name, "target_config": tc(xs)},
+                {
+                    "slot_type": "entry",
+                    "ml_component_id": es.ml_component_id,
+                    "rule_component_id": None,
+                    "feature_set_name": es.feature_set_name,
+                    "target_config": tc(es),
+                },
+                {
+                    "slot_type": "exit",
+                    "ml_component_id": xs.ml_component_id,
+                    "rule_component_id": None,
+                    "feature_set_name": xs.feature_set_name,
+                    "target_config": tc(xs),
+                },
             ]
             tmpl = await repo.create(
-                name=name, market=base.market, strategy=base.strategy,
-                feature_set_id=base.feature_set_id, target_id=base.target_id,
-                component_slots=copy.deepcopy(slots), direction=base.direction,
-                signal_mode=base.signal_mode, signal_threshold=base.signal_threshold,
+                name=name,
+                market=base.market,
+                strategy=base.strategy,
+                feature_set_id=base.feature_set_id,
+                target_id=base.target_id,
+                component_slots=copy.deepcopy(slots),
+                direction=base.direction,
+                signal_mode=base.signal_mode,
+                signal_threshold=base.signal_threshold,
                 entry_threshold=base.entry_threshold,
                 exit_threshold=(xthr if xthr is not None else base.exit_threshold),
-                split_config=base.split_config, engine_config=eng,
-                validation_config=base.validation_config, seed=base.seed,
+                split_config=base.split_config,
+                engine_config=eng,
+                validation_config=base.validation_config,
+                seed=base.seed,
                 description=f"suppress signal-exit: xthr={xthr} {ov}; base {BASE}.",
                 hypothesis="Directionless exit head is dead-weight (-33u). Suppress -> defer to trailing/overext/downleg.",
                 universe_slug=base.universe_slug,
             )
-            print(f"* {name} ({tmpl.id})"); created.append((tmpl.id, name))
+            print(f"* {name} ({tmpl.id})")
+            created.append((tmpl.id, name))
         await session.commit()
         print("IDS=" + ",".join(str(t) for t, _ in created))
     await async_engine.dispose()

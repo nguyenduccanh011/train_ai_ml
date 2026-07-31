@@ -28,7 +28,7 @@ if pivot_fix_file.exists():
         data = json.load(f)
         pivot_fix = {
             "version": "Pivot fix only (gap_days=0, boundary leak con)",
-            **data["retrain_metrics"]
+            **data["retrain_metrics"],
         }
 else:
     pivot_fix = None
@@ -38,10 +38,7 @@ boundary_fix_file = ROOT / "results/leakage_check/top1_retrain_gap25_metrics.jso
 if boundary_fix_file.exists():
     with open(boundary_fix_file) as f:
         data = json.load(f)
-        boundary_fix = {
-            "version": "Pivot + boundary fix (gap_days=25)",
-            **data["retrain_metrics"]
-        }
+        boundary_fix = {"version": "Pivot + boundary fix (gap_days=25)", **data["retrain_metrics"]}
 else:
     boundary_fix = None
 
@@ -60,7 +57,9 @@ if boundary_fix:
 print(f"{'Version':<50} {'WR':>8} {'PF':>8} {'Trades':>8} {'PnL':>12} {'MaxDD':>10}")
 print("-" * 100)
 for v in versions:
-    print(f"{v['version']:<50} {v['wr']:>8.2f} {v['pf']:>8.2f} {v['trades']:>8} {v['total_pnl']:>12.2f} {v.get('max_dd', v.get('max_drawdown', 0)):>10.2f}")
+    print(
+        f"{v['version']:<50} {v['wr']:>8.2f} {v['pf']:>8.2f} {v['trades']:>8} {v['total_pnl']:>12.2f} {v.get('max_dd', v.get('max_drawdown', 0)):>10.2f}"
+    )
 
 print()
 print("=" * 80)
@@ -70,23 +69,41 @@ print("=" * 80)
 if pivot_fix:
     print()
     print("Leaderboard -> Pivot fix only:")
-    print(f"  WR: {leaderboard['wr']:.2f}% -> {pivot_fix['wr']:.2f}% (delta: {pivot_fix['wr'] - leaderboard['wr']:+.2f}%)")
-    print(f"  PF: {leaderboard['pf']:.2f} -> {pivot_fix['pf']:.2f} (delta: {pivot_fix['pf'] - leaderboard['pf']:+.2f})")
-    print(f"  => Pivot leak inflation: ~{leaderboard['wr'] - pivot_fix['wr']:.1f}% WR, ~{leaderboard['pf'] - pivot_fix['pf']:.1f} PF")
+    print(
+        f"  WR: {leaderboard['wr']:.2f}% -> {pivot_fix['wr']:.2f}% (delta: {pivot_fix['wr'] - leaderboard['wr']:+.2f}%)"
+    )
+    print(
+        f"  PF: {leaderboard['pf']:.2f} -> {pivot_fix['pf']:.2f} (delta: {pivot_fix['pf'] - leaderboard['pf']:+.2f})"
+    )
+    print(
+        f"  => Pivot leak inflation: ~{leaderboard['wr'] - pivot_fix['wr']:.1f}% WR, ~{leaderboard['pf'] - pivot_fix['pf']:.1f} PF"
+    )
 
 if boundary_fix and pivot_fix:
     print()
     print("Pivot fix only -> Pivot + boundary fix:")
-    print(f"  WR: {pivot_fix['wr']:.2f}% -> {boundary_fix['wr']:.2f}% (delta: {boundary_fix['wr'] - pivot_fix['wr']:+.2f}%)")
-    print(f"  PF: {pivot_fix['pf']:.2f} -> {boundary_fix['pf']:.2f} (delta: {boundary_fix['pf'] - pivot_fix['pf']:+.2f})")
-    print(f"  => Boundary leak inflation: ~{pivot_fix['wr'] - boundary_fix['wr']:.1f}% WR, ~{pivot_fix['pf'] - boundary_fix['pf']:.1f} PF")
+    print(
+        f"  WR: {pivot_fix['wr']:.2f}% -> {boundary_fix['wr']:.2f}% (delta: {boundary_fix['wr'] - pivot_fix['wr']:+.2f}%)"
+    )
+    print(
+        f"  PF: {pivot_fix['pf']:.2f} -> {boundary_fix['pf']:.2f} (delta: {boundary_fix['pf'] - pivot_fix['pf']:+.2f})"
+    )
+    print(
+        f"  => Boundary leak inflation: ~{pivot_fix['wr'] - boundary_fix['wr']:.1f}% WR, ~{pivot_fix['pf'] - boundary_fix['pf']:.1f} PF"
+    )
 
 if boundary_fix:
     print()
     print("Leaderboard -> Pivot + boundary fix (TOTAL):")
-    print(f"  WR: {leaderboard['wr']:.2f}% -> {boundary_fix['wr']:.2f}% (delta: {boundary_fix['wr'] - leaderboard['wr']:+.2f}%)")
-    print(f"  PF: {leaderboard['pf']:.2f} -> {boundary_fix['pf']:.2f} (delta: {boundary_fix['pf'] - leaderboard['pf']:+.2f})")
-    print(f"  => TOTAL leak inflation: ~{leaderboard['wr'] - boundary_fix['wr']:.1f}% WR, ~{leaderboard['pf'] - boundary_fix['pf']:.1f} PF")
+    print(
+        f"  WR: {leaderboard['wr']:.2f}% -> {boundary_fix['wr']:.2f}% (delta: {boundary_fix['wr'] - leaderboard['wr']:+.2f}%)"
+    )
+    print(
+        f"  PF: {leaderboard['pf']:.2f} -> {boundary_fix['pf']:.2f} (delta: {boundary_fix['pf'] - leaderboard['pf']:+.2f})"
+    )
+    print(
+        f"  => TOTAL leak inflation: ~{leaderboard['wr'] - boundary_fix['wr']:.1f}% WR, ~{leaderboard['pf'] - boundary_fix['pf']:.1f} PF"
+    )
 
 print()
 print("=" * 80)

@@ -12,6 +12,7 @@ Levers with no constants mapping (dl63 family) were NOT ported: they add a
 ~150-line dist-low-63 entry-gate (+ time-stop for dl63ts) — recover from git
 history if that line is ever revived.
 """
+
 from __future__ import annotations
 
 from dataclasses import replace
@@ -20,16 +21,32 @@ from stock_ml.portfolio.constants import PortfolioConstants
 
 # name -> (overrides dict | None if not portable, note)
 VARIANTS: dict[str, tuple[dict | None, str]] = {
-    "gtos":   ({}, "champion default: early-cut s2 + green-trail 8% + ret7 + overshoot ON (golden-verified)"),
-    "gt":     (dict(os_pct=100.0), "gtos minus overshoot (os_pct=100 -> threshold=max -> filter no-op)"),
-    "gt1":    (dict(os_pct=100.0, ec_check_bar=1),
-               "early-cut checks red@s1, cuts s2; no overshoot. UNVERIFIED: green-trail start bar may also differ"),
-    "ec":     (dict(os_pct=100.0, gt=1.0), "early-cut only (gt=1.0 disables green-trail); no overshoot"),
-    "osdef":  (dict(gt=1.0), "early-cut only, overshoot ON"),
-    "ret7g":  (dict(os_pct=100.0, rewrite_on=False), "ret7 gate only, no exit rewrite, no overshoot"),
-    "ret5g":  (dict(os_pct=100.0, rewrite_on=False, ret_win=5, r5thr=0.03),
-               "ret5 gate (window 5, thr 0.03), no exit rewrite, no overshoot"),
-    "dl63":   (None, "dist-low-63 entry-gate family — NOT ported, see git 9e37efd7"),
+    "gtos": (
+        {},
+        "champion default: early-cut s2 + green-trail 8% + ret7 + overshoot ON (golden-verified)",
+    ),
+    "gt": (
+        dict(os_pct=100.0),
+        "gtos minus overshoot (os_pct=100 -> threshold=max -> filter no-op)",
+    ),
+    "gt1": (
+        dict(os_pct=100.0, ec_check_bar=1),
+        "early-cut checks red@s1, cuts s2; no overshoot. UNVERIFIED: green-trail start bar may also differ",
+    ),
+    "ec": (
+        dict(os_pct=100.0, gt=1.0),
+        "early-cut only (gt=1.0 disables green-trail); no overshoot",
+    ),
+    "osdef": (dict(gt=1.0), "early-cut only, overshoot ON"),
+    "ret7g": (
+        dict(os_pct=100.0, rewrite_on=False),
+        "ret7 gate only, no exit rewrite, no overshoot",
+    ),
+    "ret5g": (
+        dict(os_pct=100.0, rewrite_on=False, ret_win=5, r5thr=0.03),
+        "ret5 gate (window 5, thr 0.03), no exit rewrite, no overshoot",
+    ),
+    "dl63": (None, "dist-low-63 entry-gate family — NOT ported, see git 9e37efd7"),
     "dl63ts": (None, "dl63 + time-stop — NOT ported, see git 9e37efd7"),
     "dl63opt": (None, "dl63 optimized — NOT ported, see git 9e37efd7"),
 }

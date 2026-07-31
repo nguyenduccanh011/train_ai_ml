@@ -9,6 +9,7 @@ Built on v8 (regime ENTER + confirm06, best -33.0).
 
 Usage: python stock_ml/scripts/build_smac_v11_overext.py
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -31,8 +32,15 @@ from stock_ml.scripts.run_template import run_template_experiment  # noqa: E402
 PG = dict(host="localhost", port=5433, dbname="stockml", user="stockml", password="stockml_dev")
 BASE_TMPL = 2459
 SEEDS = [42, 7, 99]
-BASE_TARGET = {"type": "action_oracle", "pct": 0.10, "min_fwd_leg": 0.10, "min_leg_bars": 3,
-               "entry_min_ret_120": -0.10, "entry_confirm_pct": 0.06, "exit_overext_ma": 20}
+BASE_TARGET = {
+    "type": "action_oracle",
+    "pct": 0.10,
+    "min_fwd_leg": 0.10,
+    "min_leg_bars": 3,
+    "entry_min_ret_120": -0.10,
+    "entry_confirm_pct": 0.06,
+    "exit_overext_ma": 20,
+}
 SWEEP = {  # name -> exit_overext_pct
     "n2_smac_v11_oe12": 0.12,
     "n2_smac_v11_oe20": 0.20,
@@ -51,26 +59,42 @@ async def make_template(new_name: str, oe_pct: float) -> int:
         slots = []
         for sl in base.component_slots:
             if sl.slot_type == "entry":
-                tc = dict(BASE_TARGET); tc["exit_overext_pct"] = oe_pct
+                tc = dict(BASE_TARGET)
+                tc["exit_overext_pct"] = oe_pct
             else:
                 tc = copy.deepcopy(sl.target_config)
-            slots.append({"slot_type": sl.slot_type, "ml_component_id": sl.ml_component_id,
-                          "rule_component_id": sl.rule_component_id,
-                          "feature_set_name": sl.feature_set_name, "target_config": tc})
+            slots.append(
+                {
+                    "slot_type": sl.slot_type,
+                    "ml_component_id": sl.ml_component_id,
+                    "rule_component_id": sl.rule_component_id,
+                    "feature_set_name": sl.feature_set_name,
+                    "target_config": tc,
+                }
+            )
         t = await repo.create(
-            name=new_name, market=base.market, strategy=base.strategy,
-            feature_set_id=base.feature_set_id, target_id=base.target_id,
-            component_slots=slots, direction=base.direction, signal_mode=base.signal_mode,
-            signal_threshold=base.signal_threshold, entry_threshold=None, exit_threshold=None,
+            name=new_name,
+            market=base.market,
+            strategy=base.strategy,
+            feature_set_id=base.feature_set_id,
+            target_id=base.target_id,
+            component_slots=slots,
+            direction=base.direction,
+            signal_mode=base.signal_mode,
+            signal_threshold=base.signal_threshold,
+            entry_threshold=None,
+            exit_threshold=None,
             split_config=copy.deepcopy(base.split_config),
             engine_config=copy.deepcopy(base.engine_config),
-            validation_config=base.validation_config, seed=42,
+            validation_config=base.validation_config,
+            seed=42,
             description=f"SMAC v11: v8 + overextension EXIT (sell when close>=+{oe_pct} above MA20, "
-                        "re-buy the pullback). Sell-strength swing exit, single position.",
+            "re-buy the pullback). Sell-strength swing exit, single position.",
             hypothesis="Weakness-exits clip recovering winners; selling into overextension (mean-"
-                       "reverting, learnable) locks profit and sets up a lower re-buy = the user's "
-                       "sell-high/buy-lower swing.",
-            universe_slug=base.universe_slug, model_mode="ml_only",
+            "reverting, learnable) locks profit and sets up a lower re-buy = the user's "
+            "sell-high/buy-lower swing.",
+            universe_slug=base.universe_slug,
+            model_mode="ml_only",
         )
         await s.commit()
         print(f"created template id={t.id} name={new_name} exit_overext_pct={oe_pct}")
@@ -78,10 +102,16 @@ async def make_template(new_name: str, oe_pct: float) -> int:
 
 
 def read(run_id):
-    con = psycopg2.connect(**PG); cur = con.cursor()
-    cur.execute("SELECT composite_score,total_pnl,pf,mdd_per_symbol,trades,wr,avg_hold "
-                "FROM leaderboard_runs WHERE run_id=%s", (run_id,))
-    r = cur.fetchone(); con.close(); return r
+    con = psycopg2.connect(**PG)
+    cur = con.cursor()
+    cur.execute(
+        "SELECT composite_score,total_pnl,pf,mdd_per_symbol,trades,wr,avg_hold "
+        "FROM leaderboard_runs WHERE run_id=%s",
+        (run_id,),
+    )
+    r = cur.fetchone()
+    con.close()
+    return r
 
 
 def main():
@@ -95,13 +125,17 @@ def main():
             comp = float(row[0]) if row and row[0] is not None else None
             seeds[sd] = comp
             if row:
-                print(f"  {new_name} seed={sd}: comp={comp} pnl={row[1]:.1f} pf={row[2]:.2f} "
-                      f"mdd={row[3]:.3f} tr={row[4]} wr={row[5]:.3f} hold={row[6]:.1f}", flush=True)
+                print(
+                    f"  {new_name} seed={sd}: comp={comp} pnl={row[1]:.1f} pf={row[2]:.2f} "
+                    f"mdd={row[3]:.3f} tr={row[4]} wr={row[5]:.3f} hold={row[6]:.1f}",
+                    flush=True,
+                )
             else:
                 print(f"  {new_name} seed={sd}: NO RESULT", flush=True)
         comps = [v for v in seeds.values() if v is not None]
         if comps:
-            mean = statistics.mean(comps); std = statistics.pstdev(comps) if len(comps) > 1 else 0.0
+            mean = statistics.mean(comps)
+            std = statistics.pstdev(comps) if len(comps) > 1 else 0.0
             print(f"== {new_name} (oe_pct={oe}): MEAN={mean:.1f} std={std:.1f} seeds={seeds}\n")
     print("== vs v8 -33.0 (pnl+22 pf1.58 mdd0.337 WR0.72) ; baselines 197.4/397.8 ; champ 704")
     print("BUILD_SMAC_V11_DONE")

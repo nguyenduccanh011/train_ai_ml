@@ -78,7 +78,11 @@ def build_resolved_config(
     # Data DECLARATION (not bytes). rs_ metrics need VNINDEX; the run-score modulator + breadth are
     # market-context series the serving host resolves from the live source (fail-loud, §1.1/§11.5.1 Q1).
     data_dependencies = {
-        "universe": {"slug": universe_slug, "as_of": as_of, "n_symbols": len(universe) if universe else None},
+        "universe": {
+            "slug": universe_slug,
+            "as_of": as_of,
+            "n_symbols": len(universe) if universe else None,
+        },
         "market_context": ["VNINDEX", "runscore", "breadth"],
         "note": "declared only — resolved from the live source (sieutinhieu) at serve time, fail-loud if absent",
     }

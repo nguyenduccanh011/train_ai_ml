@@ -142,7 +142,9 @@ class FeatureDefRepository:
             )
         for raw in raw_deps:
             self._session.add(
-                FeatureDepModel(feature_id=feature.id, depends_on_feature_id=None, depends_on_raw=raw)
+                FeatureDepModel(
+                    feature_id=feature.id, depends_on_feature_id=None, depends_on_raw=raw
+                )
             )
         await self._session.flush()
 
@@ -157,7 +159,9 @@ class FeatureSetRepository:
         result = await self._session.execute(
             select(FeatureSetModel)
             .where(FeatureSetModel.id == set_id)
-            .options(selectinload(FeatureSetModel.members).selectinload(FeatureSetMemberModel.feature))
+            .options(
+                selectinload(FeatureSetModel.members).selectinload(FeatureSetMemberModel.feature)
+            )
         )
         return result.scalar_one_or_none()
 
@@ -165,7 +169,9 @@ class FeatureSetRepository:
         result = await self._session.execute(
             select(FeatureSetModel)
             .where(FeatureSetModel.name == name)
-            .options(selectinload(FeatureSetModel.members).selectinload(FeatureSetMemberModel.feature))
+            .options(
+                selectinload(FeatureSetModel.members).selectinload(FeatureSetMemberModel.feature)
+            )
         )
         return result.scalar_one_or_none()
 

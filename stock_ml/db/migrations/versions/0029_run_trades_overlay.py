@@ -47,14 +47,22 @@ def upgrade() -> None:
             sa.Column("exit_reason", sa.String(length=32), nullable=True),
             sa.Column("conv", sa.Double(), nullable=True),
             sa.Column("prio", sa.Double(), nullable=True),
-            sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+            sa.Column(
+                "created_at",
+                sa.DateTime(timezone=True),
+                nullable=False,
+                server_default=sa.func.now(),
+            ),
         )
         op.create_index("ix_run_trades_overlay_run", "run_trades_overlay", ["run_id"])
     # leaderboard_nav is created by ops/score_nav_leaderboard.py (no ORM); only ALTER if present.
     if "leaderboard_nav" in tables:
         cols = {c["name"] for c in insp.get_columns("leaderboard_nav")}
         if "overlay_config_hash" not in cols:
-            op.add_column("leaderboard_nav", sa.Column("overlay_config_hash", sa.String(length=32), nullable=True))
+            op.add_column(
+                "leaderboard_nav",
+                sa.Column("overlay_config_hash", sa.String(length=32), nullable=True),
+            )
 
 
 def downgrade() -> None:

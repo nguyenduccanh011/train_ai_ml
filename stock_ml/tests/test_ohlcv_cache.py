@@ -30,8 +30,18 @@ def _seed_duck(path: Path) -> None:
 
 def _fake_history(symbol: str, **_kw) -> pd.DataFrame:
     # real intraday range (high>low) so the loader's leading-phantom trim keeps the bars
-    rows = [{"symbol": symbol, "date": d, "open": 2.0, "high": 2.1, "low": 1.9,
-             "close": 2.0, "volume": 500} for d in pd.bdate_range("2019-01-02", periods=3)]
+    rows = [
+        {
+            "symbol": symbol,
+            "date": d,
+            "open": 2.0,
+            "high": 2.1,
+            "low": 1.9,
+            "close": 2.0,
+            "volume": 500,
+        }
+        for d in pd.bdate_range("2019-01-02", periods=3)
+    ]
     return pd.DataFrame(rows, columns=["symbol", "date", "open", "high", "low", "close", "volume"])
 
 
@@ -110,5 +120,6 @@ def test_fetch_on_miss_aborts_when_source_down(tmp_path, monkeypatch):
     _seed_duck(db)
 
     import pytest
+
     with pytest.raises(RuntimeError, match="source unreachable"):
         ensure_symbols_cached(str(db), ["ROS", "FLC"])

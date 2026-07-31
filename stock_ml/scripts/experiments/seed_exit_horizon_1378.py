@@ -7,6 +7,7 @@ reward_risk over h5/h7 instead of h10 should let the exit score roll over sooner
 
 Clone t1378, change ONLY the exit slot target horizon. A/B vs FRESH t1378 (405.0).
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -55,22 +56,36 @@ async def main():
             for s in base.component_slots:
                 tc = _tc(s)
                 if s.slot_type == "exit":
-                    tc = dict(tc); tc["horizon"] = h
-                new_slots.append({
-                    "slot_type": s.slot_type, "ml_component_id": s.ml_component_id,
-                    "rule_component_id": s.rule_component_id, "feature_set_name": s.feature_set_name,
-                    "target_config": tc})
+                    tc = dict(tc)
+                    tc["horizon"] = h
+                new_slots.append(
+                    {
+                        "slot_type": s.slot_type,
+                        "ml_component_id": s.ml_component_id,
+                        "rule_component_id": s.rule_component_id,
+                        "feature_set_name": s.feature_set_name,
+                        "target_config": tc,
+                    }
+                )
             tmpl = await repo.create(
-                name=name, market=base.market, strategy=base.strategy,
-                feature_set_id=base.feature_set_id, target_id=base.target_id,
-                component_slots=new_slots, direction=base.direction,
-                signal_mode=base.signal_mode, signal_threshold=base.signal_threshold,
-                entry_threshold=base.entry_threshold, exit_threshold=base.exit_threshold,
-                split_config=base.split_config, engine_config=copy.deepcopy(base_ec),
-                validation_config=base.validation_config, seed=base.seed,
+                name=name,
+                market=base.market,
+                strategy=base.strategy,
+                feature_set_id=base.feature_set_id,
+                target_id=base.target_id,
+                component_slots=new_slots,
+                direction=base.direction,
+                signal_mode=base.signal_mode,
+                signal_threshold=base.signal_threshold,
+                entry_threshold=base.entry_threshold,
+                exit_threshold=base.exit_threshold,
+                split_config=base.split_config,
+                engine_config=copy.deepcopy(base_ec),
+                validation_config=base.validation_config,
+                seed=base.seed,
                 description=f"Faster exit head: reward_risk horizon {h} (was 10) on t1378; all else = t1378.",
                 hypothesis="Signal exit reacts late (lag 7.4 bars). A shorter reward_risk horizon "
-                           "should make the exit score roll over sooner on faded winners. Test vs t1378 405.0.",
+                "should make the exit score roll over sooner on faded winners. Test vs t1378 405.0.",
                 universe_slug=base.universe_slug,
             )
             print(f"* {name} created (id={tmpl.id})")

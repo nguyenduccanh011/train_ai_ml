@@ -10,6 +10,7 @@ in dead years (2024/2026) as the market beta dominates; the cross-sectional RANK
 is regime-robust (relative ordering survives the flat/choppy regimes). Aligns the entry TARGET with
 the cross-sectional RS FEATURES (which won). Purely price-derived, causal, no external data.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass

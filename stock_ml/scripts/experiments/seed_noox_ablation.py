@@ -2,9 +2,11 @@
 whether the overext top-sell currently helps or hurts. Disable cleanly:
 drop "overext" from exit_priority AND set overext_ma_window=0.
 """
+
 from __future__ import annotations
 import asyncio, copy, json, sys
 from pathlib import Path
+
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT))
 from sqlalchemy.ext.asyncio import AsyncSession  # noqa: E402
@@ -35,10 +37,20 @@ async def main():
             return json.loads(t) if isinstance(t, str) else copy.deepcopy(t)
 
         slots = [
-            {"slot_type": "entry", "ml_component_id": es.ml_component_id, "rule_component_id": None,
-             "feature_set_name": es.feature_set_name, "target_config": tc(es)},
-            {"slot_type": "exit", "ml_component_id": xs.ml_component_id, "rule_component_id": None,
-             "feature_set_name": xs.feature_set_name, "target_config": tc(xs)},
+            {
+                "slot_type": "entry",
+                "ml_component_id": es.ml_component_id,
+                "rule_component_id": None,
+                "feature_set_name": es.feature_set_name,
+                "target_config": tc(es),
+            },
+            {
+                "slot_type": "exit",
+                "ml_component_id": xs.ml_component_id,
+                "rule_component_id": None,
+                "feature_set_name": xs.feature_set_name,
+                "target_config": tc(xs),
+            },
         ]
         be = base.engine_config
         be = json.loads(be) if isinstance(be, str) else be
@@ -47,13 +59,21 @@ async def main():
         eng["overext_ma_window"] = 0
 
         tmpl = await repo.create(
-            name=NEW_NAME, market=base.market, strategy=base.strategy,
-            feature_set_id=base.feature_set_id, target_id=base.target_id,
-            component_slots=copy.deepcopy(slots), direction=base.direction,
-            signal_mode=base.signal_mode, signal_threshold=base.signal_threshold,
-            entry_threshold=base.entry_threshold, exit_threshold=base.exit_threshold,
-            split_config=base.split_config, engine_config=eng,
-            validation_config=base.validation_config, seed=base.seed,
+            name=NEW_NAME,
+            market=base.market,
+            strategy=base.strategy,
+            feature_set_id=base.feature_set_id,
+            target_id=base.target_id,
+            component_slots=copy.deepcopy(slots),
+            direction=base.direction,
+            signal_mode=base.signal_mode,
+            signal_threshold=base.signal_threshold,
+            entry_threshold=base.entry_threshold,
+            exit_threshold=base.exit_threshold,
+            split_config=base.split_config,
+            engine_config=eng,
+            validation_config=base.validation_config,
+            seed=base.seed,
             description=f"{NEW_NAME}: champion 1327 with overext DISABLED (ablation).",
             hypothesis="Does overext top-sell help or hurt the current champion?",
             universe_slug=base.universe_slug,

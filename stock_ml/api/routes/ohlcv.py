@@ -51,7 +51,10 @@ def _load_intraday_csv(symbol: str, timeframe: str) -> tuple[dict, ...] | None:
         rows.append(
             {
                 "time": int(calendar.timegm(t.timetuple())),
-                "open": float(o), "high": float(h), "low": float(low), "close": float(c),
+                "open": float(o),
+                "high": float(h),
+                "low": float(low),
+                "close": float(c),
                 "volume": float(v) if pd.notna(v) else 0.0,
             }
         )

@@ -51,12 +51,14 @@ from stock_ml.src.utils.config_loader import load_config
 # pow1.5 is the middle path — small gradient near the operating range (won't reject profitable
 # runners) yet always >0 so risk reductions are visible/rewarded. Empirically keeps the conv-pullback
 # win over the no-conv line (+0.7) while making the safer vol-gate the clear champion (+4.8).
-SCORE_MDD_DIV = 0.40    # mdd scale: norm_mdd reaches 1.0 (full penalty) at this per-symbol MDD
-SCORE_MDD_POW = 1.5     # convexity: >1 = gentle near 0, steeper toward SCORE_MDD_DIV
-SCORE_PNL_W = 0.45      # total-PnL weight (0.34->0.40->0.45) — user 2026-06-19: shift weight from the
+SCORE_MDD_DIV = 0.40  # mdd scale: norm_mdd reaches 1.0 (full penalty) at this per-symbol MDD
+SCORE_MDD_POW = 1.5  # convexity: >1 = gentle near 0, steeper toward SCORE_MDD_DIV
+SCORE_PNL_W = 0.45  # total-PnL weight (0.34->0.40->0.45) — user 2026-06-19: shift weight from the
 #                         per-bar + trade-count penalties to PnL so "let winners run" (fewer/longer but
 #                         equal-PnL, equal-MDD trades, e.g. oxt08) is no longer docked on throughput.
-SCORE_PNL_CAP = 2.6     # linear PnL credit up to this per-symbol level (≈ non-saturating in the live range)
+SCORE_PNL_CAP = (
+    2.6  # linear PnL credit up to this per-symbol level (≈ non-saturating in the live range)
+)
 
 
 def _get_weights():
@@ -113,7 +115,7 @@ def calc_sortino(trades: list, mar: float = 0.0) -> float:
         return 0.0
     pnls = np.array([t["pnl_pct"] for t in trades])
     downside = np.minimum(pnls - mar, 0.0)
-    dd = float(np.sqrt(np.mean(downside ** 2)))
+    dd = float(np.sqrt(np.mean(downside**2)))
     return float(np.mean(pnls - mar) / dd) if dd > 0 else 0.0
 
 
@@ -338,7 +340,9 @@ def composite_score(metrics: dict, trades: list | None = None) -> float:
     # longer out-ranked purely on turnover. mult = (1-a) + a*confidence, a=0.80. Diluting the
     # multiplier (not lowering k) preserves the relative penalty on genuinely thin samples (<~1000
     # trades) so buy&hold imposters stay buried, while a≥~0.6 is the floor below which they erupt.
-    CONF_ALPHA = 0.68  # 0.80->0.68 (user 2026-06-19): soften the trade-count haircut (raise the floor
+    CONF_ALPHA = (
+        0.68  # 0.80->0.68 (user 2026-06-19): soften the trade-count haircut (raise the floor
+    )
     #                    0.20->0.32) so a higher-quality model trading somewhat fewer times isn't docked
     conf_mult = (1.0 - CONF_ALPHA) + CONF_ALPHA * confidence
 

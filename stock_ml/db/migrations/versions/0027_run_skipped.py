@@ -39,7 +39,9 @@ def upgrade() -> None:
         sa.Column("pnl_pct", sa.Double(), nullable=True),
         sa.Column("conv", sa.Double(), nullable=True),
         sa.Column("skip_reason", sa.String(length=32), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+        ),
     )
     op.create_index("ix_run_skipped_run", "run_skipped", ["run_id", "signal_date"])
 

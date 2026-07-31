@@ -12,9 +12,11 @@ SELECTIVE so it only fires on a real breakdown, not a bounceable dip:
   - downleg15    : deeper reversal before forcing
 A/B vs champion 405.0. (Keeps downleg12 unless noted; only the shallow belowma token is hardened.)
 """
+
 from __future__ import annotations
 import asyncio, copy, json, sys
 from pathlib import Path
+
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT))
 from sqlalchemy.ext.asyncio import AsyncSession  # noqa: E402
@@ -51,27 +53,49 @@ async def main():
         for name, gate in GRID:
             ex = await repo.get_by_name(name)
             if ex:
-                print(f"= {name} ({ex.id})"); created.append((ex.id, name)); continue
-            eng = copy.deepcopy(be); eng["exit_force_gate"] = gate
+                print(f"= {name} ({ex.id})")
+                created.append((ex.id, name))
+                continue
+            eng = copy.deepcopy(be)
+            eng["exit_force_gate"] = gate
             slots = [
-                {"slot_type": "entry", "ml_component_id": es.ml_component_id, "rule_component_id": None,
-                 "feature_set_name": es.feature_set_name, "target_config": tc(es)},
-                {"slot_type": "exit", "ml_component_id": xs.ml_component_id, "rule_component_id": None,
-                 "feature_set_name": xs.feature_set_name, "target_config": tc(xs)},
+                {
+                    "slot_type": "entry",
+                    "ml_component_id": es.ml_component_id,
+                    "rule_component_id": None,
+                    "feature_set_name": es.feature_set_name,
+                    "target_config": tc(es),
+                },
+                {
+                    "slot_type": "exit",
+                    "ml_component_id": xs.ml_component_id,
+                    "rule_component_id": None,
+                    "feature_set_name": xs.feature_set_name,
+                    "target_config": tc(xs),
+                },
             ]
             tmpl = await repo.create(
-                name=name, market=base.market, strategy=base.strategy,
-                feature_set_id=base.feature_set_id, target_id=base.target_id,
-                component_slots=copy.deepcopy(slots), direction=base.direction,
-                signal_mode=base.signal_mode, signal_threshold=base.signal_threshold,
-                entry_threshold=base.entry_threshold, exit_threshold=base.exit_threshold,
-                split_config=base.split_config, engine_config=eng,
-                validation_config=base.validation_config, seed=base.seed,
+                name=name,
+                market=base.market,
+                strategy=base.strategy,
+                feature_set_id=base.feature_set_id,
+                target_id=base.target_id,
+                component_slots=copy.deepcopy(slots),
+                direction=base.direction,
+                signal_mode=base.signal_mode,
+                signal_threshold=base.signal_threshold,
+                entry_threshold=base.entry_threshold,
+                exit_threshold=base.exit_threshold,
+                split_config=base.split_config,
+                engine_config=eng,
+                validation_config=base.validation_config,
+                seed=base.seed,
                 description=f"harden force-gate -> {gate} on champ {BASE} (root-cause: belowma20p3 sells bounceable dips).",
                 hypothesis="More selective/robust force confirmation stops force-selling bounceable shallow dips -> beat 405.0.",
                 universe_slug=base.universe_slug,
             )
-            print(f"* {name} ({tmpl.id})  gate={gate}"); created.append((tmpl.id, name))
+            print(f"* {name} ({tmpl.id})  gate={gate}")
+            created.append((tmpl.id, name))
         await session.commit()
         print("IDS=" + ",".join(str(t) for t, _ in created))
     await async_engine.dispose()

@@ -125,7 +125,9 @@ def _item_from_run_dir(run_dir: Path, min_gap: int, leaderboard_lookup: dict[tup
 def main() -> int:
     parser = argparse.ArgumentParser(description="Quarantine old leaky leaderboard artifacts")
     parser.add_argument("--dry-run", action="store_true", help="Preview only")
-    parser.add_argument("--execute", action="store_true", help="Rename leaky ranking rows and rebuild")
+    parser.add_argument(
+        "--execute", action="store_true", help="Rename leaky ranking rows and rebuild"
+    )
     parser.add_argument("--min-gap", type=int, default=25, help="Minimum safe split.gap_days")
     parser.add_argument(
         "--source",
@@ -168,8 +170,7 @@ def main() -> int:
         run_dirs = sorted(path.parent for path in experiments_dir.glob("**/ranking_row.json"))
     else:
         run_dirs = [
-            experiments_dir / str(row["bundle"]) / str(row["run_name"])
-            for _, row in df.iterrows()
+            experiments_dir / str(row["bundle"]) / str(row["run_name"]) for _, row in df.iterrows()
         ]
 
     for run_dir in run_dirs:
@@ -193,7 +194,9 @@ def main() -> int:
         print(reason_counts.to_string())
         print("\nFirst 10 quarantine candidates:")
         preview = pd.DataFrame(quarantine).head(10)
-        print(preview[["bundle", "run_name", "gap_days", "reason", "wr", "pf"]].to_string(index=False))
+        print(
+            preview[["bundle", "run_name", "gap_days", "reason", "wr", "pf"]].to_string(index=False)
+        )
 
     manifest = {
         "timestamp": datetime.now().isoformat(),

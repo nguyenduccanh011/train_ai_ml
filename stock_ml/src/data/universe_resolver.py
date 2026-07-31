@@ -140,8 +140,11 @@ def resolve_universes(
         if min_adv_ty is not None:
             floor = float(min_adv_ty) * 1e9  # tỷ VND -> VND (adtv_value is raw VND)
             metric_by_sym = {s: a for s, a in metric_by_sym.items() if a >= floor}
-        ranked_syms = [s for s, _a in sorted(metric_by_sym.items(), key=lambda kv: (-kv[1], kv[0]))
-                       if not is_nonstock(s)]
+        ranked_syms = [
+            s
+            for s, _a in sorted(metric_by_sym.items(), key=lambda kv: (-kv[1], kv[0]))
+            if not is_nonstock(s)
+        ]
         if hyst and prev is not None:
             keep_rank = int(n * hyst)
             incumbents = [s for i, s in enumerate(ranked_syms) if s in prev and i < keep_rank]

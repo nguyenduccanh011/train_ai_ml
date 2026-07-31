@@ -1,27 +1,45 @@
 """Multi-seed the top v6 (no-incubation base) candidates to find the TRUE best beyond the
 +-3 single-seed noise. Base no_incubate already = 412.3 mean. seed 42 LAST to restore canonical.
 """
+
 from __future__ import annotations
 import subprocess, sys
 from pathlib import Path
+
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT))
 from stock_ml.scripts.run_template import run_template_experiment  # noqa: E402
 
 SEEDS = [7, 99, 42]
 CONFIGS = {
-    1696: "noincub_base", 1708: "v6_sl10", 1709: "v6_div08",
-    1705: "v6_nocool", 1707: "v6_lean",
+    1696: "noincub_base",
+    1708: "v6_sl10",
+    1709: "v6_div08",
+    1705: "v6_nocool",
+    1707: "v6_lean",
 }
 
 
 def read_comp(run_id: str):
     out = subprocess.run(
-        ["docker", "exec", "stock-ml-postgres", "psql", "-U", "stockml", "-d", "stockml",
-         "-t", "-A", "-c",
-         f"SELECT round(composite_score::numeric,1)||'/'||trades||'/'||round(total_pnl::numeric,1) "
-         f"FROM leaderboard_runs WHERE run_id='{run_id}'"],
-        capture_output=True, text=True)
+        [
+            "docker",
+            "exec",
+            "stock-ml-postgres",
+            "psql",
+            "-U",
+            "stockml",
+            "-d",
+            "stockml",
+            "-t",
+            "-A",
+            "-c",
+            f"SELECT round(composite_score::numeric,1)||'/'||trades||'/'||round(total_pnl::numeric,1) "
+            f"FROM leaderboard_runs WHERE run_id='{run_id}'",
+        ],
+        capture_output=True,
+        text=True,
+    )
     return out.stdout.strip()
 
 

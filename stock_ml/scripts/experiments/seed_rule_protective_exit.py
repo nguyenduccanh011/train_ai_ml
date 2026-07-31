@@ -10,6 +10,7 @@ Bases:  r2_17_multi_trigger_or (id 67, comp 207.1 PF1.93 mdd7.13)
 Proven champion exit params: trailing_atr_mult2.0 / activate0.15 / pct0.08,
                              overext ma20 pct0.14, exit_priority trail>overext>signal.
 """
+
 from __future__ import annotations
 import asyncio, copy, json, sys
 from pathlib import Path
@@ -44,22 +45,64 @@ def _pb(eng, pct=0.03, win=25):
 
 
 # (name, base_id, mutator, desc)
-def m_trail_h20(e): _trail(e); e["exit_priority"] = ["trailing_stop", "signal"]
-def m_trail(e): _trail(e); _hold(e, 250); e["exit_priority"] = ["trailing_stop", "signal"]
-def m_ox(e): _ox(e); _hold(e, 250); e["exit_priority"] = ["overext", "signal"]
-def m_trailox(e): _trail(e); _ox(e); _hold(e, 250); e["exit_priority"] = ["trailing_stop", "overext", "signal"]
-def m_trailox_h20(e): _trail(e); _ox(e); e["exit_priority"] = ["trailing_stop", "overext", "signal"]
-def m_trailox_pb(e): _trail(e); _ox(e); _hold(e, 250); _pb(e); e["exit_priority"] = ["trailing_stop", "overext", "signal"]
-def m06_trailox(e): _trail(e); _ox(e); _hold(e, 250); e["exit_priority"] = ["trailing_stop", "overext", "signal"]
+def m_trail_h20(e):
+    _trail(e)
+    e["exit_priority"] = ["trailing_stop", "signal"]
+
+
+def m_trail(e):
+    _trail(e)
+    _hold(e, 250)
+    e["exit_priority"] = ["trailing_stop", "signal"]
+
+
+def m_ox(e):
+    _ox(e)
+    _hold(e, 250)
+    e["exit_priority"] = ["overext", "signal"]
+
+
+def m_trailox(e):
+    _trail(e)
+    _ox(e)
+    _hold(e, 250)
+    e["exit_priority"] = ["trailing_stop", "overext", "signal"]
+
+
+def m_trailox_h20(e):
+    _trail(e)
+    _ox(e)
+    e["exit_priority"] = ["trailing_stop", "overext", "signal"]
+
+
+def m_trailox_pb(e):
+    _trail(e)
+    _ox(e)
+    _hold(e, 250)
+    _pb(e)
+    e["exit_priority"] = ["trailing_stop", "overext", "signal"]
+
+
+def m06_trailox(e):
+    _trail(e)
+    _ox(e)
+    _hold(e, 250)
+    e["exit_priority"] = ["trailing_stop", "overext", "signal"]
+
 
 GRID = [
-    ("r17_trail_h20",   67,  m_trail_h20,  "r2_17 + ATR-trail, keep hold-cap 20"),
-    ("r17_trail",       67,  m_trail,      "r2_17 + ATR-trail, hold-cap 250"),
-    ("r17_ox",          67,  m_ox,         "r2_17 + overext top-sell, hold-cap 250"),
-    ("r17_trailox",     67,  m_trailox,    "r2_17 + trail + overext, hold-cap 250"),
-    ("r17_trailox_h20", 67,  m_trailox_h20,"r2_17 + trail + overext, keep hold-cap 20"),
-    ("r17_trailox_pb",  67,  m_trailox_pb, "r2_17 + trail + overext + pullback-fill, hold-cap 250"),
-    ("r06_trailox",     1098, m06_trailox, "r2_06 (breakout+DI+pullback) + trail + overext, hold-cap 250"),
+    ("r17_trail_h20", 67, m_trail_h20, "r2_17 + ATR-trail, keep hold-cap 20"),
+    ("r17_trail", 67, m_trail, "r2_17 + ATR-trail, hold-cap 250"),
+    ("r17_ox", 67, m_ox, "r2_17 + overext top-sell, hold-cap 250"),
+    ("r17_trailox", 67, m_trailox, "r2_17 + trail + overext, hold-cap 250"),
+    ("r17_trailox_h20", 67, m_trailox_h20, "r2_17 + trail + overext, keep hold-cap 20"),
+    ("r17_trailox_pb", 67, m_trailox_pb, "r2_17 + trail + overext + pullback-fill, hold-cap 250"),
+    (
+        "r06_trailox",
+        1098,
+        m06_trailox,
+        "r2_06 (breakout+DI+pullback) + trail + overext, hold-cap 250",
+    ),
 ]
 
 
@@ -72,7 +115,9 @@ async def main():
         for name, base_id, mutate, desc in GRID:
             ex = await repo.get_by_name(name)
             if ex:
-                print(f"= {name} exists (id={ex.id})"); created.append((ex.id, name)); continue
+                print(f"= {name} exists (id={ex.id})")
+                created.append((ex.id, name))
+                continue
             if base_id not in cache:
                 cache[base_id] = await repo.get_by_id(base_id)
             base = cache[base_id]
@@ -84,12 +129,20 @@ async def main():
                 return json.loads(tc) if isinstance(tc, str) else copy.deepcopy(tc)
 
             slots_def = [
-                {"slot_type": "entry", "ml_component_id": entry_slot.ml_component_id,
-                 "rule_component_id": entry_slot.rule_component_id,
-                 "feature_set_name": entry_slot.feature_set_name, "target_config": _tc(entry_slot)},
-                {"slot_type": "exit", "ml_component_id": exit_slot.ml_component_id,
-                 "rule_component_id": exit_slot.rule_component_id,
-                 "feature_set_name": exit_slot.feature_set_name, "target_config": _tc(exit_slot)},
+                {
+                    "slot_type": "entry",
+                    "ml_component_id": entry_slot.ml_component_id,
+                    "rule_component_id": entry_slot.rule_component_id,
+                    "feature_set_name": entry_slot.feature_set_name,
+                    "target_config": _tc(entry_slot),
+                },
+                {
+                    "slot_type": "exit",
+                    "ml_component_id": exit_slot.ml_component_id,
+                    "rule_component_id": exit_slot.rule_component_id,
+                    "feature_set_name": exit_slot.feature_set_name,
+                    "target_config": _tc(exit_slot),
+                },
             ]
             base_engine = base.engine_config
             if isinstance(base_engine, str):
@@ -97,19 +150,29 @@ async def main():
             eng = copy.deepcopy(base_engine)
             mutate(eng)
             tmpl = await repo.create(
-                name=name, market=base.market, strategy=base.strategy,
-                feature_set_id=base.feature_set_id, target_id=base.target_id,
-                component_slots=copy.deepcopy(slots_def), direction=base.direction,
-                signal_mode=base.signal_mode, signal_threshold=base.signal_threshold,
-                entry_threshold=base.entry_threshold, exit_threshold=base.exit_threshold,
-                split_config=base.split_config, engine_config=eng,
-                validation_config=base.validation_config, seed=base.seed,
+                name=name,
+                market=base.market,
+                strategy=base.strategy,
+                feature_set_id=base.feature_set_id,
+                target_id=base.target_id,
+                component_slots=copy.deepcopy(slots_def),
+                direction=base.direction,
+                signal_mode=base.signal_mode,
+                signal_threshold=base.signal_threshold,
+                entry_threshold=base.entry_threshold,
+                exit_threshold=base.exit_threshold,
+                split_config=base.split_config,
+                engine_config=eng,
+                validation_config=base.validation_config,
+                seed=base.seed,
                 description=f"Rule protective-exit: {desc}.",
                 hypothesis="Rule book has NO profit protection; winners give back 58% of peak. "
-                           "Port champion trailing+overext -> mdd down + pnl up.",
-                universe_slug=base.universe_slug, model_mode=base.model_mode,
+                "Port champion trailing+overext -> mdd down + pnl up.",
+                universe_slug=base.universe_slug,
+                model_mode=base.model_mode,
             )
-            print(f"* {name} created (id={tmpl.id})  base={base_id}"); created.append((tmpl.id, name))
+            print(f"* {name} created (id={tmpl.id})  base={base_id}")
+            created.append((tmpl.id, name))
         await session.commit()
         print("\nIDS=" + ",".join(str(t) for t, _ in created))
     await async_engine.dispose()

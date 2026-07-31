@@ -55,17 +55,21 @@ TOL = 0.16  # ex-date close must trade within this of its (reset) open
 # and illiquid clusters (PGV, TDM) without a hardcoded list. UPCOM is skipped (its band is
 # 15%, so sub-15.5% is negligible and indistinguishable from normal moves).
 BANDS = {"HOSE": 0.07, "HNX": 0.10}
-LOCAL_WIN = 40           # bars each side for the local-band estimate
-LOCAL_MARGIN = 0.005     # a bar counts as "beyond band" only if it clears band by this much
-MAX_BEYOND = 0           # a truly band-capped stock has ZERO non-CA overnight gaps past band;
-                         # any => wider-band era (UPCOM/HNX migration), crash floors, or illiquid -> skip
-MIN_WIN_BARS = 30        # need this many real surrounding sessions (excludes sparse pre-listing data)
-PERSIST_MAX = 0.93       # median(next-5 close)/prev_close must be <= this (stayed down)
-T2_MIN_DATE = "2015-01-01"  # tier2 only in the training era; pre-2015 has unreliable exchange/era data
+LOCAL_WIN = 40  # bars each side for the local-band estimate
+LOCAL_MARGIN = 0.005  # a bar counts as "beyond band" only if it clears band by this much
+MAX_BEYOND = 0  # a truly band-capped stock has ZERO non-CA overnight gaps past band;
+# any => wider-band era (UPCOM/HNX migration), crash floors, or illiquid -> skip
+MIN_WIN_BARS = 30  # need this many real surrounding sessions (excludes sparse pre-listing data)
+PERSIST_MAX = 0.93  # median(next-5 close)/prev_close must be <= this (stayed down)
+T2_MIN_DATE = (
+    "2015-01-01"  # tier2 only in the training era; pre-2015 has unreliable exchange/era data
+)
 PRICE_COLS = ["open", "high", "low", "close"]
 
 
-def detect_events(df: pd.DataFrame, band: float | None = None, crash_dates: set | None = None) -> pd.DataFrame:
+def detect_events(
+    df: pd.DataFrame, band: float | None = None, crash_dates: set | None = None
+) -> pd.DataFrame:
     """df: one symbol, sorted by date. Return ex-date corporate actions (tier1 + tier2).
 
     Common guards (both tiers): consecutive session (dgap<=5), both sessions traded
@@ -84,8 +88,11 @@ def detect_events(df: pd.DataFrame, band: float | None = None, crash_dates: set 
     d["close_open"] = d["close"] / d["open"] - 1.0
 
     base = (
-        (d["prev_close"] > 0) & (d["open"] > 0) & (d["dgap"] <= 5)
-        & (d["volume"] > 0) & (d["prev_vol"] > 0)
+        (d["prev_close"] > 0)
+        & (d["open"] > 0)
+        & (d["dgap"] <= 5)
+        & (d["volume"] > 0)
+        & (d["prev_vol"] > 0)
     )
     t1 = base & (d["open_gap"] <= GAP_THR) & (d["close_open"].abs() <= TOL)
     ev = d[t1].copy()
@@ -94,7 +101,9 @@ def detect_events(df: pd.DataFrame, band: float | None = None, crash_dates: set 
     if band is not None:
         thr2 = -(band + 0.015)
         cand = (
-            base & (d["open_gap"] <= thr2) & (d["open_gap"] > GAP_THR)
+            base
+            & (d["open_gap"] <= thr2)
+            & (d["open_gap"] > GAP_THR)
             & (d["close_open"].abs() <= band + 0.02)
             & (pd.to_datetime(d["date"]) >= pd.Timestamp(T2_MIN_DATE))
         )
@@ -107,20 +116,20 @@ def detect_events(df: pd.DataFrame, band: float | None = None, crash_dates: set 
             lo, hi = max(0, i - LOCAL_WIN), min(len(d), i + LOCAL_WIN + 1)
             beyond = valid = 0
             for j in range(lo, hi):
-                if abs(j - i) <= 2:          # skip the event and its neighbours
+                if abs(j - i) <= 2:  # skip the event and its neighbours
                     continue
                 g = og[j]
                 if pd.isna(g) or dgaps[j] > 5:  # skip resumption gaps (not normal sessions)
                     continue
                 valid += 1
                 ag = abs(g)
-                if ag >= abs(GAP_THR):       # skip other CA-sized gaps
+                if ag >= abs(GAP_THR):  # skip other CA-sized gaps
                     continue
                 if ag > band + LOCAL_MARGIN:
                     beyond += 1
             if valid < MIN_WIN_BARS or beyond > MAX_BEYOND:  # sparse, or not hard-capped at band
                 continue
-            nxt = d["close"].iloc[i + 1:i + 6]
+            nxt = d["close"].iloc[i + 1 : i + 6]
             if len(nxt) and nxt.median() / d["prev_close"].iloc[i] <= PERSIST_MAX:
                 keep.append(i)
         ev2 = d.loc[keep].copy()
@@ -158,6 +167,7 @@ def main() -> int:
     print(f"raw rows={len(raw)} symbols={raw['symbol'].nunique()}", flush=True)
 
     import re
+
     # market-crash dates: a broad down day (median close-to-close <= -3%) gaps many stocks at
     # once -> a tier2 gap there is market-driven, not an idiosyncratic ex-date. Exclude them.
     mr = raw.copy()
@@ -175,13 +185,19 @@ def main() -> int:
         ev = detect_events(g, band=BANDS.get(exch.get(sym)), crash_dates=crash_dates)
         if len(ev):
             for _, e in ev.iterrows():
-                audit_rows.append({
-                    "symbol": sym, "exchange": exch.get(sym), "ex_date": e["date"],
-                    "tier": int(e["tier"]),
-                    "prev_close": round(e["prev_close"], 3), "ex_open": round(e["open"], 3),
-                    "ex_close": round(e["close"], 3),
-                    "open_gap": round(e["open_gap"], 4), "factor": round(e["factor"], 5),
-                })
+                audit_rows.append(
+                    {
+                        "symbol": sym,
+                        "exchange": exch.get(sym),
+                        "ex_date": e["date"],
+                        "tier": int(e["tier"]),
+                        "prev_close": round(e["prev_close"], 3),
+                        "ex_open": round(e["open"], 3),
+                        "ex_close": round(e["close"], 3),
+                        "open_gap": round(e["open_gap"], 4),
+                        "factor": round(e["factor"], 5),
+                    }
+                )
         adjusted_parts.append(adjust_symbol(g, ev) if len(ev) else g.sort_values("date"))
 
     audit = pd.DataFrame(audit_rows)
@@ -210,10 +226,14 @@ def main() -> int:
     ).fetchdf()
     con.close()
 
-    adj = adj.merge(prod_tv, on=["symbol", "date"], how="left").merge(raw_tv, on=["symbol", "date"], how="left")
+    adj = adj.merge(prod_tv, on=["symbol", "date"], how="left").merge(
+        raw_tv, on=["symbol", "date"], how="left"
+    )
     adj["traded_value"] = adj["traded_value"].fillna(adj["raw_tv"])
     adj["timeframe"] = "1D"
-    out = adj[["symbol", "timeframe", "date", "open", "high", "low", "close", "volume", "traded_value"]]
+    out = adj[
+        ["symbol", "timeframe", "date", "open", "high", "low", "close", "volume", "traded_value"]
+    ]
 
     Path(OUT_DB).unlink(missing_ok=True)
     con = duckdb.connect(OUT_DB)
@@ -226,10 +246,14 @@ def main() -> int:
     con.unregister("out_tmp")
     if len(intraday):
         con.register("intra_tmp", intraday)
-        con.execute("INSERT INTO ohlcv SELECT symbol, timeframe, date, open, high, low, close, "
-                    "volume, traded_value FROM intra_tmp")
+        con.execute(
+            "INSERT INTO ohlcv SELECT symbol, timeframe, date, open, high, low, close, "
+            "volume, traded_value FROM intra_tmp"
+        )
         con.unregister("intra_tmp")
-    n = con.execute("SELECT count(*), count(distinct symbol) FROM ohlcv WHERE timeframe='1D'").fetchone()
+    n = con.execute(
+        "SELECT count(*), count(distinct symbol) FROM ohlcv WHERE timeframe='1D'"
+    ).fetchone()
     con.close()
     print(f"WROTE {OUT_DB}: 1D rows={n[0]} symbols={n[1]} (+intraday {len(intraday)})", flush=True)
     return 0

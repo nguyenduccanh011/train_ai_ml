@@ -280,8 +280,7 @@ async def get_run_portfolio_equity(run_id: str, session: AsyncSession = Depends(
     return {
         "run_id": run_id,
         "equity": [
-            {"date": str(r[0]), "nav": r[1], "exposure": r[2], "n_positions": r[3]}
-            for r in rows
+            {"date": str(r[0]), "nav": r[1], "exposure": r[2], "n_positions": r[3]} for r in rows
         ],
     }
 
@@ -298,9 +297,14 @@ async def get_run_portfolio_day(
         d_obj = datetime.strptime(date, "%Y-%m-%d").date()
         # B4: per-day trade enrichment reads the PORTFOLIO layer when persisted
         try:
-            _has_ov = bool((await session.execute(
-                text("SELECT 1 FROM run_trades_overlay WHERE run_id=:rid LIMIT 1"),
-                {"rid": run_id})).fetchone())
+            _has_ov = bool(
+                (
+                    await session.execute(
+                        text("SELECT 1 FROM run_trades_overlay WHERE run_id=:rid LIMIT 1"),
+                        {"rid": run_id},
+                    )
+                ).fetchone()
+            )
         except Exception:
             await session.rollback()
             _has_ov = False
@@ -380,37 +384,49 @@ async def get_run_portfolio_day(
         ).fetchall()
     except Exception:
         await session.rollback()
-        return {"run_id": run_id, "date": date, "holdings": [], "entries": [], "exits": [],
-                "signals": [], "sell_next": [], "pending": [], "unrealized": None}
+        return {
+            "run_id": run_id,
+            "date": date,
+            "holdings": [],
+            "entries": [],
+            "exits": [],
+            "signals": [],
+            "sell_next": [],
+            "pending": [],
+            "unrealized": None,
+        }
     # buy-price lookup for held positions (symbol -> entry_price), keyed by (symbol, entry_date).
     buy_px = {(o[0], str(o[1])): o[2] for o in open_tr}
     # full detail for trades closing today (symbol -> row).
     exit_detail = {e[0]: e for e in exit_tr}
     nav_d = float(nav_row[0]) if nav_row and nav_row[0] else None
     holdings, entries, exits = [], [], []
-    unreal_val = 0.0   # sum of open positions' unrealized P&L in NAV units
+    unreal_val = 0.0  # sum of open positions' unrealized P&L in NAV units
     for r in rows:
         rec = {
             "symbol": r[0],
             "weight": r[1],
             "entry_date": str(r[2]) if r[2] else None,
-            "days_held": r[3],            # now TRADING SESSIONS, not calendar days
+            "days_held": r[3],  # now TRADING SESSIONS, not calendar days
             "is_new": bool(r[4]),
             "conv": r[7],
             "entry_weight": r[8],
-            "unreal_pnl": r[9],           # % gain of this holding vs its buy price (unrealized)
+            "unreal_pnl": r[9],  # % gain of this holding vs its buy price (unrealized)
             "entry_price": buy_px.get((r[0], str(r[2])) if r[2] else None),
         }
         if r[5]:  # is_exit -> enrich with realized P&L + buy/sell price + dates + sessions
             e = exit_detail.get(r[0])
-            exits.append({
-                "symbol": r[0], "exit_reason": r[6],
-                "entry_date": str(e[1]) if e and e[1] else None,
-                "entry_price": e[2] if e else None,
-                "exit_price": e[3] if e else None,
-                "pnl_pct": e[4] if e else None,           # REALIZED P&L of the closed trade
-                "holding_days": e[5] if e else None,      # sessions held
-            })
+            exits.append(
+                {
+                    "symbol": r[0],
+                    "exit_reason": r[6],
+                    "entry_date": str(e[1]) if e and e[1] else None,
+                    "entry_price": e[2] if e else None,
+                    "exit_price": e[3] if e else None,
+                    "pnl_pct": e[4] if e else None,  # REALIZED P&L of the closed trade
+                    "holding_days": e[5] if e else None,  # sessions held
+                }
+            )
         else:
             holdings.append(rec)
             # unrealized $ (in NAV units) = current value - cost = w*nav*(u/(1+u))
@@ -429,15 +445,26 @@ async def get_run_portfolio_day(
         cost = pos_value - unreal_val
         unrealized = {
             "nav": nav_d,
-            "unreal_pnl_nav_pct": (unreal_val / nav_d) if nav_d else None,    # unrealized as % of total NAV
-            "unreal_pnl_cost_pct": (unreal_val / cost) if cost else None,     # unrealized as % of money invested
-            "invested_value": pos_value,                                      # current MTM value of holdings
-            "invested_cost": cost,                                           # what was paid for them
+            "unreal_pnl_nav_pct": (unreal_val / nav_d)
+            if nav_d
+            else None,  # unrealized as % of total NAV
+            "unreal_pnl_cost_pct": (unreal_val / cost)
+            if cost
+            else None,  # unrealized as % of money invested
+            "invested_value": pos_value,  # current MTM value of holdings
+            "invested_cost": cost,  # what was paid for them
         }
     pending = [
-        {"symbol": p[0], "signal_date": str(p[1]) if p[1] else None,
-         "days_waiting": p[2], "limit_price": p[3], "ref_price": p[4],
-         "pct_to_limit": p[5], "outcome": p[6], "result_date": str(p[7]) if p[7] else None}
+        {
+            "symbol": p[0],
+            "signal_date": str(p[1]) if p[1] else None,
+            "days_waiting": p[2],
+            "limit_price": p[3],
+            "ref_price": p[4],
+            "pct_to_limit": p[5],
+            "outcome": p[6],
+            "result_date": str(p[7]) if p[7] else None,
+        }
         for p in pend
     ]
     return {
@@ -514,23 +541,34 @@ async def get_symbol_portfolio_fate(
     p = {"rid": run_id, "sym": symbol}
     sig = await _rows(
         "SELECT date, score FROM run_signals "
-        "WHERE run_id=:rid AND symbol=:sym AND signal=1 ORDER BY date", p)
+        "WHERE run_id=:rid AND symbol=:sym AND signal=1 ORDER BY date",
+        p,
+    )
     base = await _rows(
         "SELECT entry_signal_date, entry_date, exit_date, pnl_pct, exit_reason "
-        "FROM run_trades WHERE run_id=:rid AND symbol=:sym ORDER BY entry_date", p)
+        "FROM run_trades WHERE run_id=:rid AND symbol=:sym ORDER BY entry_date",
+        p,
+    )
     overlay = await _rows(
         "SELECT entry_date, exit_date, pnl_pct, exit_reason "
-        "FROM run_trades_overlay WHERE run_id=:rid AND symbol=:sym ORDER BY entry_date", p)
+        "FROM run_trades_overlay WHERE run_id=:rid AND symbol=:sym ORDER BY entry_date",
+        p,
+    )
     skipped = await _rows(
         "SELECT signal_date, entry_date, skip_reason FROM run_skipped "
-        "WHERE run_id=:rid AND symbol=:sym", p)
+        "WHERE run_id=:rid AND symbol=:sym",
+        p,
+    )
 
     # Layer is a property of the RUN, not the symbol — a signals-only symbol has no
     # run_trades rows of its own, yet its run may still be an OUTPUT run.
-    run_is_output = bool(await _rows(
-        "SELECT 1 FROM run_trades WHERE run_id=:rid "
-        "AND exit_reason IN ('preempt', 'green_trail', 'early_cut') LIMIT 1",
-        {"rid": run_id}))
+    run_is_output = bool(
+        await _rows(
+            "SELECT 1 FROM run_trades WHERE run_id=:rid "
+            "AND exit_reason IN ('preempt', 'green_trail', 'early_cut') LIMIT 1",
+            {"rid": run_id},
+        )
+    )
     layer = "overlay" if run_is_output else "base"
     base_by_sig = {str(r[0]): r for r in base if r[0] is not None}
     overlay_entry_dates = {str(r[0]) for r in overlay}
@@ -563,16 +601,18 @@ async def get_symbol_portfolio_fate(
         if skip_reason:
             n_skipped += 1
             skip_hist[skip_reason] = skip_hist.get(skip_reason, 0) + 1
-        out.append({
-            "signal_date": ds,
-            "score": score,
-            "became_base_trade": became_base,
-            "base_entry_date": str(t[1]) if t else None,
-            "filled": filled,
-            "exit_reason": t[4] if t else None,
-            "pnl_pct": t[3] if t else None,
-            "skip_reason": skip_reason,
-        })
+        out.append(
+            {
+                "signal_date": ds,
+                "score": score,
+                "became_base_trade": became_base,
+                "base_entry_date": str(t[1]) if t else None,
+                "filled": filled,
+                "exit_reason": t[4] if t else None,
+                "pnl_pct": t[3] if t else None,
+                "skip_reason": skip_reason,
+            }
+        )
 
     return {
         "run_id": run_id,

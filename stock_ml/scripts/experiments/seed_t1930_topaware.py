@@ -4,6 +4,7 @@ head that natively down-scores du-dinh / right-shoulder entries instead of a pos
 train: does the retrained head + a (recombine-only) entry_threshold sweep cull toppy without cutting
 winners? (C-arc 2026-06-18.)
 """
+
 from __future__ import annotations
 import asyncio
 import copy
@@ -29,8 +30,11 @@ async def main():
         base = await repo.get_by_id(BASE_ID)
         be = base.engine_config
         be = json.loads(be) if isinstance(be, str) else copy.deepcopy(be)
-        tc = lambda sl: (json.loads(sl.target_config) if isinstance(sl.target_config, str)
-                         else copy.deepcopy(sl.target_config))
+        tc = lambda sl: (
+            json.loads(sl.target_config)
+            if isinstance(sl.target_config, str)
+            else copy.deepcopy(sl.target_config)
+        )
         ex = await repo.get_by_name(NAME)
         if ex:
             print(f"= {NAME} ({ex.id})  IDS={ex.id}")
@@ -39,20 +43,36 @@ async def main():
         slots = []
         for sl in base.component_slots:
             fsn = NEW_FS if sl.slot_type == "entry" else sl.feature_set_name
-            slots.append({"slot_type": sl.slot_type, "ml_component_id": sl.ml_component_id,
-                          "rule_component_id": sl.rule_component_id, "feature_set_name": fsn,
-                          "target_config": tc(sl)})
+            slots.append(
+                {
+                    "slot_type": sl.slot_type,
+                    "ml_component_id": sl.ml_component_id,
+                    "rule_component_id": sl.rule_component_id,
+                    "feature_set_name": fsn,
+                    "target_config": tc(sl),
+                }
+            )
         t = await repo.create(
-            name=NAME, market=base.market, strategy=base.strategy,
-            feature_set_id=base.feature_set_id, target_id=base.target_id, component_slots=slots,
-            direction=base.direction, signal_mode=base.signal_mode,
-            signal_threshold=base.signal_threshold, entry_threshold=base.entry_threshold,
-            exit_threshold=base.exit_threshold, split_config=base.split_config,
-            engine_config=copy.deepcopy(be), validation_config=base.validation_config, seed=base.seed,
+            name=NAME,
+            market=base.market,
+            strategy=base.strategy,
+            feature_set_id=base.feature_set_id,
+            target_id=base.target_id,
+            component_slots=slots,
+            direction=base.direction,
+            signal_mode=base.signal_mode,
+            signal_threshold=base.signal_threshold,
+            entry_threshold=base.entry_threshold,
+            exit_threshold=base.exit_threshold,
+            split_config=base.split_config,
+            engine_config=copy.deepcopy(be),
+            validation_config=base.validation_config,
+            seed=base.seed,
             description="Champion 1930 + entry_lvup126_topaware (upper_wick_5 + lower_high_20).",
             hypothesis="Top-structure features let the entry head natively down-score du-dinh entries "
-                       "so a tighter entry_threshold can cull right-shoulder fills without cutting winners.",
-            universe_slug=base.universe_slug)
+            "so a tighter entry_threshold can cull right-shoulder fills without cutting winners.",
+            universe_slug=base.universe_slug,
+        )
         print(f"* {NAME} ({t.id})")
         await s.commit()
         print(f"IDS={t.id}")

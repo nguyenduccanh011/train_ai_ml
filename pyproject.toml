@@ -6,6 +6,7 @@ extend-exclude = [
     "stock_ml/legacy",
     "stock_ml/visualization",
     "stock_ml/results",
+    "stock_ml/analysis",
     "portable_data",
 ]
 
@@ -20,10 +21,13 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"stock_ml/tests/**" = ["B011"]
+"stock_ml/tests/**" = ["B011", "E402", "E741", "SIM101", "N802"]
+# Repo-root utility/seed scripts (sys.path shim before imports) + one-off prod-replay scratch
+"scripts/**" = ["E402", "E741", "F401", "F841", "E702", "I001"]
+"_champ_prod_replay.py" = ["E402", "E741", "F841", "B905", "E731", "SIM101", "B007", "F401"]
 # Legacy code: chỉ check critical errors, bỏ qua style warnings.
 # Sẽ siết khi port qua src/components/ ở Phase 1+.
-"stock_ml/src/**" = ["SIM", "B007", "B905", "F841", "N816", "E741", "E702", "W293", "N814"]
+"stock_ml/src/**" = ["SIM", "B007", "B905", "F841", "N816", "E741", "E702", "W293", "N814", "N802", "E731"]
 "stock_ml/experiments/**" = ["SIM", "B007", "B905", "F", "N", "E"]
 "stock_ml/analysis/**" = ["SIM", "B007", "B905", "F", "N", "E"]
 # Legacy one-off analysis script (moved from repo root): loop-closure warnings left as-is
@@ -35,6 +39,19 @@ ignore = [
 "stock_ml/scripts/**" = ["E402", "B007", "F841", "E722"]
 # Archived experiment/ops/audit scripts (terse legacy style): style rules relaxed, logic rules kept
 "stock_ml/scripts/*/*.py" = ["E401", "E701", "E702", "E731", "F401", "F541", "I001", "N802", "SIM105", "SIM115", "UP015", "UP031"]
+# One-off experiment BUILDER scripts (scratch, like analysis/): loop-closure + unused warnings left as-is
+"stock_ml/scripts/experiments/**" = ["B023", "B007", "F841", "N802", "F401", "E741", "B905", "E402", "SIM101"]
+# API layer (legacy FastAPI handlers): relax style, exception-chaining, unused locals — tighten when ported
+"stock_ml/api/**" = ["B904", "F841", "E741", "B905", "E402"]
+# Portfolio layer (terse quant style)
+"stock_ml/portfolio/**" = ["E741", "B905", "B007"]
+# Package __init__ re-exports the submodule public API via star-import (intentional)
+"stock_ml/src/utils/__init__.py" = ["F403", "F405"]
+# Model factories use CamelCase net names (_RNNNet) — ML naming convention, like N803/N806
+"stock_ml/src/models/**" = ["N802"]
+# FIXME(audit): pre-existing duplicate dict key "vwap_20" (catalog.py:388) — grandfathered so the
+# ruff hook can pass; NOT silently rewritten (the two entries may differ). Flagged for review.
+"stock_ml/src/features/catalog.py" = ["F601"]
 # train61_standalone: ignore style warnings for legacy backtest engine and feature code
 "stock_ml/train61_standalone/app/**" = ["E402", "I"]
 "stock_ml/train61_standalone/tools/**" = ["E402"]

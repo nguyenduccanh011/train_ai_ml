@@ -190,8 +190,10 @@ def _op_pct(ctx, args, kwargs):
 @_register("EMA", "symbol")
 def _op_ema(ctx, args, kwargs):
     n = int(args[1])
-    return args[0].groupby(ctx.symbol, sort=False).transform(
-        lambda x: x.ewm(span=n, adjust=False).mean()
+    return (
+        args[0]
+        .groupby(ctx.symbol, sort=False)
+        .transform(lambda x: x.ewm(span=n, adjust=False).mean())
     )
 
 
@@ -199,16 +201,20 @@ def _op_ema(ctx, args, kwargs):
 def _op_quantile(ctx, args, kwargs):
     n = int(args[1])
     q = float(args[2])
-    return args[0].groupby(ctx.symbol, sort=False).transform(
-        lambda x: x.rolling(n, min_periods=n).quantile(q)
+    return (
+        args[0]
+        .groupby(ctx.symbol, sort=False)
+        .transform(lambda x: x.rolling(n, min_periods=n).quantile(q))
     )
 
 
 @_register("TsRank", "symbol")
 def _op_tsrank(ctx, args, kwargs):
     n = int(args[1])
-    return args[0].groupby(ctx.symbol, sort=False).transform(
-        lambda x: x.rolling(n, min_periods=n).rank()
+    return (
+        args[0]
+        .groupby(ctx.symbol, sort=False)
+        .transform(lambda x: x.rolling(n, min_periods=n).rank())
     )
 
 
@@ -245,9 +251,7 @@ def _op_heiken_ashi(ctx, args, kwargs):
                 trend[i] = trend[i - 1] + color[i]
             else:
                 trend[i] = color[i]
-        return pd.DataFrame(
-            {"color": color, "body": body, "trend": trend}, index=g.index
-        )
+        return pd.DataFrame({"color": color, "body": body, "trend": trend}, index=g.index)
 
     return _by_symbol(
         ctx, {"open": args[0], "high": args[1], "low": args[2], "close": args[3]}, _fn
@@ -289,9 +293,9 @@ def _rsi_boundary_fill(rsi: pd.Series, avg_gain: pd.Series, avg_loss: pd.Series)
     of the truth. Genuine warmup NaN (before ``min_periods``) is left as NaN so feature-warmup
     trimming removes it rather than injecting a fabricated 50.
     """
-    warm = avg_loss.isna() | avg_gain.isna()          # true warmup -> stays NaN
+    warm = avg_loss.isna() | avg_gain.isna()  # true warmup -> stays NaN
     rsi = rsi.where(~((avg_loss == 0) & ~warm), 100.0)  # only up-moves -> overbought 100
-    rsi = rsi.where(~((avg_gain == 0) & ~warm), 0.0)    # only down-moves -> oversold 0
+    rsi = rsi.where(~((avg_gain == 0) & ~warm), 0.0)  # only down-moves -> oversold 0
     return rsi
 
 
@@ -364,11 +368,13 @@ def _op_adx(ctx, args, kwargs):
         ).max(axis=1)
         atr = tr.ewm(alpha=1.0 / period, adjust=False, min_periods=period).mean()
         plus_di = (
-            100 * plus_dm.ewm(alpha=1.0 / period, adjust=False, min_periods=period).mean()
+            100
+            * plus_dm.ewm(alpha=1.0 / period, adjust=False, min_periods=period).mean()
             / (atr + 1e-8)
         )
         minus_di = (
-            100 * minus_dm.ewm(alpha=1.0 / period, adjust=False, min_periods=period).mean()
+            100
+            * minus_dm.ewm(alpha=1.0 / period, adjust=False, min_periods=period).mean()
             / (atr + 1e-8)
         )
         di_diff = (plus_di - minus_di).abs()
@@ -464,8 +470,10 @@ def _op_bollinger(ctx, args, kwargs):
 @_register("ROC", "symbol")
 def _op_roc(ctx, args, kwargs):
     n = int(args[1])
-    return args[0].groupby(ctx.symbol, sort=False).transform(
-        lambda x: x / x.shift(n).replace(0.0, np.nan) - 1.0
+    return (
+        args[0]
+        .groupby(ctx.symbol, sort=False)
+        .transform(lambda x: x / x.shift(n).replace(0.0, np.nan) - 1.0)
     )
 
 
@@ -484,14 +492,8 @@ def _op_aroon(ctx, args, kwargs):
 
     def _fn(g: pd.DataFrame) -> pd.DataFrame:
         high, low = g["high"], g["low"]
-        up = (
-            high.rolling(period, min_periods=period).apply(np.argmax, raw=True)
-            / denom * 100.0
-        )
-        down = (
-            low.rolling(period, min_periods=period).apply(np.argmin, raw=True)
-            / denom * 100.0
-        )
+        up = high.rolling(period, min_periods=period).apply(np.argmax, raw=True) / denom * 100.0
+        down = low.rolling(period, min_periods=period).apply(np.argmin, raw=True) / denom * 100.0
         return pd.DataFrame({"up": up, "down": down}, index=g.index)
 
     return _by_symbol(ctx, {"high": args[0], "low": args[1]}, _fn)
@@ -605,10 +607,18 @@ def _op_zigzag(ctx, args, kwargs):
     min_leg = int(args[2]) if len(args) > 2 else 0
 
     cols = (
-        "last_dir", "last_leg_return", "last_leg_dur", "prev_leg_return",
-        "prev_leg_dur", "bars_since_pivot", "return_since_pivot",
-        "progress_to_deviation", "dist_to_confirm", "price_pos_in_swing",
-        "max_adverse_since_pivot", "n_pivots",
+        "last_dir",
+        "last_leg_return",
+        "last_leg_dur",
+        "prev_leg_return",
+        "prev_leg_dur",
+        "bars_since_pivot",
+        "return_since_pivot",
+        "progress_to_deviation",
+        "dist_to_confirm",
+        "price_pos_in_swing",
+        "max_adverse_since_pivot",
+        "n_pivots",
     )
 
     def _fn(g: pd.DataFrame) -> pd.DataFrame:
@@ -669,9 +679,7 @@ def _op_zigzag(ctx, args, kwargs):
                     lo_, hi_ = sorted((pp_price, lp_price))
                     # Degenerate swing (two pivots at the same price) → neutral 0.5
                     # instead of 0/0 NaN, so a flat stretch doesn't trip fail-loud.
-                    out["price_pos_in_swing"][i] = (
-                        (price - lo_) / (hi_ - lo_) if hi_ > lo_ else 0.5
-                    )
+                    out["price_pos_in_swing"][i] = (price - lo_) / (hi_ - lo_) if hi_ > lo_ else 0.5
                     if len(pivots) >= 3:
                         ppp_idx, ppp_price, _ = pivots[-3]
                         out["prev_leg_return"][i] = pp_price / ppp_price - 1.0

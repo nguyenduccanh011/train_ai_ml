@@ -22,10 +22,10 @@ API = "https://sieutinhieu.vn/api/v1"
 PROD_DB = "market_data/market.duckdb"
 RAW_DB = "market_data/market_raw_api.duckdb"
 TIMEFRAME = "1D"
-PAGE = 1000          # API max limit
+PAGE = 1000  # API max limit
 MAX_RETRY = 6
-BACKOFF = 2.0        # seconds, exponential
-SLEEP = 0.10         # polite delay between requests
+BACKOFF = 2.0  # seconds, exponential
+SLEEP = 0.10  # polite delay between requests
 
 
 def prod_symbols() -> list[str]:
@@ -44,9 +44,11 @@ def try_page(sess: requests.Session, symbol: str, offset: int, limit: int, retri
     last = None
     for attempt in range(retries):
         try:
-            r = sess.get(f"{API}/ohlcv/",
-                         params={"symbol": symbol, "timeframe": TIMEFRAME, "limit": limit, "offset": offset},
-                         timeout=40)
+            r = sess.get(
+                f"{API}/ohlcv/",
+                params={"symbol": symbol, "timeframe": TIMEFRAME, "limit": limit, "offset": offset},
+                timeout=40,
+            )
             if r.status_code == 200:
                 return r.json(), True
             last = f"HTTP {r.status_code}: {r.text[:80]}"
@@ -131,16 +133,25 @@ def main() -> int:
                 con.unregister("df_tmp")
             con.execute(
                 "INSERT OR REPLACE INTO _fetched VALUES (?,?,?,?,?)",
-                [sym, len(df), (df["date"].min() if len(df) else None),
-                 (df["date"].max() if len(df) else None), "ok"],
+                [
+                    sym,
+                    len(df),
+                    (df["date"].min() if len(df) else None),
+                    (df["date"].max() if len(df) else None),
+                    "ok",
+                ],
             )
             ok += 1
-            print(f"[{i}/{len(todo)}] {sym} nbars={len(df)} "
-                  f"{df['date'].min() if len(df) else '-'}..{df['date'].max() if len(df) else '-'}",
-                  flush=True)
+            print(
+                f"[{i}/{len(todo)}] {sym} nbars={len(df)} "
+                f"{df['date'].min() if len(df) else '-'}..{df['date'].max() if len(df) else '-'}",
+                flush=True,
+            )
         except Exception as e:  # noqa: BLE001
             fail += 1
-            con.execute("INSERT OR REPLACE INTO _fetched VALUES (?,?,?,?,?)", [sym, 0, None, None, "fail"])
+            con.execute(
+                "INSERT OR REPLACE INTO _fetched VALUES (?,?,?,?,?)", [sym, 0, None, None, "fail"]
+            )
             print(f"[{i}/{len(todo)}] {sym} FAIL {e!r}", flush=True)
         time.sleep(SLEEP)
     con.close()

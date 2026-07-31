@@ -46,6 +46,7 @@ def engine_code_fingerprint() -> str:
             h.update(b"\x00missing\x00")
     return h.hexdigest()[:12]
 
+
 _OHLCV = frozenset({"open", "high", "low", "close", "volume"})
 
 _COMPARE = {

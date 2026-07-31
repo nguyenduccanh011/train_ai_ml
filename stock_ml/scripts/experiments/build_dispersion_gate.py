@@ -9,6 +9,7 @@ the quality/volume trade-off; seed 42 first, multi-seed the survivor.
 
 Usage: venv/Scripts/python.exe stock_ml/scripts/experiments/build_dispersion_gate.py
 """
+
 from __future__ import annotations
 import asyncio, copy, json, sys
 from pathlib import Path
@@ -45,36 +46,56 @@ async def make_all() -> dict:
         for sl in base.component_slots:
             tc = sl.target_config
             tc = json.loads(tc) if isinstance(tc, str) else copy.deepcopy(tc)
-            slots.append({"slot_type": sl.slot_type, "ml_component_id": sl.ml_component_id,
-                          "rule_component_id": sl.rule_component_id,
-                          "feature_set_name": sl.feature_set_name, "target_config": tc})
+            slots.append(
+                {
+                    "slot_type": sl.slot_type,
+                    "ml_component_id": sl.ml_component_id,
+                    "rule_component_id": sl.rule_component_id,
+                    "feature_set_name": sl.feature_set_name,
+                    "target_config": tc,
+                }
+            )
         base_eng = base.engine_config
         base_eng = json.loads(base_eng) if isinstance(base_eng, str) else dict(base_eng)
         for new_name, pct in VARIANTS:
             ex = await repo.get_by_name(new_name)
             if ex:
-                print(f"clone exists: id={ex.id} name={new_name}"); ids[new_name] = (ex.id, pct); continue
+                print(f"clone exists: id={ex.id} name={new_name}")
+                ids[new_name] = (ex.id, pct)
+                continue
             eng = copy.deepcopy(base_eng)
-            eng.update({
-                "entry_dispersion_gate_enabled": True,
-                "entry_dispersion_ma": 20,
-                "entry_dispersion_pct": pct,
-                "entry_dispersion_lookback": 252,
-            })
+            eng.update(
+                {
+                    "entry_dispersion_gate_enabled": True,
+                    "entry_dispersion_ma": 20,
+                    "entry_dispersion_pct": pct,
+                    "entry_dispersion_lookback": 252,
+                }
+            )
             t = await repo.create(
-                name=new_name, market=base.market, strategy=base.strategy,
-                feature_set_id=base.feature_set_id, target_id=base.target_id,
-                component_slots=copy.deepcopy(slots), direction=base.direction,
-                signal_mode=base.signal_mode, signal_threshold=base.signal_threshold,
-                entry_threshold=base.entry_threshold, exit_threshold=base.exit_threshold,
-                split_config=base.split_config, engine_config=eng,
-                validation_config=base.validation_config, seed=base.seed,
+                name=new_name,
+                market=base.market,
+                strategy=base.strategy,
+                feature_set_id=base.feature_set_id,
+                target_id=base.target_id,
+                component_slots=copy.deepcopy(slots),
+                direction=base.direction,
+                signal_mode=base.signal_mode,
+                signal_threshold=base.signal_threshold,
+                entry_threshold=base.entry_threshold,
+                exit_threshold=base.exit_threshold,
+                split_config=base.split_config,
+                engine_config=eng,
+                validation_config=base.validation_config,
+                seed=base.seed,
                 description=f"gb_x08 (2783) + cross-sectional dispersion entry gate pct={pct} (D9). "
-                            "Skip buys on low-dispersion macro days where the entry ranker turns to noise.",
+                "Skip buys on low-dispersion macro days where the entry ranker turns to noise.",
                 hypothesis="Entry head IC flips negative in low cross-sectional dispersion regimes "
-                           "(2023/24); gating entries to high-dispersion days restores regime-robust "
-                           "selection and lifts the dead years (2024/2026).",
-                universe_slug=base.universe_slug, model_mode=base.model_mode)
+                "(2023/24); gating entries to high-dispersion days restores regime-robust "
+                "selection and lifts the dead years (2024/2026).",
+                universe_slug=base.universe_slug,
+                model_mode=base.model_mode,
+            )
             await s.commit()
             print(f"created id={t.id} name={new_name} pct={pct}")
             ids[new_name] = (t.id, pct)
@@ -82,10 +103,16 @@ async def make_all() -> dict:
 
 
 def read(run_id):
-    con = psycopg2.connect(**PG); cur = con.cursor()
-    cur.execute("SELECT composite_score,total_pnl,avg_pnl,pf,mdd_per_symbol,trades,avg_hold "
-                "FROM leaderboard_runs WHERE run_id=%s", (run_id,))
-    r = cur.fetchone(); con.close(); return r
+    con = psycopg2.connect(**PG)
+    cur = con.cursor()
+    cur.execute(
+        "SELECT composite_score,total_pnl,avg_pnl,pf,mdd_per_symbol,trades,avg_hold "
+        "FROM leaderboard_runs WHERE run_id=%s",
+        (run_id,),
+    )
+    r = cur.fetchone()
+    con.close()
+    return r
 
 
 def main():
@@ -97,9 +124,12 @@ def main():
             rid = r.get("run_id")
             row = read(rid)
             if row:
-                print(f"  {name}(t{tid},pct{pct}) seed={sd}: comp={row[0]} pnl={row[1]:.1f} "
-                      f"avg={row[2]:.4f} pf={row[3]:.2f} mdd={row[4]:.3f} tr={row[5]} hold={row[6]:.1f} "
-                      f"run_id={rid}", flush=True)
+                print(
+                    f"  {name}(t{tid},pct{pct}) seed={sd}: comp={row[0]} pnl={row[1]:.1f} "
+                    f"avg={row[2]:.4f} pf={row[3]:.2f} mdd={row[4]:.3f} tr={row[5]} hold={row[6]:.1f} "
+                    f"run_id={rid}",
+                    flush=True,
+                )
             else:
                 print(f"  {name} seed={sd}: NO ROW run_id={rid}", flush=True)
     print("BUILD_DISPERSION_GATE_DONE")

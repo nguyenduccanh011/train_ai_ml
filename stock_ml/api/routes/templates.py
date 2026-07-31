@@ -388,8 +388,16 @@ async def export_template_yaml(template_id: int, session: AsyncSession = Depends
         "seed": template.seed,
         "direction": template.direction,
         "signal_threshold": template.signal_threshold,
-        **({"entry_threshold": template.entry_threshold} if template.entry_threshold is not None else {}),
-        **({"exit_threshold": template.exit_threshold} if template.exit_threshold is not None else {}),
+        **(
+            {"entry_threshold": template.entry_threshold}
+            if template.entry_threshold is not None
+            else {}
+        ),
+        **(
+            {"exit_threshold": template.exit_threshold}
+            if template.exit_threshold is not None
+            else {}
+        ),
         "model_mode": template.model_mode,
         "components": {
             "features": template.feature_set.name,

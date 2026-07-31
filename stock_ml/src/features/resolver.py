@@ -210,9 +210,7 @@ class FeatureResolver:
 
         if "market_close" in raw_deps:
             if market_df is None or "market_close" not in self._market_columns(market_df):
-                raise ValueError(
-                    "Feature set needs $market_close but no market index was provided"
-                )
+                raise ValueError("Feature set needs $market_close but no market index was provided")
             md = market_df.rename(columns={"close": "market_close"})
             frame = frame.merge(md[["date", "market_close"]], on="date", how="left")
             if frame["market_close"].isna().all():

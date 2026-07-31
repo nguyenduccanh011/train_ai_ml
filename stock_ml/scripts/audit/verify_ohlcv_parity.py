@@ -65,7 +65,9 @@ def _compare_symbol(sym: str, csv: DataLoader, duck: DuckDBLoader, atol: float) 
     common = c.index.intersection(d.index)
     cc, dd = c.loc[common], d.loc[common]
     for col in _VALUE_COLS:
-        diff = ~np.isclose(cc[col].to_numpy(), dd[col].to_numpy(), atol=atol, rtol=0, equal_nan=True)
+        diff = ~np.isclose(
+            cc[col].to_numpy(), dd[col].to_numpy(), atol=atol, rtol=0, equal_nan=True
+        )
         if diff.any():
             n = int(diff.sum())
             first = common[diff][0].date()
@@ -93,7 +95,9 @@ def main() -> int:
     print(f"CSV symbols:    {len(csv_syms)}")
     print(f"DuckDB symbols: {len(duck_syms)}")
     if missing_in_duck:
-        print(f"[FAIL] {len(missing_in_duck)} symbols in CSV but not DuckDB: {missing_in_duck[:10]}")
+        print(
+            f"[FAIL] {len(missing_in_duck)} symbols in CSV but not DuckDB: {missing_in_duck[:10]}"
+        )
     if missing_in_csv:
         print(f"[WARN] {len(missing_in_csv)} symbols in DuckDB but not CSV: {missing_in_csv[:10]}")
 

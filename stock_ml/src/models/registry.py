@@ -329,9 +329,21 @@ class MLPEntryModel:
         merged = {**defaults, **self.params}
         # Drop params MLPClassifier doesn't accept (e.g. class_weight, injected by callers for
         # tree models; MLP handles imbalance via the data/early_stopping, not class_weight).
-        for k in ("class_weight", "num_leaves", "min_data_in_leaf", "feature_fraction",
-                  "bagging_fraction", "bagging_freq", "n_estimators", "deterministic",
-                  "force_col_wise", "lambda_l1", "lambda_l2", "learning_rate", "verbose"):
+        for k in (
+            "class_weight",
+            "num_leaves",
+            "min_data_in_leaf",
+            "feature_fraction",
+            "bagging_fraction",
+            "bagging_freq",
+            "n_estimators",
+            "deterministic",
+            "force_col_wise",
+            "lambda_l1",
+            "lambda_l2",
+            "learning_rate",
+            "verbose",
+        ):
             merged.pop(k, None)
         # MLP needs standardized inputs (features span ranks 0-1, returns, ratios); without a
         # scaler it barely converges. Pipeline exposes classes_/predict_proba (delegated).
@@ -538,6 +550,7 @@ def detect_device(device: str = "auto") -> str:
     if _GPU_DETECTED is None:
         try:
             import lightgbm as lgb
+
             _GPU_DETECTED = lgb.basic.device_type() == "gpu"
         except Exception:
             _GPU_DETECTED = False

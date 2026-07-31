@@ -9,13 +9,18 @@ sequence carries entry-timing signal the snapshot model can't see.
 Usage:  python stock_ml/scripts/build_smac_v48_seq.py [smoke|full]
   smoke = 1 seed, 4 epochs (pipeline validation);  full = seeds 42,7,99, 20 epochs.
 """
+
 import asyncio, copy, sys, statistics as st
+
 sys.path.insert(0, "c:/Users/DUC CANH PC/Desktop/train_ai_ml")
 import psycopg2
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import sessionmaker
 from stock_ml.db.engine import async_engine
-from stock_ml.db.repositories.template_repo import StrategyTemplateRepository, ModelComponentRepository
+from stock_ml.db.repositories.template_repo import (
+    StrategyTemplateRepository,
+    ModelComponentRepository,
+)
 from stock_ml.scripts.run_template import run_template_experiment
 
 PG = dict(host="localhost", port=5433, dbname="stockml", user="stockml", password="stockml_dev")
@@ -25,7 +30,13 @@ BASE = 2459
 # architecturally-correct sequence input that lets the net learn its own dynamics).
 FSARG = sys.argv[2] if len(sys.argv) > 2 else "eng"
 FS = {"raw": "seq_raw", "rich": "seq_rich"}.get(FSARG, "entry_dyn_sec")
-BG = {"metric": "pct_above_ma50", "threshold": 0.35, "ma_win": 50, "mode": "level", "z_lookback": 60}
+BG = {
+    "metric": "pct_above_ma50",
+    "threshold": 0.35,
+    "ma_win": 50,
+    "mode": "level",
+    "z_lookback": 60,
+}
 # forensic v52: losses cluster in the 2022 bear (-11.5 = whole net profit, wr.48, hold64).
 # STRICTER breadth gate to cut bear-regime dip-buys (the dip-buy edge inverts in bears).
 _REG = sys.argv[5] if len(sys.argv) > 5 else None
@@ -41,52 +52,127 @@ SWARG = sys.argv[3] if len(sys.argv) > 3 else "std"
 CUTARG = sys.argv[4] if len(sys.argv) > 4 else "none"
 COOLDOWN = 40
 if SWARG == "fast":
-    TGT = {"type": "action_oracle", "pct": 0.045, "min_fwd_leg": 0.05, "min_leg_bars": 2,
-           "entry_min_ret_120": -0.02, "entry_confirm_pct": 0.05}
+    TGT = {
+        "type": "action_oracle",
+        "pct": 0.045,
+        "min_fwd_leg": 0.05,
+        "min_leg_bars": 2,
+        "entry_min_ret_120": -0.02,
+        "entry_confirm_pct": 0.05,
+    }
     ET_OVERRIDE = 0.40
 elif SWARG == "vfast":
     # push hardest toward the ~1700-trade goal: smaller/faster swings + lower P(ENTER)
     # cutoff + SHORTER re-entry cooldown (40->15, the main per-symbol trade-count limiter).
-    TGT = {"type": "action_oracle", "pct": 0.035, "min_fwd_leg": 0.04, "min_leg_bars": 1,
-           "entry_min_ret_120": -0.02, "entry_confirm_pct": 0.04}
+    TGT = {
+        "type": "action_oracle",
+        "pct": 0.035,
+        "min_fwd_leg": 0.04,
+        "min_leg_bars": 1,
+        "entry_min_ret_120": -0.02,
+        "entry_confirm_pct": 0.04,
+    }
     ET_OVERRIDE = 0.30
     COOLDOWN = 15
 else:
-    TGT = {"type": "action_oracle", "pct": 0.06, "min_fwd_leg": 0.08, "min_leg_bars": 3,
-           "entry_min_ret_120": -0.02, "entry_confirm_pct": 0.07}
+    TGT = {
+        "type": "action_oracle",
+        "pct": 0.06,
+        "min_fwd_leg": 0.08,
+        "min_leg_bars": 3,
+        "entry_min_ret_120": -0.02,
+        "entry_confirm_pct": 0.07,
+    }
     ET_OVERRIDE = None
 
 MODE = sys.argv[1] if len(sys.argv) > 1 else "smoke"
 if MODE == "smoke":
     SEEDS = [42]
-    GRU_PARAMS = {"window": 24, "hidden": 32, "layers": 1, "dropout": 0.10, "epochs": 4, "batch": 512, "lr": 1e-3}
+    GRU_PARAMS = {
+        "window": 24,
+        "hidden": 32,
+        "layers": 1,
+        "dropout": 0.10,
+        "epochs": 4,
+        "batch": 512,
+        "lr": 1e-3,
+    }
 elif MODE == "mid":
     SEEDS = [42]
-    GRU_PARAMS = {"window": 24, "hidden": 32, "layers": 1, "dropout": 0.10, "epochs": 20, "batch": 512, "lr": 1e-3}
+    GRU_PARAMS = {
+        "window": 24,
+        "hidden": 32,
+        "layers": 1,
+        "dropout": 0.10,
+        "epochs": 20,
+        "batch": 512,
+        "lr": 1e-3,
+    }
 elif MODE == "deep":
     # convergence check: more epochs on the best config to rule out undertraining
     SEEDS = [42]
-    GRU_PARAMS = {"window": 24, "hidden": 32, "layers": 1, "dropout": 0.10, "epochs": 40, "batch": 512, "lr": 1e-3}
+    GRU_PARAMS = {
+        "window": 24,
+        "hidden": 32,
+        "layers": 1,
+        "dropout": 0.10,
+        "epochs": 40,
+        "batch": 512,
+        "lr": 1e-3,
+    }
 elif MODE == "vdeep":
     # raw-GRU kept improving 20->40 epochs; push to find the plateau
     SEEDS = [42]
-    GRU_PARAMS = {"window": 24, "hidden": 32, "layers": 1, "dropout": 0.10, "epochs": 80, "batch": 512, "lr": 1e-3}
+    GRU_PARAMS = {
+        "window": 24,
+        "hidden": 32,
+        "layers": 1,
+        "dropout": 0.10,
+        "epochs": 80,
+        "batch": 512,
+        "lr": 1e-3,
+    }
 elif MODE == "xdeep":
     # 80ep beat the champion and was still climbing; probe 120ep for the peak (seed 42 trajectory)
     SEEDS = [42]
-    GRU_PARAMS = {"window": 24, "hidden": 32, "layers": 1, "dropout": 0.10, "epochs": 120, "batch": 512, "lr": 1e-3}
+    GRU_PARAMS = {
+        "window": 24,
+        "hidden": 32,
+        "layers": 1,
+        "dropout": 0.10,
+        "epochs": 120,
+        "batch": 512,
+        "lr": 1e-3,
+    }
 elif MODE == "wide":
     # bigger entry representation: more hidden capacity + longer window (see more history) ->
     # potentially better entry timing/quality (tested in the rideplus exit regime).
     SEEDS = [42]
-    GRU_PARAMS = {"window": 40, "hidden": 48, "layers": 1, "dropout": 0.10, "epochs": 80, "batch": 512, "lr": 1e-3}
+    GRU_PARAMS = {
+        "window": 40,
+        "hidden": 48,
+        "layers": 1,
+        "dropout": 0.10,
+        "epochs": 80,
+        "batch": 512,
+        "lr": 1e-3,
+    }
 else:  # full: multi-seed robustness at the proven 80-epoch config (seed 42 already=+32.7)
     SEEDS = [7, 99]
-    GRU_PARAMS = {"window": 24, "hidden": 32, "layers": 1, "dropout": 0.10, "epochs": 80, "batch": 512, "lr": 1e-3}
+    GRU_PARAMS = {
+        "window": 24,
+        "hidden": 32,
+        "layers": 1,
+        "dropout": 0.10,
+        "epochs": 80,
+        "batch": 512,
+        "lr": 1e-3,
+    }
 
 COMP_NAME = "entry_torch_gru_smac"
 TMPL_NAME = {"raw": "n2_smac_v49_gruraw_et50", "rich": "n2_smac_v50_grurich_et50"}.get(
-    FSARG, "n2_smac_v48_gru_et50")
+    FSARG, "n2_smac_v48_gru_et50"
+)
 ET = 0.50
 if SWARG == "fast":
     TMPL_NAME = "n2_smac_v51_gruraw_fast"
@@ -113,8 +199,13 @@ async def get_gru_component():
             await s.commit()
             print(f"reuse component {ex.id} (params refreshed)")
             return ex.id
-        c = await repo.create(name=COMP_NAME, role="entry", algorithm="torch_gru",
-                              params=GRU_PARAMS, description="PyTorch GRU sequence entry for SMAC")
+        c = await repo.create(
+            name=COMP_NAME,
+            role="entry",
+            algorithm="torch_gru",
+            params=GRU_PARAMS,
+            description="PyTorch GRU sequence entry for SMAC",
+        )
         await s.commit()
         print(f"created component {c.id} {COMP_NAME}")
         return c.id
@@ -341,58 +432,97 @@ async def mk(gru_id):
             # ['signal'] only, so the 40-bar cap never fired). Forensic: >30d holds are all
             # net-negative; immediate-bleeders reach -18% MAE.
             if CUTARG == "cut":
-                eng["max_hold_bars"] = 21; eng["hard_stop_pct"] = -0.10
+                eng["max_hold_bars"] = 21
+                eng["hard_stop_pct"] = -0.10
                 eng["exit_priority"] = ["hard_stop", "signal", "max_hold"]
             elif CUTARG == "cut2":
-                eng["max_hold_bars"] = 30; eng["hard_stop_pct"] = -0.12
+                eng["max_hold_bars"] = 30
+                eng["hard_stop_pct"] = -0.12
                 eng["exit_priority"] = ["hard_stop", "signal", "max_hold"]
             else:  # timeonly: isolate the time-cap effect (no stop)
-                eng["max_hold_bars"] = 21; eng["hard_stop_pct"] = None
+                eng["max_hold_bars"] = 21
+                eng["hard_stop_pct"] = None
                 eng["exit_priority"] = ["signal", "max_hold"]
         slots = []
         for sl in base.component_slots:
             if sl.slot_type == "entry":
-                tc = dict(TGT); f = FS; mlid = gru_id  # <-- GRU entry component
+                tc = dict(TGT)
+                f = FS
+                mlid = gru_id  # <-- GRU entry component
             else:
-                tc = copy.deepcopy(sl.target_config); f = sl.feature_set_name; mlid = sl.ml_component_id
-            slots.append({"slot_type": sl.slot_type, "ml_component_id": mlid,
-                          "rule_component_id": sl.rule_component_id, "feature_set_name": f,
-                          "target_config": tc})
-        tt = await repo.create(name=TMPL_NAME, market=base.market, strategy=base.strategy,
-                               feature_set_id=base.feature_set_id, target_id=base.target_id,
-                               component_slots=slots, direction=base.direction, signal_mode=base.signal_mode,
-                               signal_threshold=base.signal_threshold, entry_threshold=ET, exit_threshold=EXIT_THR,
-                               split_config=copy.deepcopy(base.split_config), engine_config=eng,
-                               validation_config=base.validation_config, seed=42,
-                               description="SMAC v48 GRU sequence entry, v47 hi-trade base",
-                               hypothesis="temporal sequence carries entry-timing signal a snapshot model misses",
-                               universe_slug=base.universe_slug, model_mode="ml_only")
+                tc = copy.deepcopy(sl.target_config)
+                f = sl.feature_set_name
+                mlid = sl.ml_component_id
+            slots.append(
+                {
+                    "slot_type": sl.slot_type,
+                    "ml_component_id": mlid,
+                    "rule_component_id": sl.rule_component_id,
+                    "feature_set_name": f,
+                    "target_config": tc,
+                }
+            )
+        tt = await repo.create(
+            name=TMPL_NAME,
+            market=base.market,
+            strategy=base.strategy,
+            feature_set_id=base.feature_set_id,
+            target_id=base.target_id,
+            component_slots=slots,
+            direction=base.direction,
+            signal_mode=base.signal_mode,
+            signal_threshold=base.signal_threshold,
+            entry_threshold=ET,
+            exit_threshold=EXIT_THR,
+            split_config=copy.deepcopy(base.split_config),
+            engine_config=eng,
+            validation_config=base.validation_config,
+            seed=42,
+            description="SMAC v48 GRU sequence entry, v47 hi-trade base",
+            hypothesis="temporal sequence carries entry-timing signal a snapshot model misses",
+            universe_slug=base.universe_slug,
+            model_mode="ml_only",
+        )
         await s.commit()
         print(f"created template {tt.id} {TMPL_NAME}")
         return tt.id
 
 
 def rd(rid):
-    c = psycopg2.connect(**PG); cur = c.cursor()
-    cur.execute("SELECT composite_score,total_pnl,pf,mdd_per_symbol,trades,wr,avg_hold FROM leaderboard_runs WHERE run_id=%s", (rid,))
-    r = cur.fetchone(); c.close(); return r
+    c = psycopg2.connect(**PG)
+    cur = c.cursor()
+    cur.execute(
+        "SELECT composite_score,total_pnl,pf,mdd_per_symbol,trades,wr,avg_hold FROM leaderboard_runs WHERE run_id=%s",
+        (rid,),
+    )
+    r = cur.fetchone()
+    c.close()
+    return r
 
 
 gru_id = asyncio.run(get_gru_component())
 asyncio.run(async_engine.dispose())
 tid = asyncio.run(mk(gru_id))
 asyncio.run(async_engine.dispose())
-print(f"MODE={MODE} template={tid} epochs={GRU_PARAMS['epochs']} window={GRU_PARAMS['window']}", flush=True)
+print(
+    f"MODE={MODE} template={tid} epochs={GRU_PARAMS['epochs']} window={GRU_PARAMS['window']}",
+    flush=True,
+)
 rows = []
 for sd in SEEDS:
     r = run_template_experiment(template_id=tid, seed=sd)
     row = rd(r.get("run_id")) if r.get("run_id") else None
     if row:
         rows.append(row)
-        print(f"  seed={sd}: comp={row[0]:.1f} PNL={row[1]:.1f} pf={row[2]:.2f} mdd={row[3]:.3f} TR={row[4]} WR={row[5]:.2f} HOLD={row[6]:.0f}", flush=True)
+        print(
+            f"  seed={sd}: comp={row[0]:.1f} PNL={row[1]:.1f} pf={row[2]:.2f} mdd={row[3]:.3f} TR={row[4]} WR={row[5]:.2f} HOLD={row[6]:.0f}",
+            flush=True,
+        )
 if rows:
-    print(f"== v48_gru: comp={st.mean([r[0] for r in rows]):.0f} PNL={st.mean([r[1] for r in rows]):.0f} "
-          f"pf={st.mean([r[2] for r in rows]):.2f} TR={st.mean([r[4] for r in rows]):.0f} "
-          f"mdd={st.mean([r[3] for r in rows]):.3f}")
+    print(
+        f"== v48_gru: comp={st.mean([r[0] for r in rows]):.0f} PNL={st.mean([r[1] for r in rows]):.0f} "
+        f"pf={st.mean([r[2] for r in rows]):.2f} TR={st.mean([r[4] for r in rows]):.0f} "
+        f"mdd={st.mean([r[3] for r in rows]):.3f}"
+    )
 print("== ref v47_et50 (lgbm snapshot): comp+29 PNL? pf1.94 mdd0.254 ~782tr")
 print("BUILD_SMAC_V48_SEQ_DONE")

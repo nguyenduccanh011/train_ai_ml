@@ -11,6 +11,7 @@ Sweep (fee, entry_min_ret_120). Clones v1 (tmpl 2459); only the entry target cha
 
 Usage: python stock_ml/scripts/build_smac_v7_ampreg.py
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -54,28 +55,39 @@ async def make_template(new_name: str, fee: float, gate: float) -> int:
                 tc = {"type": "amplitude_oracle", "fee": fee, "entry_min_ret_120": gate}
             else:
                 tc = copy.deepcopy(sl.target_config)
-            slots.append({
-                "slot_type": sl.slot_type,
-                "ml_component_id": sl.ml_component_id,
-                "rule_component_id": sl.rule_component_id,
-                "feature_set_name": sl.feature_set_name,
-                "target_config": tc,
-            })
+            slots.append(
+                {
+                    "slot_type": sl.slot_type,
+                    "ml_component_id": sl.ml_component_id,
+                    "rule_component_id": sl.rule_component_id,
+                    "feature_set_name": sl.feature_set_name,
+                    "target_config": tc,
+                }
+            )
         t = await repo.create(
-            name=new_name, market=base.market, strategy=base.strategy,
-            feature_set_id=base.feature_set_id, target_id=base.target_id,
-            component_slots=slots, direction=base.direction, signal_mode=base.signal_mode,
-            signal_threshold=base.signal_threshold, entry_threshold=None, exit_threshold=None,
+            name=new_name,
+            market=base.market,
+            strategy=base.strategy,
+            feature_set_id=base.feature_set_id,
+            target_id=base.target_id,
+            component_slots=slots,
+            direction=base.direction,
+            signal_mode=base.signal_mode,
+            signal_threshold=base.signal_threshold,
+            entry_threshold=None,
+            exit_threshold=None,
             split_config=copy.deepcopy(base.split_config),
             engine_config=copy.deepcopy(base.engine_config),
-            validation_config=base.validation_config, seed=42,
+            validation_config=base.validation_config,
+            seed=42,
             description=f"SMAC v7: max-amplitude DP target (fee={fee}) + regime gate "
-                        f"(entry_min_ret_120={gate}) — joint entry+exit amplitude on predictable "
-                        "(healthy-regime) swings only. Synthesis of v5+v6.",
+            f"(entry_min_ret_120={gate}) — joint entry+exit amplitude on predictable "
+            "(healthy-regime) swings only. Synthesis of v5+v6.",
             hypothesis="v6's amplitude target is theoretically optimal but enters unpredictable "
-                       "downtrend knives; v5's regime gate fixes predictability. Combining: optimal "
-                       "two-way amplitude restricted to learnable healthy-regime entries.",
-            universe_slug=base.universe_slug, model_mode="ml_only",
+            "downtrend knives; v5's regime gate fixes predictability. Combining: optimal "
+            "two-way amplitude restricted to learnable healthy-regime entries.",
+            universe_slug=base.universe_slug,
+            model_mode="ml_only",
         )
         await s.commit()
         print(f"created template id={t.id} name={new_name} fee={fee} gate={gate}")
@@ -83,10 +95,16 @@ async def make_template(new_name: str, fee: float, gate: float) -> int:
 
 
 def read(run_id):
-    con = psycopg2.connect(**PG); cur = con.cursor()
-    cur.execute("SELECT composite_score,total_pnl,pf,mdd_per_symbol,trades,wr,avg_hold "
-                "FROM leaderboard_runs WHERE run_id=%s", (run_id,))
-    r = cur.fetchone(); con.close(); return r
+    con = psycopg2.connect(**PG)
+    cur = con.cursor()
+    cur.execute(
+        "SELECT composite_score,total_pnl,pf,mdd_per_symbol,trades,wr,avg_hold "
+        "FROM leaderboard_runs WHERE run_id=%s",
+        (run_id,),
+    )
+    r = cur.fetchone()
+    con.close()
+    return r
 
 
 def main():
@@ -100,15 +118,23 @@ def main():
             comp = float(row[0]) if row and row[0] is not None else None
             seeds[sd] = comp
             if row:
-                print(f"  {new_name} seed={sd}: comp={comp} pnl={row[1]:.1f} pf={row[2]:.2f} "
-                      f"mdd={row[3]:.3f} tr={row[4]} wr={row[5]:.3f} hold={row[6]:.1f}", flush=True)
+                print(
+                    f"  {new_name} seed={sd}: comp={comp} pnl={row[1]:.1f} pf={row[2]:.2f} "
+                    f"mdd={row[3]:.3f} tr={row[4]} wr={row[5]:.3f} hold={row[6]:.1f}",
+                    flush=True,
+                )
             else:
                 print(f"  {new_name} seed={sd}: NO RESULT", flush=True)
         comps = [v for v in seeds.values() if v is not None]
         if comps:
-            mean = statistics.mean(comps); std = statistics.pstdev(comps) if len(comps) > 1 else 0.0
-            print(f"== {new_name} (fee={fee},gate={gate}): MEAN={mean:.1f} std={std:.1f} seeds={seeds}\n")
-    print("== vs v5_reg10 -46.7 (pnl+21.5 pf1.53 mdd0.341) / v6 amp -211..-233 ; baselines 197.4/397.8")
+            mean = statistics.mean(comps)
+            std = statistics.pstdev(comps) if len(comps) > 1 else 0.0
+            print(
+                f"== {new_name} (fee={fee},gate={gate}): MEAN={mean:.1f} std={std:.1f} seeds={seeds}\n"
+            )
+    print(
+        "== vs v5_reg10 -46.7 (pnl+21.5 pf1.53 mdd0.341) / v6 amp -211..-233 ; baselines 197.4/397.8"
+    )
     print("BUILD_SMAC_V7_DONE")
 
 

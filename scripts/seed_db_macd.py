@@ -13,13 +13,13 @@ sys.path.insert(0, str(REPO_ROOT))
 sys.path.insert(0, str(REPO_ROOT / "stock_ml"))
 
 from sqlalchemy.orm import sessionmaker
+from stock_ml.src.features.leading_v2 import FEATURE_COLS
 
 from stock_ml.db.engine import sync_engine
 from stock_ml.db.models.template import (
     FeatureSetCatalogModel,
     TargetCatalogModel,
 )
-from stock_ml.src.features.leading_v2 import FEATURE_COLS
 
 Session = sessionmaker(bind=sync_engine)
 session = Session()

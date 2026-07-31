@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """score_nav_leaderboard: cham CAGR/NAV THAT cho leaderboard tu bang run_trades.
 
 Thuoc chuan: nh_nav2.NavSim2 + shuffle_stats (K=25, roundtrip 0.006, settle_lag=2,
@@ -20,6 +19,7 @@ Chay:
   python stock_ml/scripts/ops/score_nav_leaderboard.py --force       # cham lai tat ca
 Xem them: F:/PROJECTS/hb2943_work/navboard/NAVBOARD_NOTES.md
 """
+
 from __future__ import annotations
 
 import argparse
@@ -47,14 +47,18 @@ DSN = os.environ.get(
 
 MEASURE = dict(
     measure="nh_nav2.NavSim2+shuffle_stats",
-    K=25, roundtrip=0.006, settle_lag=2,
-    advance_fee_adv=0.0008, n_perm=20,
-    date_lo="2020-01-01", date_lo_f22="2022-01-01", date_hi=DATE_HI,
-    price_db=DB_PATH, years_basis="nav_calendar_span",
+    K=25,
+    roundtrip=0.006,
+    settle_lag=2,
+    advance_fee_adv=0.0008,
+    n_perm=20,
+    date_lo="2020-01-01",
+    date_lo_f22="2022-01-01",
+    date_hi=DATE_HI,
+    price_db=DB_PATH,
+    years_basis="nav_calendar_span",
 )
-CONFIG_HASH = hashlib.md5(
-    json.dumps(MEASURE, sort_keys=True).encode()
-).hexdigest()[:16]
+CONFIG_HASH = hashlib.md5(json.dumps(MEASURE, sort_keys=True).encode()).hexdigest()[:16]
 
 DDL = """
 CREATE TABLE IF NOT EXISTS leaderboard_nav (
@@ -121,7 +125,8 @@ def score_run(con, run_id):
         "FROM run_trades WHERE run_id = %s "
         "AND exit_date IS NOT NULL AND entry_price IS NOT NULL "
         "AND exit_price IS NOT NULL AND entry_date IS NOT NULL",
-        con, params=(run_id,),
+        con,
+        params=(run_id,),
     )
     if len(trades) < 5:
         return None, f"chi {len(trades)} trades dong"
@@ -130,16 +135,24 @@ def score_run(con, run_id):
     sim = NavSim2(str(TMP_CSV), date_lo=MEASURE["date_lo"])
     if len(sim.trades) < 5 or len(sim.calendar) < 30:
         return None, (
-            f"sim khong du du lieu (trades khop gia={len(sim.trades)}, "
-            f"skipped_db={sim.skipped_db})"
+            f"sim khong du du lieu (trades khop gia={len(sim.trades)}, skipped_db={sim.skipped_db})"
         )
-    adv = shuffle_stats(sim, K=MEASURE["K"], roundtrip=MEASURE["roundtrip"],
-                        settle_lag=MEASURE["settle_lag"],
-                        advance_fee=MEASURE["advance_fee_adv"],
-                        n=MEASURE["n_perm"])
-    noadv = shuffle_stats(sim, K=MEASURE["K"], roundtrip=MEASURE["roundtrip"],
-                          settle_lag=MEASURE["settle_lag"], advance_fee=None,
-                          n=MEASURE["n_perm"])
+    adv = shuffle_stats(
+        sim,
+        K=MEASURE["K"],
+        roundtrip=MEASURE["roundtrip"],
+        settle_lag=MEASURE["settle_lag"],
+        advance_fee=MEASURE["advance_fee_adv"],
+        n=MEASURE["n_perm"],
+    )
+    noadv = shuffle_stats(
+        sim,
+        K=MEASURE["K"],
+        roundtrip=MEASURE["roundtrip"],
+        settle_lag=MEASURE["settle_lag"],
+        advance_fee=None,
+        n=MEASURE["n_perm"],
+    )
     years = (pd.Timestamp(sim.calendar[-1]) - pd.Timestamp(sim.calendar[0])).days / 365.25
     if years < 0.5:
         return None, f"cua so qua ngan ({years:.2f} nam)"
@@ -148,34 +161,44 @@ def score_run(con, run_id):
     sim22 = NavSim2(str(TMP_CSV), date_lo=MEASURE["date_lo_f22"])
     if len(sim22.trades) >= 5 and len(sim22.calendar) >= 30:
         nav_f22 = shuffle_stats(
-            sim22, K=MEASURE["K"], roundtrip=MEASURE["roundtrip"],
+            sim22,
+            K=MEASURE["K"],
+            roundtrip=MEASURE["roundtrip"],
             settle_lag=MEASURE["settle_lag"],
-            advance_fee=MEASURE["advance_fee_adv"], n=MEASURE["n_perm"],
+            advance_fee=MEASURE["advance_fee_adv"],
+            n=MEASURE["n_perm"],
         )["mean"]
 
     row = (
         run_id,
-        adv["mean"], noadv["mean"],
+        adv["mean"],
+        noadv["mean"],
         adv["mean"] ** (1.0 / years) - 1.0,
         noadv["mean"] ** (1.0 / years) - 1.0,
         adv["dd_mean"],
         nav_f22,
-        years, len(sim.trades), CONFIG_HASH,
+        years,
+        len(sim.trades),
+        CONFIG_HASH,
     )
     return row, None
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--market", default="vn_stock",
-                    help="market filter (default vn_stock; '' = tat ca)")
-    ap.add_argument("--include-superseded", action="store_true",
-                    help="cham ca run superseded (mac dinh chi active)")
+    ap.add_argument(
+        "--market", default="vn_stock", help="market filter (default vn_stock; '' = tat ca)"
+    )
+    ap.add_argument(
+        "--include-superseded",
+        action="store_true",
+        help="cham ca run superseded (mac dinh chi active)",
+    )
     ap.add_argument("--run-like", default=None, help="loc run_id theo substring")
-    ap.add_argument("--limit", type=int, default=None,
-                    help="chi cham N run diem composite cao nhat")
-    ap.add_argument("--force", action="store_true",
-                    help="cham lai ca run da co cung config_hash")
+    ap.add_argument(
+        "--limit", type=int, default=None, help="chi cham N run diem composite cao nhat"
+    )
+    ap.add_argument("--force", action="store_true", help="cham lai ca run da co cung config_hash")
     args = ap.parse_args()
 
     WORKDIR.mkdir(parents=True, exist_ok=True)
@@ -184,17 +207,19 @@ def main():
     cur.execute(DDL)
     con.commit()
 
-    run_ids = fetch_run_list(cur, args.market or None, args.include_superseded,
-                             args.run_like, args.limit)
+    run_ids = fetch_run_list(
+        cur, args.market or None, args.include_superseded, args.run_like, args.limit
+    )
     done: set = set()
     if not args.force:
-        cur.execute("SELECT run_id FROM leaderboard_nav WHERE config_hash = %s",
-                    (CONFIG_HASH,))
+        cur.execute("SELECT run_id FROM leaderboard_nav WHERE config_hash = %s", (CONFIG_HASH,))
         done = {r[0] for r in cur.fetchall()}
     todo = [r for r in run_ids if r not in done]
-    print(f"config_hash={CONFIG_HASH} | ung vien={len(run_ids)} "
-          f"da cham truoc do={len(run_ids) - len(todo)} | can cham={len(todo)}",
-          flush=True)
+    print(
+        f"config_hash={CONFIG_HASH} | ung vien={len(run_ids)} "
+        f"da cham truoc do={len(run_ids) - len(todo)} | can cham={len(todo)}",
+        flush=True,
+    )
 
     n_ok = n_skip = 0
     t_start = time.time()
@@ -212,14 +237,18 @@ def main():
         con.commit()
         n_ok += 1
         _, nav_a, nav_n, cagr_a, _, dd, f22, yrs, ntr, _ = row
-        print(f"[{i}/{len(todo)}] {run_id}: NAV x{nav_a:.2f}/x{nav_n:.2f} "
-              f"CAGR {cagr_a*100:.1f}% DD {dd*100:.1f}% "
-              f"f22 {'x%.2f' % f22 if f22 else '—'} ({ntr} tr, {yrs:.2f}y, "
-              f"{time.time()-t0:.1f}s)", flush=True)
+        print(
+            f"[{i}/{len(todo)}] {run_id}: NAV x{nav_a:.2f}/x{nav_n:.2f} "
+            f"CAGR {cagr_a * 100:.1f}% DD {dd * 100:.1f}% "
+            f"f22 {'x%.2f' % f22 if f22 else '—'} ({ntr} tr, {yrs:.2f}y, "
+            f"{time.time() - t0:.1f}s)",
+            flush=True,
+        )
 
     dt = time.time() - t_start
-    print(f"XONG: cham={n_ok} skip={n_skip} / todo={len(todo)} "
-          f"trong {dt/60:.1f} phut", flush=True)
+    print(
+        f"XONG: cham={n_ok} skip={n_skip} / todo={len(todo)} trong {dt / 60:.1f} phut", flush=True
+    )
     con.close()
 
 

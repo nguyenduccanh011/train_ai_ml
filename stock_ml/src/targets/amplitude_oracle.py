@@ -90,7 +90,7 @@ def _maxprofit_positions(
     NEG = -1e18
     hold = np.empty(n)  # best net profit ending bar t HOLDING a position
     cash = np.empty(n)  # best net profit ending bar t FLAT
-    buy_at = np.zeros(n, dtype=bool)   # hold[t] achieved by buying at t (from cash[t-1])
+    buy_at = np.zeros(n, dtype=bool)  # hold[t] achieved by buying at t (from cash[t-1])
     sell_at = np.zeros(n, dtype=bool)  # cash[t] achieved by selling at t (from hold[t-1])
 
     hold[0] = -logp[0] if can_buy[0] else NEG  # can only hold at bar 0 by buying at bar 0

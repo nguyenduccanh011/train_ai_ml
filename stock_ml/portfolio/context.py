@@ -4,6 +4,7 @@ portfolio implementation and differ only in where frames come from.
 duckdb/sqlite are imported lazily INSIDE the concrete context (design doc §6:
 duckdb stays out of the stock_ml_core wheel dependencies).
 """
+
 from __future__ import annotations
 
 import pandas as pd
@@ -40,26 +41,38 @@ class DuckDBContext(PortfolioContext):
 
     def market_frame(self, start: str) -> pd.DataFrame:
         import duckdb
+
         cx = duckdb.connect(self.market_db, read_only=True)
-        px = cx.execute("SELECT symbol,date,low,close,high,volume FROM ohlcv WHERE timeframe='1D' AND date>=? "
-                        "ORDER BY symbol,date", [start]).fetchdf()
+        px = cx.execute(
+            "SELECT symbol,date,low,close,high,volume FROM ohlcv WHERE timeframe='1D' AND date>=? "
+            "ORDER BY symbol,date",
+            [start],
+        ).fetchdf()
         cx.close()
         return px
 
     def meta_frame(self, symbols: list[str]) -> pd.DataFrame:
         import duckdb
-        d = duckdb.connect(self.market_db, read_only=True); ph = ",".join("?" * len(symbols))
-        q = d.execute(f"select symbol,date,open,high,low,close,volume from ohlcv where timeframe='1D' "
-                      f"and symbol in ({ph}) order by symbol,date", symbols).fetchdf()
+
+        d = duckdb.connect(self.market_db, read_only=True)
+        ph = ",".join("?" * len(symbols))
+        q = d.execute(
+            f"select symbol,date,open,high,low,close,volume from ohlcv where timeframe='1D' "
+            f"and symbol in ({ph}) order by symbol,date",
+            symbols,
+        ).fetchdf()
         d.close()
         return q
 
     def price_frame(self, symbols: list[str], date_lo: str) -> pd.DataFrame:
         import sqlite3
+
         con = sqlite3.connect(self.ohlcv_db)
         ph = ",".join("?" * len(symbols))
         px = pd.read_sql_query(
             f"SELECT symbol,date,close FROM ohlcv WHERE symbol IN ({ph}) AND date>=? AND date<=?",
-            con, params=list(symbols) + [date_lo, self.date_hi])
+            con,
+            params=list(symbols) + [date_lo, self.date_hi],
+        )
         con.close()
         return px

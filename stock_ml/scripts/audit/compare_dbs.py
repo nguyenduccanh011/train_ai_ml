@@ -30,7 +30,9 @@ def _run_async(coro):
             return await coro
         finally:
             from db.engine import async_engine
+
             await async_engine.dispose()
+
     return asyncio.run(_wrapper())
 
 
@@ -39,6 +41,7 @@ async def _load(template_id):
     from sqlalchemy.ext.asyncio import AsyncSession
     from sqlalchemy.orm import sessionmaker
     from src.pipeline.experiment import ExperimentConfig
+
     maker = sessionmaker(async_engine, class_=AsyncSession, expire_on_commit=False)
     async with maker() as s:
         return await ExperimentConfig.from_template_id_async(template_id, s)
@@ -46,23 +49,31 @@ async def _load(template_id):
 
 def _score(summary):
     from src.evaluation.scoring import composite_score
+
     agg = summary.get("aggregate", {})
     frames = summary.get("_run_detail_frames", {})
     tr = frames.get("trades")
     trades_list = None
     if tr is not None and not tr.empty:
         trades_list = [
-            {"symbol": r.get("symbol"), "entry_date": str(r.get("entry_date")),
-             "pnl_pct": float(r.get("pnl_pct", 0) or 0),
-             "holding_days": float(r.get("holding_days", 0) or 0)}
+            {
+                "symbol": r.get("symbol"),
+                "entry_date": str(r.get("entry_date")),
+                "pnl_pct": float(r.get("pnl_pct", 0) or 0),
+                "holding_days": float(r.get("holding_days", 0) or 0),
+            }
             for r in tr.to_dict("records")
         ]
     return composite_score(
         metrics={
-            "trades": agg.get("n_trades", 0), "avg_pnl": agg.get("avg_pnl", 0.0),
-            "total_pnl": agg.get("total_pnl", 0.0), "pf": agg.get("profit_factor", 0.0),
-            "max_loss": agg.get("max_loss", 0.0), "avg_hold": agg.get("avg_hold_days", 0.0),
-            "sharpe": summary.get("sharpe", 0.0), "n_symbols": summary.get("n_symbols", 0),
+            "trades": agg.get("n_trades", 0),
+            "avg_pnl": agg.get("avg_pnl", 0.0),
+            "total_pnl": agg.get("total_pnl", 0.0),
+            "pf": agg.get("profit_factor", 0.0),
+            "max_loss": agg.get("max_loss", 0.0),
+            "avg_hold": agg.get("avg_hold_days", 0.0),
+            "sharpe": summary.get("sharpe", 0.0),
+            "n_symbols": summary.get("n_symbols", 0),
         },
         trades=trades_list,
     )
@@ -70,18 +81,27 @@ def _score(summary):
 
 def _run_one(cfg, symbols, tag, db):
     from src.pipeline.experiment import run_experiment
+
     print(f"\n===== RUN [{tag}] data={db} =====", flush=True)
     summary = run_experiment(
-        cfg=cfg, data_root=db, symbols=symbols,
+        cfg=cfg,
+        data_root=db,
+        symbols=symbols,
         out_dir=str(REPO_ROOT / "results" / f"cmp_{tag}"),
-        run_id=f"cmp{cfg.seed}_{tag}", export_csv=False,
+        run_id=f"cmp{cfg.seed}_{tag}",
+        export_csv=False,
     )
     agg = summary.get("aggregate", {})
     return {
-        "tag": tag, "trades": agg.get("n_trades", 0), "wr": agg.get("win_rate", 0.0),
-        "pf": agg.get("profit_factor", 0.0), "avg_pnl": agg.get("avg_pnl", 0.0),
-        "total_pnl": agg.get("total_pnl", 0.0), "sharpe": summary.get("sharpe", 0.0),
-        "mdd": summary.get("max_drawdown", 0.0), "mdd_sym": summary.get("mdd_per_symbol", 0.0),
+        "tag": tag,
+        "trades": agg.get("n_trades", 0),
+        "wr": agg.get("win_rate", 0.0),
+        "pf": agg.get("profit_factor", 0.0),
+        "avg_pnl": agg.get("avg_pnl", 0.0),
+        "total_pnl": agg.get("total_pnl", 0.0),
+        "sharpe": summary.get("sharpe", 0.0),
+        "mdd": summary.get("max_drawdown", 0.0),
+        "mdd_sym": summary.get("mdd_per_symbol", 0.0),
         "composite": _score(summary),
     }
 
@@ -93,6 +113,7 @@ def main():
     args = ap.parse_args()
 
     from src.utils.config_loader import get_pipeline_symbols
+
     cfg = _run_async(_load(args.template_id))
     cfg.seed = args.seed
     symbols = get_pipeline_symbols(market=cfg.market, universe_config=cfg.universe)
@@ -102,10 +123,19 @@ def main():
 
     print("\n================ A/B RESULT (template %d) ================" % args.template_id)
     hdr = f"{'metric':<12}{'OLD(unadj)':>14}{'ADJUSTED':>14}{'delta':>12}"
-    print(hdr); print("-" * len(hdr))
-    for k, fmt in [("trades", "{:.0f}"), ("wr", "{:.3f}"), ("pf", "{:.3f}"),
-                   ("avg_pnl", "{:.4f}"), ("total_pnl", "{:.3f}"), ("sharpe", "{:.4f}"),
-                   ("mdd", "{:.3f}"), ("mdd_sym", "{:.4f}"), ("composite", "{:.2f}")]:
+    print(hdr)
+    print("-" * len(hdr))
+    for k, fmt in [
+        ("trades", "{:.0f}"),
+        ("wr", "{:.3f}"),
+        ("pf", "{:.3f}"),
+        ("avg_pnl", "{:.4f}"),
+        ("total_pnl", "{:.3f}"),
+        ("sharpe", "{:.4f}"),
+        ("mdd", "{:.3f}"),
+        ("mdd_sym", "{:.4f}"),
+        ("composite", "{:.2f}"),
+    ]:
         o, a = rows[0][k], rows[1][k]
         print(f"{k:<12}{fmt.format(o):>14}{fmt.format(a):>14}{fmt.format(a - o):>12}")
 

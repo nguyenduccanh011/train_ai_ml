@@ -41,8 +41,12 @@ def _create_new_tables() -> None:
         sa.Column("version", sa.Integer(), nullable=False, server_default="1"),
         sa.Column("expr_hash", sa.String(40), nullable=False),
         sa.Column("is_active", sa.Boolean(), nullable=False, server_default="1"),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
-        sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+        ),
+        sa.Column(
+            "updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+        ),
         sa.PrimaryKeyConstraint("id", name="pk_feature_def"),
     )
     op.create_index("idx_feature_def_name", "feature_def", ["name"])
@@ -75,7 +79,9 @@ def _create_new_tables() -> None:
         sa.Column("version", sa.Integer(), nullable=False, server_default="1"),
         sa.Column("description", sa.Text(), nullable=True),
         sa.Column("is_active", sa.Boolean(), nullable=False, server_default="1"),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+        ),
         sa.PrimaryKeyConstraint("id", name="pk_feature_set"),
     )
     op.create_index("idx_feature_set_name", "feature_set", ["name"])
@@ -106,7 +112,9 @@ def _create_new_tables() -> None:
         sa.Column("storage_uri", sa.Text(), nullable=False),
         sa.Column("rows", sa.Integer(), nullable=False, server_default="0"),
         sa.Column("engine_version", sa.String(32), nullable=False, server_default=""),
-        sa.Column("computed_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column(
+            "computed_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+        ),
         sa.ForeignKeyConstraint(
             ["feature_id"], ["feature_def.id"], ondelete="CASCADE", name="fk_feature_mat_feature"
         ),
@@ -163,7 +171,9 @@ def downgrade() -> None:
         sa.Column("columns", sa.JSON(), nullable=False, server_default="[]"),
         sa.Column("description", sa.Text(), nullable=True),
         sa.Column("is_active", sa.Boolean(), nullable=False, server_default="1"),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+        ),
         sa.PrimaryKeyConstraint("id", name="pk_feature_set_catalog"),
     )
     op.create_index("idx_feature_set_catalog_name", "feature_set_catalog", ["name"])

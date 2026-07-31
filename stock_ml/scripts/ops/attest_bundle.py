@@ -15,6 +15,7 @@ Usage:
   python stock_ml/scripts/ops/attest_bundle.py --bundle <dir> --run-id <backtest run_id> \
       --duckdb market_data/market.duckdb [--window 2025-01-01]
 """
+
 from __future__ import annotations
 
 import argparse
@@ -41,7 +42,8 @@ def _backtest_signals(run_id: str, window: str, symbols: list[str]) -> pd.DataFr
         df = pd.read_sql(
             "SELECT symbol, date, signal FROM run_signals "
             "WHERE run_id=%s AND date >= %s AND symbol = ANY(%s)",
-            con, params=(run_id, window, symbols),
+            con,
+            params=(run_id, window, symbols),
         )
     finally:
         con.close()
@@ -52,9 +54,13 @@ def _backtest_signals(run_id: str, window: str, symbols: list[str]) -> pd.DataFr
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     p.add_argument("--bundle", required=True)
-    p.add_argument("--run-id", required=True, help="backtest run_id whose run_signals are the xưởng side")
+    p.add_argument(
+        "--run-id", required=True, help="backtest run_id whose run_signals are the xưởng side"
+    )
     p.add_argument("--duckdb", default="market_data/market.duckdb")
-    p.add_argument("--window", default=None, help="attest from this date (default: bundle cutoff_date)")
+    p.add_argument(
+        "--window", default=None, help="attest from this date (default: bundle cutoff_date)"
+    )
     a = p.parse_args()
 
     bundle_dir = Path(a.bundle)
@@ -80,7 +86,9 @@ def main() -> None:
     loader = get_loader(a.duckdb)
     available = set(loader.list_symbols())
     load_syms = [s for s in universe if s in available]
-    ohlcv = loader.load_many(load_syms)[["symbol", "date", "open", "high", "low", "close", "volume"]]
+    ohlcv = loader.load_many(load_syms)[
+        ["symbol", "date", "open", "high", "low", "close", "volume"]
+    ]
     ohlcv["date"] = pd.to_datetime(ohlcv["date"]).dt.normalize()
     prod = generate_signals_from_bundle(bundle, ohlcv)[["symbol", "date", "signal"]]
     prod["date"] = pd.to_datetime(prod["date"]).dt.normalize()
@@ -92,25 +100,38 @@ def main() -> None:
     merged = prod.merge(bt, on=["symbol", "date"], suffixes=("_prod", "_bt"), how="inner")
     n = len(merged)
     if n == 0:
-        raise SystemExit(f"attest: no overlapping (symbol,date) between production and run_id={a.run_id} "
-                         f"on/after {window} — check the run_id/window/universe")
+        raise SystemExit(
+            f"attest: no overlapping (symbol,date) between production and run_id={a.run_id} "
+            f"on/after {window} — check the run_id/window/universe"
+        )
     mism = merged[merged["signal_prod"] != merged["signal_bt"]]
     n_mis = len(mism)
-    print(f"[attest] window>={window} | universe={len(load_syms)} | compared={n} | mismatch={n_mis} "
-          f"({100 * (n - n_mis) / n:.4f}% match)")
+    print(
+        f"[attest] window>={window} | universe={len(load_syms)} | compared={n} | mismatch={n_mis} "
+        f"({100 * (n - n_mis) / n:.4f}% match)"
+    )
 
     parity_path = bundle_dir / "parity.json"
-    parity = json.loads(parity_path.read_text(encoding="utf-8")) if parity_path.is_file() else {
-        "schema": "parity.json/1", "generated_by": "attest_bundle"}
+    parity = (
+        json.loads(parity_path.read_text(encoding="utf-8"))
+        if parity_path.is_file()
+        else {"schema": "parity.json/1", "generated_by": "attest_bundle"}
+    )
     if n_mis == 0:
         parity["status"] = "PASS"
-        parity["attest"] = {"run_id": a.run_id, "window": str(window), "compared": n,
-                            "note": "production signal chain reproduced the backtest on the serve window"}
+        parity["attest"] = {
+            "run_id": a.run_id,
+            "window": str(window),
+            "compared": n,
+            "note": "production signal chain reproduced the backtest on the serve window",
+        }
         parity_path.write_text(json.dumps(parity, indent=2, sort_keys=True), encoding="utf-8")
         print(f"[attest] PASS — {n} signals reproduce bit-for-bit. parity.json -> PASS.")
     else:
         ex = mism.head(5)[["symbol", "date", "signal_prod", "signal_bt"]].to_dict("records")
-        print(f"[attest] FAIL — {n_mis}/{n} signals differ. parity stays PENDING. First diffs: {ex}")
+        print(
+            f"[attest] FAIL — {n_mis}/{n} signals differ. parity stays PENDING. First diffs: {ex}"
+        )
         sys.exit(2)
 
 

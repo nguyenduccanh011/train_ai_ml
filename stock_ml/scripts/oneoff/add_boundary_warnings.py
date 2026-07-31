@@ -33,6 +33,7 @@ for entry in data:
     if isinstance(target_dict, str):
         # Parse from string if needed
         import ast
+
         try:
             target_dict = ast.literal_eval(target_dict)
         except:
@@ -72,6 +73,7 @@ for i, e in enumerate(non_sup[:5]):
     target_dict = e.get("target", {})
     if isinstance(target_dict, str):
         import ast
+
         try:
             target_dict = ast.literal_eval(target_dict)
         except:
@@ -81,7 +83,7 @@ for i, e in enumerate(non_sup[:5]):
     gap = e.get("gap_days", 0)
     warns = e.get("warnings", [])
 
-    print(f"#{i+1}: score={e['composite_score']} pf={e['pf']} wr={e['wr']}")
+    print(f"#{i + 1}: score={e['composite_score']} pf={e['pf']} wr={e['wr']}")
     print(f"    gap_days={gap}, target_fw={target_fw}, exit_fw={exit_fw}")
     print(f"    warnings={warns}")
     print()

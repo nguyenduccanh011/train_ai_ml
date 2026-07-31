@@ -36,10 +36,19 @@ def _synthetic_ohlcv(symbols, start, end, seed=3):
         high = np.maximum(opn, close) * (1.0 + np.abs(rng.normal(0.0, 0.004, size=len(dates))))
         low = np.minimum(opn, close) * (1.0 - np.abs(rng.normal(0.0, 0.004, size=len(dates))))
         volume = rng.integers(100_000, 1_000_000, size=len(dates))
-        frames.append(pd.DataFrame({
-            "symbol": sym, "date": dates, "open": opn, "high": high,
-            "low": low, "close": close, "volume": volume,
-        }))
+        frames.append(
+            pd.DataFrame(
+                {
+                    "symbol": sym,
+                    "date": dates,
+                    "open": opn,
+                    "high": high,
+                    "low": low,
+                    "close": close,
+                    "volume": volume,
+                }
+            )
+        )
     return pd.concat(frames, ignore_index=True)
 
 
@@ -83,8 +92,12 @@ def test_predict_slot_matches_train_fold():
     )
 
     entry_model, exit_model, sig_tf = train_fold(
-        train, test, FEATURE_COLS, cfg,
-        entry_target_col="target_entry", exit_target_col="target_exit",
+        train,
+        test,
+        FEATURE_COLS,
+        cfg,
+        entry_target_col="target_entry",
+        exit_target_col="target_exit",
     )
     assert exit_model is not None, "dual-ML branch should build an exit model"
 
@@ -112,8 +125,14 @@ def test_predict_slot_matches_train_fold_3head():
     # Two extra entry heads on DIFFERENT-horizon targets (stand-ins for reversal/continuation).
     cfg.engine = {
         "exit_force_gate": "downleg12",
-        "entry_ensemble": {"target": {"type": "forward_return_regression", "horizon": 8}, "z_threshold": 0.9},
-        "entry_ensemble2": {"target": {"type": "forward_return_regression", "horizon": 3}, "z_threshold": 0.7},
+        "entry_ensemble": {
+            "target": {"type": "forward_return_regression", "horizon": 8},
+            "z_threshold": 0.9,
+        },
+        "entry_ensemble2": {
+            "target": {"type": "forward_return_regression", "horizon": 3},
+            "z_threshold": 0.7,
+        },
     }
     train, test = _build_dual_data(
         ["X", "Y"], "2019-09-01", "2020-01-01", "2020-06-01", "2020-12-31"
@@ -124,16 +143,25 @@ def test_predict_slot_matches_train_fold_3head():
 
     ensemble: dict = {}
     entry_model, exit_model, sig_tf = train_fold(
-        train, test, FEATURE_COLS, cfg,
-        entry_target_col="target_entry", exit_target_col="target_exit",
-        entry2_target_col="target_entry2", entry3_target_col="target_entry3",
+        train,
+        test,
+        FEATURE_COLS,
+        cfg,
+        entry_target_col="target_entry",
+        exit_target_col="target_exit",
+        entry2_target_col="target_entry2",
+        entry3_target_col="target_entry3",
         out_models=ensemble,
     )
     assert {"entry2", "entry3"}.issubset(ensemble), "train_fold should expose ensemble models"
     assert "score2" in sig_tf.columns and "score3" in sig_tf.columns
 
     sig_ps = predict_slot_signals(
-        entry_model, exit_model, test, FEATURE_COLS, cfg,
+        entry_model,
+        exit_model,
+        test,
+        FEATURE_COLS,
+        cfg,
         entry_ensemble=[
             ("score2", ensemble["entry2"], None),
             ("score3", ensemble["entry3"], None),

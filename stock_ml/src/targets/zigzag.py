@@ -120,7 +120,9 @@ def _profitable_pivots(
     return keep
 
 
-def _proximity(n: int, pivot_idx: list[int], tau: float, one_sided: str | None = None) -> np.ndarray:
+def _proximity(
+    n: int, pivot_idx: list[int], tau: float, one_sided: str | None = None
+) -> np.ndarray:
     """Soft label in [0,1]: exp(-distance_to_nearest_pivot / tau) per bar.
 
     ``one_sided`` restricts which side of each pivot is labeled:

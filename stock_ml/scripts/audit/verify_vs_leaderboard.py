@@ -36,9 +36,12 @@ def main() -> None:
     p.add_argument("--bundle", required=True)
     p.add_argument("--leaderboard-csv", required=True)
     p.add_argument("--duckdb", default="market_data/market.duckdb")
-    p.add_argument("--since", default="2024-06-01",
-                   help="load OHLCV from this date (avoids old std==0 NaN bars; "
-                        "needs >=~1y warmup before the cutoff year)")
+    p.add_argument(
+        "--since",
+        default="2024-06-01",
+        help="load OHLCV from this date (avoids old std==0 NaN bars; "
+        "needs >=~1y warmup before the cutoff year)",
+    )
     args = p.parse_args()
 
     bundle = load_bundle(args.bundle)
@@ -54,8 +57,10 @@ def main() -> None:
     ohlcv = raw[["symbol", "date", "open", "high", "low", "close", "volume"]].copy()
     ohlcv = ohlcv[pd.to_datetime(ohlcv["date"]) >= pd.Timestamp(args.since)].copy()
 
-    print(f"[verify-lb] generating bundle signals for {len(requested)} symbols "
-          f"(since {args.since}) ...")
+    print(
+        f"[verify-lb] generating bundle signals for {len(requested)} symbols "
+        f"(since {args.since}) ..."
+    )
     bsig = generate_signals_from_bundle(bundle, ohlcv)[["symbol", "date", "signal"]].copy()
     bsig["date"] = pd.to_datetime(bsig["date"]).dt.normalize()
 
@@ -69,18 +74,24 @@ def main() -> None:
     m["agree"] = m["signal_lb"] == m["signal_bundle"]
 
     print(f"\n[verify-lb] overlapping bars: {len(m)}")
-    print(f"{'year':<6}{'bars':>8}{'agree%':>9}{'lb_buy':>8}{'bd_buy':>8}{'lb_sell':>9}{'bd_sell':>9}"
-          + "   (bundle responsible)")
+    print(
+        f"{'year':<6}{'bars':>8}{'agree%':>9}{'lb_buy':>8}{'bd_buy':>8}{'lb_sell':>9}{'bd_sell':>9}"
+        + "   (bundle responsible)"
+    )
     for y, g in m.groupby("year"):
         mark = "  <== cutoff year" if y == cutoff_year else ""
-        print(f"{y:<6}{len(g):>8}{g['agree'].mean()*100:>8.1f}%"
-              f"{int((g['signal_lb']>0).sum()):>8}{int((g['signal_bundle']>0).sum()):>8}"
-              f"{int((g['signal_lb']<0).sum()):>9}{int((g['signal_bundle']<0).sum()):>9}{mark}")
+        print(
+            f"{y:<6}{len(g):>8}{g['agree'].mean() * 100:>8.1f}%"
+            f"{int((g['signal_lb'] > 0).sum()):>8}{int((g['signal_bundle'] > 0).sum()):>8}"
+            f"{int((g['signal_lb'] < 0).sum()):>9}{int((g['signal_bundle'] < 0).sum()):>9}{mark}"
+        )
 
     cut = m[m["year"] == cutoff_year]
     overall = m["agree"].mean() * 100
     cut_agree = cut["agree"].mean() * 100 if len(cut) else float("nan")
-    print(f"\n[verify-lb] overall agree {overall:.1f}% | cutoff-year {cutoff_year} agree {cut_agree:.1f}%")
+    print(
+        f"\n[verify-lb] overall agree {overall:.1f}% | cutoff-year {cutoff_year} agree {cut_agree:.1f}%"
+    )
     # confusion on the cutoff year (the production-relevant comparison)
     if len(cut):
         print(f"[verify-lb] cutoff-year confusion (lb -> bundle):")
@@ -95,7 +106,7 @@ def main() -> None:
         print(f"{'month':<7}{'bars':>7}{'disagree':>10}{'disagree%':>11}")
         for mo, g in cut.groupby("month"):
             dis = (~g["agree"]).sum()
-            print(f"{mo:<7}{len(g):>7}{dis:>10}{(dis/len(g)*100):>10.1f}%")
+            print(f"{mo:<7}{len(g):>7}{dis:>10}{(dis / len(g) * 100):>10.1f}%")
 
 
 if __name__ == "__main__":

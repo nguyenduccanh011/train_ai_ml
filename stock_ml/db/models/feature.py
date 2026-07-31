@@ -48,7 +48,9 @@ class FeatureDefModel(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
     expr: Mapped[str] = mapped_column(Text, nullable=False)
-    kind: Mapped[str] = mapped_column(String(16), nullable=False)  # per_symbol|cross_sectional|market
+    kind: Mapped[str] = mapped_column(
+        String(16), nullable=False
+    )  # per_symbol|cross_sectional|market
     output_dtype: Mapped[str] = mapped_column(String(16), nullable=False, default="float")
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
@@ -142,9 +144,7 @@ class FeatureSetMemberModel(Base):
     )
     position: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
-    feature_set: Mapped[FeatureSetModel] = relationship(
-        "FeatureSetModel", back_populates="members"
-    )
+    feature_set: Mapped[FeatureSetModel] = relationship("FeatureSetModel", back_populates="members")
     feature: Mapped[FeatureDefModel] = relationship("FeatureDefModel", back_populates="members")
 
 

@@ -10,21 +10,21 @@ from typing import Protocol
 
 import pandas as pd
 
-from stock_ml.src.targets.continuation_entry import ContinuationEntryRegressionTarget
+from stock_ml.src.targets.action_oracle import ActionOracleTarget
+from stock_ml.src.targets.amplitude_oracle import MaxProfitActionTarget
 from stock_ml.src.targets.bottom_structure_entry import (
     BottomStructureEntryRegressionTarget,
 )
-from stock_ml.src.targets.action_oracle import ActionOracleTarget
-from stock_ml.src.targets.amplitude_oracle import MaxProfitActionTarget
+from stock_ml.src.targets.continuation_entry import ContinuationEntryRegressionTarget
 from stock_ml.src.targets.continuation_recov_entry import (
     ContinuationRecovEntryRegressionTarget,
 )
 from stock_ml.src.targets.downleg_depth import DownlegDepthRegressionTarget
 from stock_ml.src.targets.early_wave import EarlyWaveExitTarget, EarlyWaveV2Target
 from stock_ml.src.targets.forward import ForwardReturnTarget
+from stock_ml.src.targets.forward_cross_sectional import ForwardReturnCrossSectionalTarget
 from stock_ml.src.targets.forward_drawdown import ForwardDrawdownRegressionTarget
 from stock_ml.src.targets.forward_regression import ForwardReturnRegressionTarget
-from stock_ml.src.targets.forward_cross_sectional import ForwardReturnCrossSectionalTarget
 from stock_ml.src.targets.forward_return_penalized import (
     ForwardReturnPenalizedRegressionTarget,
 )
@@ -148,21 +148,23 @@ _REGISTRY: dict[str, type] = {
 ZIGZAG_FORWARD_SPAN = 40
 
 # Targets whose forward label spans exactly `horizon` bars (tail-NaN at `horizon`).
-_HORIZON_TARGETS = frozenset({
-    "forward_return",
-    "forward_return_regression",
-    "forward_cross_sectional",
-    "forward_return_penalized_regression",
-    "forward_drawdown_regression",
-    "continuation_entry_regression",
-    "continuation_recov_entry_regression",
-    "reversal_entry_regression",
-    "risk_exit_regression",
-    "swing_value_regression",  # asymmetric forward swing value over `horizon`
-    "mfe_regression",
-    "reward_risk_regression",
-    "triple_barrier",  # horizon = vertical barrier
-})
+_HORIZON_TARGETS = frozenset(
+    {
+        "forward_return",
+        "forward_return_regression",
+        "forward_cross_sectional",
+        "forward_return_penalized_regression",
+        "forward_drawdown_regression",
+        "continuation_entry_regression",
+        "continuation_recov_entry_regression",
+        "reversal_entry_regression",
+        "risk_exit_regression",
+        "swing_value_regression",  # asymmetric forward swing value over `horizon`
+        "mfe_regression",
+        "reward_risk_regression",
+        "triple_barrier",  # horizon = vertical barrier
+    }
+)
 
 
 def target_forward_span(config: dict | None) -> int:

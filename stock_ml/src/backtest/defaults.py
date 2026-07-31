@@ -9,34 +9,43 @@ VN market realistic baseline:
 from __future__ import annotations
 
 import os as _os
+
 import yaml as _yaml
 
 
 def _load_symbol_configs():
     try:
-        config_path = _os.path.join(
-            _os.path.dirname(__file__), '..', '..', 'config', 'models.yaml'
-        )
-        with open(config_path, 'r', encoding='utf-8') as f:
+        config_path = _os.path.join(_os.path.dirname(__file__), "..", "..", "config", "models.yaml")
+        with open(config_path, encoding="utf-8") as f:
             cfg = _yaml.safe_load(f)
 
         profiles = {}
-        for profile_name, syms in cfg.get('symbol_profiles', {}).items():
-            for sym in (syms or []):
+        for profile_name, syms in cfg.get("symbol_profiles", {}).items():
+            for sym in syms or []:
                 profiles[str(sym)] = profile_name
 
-        rule_priority = set(str(s) for s in cfg.get('rule_priority_symbols', []))
-        score5_risky = set(str(s) for s in cfg.get('score5_risky_symbols', []))
+        rule_priority = set(str(s) for s in cfg.get("rule_priority_symbols", []))
+        score5_risky = set(str(s) for s in cfg.get("score5_risky_symbols", []))
         return profiles, rule_priority, score5_risky
     except Exception:
         return _FALLBACK_SYMBOL_PROFILES, _FALLBACK_RULE_PRIORITY, _FALLBACK_SCORE5_RISKY
 
 
 _FALLBACK_SYMBOL_PROFILES = {
-    "ACB": "bank", "BID": "bank", "MBB": "bank", "TCB": "bank",
-    "AAV": "high_beta", "AAS": "high_beta", "SSI": "high_beta", "VND": "high_beta",
-    "DGC": "momentum", "HPG": "momentum", "VIC": "momentum",
-    "FPT": "defensive", "REE": "defensive", "VNM": "defensive",
+    "ACB": "bank",
+    "BID": "bank",
+    "MBB": "bank",
+    "TCB": "bank",
+    "AAV": "high_beta",
+    "AAS": "high_beta",
+    "SSI": "high_beta",
+    "VND": "high_beta",
+    "DGC": "momentum",
+    "HPG": "momentum",
+    "VIC": "momentum",
+    "FPT": "defensive",
+    "REE": "defensive",
+    "VNM": "defensive",
 }
 _FALLBACK_RULE_PRIORITY = {"AAA", "SSN", "TEG", "GAS", "PLX", "IJC", "DQC"}
 _FALLBACK_SCORE5_RISKY = {"AAA", "IJC", "ITC", "VHM", "TEG", "QBS", "KMR", "SSN", "PLX"}
@@ -52,15 +61,25 @@ DEFAULT_TRADING_COST: dict[str, float] = {
 DEFAULT_INITIAL_CAPITAL: float = 100_000_000.0
 
 FEATURE_NAMES = [
-    "rsi_slope_5d", "vol_surge_ratio", "range_position_20d",
-    "dist_to_resistance", "breakout_setup_score", "bb_width_percentile",
-    "higher_lows_count", "obv_price_divergence",
+    "rsi_slope_5d",
+    "vol_surge_ratio",
+    "range_position_20d",
+    "dist_to_resistance",
+    "breakout_setup_score",
+    "bb_width_percentile",
+    "higher_lows_count",
+    "obv_price_divergence",
 ]
 
 FEATURE_DEFAULTS = {
-    "rsi_slope_5d": 0, "vol_surge_ratio": 1.0, "range_position_20d": 0.5,
-    "dist_to_resistance": 0.05, "breakout_setup_score": 0, "bb_width_percentile": 0.5,
-    "higher_lows_count": 0, "obv_price_divergence": 0,
+    "rsi_slope_5d": 0,
+    "vol_surge_ratio": 1.0,
+    "range_position_20d": 0.5,
+    "dist_to_resistance": 0.05,
+    "breakout_setup_score": 0,
+    "bb_width_percentile": 0.5,
+    "higher_lows_count": 0,
+    "obv_price_divergence": 0,
 }
 
 DEFAULT_PARAMS = {
@@ -81,9 +100,16 @@ DEFAULT_PARAMS = {
     "exit_mode": "rule",
     "pnl_mode": "log",
     # Mods
-    "mod_a": True, "mod_b": True, "mod_c": False, "mod_d": False,
-    "mod_e": True, "mod_f": True, "mod_g": True, "mod_h": True,
-    "mod_i": True, "mod_j": True,
+    "mod_a": True,
+    "mod_b": True,
+    "mod_c": False,
+    "mod_d": False,
+    "mod_e": True,
+    "mod_f": True,
+    "mod_g": True,
+    "mod_h": True,
+    "mod_i": True,
+    "mod_j": True,
     # V23 tunable params
     "fast_exit_strong": -0.08,
     "fast_exit_moderate": -0.06,

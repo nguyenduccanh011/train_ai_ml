@@ -89,7 +89,9 @@ class LeaderboardRow(BaseModel):
     entry_model: str
     direction: str = "long"  # long | short
     # Component composition (parity with leaderboard_runs columns; read by row_to_model)
-    model_mode: str = "ml_only"  # ml_only | rule_only | hybrid_ml_entry_rule_exit | hybrid_rule_entry_ml_exit
+    model_mode: str = (
+        "ml_only"  # ml_only | rule_only | hybrid_ml_entry_rule_exit | hybrid_rule_entry_ml_exit
+    )
     signal_mode: str = "entry_first"  # entry/exit hysteresis mode
     target: TargetConfig
 

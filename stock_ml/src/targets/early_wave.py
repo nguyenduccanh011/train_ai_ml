@@ -77,9 +77,7 @@ class EarlyWaveV2Target:
             past_range = (high[lo : i + 1].max() - low[lo : i + 1].min()) / ci
             is_accumulating = past_range < 0.15
 
-            rule_trigger = (
-                i >= 26 and macd_hist[i] > 0 and ci > ma20[i] and ci > open_[i]
-            )
+            rule_trigger = i >= 26 and macd_hist[i] > 0 and ci > ma20[i] and ci > open_[i]
             is_downtrend = (
                 i >= self.long_window
                 and (ci - close[i - self.long_window]) / close[i - self.long_window] < -0.10

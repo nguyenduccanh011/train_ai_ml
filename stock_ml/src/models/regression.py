@@ -138,7 +138,7 @@ class MLPRegressionModel:
         defaults = {
             "hidden_layer_sizes": (64, 32),
             "activation": "relu",
-            "alpha": 1e-3,            # L2 regularization
+            "alpha": 1e-3,  # L2 regularization
             "learning_rate_init": 1e-3,
             "max_iter": 300,
             "early_stopping": True,
@@ -146,9 +146,20 @@ class MLPRegressionModel:
             "validation_fraction": 0.15,
         }
         mlp_keys = {
-            "hidden_layer_sizes", "activation", "alpha", "learning_rate_init", "max_iter",
-            "early_stopping", "n_iter_no_change", "validation_fraction", "batch_size",
-            "solver", "learning_rate", "momentum", "beta_1", "beta_2",
+            "hidden_layer_sizes",
+            "activation",
+            "alpha",
+            "learning_rate_init",
+            "max_iter",
+            "early_stopping",
+            "n_iter_no_change",
+            "validation_fraction",
+            "batch_size",
+            "solver",
+            "learning_rate",
+            "momentum",
+            "beta_1",
+            "beta_2",
         }
         clean = {k: v for k, v in self.params.items() if v is not None and k in mlp_keys}
         merged = {**defaults, **clean}

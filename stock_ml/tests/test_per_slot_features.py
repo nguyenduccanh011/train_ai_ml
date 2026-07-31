@@ -54,7 +54,9 @@ def test_resolver_unions_per_slot_sets():
     feat, cols, _hits = resolver.resolve(bars, ["leading_v2", "basic_v1"], data_root="t")
     assert set(cols["basic_v1"]).issubset(set(cols["leading_v2"]))
     feature_cols = [
-        c for c in feat.columns if c not in {"symbol", "date", "open", "high", "low", "close", "volume"}
+        c
+        for c in feat.columns
+        if c not in {"symbol", "date", "open", "high", "low", "close", "volume"}
     ]
     assert len(feature_cols) == 37  # union == leading_v2, basic_v1 shares its features
 

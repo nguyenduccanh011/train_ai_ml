@@ -8,9 +8,11 @@ faders WITHOUT clipping runners (trail follows the peak), and EXITS faders soone
 MDD-neutral-to-positive (opposite of the overext 'ride longer' tension). Base champ:
 activate 0.15, atr_mult 2.0, atr_floor 0.04, atr_cap 0.16. Backtest vs 407.7.
 """
+
 from __future__ import annotations
 import asyncio, copy, json, sys
 from pathlib import Path
+
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT))
 from sqlalchemy.ext.asyncio import AsyncSession  # noqa: E402
@@ -23,9 +25,23 @@ GRID = [
     ("n2_dz_act08", {"trailing_activate_pct": 0.08}),
     ("n2_dz_act05", {"trailing_activate_pct": 0.05}),
     ("n2_dz_act05_m15", {"trailing_activate_pct": 0.05, "trailing_atr_mult": 1.5}),
-    ("n2_dz_act05_m15_fl03", {"trailing_activate_pct": 0.05, "trailing_atr_mult": 1.5, "trailing_atr_floor": 0.03}),
-    ("n2_dz_act05_m10_fl03_cap08", {"trailing_activate_pct": 0.05, "trailing_atr_mult": 1.0, "trailing_atr_floor": 0.03, "trailing_atr_cap": 0.08}),
-    ("n2_dz_act08_m15_fl03", {"trailing_activate_pct": 0.08, "trailing_atr_mult": 1.5, "trailing_atr_floor": 0.03}),
+    (
+        "n2_dz_act05_m15_fl03",
+        {"trailing_activate_pct": 0.05, "trailing_atr_mult": 1.5, "trailing_atr_floor": 0.03},
+    ),
+    (
+        "n2_dz_act05_m10_fl03_cap08",
+        {
+            "trailing_activate_pct": 0.05,
+            "trailing_atr_mult": 1.0,
+            "trailing_atr_floor": 0.03,
+            "trailing_atr_cap": 0.08,
+        },
+    ),
+    (
+        "n2_dz_act08_m15_fl03",
+        {"trailing_activate_pct": 0.08, "trailing_atr_mult": 1.5, "trailing_atr_floor": 0.03},
+    ),
 ]
 
 
@@ -47,27 +63,49 @@ async def main():
         for name, ov in GRID:
             ex = await repo.get_by_name(name)
             if ex:
-                print(f"= {name} ({ex.id})"); created.append((ex.id, name)); continue
-            eng = copy.deepcopy(be); eng.update(ov)
+                print(f"= {name} ({ex.id})")
+                created.append((ex.id, name))
+                continue
+            eng = copy.deepcopy(be)
+            eng.update(ov)
             slots = [
-                {"slot_type": "entry", "ml_component_id": es.ml_component_id, "rule_component_id": None,
-                 "feature_set_name": es.feature_set_name, "target_config": tc(es)},
-                {"slot_type": "exit", "ml_component_id": xs.ml_component_id, "rule_component_id": None,
-                 "feature_set_name": xs.feature_set_name, "target_config": tc(xs)},
+                {
+                    "slot_type": "entry",
+                    "ml_component_id": es.ml_component_id,
+                    "rule_component_id": None,
+                    "feature_set_name": es.feature_set_name,
+                    "target_config": tc(es),
+                },
+                {
+                    "slot_type": "exit",
+                    "ml_component_id": xs.ml_component_id,
+                    "rule_component_id": None,
+                    "feature_set_name": xs.feature_set_name,
+                    "target_config": tc(xs),
+                },
             ]
             tmpl = await repo.create(
-                name=name, market=base.market, strategy=base.strategy,
-                feature_set_id=base.feature_set_id, target_id=base.target_id,
-                component_slots=copy.deepcopy(slots), direction=base.direction,
-                signal_mode=base.signal_mode, signal_threshold=base.signal_threshold,
-                entry_threshold=base.entry_threshold, exit_threshold=base.exit_threshold,
-                split_config=base.split_config, engine_config=eng,
-                validation_config=base.validation_config, seed=base.seed,
+                name=name,
+                market=base.market,
+                strategy=base.strategy,
+                feature_set_id=base.feature_set_id,
+                target_id=base.target_id,
+                component_slots=copy.deepcopy(slots),
+                direction=base.direction,
+                signal_mode=base.signal_mode,
+                signal_threshold=base.signal_threshold,
+                entry_threshold=base.entry_threshold,
+                exit_threshold=base.exit_threshold,
+                split_config=base.split_config,
+                engine_config=eng,
+                validation_config=base.validation_config,
+                seed=base.seed,
                 description=f"dead-zone early-arm vol-trail {ov} on champ {BASE}.",
                 hypothesis="Arm vol-trail earlier+tighter to plug MFE +2-12% dead zone (recover giveback) -> beat 407.7 w/o MDD cost.",
                 universe_slug=base.universe_slug,
             )
-            print(f"* {name} ({tmpl.id})"); created.append((tmpl.id, name))
+            print(f"* {name} ({tmpl.id})")
+            created.append((tmpl.id, name))
         await session.commit()
         print("IDS=" + ",".join(str(t) for t, _ in created))
     await async_engine.dispose()

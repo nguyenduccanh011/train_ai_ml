@@ -76,9 +76,13 @@ def _write_parity(bundle_path: Path, *, as_of: str) -> None:
     def _sha(p: Path) -> str:
         return hashlib.sha256(p.read_bytes()).hexdigest()
 
-    fp = hashlib.sha256("".join(
-        _sha(bundle_path / f) for f in ("manifest.json", "config.json", "feature_spec.json")
-        if (bundle_path / f).is_file()).encode()).hexdigest()[:12]
+    fp = hashlib.sha256(
+        "".join(
+            _sha(bundle_path / f)
+            for f in ("manifest.json", "config.json", "feature_spec.json")
+            if (bundle_path / f).is_file()
+        ).encode()
+    ).hexdigest()[:12]
     parity = {
         "schema": "parity.json/1",
         "status": "PENDING",
@@ -88,10 +92,11 @@ def _write_parity(bundle_path: Path, *, as_of: str) -> None:
         "as_of": as_of,
         "generated_by": "export_bundle",
         "note": "status flips to PASS only after the two-way signal+trade equivalence attestation "
-                "(ENGINE_UPGRADE §11.5.3); until then deploy refuses it without --force.",
+        "(ENGINE_UPGRADE §11.5.3); until then deploy refuses it without --force.",
     }
     (bundle_path / "parity.json").write_text(
-        json.dumps(parity, indent=2, sort_keys=True), encoding="utf-8")
+        json.dumps(parity, indent=2, sort_keys=True), encoding="utf-8"
+    )
     print(f"[export] wrote parity.json (status=PENDING, wheel={parity['wheel']}, fp={fp})")
 
 
@@ -121,38 +126,62 @@ def main() -> None:
     p.add_argument("--symbols", default=None, help="comma-separated symbols")
     p.add_argument("--symbols-file", default=None, help="file with symbols (newline/comma)")
     p.add_argument("--duckdb", default="market_data/market.duckdb")
-    p.add_argument("--cutoff", default=None,
-                   help="single-fit on data <= cutoff (YYYY-MM-DD). Ignored with "
-                        "--replicate-last-fold.")
-    p.add_argument("--replicate-last-fold", action="store_true",
-                   help="train the EXACT last walk-forward fold (same train window via the "
-                        "split config) so the bundle == the backtest's last-fold model.")
-    p.add_argument("--fold-models", action="store_true",
-                   help="§11.9: train EVERY walk-forward fold and ship each model, so serving re-runs "
-                        "the walk-forward (bar year Y scored by model-fold-Y) — history reproduces the "
-                        "backtest by construction, no z-window seed. Implies replicate-last-fold semantics.")
-    p.add_argument("--fold-models-from-run", default=None,
-                   help="§11.9 robust: load the EXACT per-fold models the BACKTEST persisted (run with "
-                        "STOCKML_PERSIST_FOLD_MODELS=1) from that run's folds dir "
-                        "(<out_dir>/<run_id>/folds, holding *.models.joblib) instead of re-training. Ships "
-                        "the verbatim model that produced run_signals → serving == backtest exactly "
-                        "(attest 100%). Implies replicate-last-fold semantics.")
-    p.add_argument("--pred-history-csv", default=None,
-                   help="CSV[symbol,date,score,exit_score] of backtest predictions to embed "
-                        "as the z-window seed.")
-    p.add_argument("--history-mode", choices=["single", "walk_forward"], default="single",
-                   help="single: embed only warmup (< test window) — current model owns the "
-                        "test window onward. walk_forward: embed the FULL backtest predictions "
-                        "so historical signals replay each fold exactly (== backtest); future "
-                        "bars still use this (latest) model.")
+    p.add_argument(
+        "--cutoff",
+        default=None,
+        help="single-fit on data <= cutoff (YYYY-MM-DD). Ignored with --replicate-last-fold.",
+    )
+    p.add_argument(
+        "--replicate-last-fold",
+        action="store_true",
+        help="train the EXACT last walk-forward fold (same train window via the "
+        "split config) so the bundle == the backtest's last-fold model.",
+    )
+    p.add_argument(
+        "--fold-models",
+        action="store_true",
+        help="§11.9: train EVERY walk-forward fold and ship each model, so serving re-runs "
+        "the walk-forward (bar year Y scored by model-fold-Y) — history reproduces the "
+        "backtest by construction, no z-window seed. Implies replicate-last-fold semantics.",
+    )
+    p.add_argument(
+        "--fold-models-from-run",
+        default=None,
+        help="§11.9 robust: load the EXACT per-fold models the BACKTEST persisted (run with "
+        "STOCKML_PERSIST_FOLD_MODELS=1) from that run's folds dir "
+        "(<out_dir>/<run_id>/folds, holding *.models.joblib) instead of re-training. Ships "
+        "the verbatim model that produced run_signals → serving == backtest exactly "
+        "(attest 100%). Implies replicate-last-fold semantics.",
+    )
+    p.add_argument(
+        "--pred-history-csv",
+        default=None,
+        help="CSV[symbol,date,score,exit_score] of backtest predictions to embed "
+        "as the z-window seed.",
+    )
+    p.add_argument(
+        "--history-mode",
+        choices=["single", "walk_forward"],
+        default="single",
+        help="single: embed only warmup (< test window) — current model owns the "
+        "test window onward. walk_forward: embed the FULL backtest predictions "
+        "so historical signals replay each fold exactly (== backtest); future "
+        "bars still use this (latest) model.",
+    )
     p.add_argument("--retrain-schedule", default="yearly")
     p.add_argument("--out", default="bundles")
     args = p.parse_args()
 
-    if (not args.replicate_last_fold and not args.fold_models
-            and not args.fold_models_from_run and not args.cutoff):
-        raise SystemExit("export_bundle: provide --cutoff, --replicate-last-fold, "
-                         "--fold-models, or --fold-models-from-run")
+    if (
+        not args.replicate_last_fold
+        and not args.fold_models
+        and not args.fold_models_from_run
+        and not args.cutoff
+    ):
+        raise SystemExit(
+            "export_bundle: provide --cutoff, --replicate-last-fold, "
+            "--fold-models, or --fold-models-from-run"
+        )
 
     cfg = _load_config(args)
 
@@ -176,14 +205,18 @@ def main() -> None:
         universe_by_year = {y: _resolved[y] for y in fold_years}
         serve_universe = sorted(_resolved[serve_year])
         symbols = sorted(set().union(*universe_by_year.values()))
-        print("[export] universe_policy: "
-              + ", ".join(f"{y}={len(_resolved[y])}" for y in all_years)
-              + f"; union(folds)={len(symbols)}; serving {serve_year}: {len(serve_universe)}")
+        print(
+            "[export] universe_policy: "
+            + ", ".join(f"{y}={len(_resolved[y])}" for y in all_years)
+            + f"; union(folds)={len(symbols)}; serving {serve_year}: {len(serve_universe)}"
+        )
     else:
         symbols = _resolve_symbols(args)
 
-    print(f"[export] template={cfg.name} strategy={cfg.strategy} "
-          f"mode={'replicate-last-fold' if args.replicate_last_fold else 'single-fit'}")
+    print(
+        f"[export] template={cfg.name} strategy={cfg.strategy} "
+        f"mode={'replicate-last-fold' if args.replicate_last_fold else 'single-fit'}"
+    )
 
     from src.data.loader import get_loader
 
@@ -211,12 +244,23 @@ def main() -> None:
         ohlcv = ohlcv[pd.to_datetime(ohlcv["date"]) <= pd.Timestamp(args.cutoff)].copy()
     if ohlcv.empty:
         raise SystemExit("export_bundle: no OHLCV after clipping")
-    print(f"[export] {len(ohlcv)} bars, {ohlcv['symbol'].nunique()} symbols, "
-          f"through {pd.to_datetime(ohlcv['date']).max().date()}")
+    print(
+        f"[export] {len(ohlcv)} bars, {ohlcv['symbol'].nunique()} symbols, "
+        f"through {pd.to_datetime(ohlcv['date']).max().date()}"
+    )
 
-    (feat, entry_feat_cols, exit_feat_cols, entry_target_cfg, exit_target_cfg,
-     entry2_feat_cols, entry3_feat_cols,
-     entry4_feat_cols, entry5_feat_cols, entry6_feat_cols) = build_feature_frame(
+    (
+        feat,
+        entry_feat_cols,
+        exit_feat_cols,
+        entry_target_cfg,
+        exit_target_cfg,
+        entry2_feat_cols,
+        entry3_feat_cols,
+        entry4_feat_cols,
+        entry5_feat_cols,
+        entry6_feat_cols,
+    ) = build_feature_frame(
         ohlcv, cfg, requested_symbols=requested, data_root=args.duckdb, with_targets=True
     )
 
@@ -247,15 +291,17 @@ def main() -> None:
         # whose data ends mid-window, e.g. a suspension/delisting, + NaN-feature zones) —
         # same fail-loud guard the single-fit path honors. The backtest's effective train
         # set excludes these too (see experiment.py train count via dropna).
-        _need = ["target_entry", "target_exit"] + sorted(
-            set(entry_feat_cols) | set(exit_feat_cols)
-        )
+        _need = ["target_entry", "target_exit"] + sorted(set(entry_feat_cols) | set(exit_feat_cols))
         _n0 = len(train_src)
         train_src = train_src.dropna(subset=[c for c in _need if c in train_src.columns])
         if len(train_src) < _n0:
-            print(f"[export] replicate-fold: dropped {_n0 - len(train_src)} un-ripe/NaN train row(s)")
-        print(f"[export] last fold: train {pd.to_datetime(train_src['date']).min().date()}.."
-              f"{pd.to_datetime(train_src['date']).max().date()} -> test_start {cutoff_used.date()}")
+            print(
+                f"[export] replicate-fold: dropped {_n0 - len(train_src)} un-ripe/NaN train row(s)"
+            )
+        print(
+            f"[export] last fold: train {pd.to_datetime(train_src['date']).min().date()}.."
+            f"{pd.to_datetime(train_src['date']).max().date()} -> test_start {cutoff_used.date()}"
+        )
     else:
         # Single-fit on all data up to cutoff; drop rows the model cannot train on
         # (un-ripe label tail + NaN-feature zones) explicitly, since train_fold is fail-loud.
@@ -274,19 +320,29 @@ def main() -> None:
     # head — else serving silently drops the ensemble union buys and live signals diverge from the backtest.
     def _train_models(tsrc: pd.DataFrame) -> dict:
         """Fit the full head set on one train frame and return {entry, exit, entry2.., exit2}."""
+
         def _tcol(name: str) -> str | None:
             return name if name in tsrc.columns else None
 
         om: dict = {}
         e_m, x_m, _ = train_fold(
-            tsrc, tsrc.groupby("symbol", group_keys=False).tail(3), entry_feat_cols, cfg,
+            tsrc,
+            tsrc.groupby("symbol", group_keys=False).tail(3),
+            entry_feat_cols,
+            cfg,
             exit_feat_cols=exit_feat_cols if exit_feat_cols != entry_feat_cols else None,
-            entry_target_col="target_entry", exit_target_col="target_exit",
-            entry2_target_col=_tcol("target_entry2"), entry2_feat_cols=entry2_feat_cols,
-            entry3_target_col=_tcol("target_entry3"), entry3_feat_cols=entry3_feat_cols,
-            entry4_target_col=_tcol("target_entry4"), entry4_feat_cols=entry4_feat_cols,
-            entry5_target_col=_tcol("target_entry5"), entry5_feat_cols=entry5_feat_cols,
-            exit2_target_col=_tcol("target_exit2"), out_models=om,
+            entry_target_col="target_entry",
+            exit_target_col="target_exit",
+            entry2_target_col=_tcol("target_entry2"),
+            entry2_feat_cols=entry2_feat_cols,
+            entry3_target_col=_tcol("target_entry3"),
+            entry3_feat_cols=entry3_feat_cols,
+            entry4_target_col=_tcol("target_entry4"),
+            entry4_feat_cols=entry4_feat_cols,
+            entry5_target_col=_tcol("target_entry5"),
+            entry5_feat_cols=entry5_feat_cols,
+            exit2_target_col=_tcol("target_exit2"),
+            out_models=om,
         )
         m = {"entry": e_m}
         if x_m is not None:
@@ -312,8 +368,11 @@ def main() -> None:
         for mf in mfiles:
             rec = joblib.load(mf)
             fold_models_collected[int(rec["test_year"])] = rec["models"]
-        print(f"[export] loaded persisted fold-models for {sorted(fold_models_collected)} "
-              f"from {run_folds}", flush=True)
+        print(
+            f"[export] loaded persisted fold-models for {sorted(fold_models_collected)} "
+            f"from {run_folds}",
+            flush=True,
+        )
         models = fold_models_collected[max(fold_models_collected)]
     elif args.fold_models:
         # §11.9: train EVERY fold; the serving path replays the walk-forward from these so history
@@ -325,15 +384,20 @@ def main() -> None:
             if ftrain.empty:
                 continue
             fold_models_collected[int(w.test_year)] = _train_models(ftrain)
-            print(f"[export] fold {w.test_year}: {sorted(fold_models_collected[int(w.test_year)])} "
-                  f"(train {len(ftrain)} rows)", flush=True)
+            print(
+                f"[export] fold {w.test_year}: {sorted(fold_models_collected[int(w.test_year)])} "
+                f"(train {len(ftrain)} rows)",
+                flush=True,
+            )
         if not fold_models_collected:
             raise SystemExit("export_bundle: --fold-models produced no non-empty folds")
         models = fold_models_collected[max(fold_models_collected)]
     else:
         models = _train_models(train_src)
-    print(f"[export] fitted models: {sorted(models)}"
-          + (f" + fold-models for {sorted(fold_models_collected)}" if fold_models_collected else ""))
+    print(
+        f"[export] fitted models: {sorted(models)}"
+        + (f" + fold-models for {sorted(fold_models_collected)}" if fold_models_collected else "")
+    )
 
     # --- prediction history (z-window seed / full walk-forward replay) ---
     prediction_history = None
@@ -344,7 +408,8 @@ def main() -> None:
         # serving z-window for score2/score3 (the union-buy bands) is seeded exactly as in
         # the backtest, not re-predicted by the current model on warmup bars.
         _ph_cols = ["symbol", "date", "score", "exit_score"] + [
-            c for c in ph.columns
+            c
+            for c in ph.columns
             if c not in ("symbol", "date", "score", "exit_score")
             and (c.startswith("score") or c.startswith("exit_score"))
         ]
@@ -355,8 +420,10 @@ def main() -> None:
             print(f"[export] mode=single: embedding {len(ph)} warmup rows (< {cutoff_used.date()})")
         else:
             # Full backtest predictions — historical signals replay each fold exactly.
-            print(f"[export] mode=walk_forward: embedding {len(ph)} full backtest rows "
-                  f"(history replays backtest; future uses this model)")
+            print(
+                f"[export] mode=walk_forward: embedding {len(ph)} full backtest rows "
+                f"(history replays backtest; future uses this model)"
+            )
         prediction_history = ph
 
     # --- serialize bundle ---
@@ -377,8 +444,12 @@ def main() -> None:
     # cols = head shares the primary entry features. Serving re-resolves these from the same DSL
     # catalog (build_feature_frame); recorded here for provenance + the drift guard. The engine
     # key for entryK is entry_ensemble (k=2) / entry_ensemble{k-1} (k>=3).
-    _entry_head_feat = {2: entry2_feat_cols, 3: entry3_feat_cols,
-                        4: entry4_feat_cols, 5: entry5_feat_cols}
+    _entry_head_feat = {
+        2: entry2_feat_cols,
+        3: entry3_feat_cols,
+        4: entry4_feat_cols,
+        5: entry5_feat_cols,
+    }
     for k, fc in _entry_head_feat.items():
         if f"entry{k}" in models:
             ens_key = "entry_ensemble" if k == 2 else f"entry_ensemble{k - 1}"
@@ -422,14 +493,19 @@ def main() -> None:
     _engine, _ = engine_config_from_dict(cfg.engine)
     _serve_universe = serve_universe if serve_universe is not None else requested
     resolved_config = build_resolved_config(
-        cfg, _engine,
+        cfg,
+        _engine,
         universe=_serve_universe,
-        universe_slug=manifest_extra.get("universe_slug") or (getattr(cfg, "universe", None) or {}).get("slug"),
+        universe_slug=manifest_extra.get("universe_slug")
+        or (getattr(cfg, "universe", None) or {}).get("slug"),
         as_of=str(cutoff.date()),
     )
     path = write_bundle(
-        out_dir, models=models, config=config_dict,
-        feature_spec=feature_spec, manifest_extra=manifest_extra,
+        out_dir,
+        models=models,
+        config=config_dict,
+        feature_spec=feature_spec,
+        manifest_extra=manifest_extra,
         prediction_history=prediction_history,
         resolved_config=resolved_config,
         fold_models=fold_models_collected,

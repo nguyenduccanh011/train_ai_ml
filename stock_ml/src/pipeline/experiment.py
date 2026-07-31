@@ -397,14 +397,18 @@ def _normalize_rule_conditions(rule_conditions: Any, where: str) -> list[dict]:
             "Refusing to silently treat a condition-less rule as always-true."
         )
     if not isinstance(rule_conditions, list):
-        raise ValueError(f"{where}: rule_conditions must be a list, got {type(rule_conditions).__name__}")
+        raise ValueError(
+            f"{where}: rule_conditions must be a list, got {type(rule_conditions).__name__}"
+        )
     normalized = []
     for i, cond in enumerate(rule_conditions):
         if not isinstance(cond, dict) or "feature" not in cond or "op" not in cond:
             raise ValueError(
                 f"{where}: rule_conditions[{i}] must be a dict with 'feature' and 'op', got {cond!r}"
             )
-        normalized.append({"feature": cond["feature"], "op": cond["op"], "value": cond.get("value", 0)})
+        normalized.append(
+            {"feature": cond["feature"], "op": cond["op"], "value": cond.get("value", 0)}
+        )
     return normalized
 
 
@@ -425,9 +429,7 @@ def require_no_nan(df: pd.DataFrame, subset: list[str], *, stage: str) -> pd.Dat
 
     mask = df[subset].isna().any(axis=1)
     n = int(mask.sum())
-    col_counts = sorted(
-        ((c, int(df[c].isna().sum())) for c in nan_cols), key=lambda kv: -kv[1]
-    )
+    col_counts = sorted(((c, int(df[c].isna().sum())) for c in nan_cols), key=lambda kv: -kv[1])
     detail = "\n".join(f"  {c}: {cnt} NaN" for c, cnt in col_counts)
     id_cols = [c for c in ("symbol", "date") if c in df.columns]
     sample = df.loc[mask, id_cols].head(10).to_dict("records") if id_cols else []
@@ -499,13 +501,9 @@ def trim_feature_warmup(
         ok = g[feature_cols].notna().all(axis=1).to_numpy()
         if not ok.any():
             return g.iloc[0:0]  # whole symbol is too short — drop it (logged via total)
-        return g.iloc[int(ok.argmax()):]  # first all-non-NaN row onward
+        return g.iloc[int(ok.argmax()) :]  # first all-non-NaN row onward
 
-    out = (
-        feat.sort_values(["symbol", "date"])
-        .groupby("symbol", group_keys=False)
-        .apply(_trim)
-    )
+    out = feat.sort_values(["symbol", "date"]).groupby("symbol", group_keys=False).apply(_trim)
     dropped = len(feat) - len(out)
     kept_syms = out["symbol"].nunique() if not out.empty else 0
     print(
@@ -515,9 +513,7 @@ def trim_feature_warmup(
     return out
 
 
-def trim_target_tail(
-    feat: pd.DataFrame, target_cols: list[str], *, name: str = ""
-) -> pd.DataFrame:
+def trim_target_tail(feat: pd.DataFrame, target_cols: list[str], *, name: str = "") -> pd.DataFrame:
     """Drop each symbol's trailing rows that are NaN in any label column.
 
     Forward-looking targets (triple_barrier, velocity_exit, ...) are structurally NaN
@@ -550,15 +546,13 @@ def trim_target_tail(
         last_ok = len(ok) - 1 - int(ok[::-1].argmax())  # last all-non-NaN row index
         return g.iloc[: last_ok + 1]
 
-    out = (
-        feat.sort_values(["symbol", "date"])
-        .groupby("symbol", group_keys=False)
-        .apply(_trim)
-    )
+    out = feat.sort_values(["symbol", "date"]).groupby("symbol", group_keys=False).apply(_trim)
     dropped = len(feat) - len(out)
     if dropped:
-        print(f"[{name}] target tail trim: dropped {dropped} trailing NaN-label rows "
-              f"(delisted/short symbols' forward-window tail)")
+        print(
+            f"[{name}] target tail trim: dropped {dropped} trailing NaN-label rows "
+            f"(delisted/short symbols' forward-window tail)"
+        )
     return out
 
 
@@ -675,14 +669,16 @@ def train_fold(
 
         params = dict(cfg.entry_model.get("params", {}))
         trs = train_clean.sort_values(["date", "symbol"], kind="mergesort")
-        rel_pct = trs[entry_target_col].groupby(trs["date"].to_numpy()).rank(
-            pct=True, method="average"
+        rel_pct = (
+            trs[entry_target_col].groupby(trs["date"].to_numpy()).rank(pct=True, method="average")
         )
         rel = np.clip((rel_pct * 5).astype(int).clip(upper=4), 0, 4).to_numpy()
         grp = trs.groupby("date", sort=True).size().to_numpy()
         ranker = lgb.LGBMRanker(
-            objective="lambdarank", random_state=cfg.seed,
-            label_gain=list(range(32)), **params,
+            objective="lambdarank",
+            random_state=cfg.seed,
+            label_gain=list(range(32)),
+            **params,
         )
         ranker.fit(trs[feat_cols].to_numpy(dtype=np.float32), rel, group=grp)
         signals_df = test_use.copy()
@@ -878,8 +874,10 @@ def train_fold(
         entry_model.fit(X_train, y_full)
 
         y_exit_full = train_clean[exit_target_col].to_numpy()
-        X_train_exit = X_train if exit_feat_cols == feat_cols else (
-            train_clean[exit_feat_cols].to_numpy(dtype=np.float32)
+        X_train_exit = (
+            X_train
+            if exit_feat_cols == feat_cols
+            else (train_clean[exit_feat_cols].to_numpy(dtype=np.float32))
         )
         exit_model = build_regression_model(
             cfg.exit_model["type"],
@@ -902,9 +900,9 @@ def train_fold(
         # targets are in [0,1]), not the mirrored ±return cutoffs ml_only uses.
         hi = cfg.entry_threshold if cfg.entry_threshold is not None else cfg.signal_threshold
         lo = cfg.exit_threshold if cfg.exit_threshold is not None else cfg.signal_threshold
-        signals_array = np.where(
-            pred_exit > lo, -1, np.where(pred_entry > hi, 1, 0)
-        ).astype(np.int8)
+        signals_array = np.where(pred_exit > lo, -1, np.where(pred_entry > hi, 1, 0)).astype(
+            np.int8
+        )
         if cfg.direction == "short":
             signals_array = (signals_array * -1).astype(np.int8)
 
@@ -932,8 +930,11 @@ def train_fold(
                 seed=cfg.seed,
             )
             entry_model2.fit(X_tr2[ok2], y2[ok2])
-            X_te2 = (X_test if cols2 == feat_cols
-                     else np.nan_to_num(test_use[cols2].to_numpy(dtype=np.float32), nan=0.0))
+            X_te2 = (
+                X_test
+                if cols2 == feat_cols
+                else np.nan_to_num(test_use[cols2].to_numpy(dtype=np.float32), nan=0.0)
+            )
             signals_df["score2"] = entry_model2.predict(X_te2).astype(np.float32)
             if out_models is not None:
                 out_models["entry2"] = entry_model2
@@ -952,8 +953,11 @@ def train_fold(
                 seed=cfg.seed,
             )
             entry_model3.fit(X_tr3[ok3], y3[ok3])
-            X_te3 = (X_test if cols3 == feat_cols
-                     else np.nan_to_num(test_use[cols3].to_numpy(dtype=np.float32), nan=0.0))
+            X_te3 = (
+                X_test
+                if cols3 == feat_cols
+                else np.nan_to_num(test_use[cols3].to_numpy(dtype=np.float32), nan=0.0)
+            )
             signals_df["score3"] = entry_model3.predict(X_te3).astype(np.float32)
             if out_models is not None:
                 out_models["entry3"] = entry_model3
@@ -969,8 +973,11 @@ def train_fold(
                 seed=cfg.seed,
             )
             entry_model4.fit(X_tr4[ok4], y4[ok4])
-            X_te4 = (X_test if cols4 == feat_cols
-                     else np.nan_to_num(test_use[cols4].to_numpy(dtype=np.float32), nan=0.0))
+            X_te4 = (
+                X_test
+                if cols4 == feat_cols
+                else np.nan_to_num(test_use[cols4].to_numpy(dtype=np.float32), nan=0.0)
+            )
             signals_df["score4"] = entry_model4.predict(X_te4).astype(np.float32)
             if out_models is not None:
                 out_models["entry4"] = entry_model4
@@ -986,8 +993,11 @@ def train_fold(
                 seed=cfg.seed,
             )
             entry_model5.fit(X_tr5[ok5], y5[ok5])
-            X_te5 = (X_test if cols5 == feat_cols
-                     else np.nan_to_num(test_use[cols5].to_numpy(dtype=np.float32), nan=0.0))
+            X_te5 = (
+                X_test
+                if cols5 == feat_cols
+                else np.nan_to_num(test_use[cols5].to_numpy(dtype=np.float32), nan=0.0)
+            )
             signals_df["score5"] = entry_model5.predict(X_te5).astype(np.float32)
             if out_models is not None:
                 out_models["entry5"] = entry_model5
@@ -1003,8 +1013,11 @@ def train_fold(
                 seed=cfg.seed,
             )
             entry_model6.fit(X_tr6[ok6], y6[ok6])
-            X_te6 = (X_test if cols6 == feat_cols
-                     else np.nan_to_num(test_use[cols6].to_numpy(dtype=np.float32), nan=0.0))
+            X_te6 = (
+                X_test
+                if cols6 == feat_cols
+                else np.nan_to_num(test_use[cols6].to_numpy(dtype=np.float32), nan=0.0)
+            )
             signals_df["score6"] = entry_model6.predict(X_te6).astype(np.float32)
             if out_models is not None:
                 out_models["entry6"] = entry_model6
@@ -1082,8 +1095,10 @@ def train_fold(
 
         # Exit regressor: train on the train fold ONLY (walk-forward, no leakage).
         y_exit_full = train_clean[exit_target_col].to_numpy()
-        X_train_exit = X_train if exit_feat_cols == feat_cols else (
-            train_clean[exit_feat_cols].to_numpy(dtype=np.float32)
+        X_train_exit = (
+            X_train
+            if exit_feat_cols == feat_cols
+            else (train_clean[exit_feat_cols].to_numpy(dtype=np.float32))
         )
         exit_model = build_regression_model(
             cfg.exit_model["type"],
@@ -1095,9 +1110,7 @@ def train_fold(
 
         # exit_threshold is the positive downside cutoff (predicted drop magnitude).
         lo = cfg.exit_threshold if cfg.exit_threshold is not None else cfg.signal_threshold
-        signals_array = np.where(
-            pred_exit > lo, -1, np.where(entry_mask, 1, 0)
-        ).astype(np.int8)
+        signals_array = np.where(pred_exit > lo, -1, np.where(entry_mask, 1, 0)).astype(np.int8)
         if cfg.direction == "short":
             signals_array = (signals_array * -1).astype(np.int8)
 
@@ -1128,9 +1141,7 @@ def train_fold(
         entry_model.fit(X_train, y_entry)
 
         y_exit_full = (
-            train_clean[exit_target_col].to_numpy()
-            if exit_target_col in train_clean
-            else y_full
+            train_clean[exit_target_col].to_numpy() if exit_target_col in train_clean else y_full
         )
         y_exit = (y_exit_full == -1).astype(np.int8)
         exit_model = build_exit_model(
@@ -1150,11 +1161,15 @@ def train_fold(
 
         entry_p = _proba1(entry_model, X_test)
         exit_p = _proba1(exit_model, X_test)
-        buy = entry_p >= cfg.entry_threshold if cfg.entry_threshold is not None else (
-            entry_model.predict(X_test) == 1
+        buy = (
+            entry_p >= cfg.entry_threshold
+            if cfg.entry_threshold is not None
+            else (entry_model.predict(X_test) == 1)
         )
-        sell = exit_p >= cfg.exit_threshold if cfg.exit_threshold is not None else (
-            exit_model.predict(X_test) == 1
+        sell = (
+            exit_p >= cfg.exit_threshold
+            if cfg.exit_threshold is not None
+            else (exit_model.predict(X_test) == 1)
         )
         sig = np.where(buy, 1, np.where(sell, -1, 0)).astype(np.int8)
         if cfg.direction == "short":
@@ -1310,13 +1325,13 @@ def predict_slot_signals(
         return np.nan_to_num(test_use[cols].to_numpy(dtype=np.float32), nan=0.0)
 
     ensemble_cols: list[str] = []
-    for score_col, model, cols in (entry_ensemble or []):
+    for score_col, model, cols in entry_ensemble or []:
         signals_df[score_col] = model.predict(_X_for(cols, X_test, feat_cols)).astype(np.float32)
         ensemble_cols.append(score_col)
-    for score_col, model, cols in (exit_ensemble or []):
-        signals_df[score_col] = model.predict(
-            _X_for(cols, X_test_exit, exit_feat_cols)
-        ).astype(np.float32)
+    for score_col, model, cols in exit_ensemble or []:
+        signals_df[score_col] = model.predict(_X_for(cols, X_test_exit, exit_feat_cols)).astype(
+            np.float32
+        )
         ensemble_cols.append(score_col)
 
     keep = ["symbol", "date", "signal", "score", "exit_score"]
@@ -1358,6 +1373,7 @@ def _causal_zscore_by_symbol(
     prediction is normalised against its own symbol's prior predictions and never any
     future value. Used by the dual-ML recombine entry.
     """
+
     def _cz(x: pd.Series) -> pd.Series:
         m = x.rolling(window, min_periods=min_periods).mean()
         sd = x.rolling(window, min_periods=min_periods).std()
@@ -1378,18 +1394,24 @@ def _causal_leg_dir(close: np.ndarray, pct: float = 0.06) -> np.ndarray:
     for i in range(1, n):
         price = close[i]
         if direction >= 0 and price > ext:
-            ext = price; direction = 1
+            ext = price
+            direction = 1
         elif direction <= 0 and price < ext:
-            ext = price; direction = -1
+            ext = price
+            direction = -1
         elif direction == 1 and price <= ext * (1.0 - pct):
-            direction = -1; ext = price
+            direction = -1
+            ext = price
         elif direction == -1 and price >= ext * (1.0 + pct):
-            direction = 1; ext = price
+            direction = 1
+            ext = price
         leg[i] = direction
     return leg
 
 
-def _causal_leg_dir_vol(close: np.ndarray, base_pct: float = 0.12, vmult: float = 0.4) -> np.ndarray:
+def _causal_leg_dir_vol(
+    close: np.ndarray, base_pct: float = 0.12, vmult: float = 0.4
+) -> np.ndarray:
     """Vol-conditional causal zigzag: the reversal threshold SHRINKS when realized vol is
     high (deep drops predicted -> flip to down-leg / sell EARLIER) and GROWS when vol is low
     (shallow reversals there are usually bounceable whipsaws -> wait). Exploits the one
@@ -1403,20 +1425,26 @@ def _causal_leg_dir_vol(close: np.ndarray, base_pct: float = 0.12, vmult: float 
     cs = pd.Series(close)
     rv = cs.pct_change().rolling(20, min_periods=10).std()
     rank = rv.rolling(120, min_periods=40).rank(pct=True).to_numpy()
-    pct_arr = np.where(np.isnan(rank), base_pct,
-                       base_pct * np.clip(1.0 - vmult * (2.0 * rank - 1.0), 0.5, 1.5))
+    pct_arr = np.where(
+        np.isnan(rank), base_pct, base_pct * np.clip(1.0 - vmult * (2.0 * rank - 1.0), 0.5, 1.5)
+    )
     direction = 0
     ext = close[0]
     for i in range(1, n):
-        price = close[i]; pct = pct_arr[i]
+        price = close[i]
+        pct = pct_arr[i]
         if direction >= 0 and price > ext:
-            ext = price; direction = 1
+            ext = price
+            direction = 1
         elif direction <= 0 and price < ext:
-            ext = price; direction = -1
+            ext = price
+            direction = -1
         elif direction == 1 and price <= ext * (1.0 - pct):
-            direction = -1; ext = price
+            direction = -1
+            ext = price
         elif direction == -1 and price >= ext * (1.0 + pct):
-            direction = 1; ext = price
+            direction = 1
+            ext = price
         leg[i] = direction
     return leg
 
@@ -1493,7 +1521,8 @@ def _entry_gate_mask(df: pd.DataFrame, gate: str) -> np.ndarray:
                 # (q0-4 hold, -133u/fold). rsi_slope_5 (botIC -0.077) separates a knife (rsi still falling)
                 # from a bottoming dip (rsi turning up) — which the entry SCORE cannot. Causal.
                 thr = float(tok[5:])
-                _cs = pd.Series(c); _d = _cs.diff()
+                _cs = pd.Series(c)
+                _d = _cs.diff()
                 _up = _d.clip(lower=0).ewm(alpha=1 / 14, adjust=False).mean()
                 _dn = (-_d.clip(upper=0)).ewm(alpha=1 / 14, adjust=False).mean()
                 _rsi = 100.0 - 100.0 / (1.0 + _up / (_dn + 1e-9))
@@ -1501,26 +1530,39 @@ def _entry_gate_mask(df: pd.DataFrame, gate: str) -> np.ndarray:
                 _cond = _slope >= -thr
                 _cond[np.isnan(_slope)] = True
                 m &= _cond
-            if tok.startswith("barpos") and tok[6:].isdigit() and "high" in df.columns and "low" in df.columns:
+            if (
+                tok.startswith("barpos")
+                and tok[6:].isdigit()
+                and "high" in df.columns
+                and "low" in df.columns
+            ):
                 # entry bar closes in the upper part of its range (close near the low = weak
                 # close = forward drawdown; bar_pos IC +0.40 vs fdd10). Causal (signal bar).
                 pct = float(tok[6:]) / 100.0
-                hi = df["high"].to_numpy()[idx]; lo = df["low"].to_numpy()[idx]
+                hi = df["high"].to_numpy()[idx]
+                lo = df["low"].to_numpy()[idx]
                 rng = np.maximum(hi - lo, 1e-9)
                 m &= (c - lo) / rng >= pct
             if tok.startswith("nowick") and tok[6:].isdigit() and "high" in df.columns:
                 # upper wick <= pct of the bar range — reject long-upper-wick rejection bars.
                 pct = float(tok[6:]) / 100.0
-                hi = df["high"].to_numpy()[idx]; lo = df["low"].to_numpy()[idx]
+                hi = df["high"].to_numpy()[idx]
+                lo = df["low"].to_numpy()[idx]
                 rng = np.maximum(hi - lo, 1e-9)
                 m &= (hi - c) / rng <= pct
-            if tok.startswith("rnup") and tok[4:].isdigit() and "high" in df.columns and "low" in df.columns:
+            if (
+                tok.startswith("rnup")
+                and tok[4:].isdigit()
+                and "high" in df.columns
+                and "low" in df.columns
+            ):
                 # PRE-ENTRY RUN-UP gate (2026-06-20, pre_entry_runup forensic): require the prior-50-bar
                 # run-up (rolling-50 high / rolling-50 low - 1) >= pct. Skips the low-runup "unproven"
                 # cohort (Q1 ~14% runup = pnl +0.018 near-worthless); pre-runup ranks realized pnl
                 # MONOTONICALLY (Q1->Q4 +0.018->+0.130) where the entry score is flat. Causal (50 bars).
                 pct = float(tok[4:]) / 100.0
-                hi = df["high"].to_numpy()[idx]; lo = df["low"].to_numpy()[idx]
+                hi = df["high"].to_numpy()[idx]
+                lo = df["low"].to_numpy()[idx]
                 hh = pd.Series(hi).rolling(50, min_periods=20).max().to_numpy()
                 ll = pd.Series(lo).rolling(50, min_periods=20).min().to_numpy()
                 ru = hh / np.where(ll <= 0, np.nan, ll) - 1.0
@@ -1589,8 +1631,10 @@ def _entry_gate_mask(df: pd.DataFrame, gate: str) -> np.ndarray:
                 # whether confining entries to the trend regime improves composite. pct=token/100.
                 thr = float(tok[2:]) / 100.0
                 _cs = pd.Series(c)
-                _er = ((_cs - _cs.shift(20)).abs()
-                       / (_cs.diff().abs().rolling(20, min_periods=20).sum() + 1e-9)).to_numpy()
+                _er = (
+                    (_cs - _cs.shift(20)).abs()
+                    / (_cs.diff().abs().rolling(20, min_periods=20).sum() + 1e-9)
+                ).to_numpy()
                 _cond = _er >= thr
                 _cond[np.isnan(_er)] = True  # warmup -> allow
                 m &= _cond
@@ -1607,14 +1651,17 @@ def _entry_gate_mask(df: pd.DataFrame, gate: str) -> np.ndarray:
     if breadth_tok is not None:
         if "date" not in df.columns:
             raise ValueError("entry_gate 'breadthq' needs a 'date' column in the signals frame")
-        p = float(breadth_tok[len("breadthq"):]) / 100.0
-        ma50 = df.groupby("symbol", sort=False)["close"].transform(
-            lambda x: x.rolling(50, min_periods=50).mean()).to_numpy()
+        p = float(breadth_tok[len("breadthq") :]) / 100.0
+        ma50 = (
+            df.groupby("symbol", sort=False)["close"]
+            .transform(lambda x: x.rolling(50, min_periods=50).mean())
+            .to_numpy()
+        )
         cl = df["close"].to_numpy()
         above = np.where(np.isnan(ma50), np.nan, (cl > ma50).astype(float))
         bd = pd.Series(above, index=df["date"].to_numpy()).groupby(level=0).mean().sort_index()
         thr = bd.rolling(252, min_periods=60).quantile(p)
-        ok = (bd >= thr)
+        ok = bd >= thr
         ok[thr.isna()] = True  # warmup: regime unknown -> allow
         allow &= df["date"].map(ok.to_dict()).fillna(True).to_numpy().astype(bool)
     # CROSS-SECTIONAL crash-risk veto (entry_lever_diagnostic): big-loser entries cluster in the
@@ -1626,7 +1673,8 @@ def _entry_gate_mask(df: pd.DataFrame, gate: str) -> np.ndarray:
         pct = float(crashx_tok[6:]) / 100.0
         w = df[["symbol", "date", "close"]].copy().sort_values(["symbol", "date"])
         w["rvol"] = w.groupby("symbol")["close"].transform(
-            lambda s: s.pct_change().rolling(20, min_periods=20).std())
+            lambda s: s.pct_change().rolling(20, min_periods=20).std()
+        )
         w["ret20"] = w.groupby("symbol")["close"].transform(lambda s: s / s.shift(20) - 1.0)
         w["vr"] = w.groupby("date")["rvol"].rank(pct=True)
         w["rr"] = w.groupby("date")["ret20"].rank(pct=True)
@@ -1642,6 +1690,7 @@ def _load_regime_index(symbol: str, duck: str = "market_data/market.duckdb") -> 
     """Daily close of a real market index/futures (e.g. VN30F1M) from the OHLCV store, for use as
     a regime detector — genuinely-new information vs the traded-universe EW proxy. Cached."""
     import duckdb
+
     con = duckdb.connect(duck, read_only=True)
     d = con.execute(
         "SELECT date, close FROM ohlcv WHERE symbol=? AND timeframe='1D' ORDER BY date", [symbol]
@@ -1654,8 +1703,9 @@ def _load_regime_index(symbol: str, duck: str = "market_data/market.duckdb") -> 
 _BREADTH_CACHE: dict = {}
 
 
-def _load_market_breadth(metric: str = "pct_above_ma50", ma_win: int = 50,
-                         duck: str = "market_data/market.duckdb") -> pd.Series:
+def _load_market_breadth(
+    metric: str = "pct_above_ma50", ma_win: int = 50, duck: str = "market_data/market.duckdb"
+) -> pd.Series:
     """ORTHOGONAL market-breadth from the FULL OHLCV universe (488 names, NOT just the 61 traded)
     — genuinely-new info the per-symbol/61-EW features never see. Causal, cached.
     pct_above_ma50/200: fraction of all symbols above their N-bar MA each date (regime health).
@@ -1666,12 +1716,16 @@ def _load_market_breadth(metric: str = "pct_above_ma50", ma_win: int = 50,
     if key in _BREADTH_CACHE:
         return _BREADTH_CACHE[key]
     import duckdb
+
     con = duckdb.connect(duck, read_only=True)
-    oh = con.execute("SELECT symbol, date, close FROM ohlcv WHERE timeframe='1D' "
-                     "ORDER BY symbol, date").fetchdf()
+    oh = con.execute(
+        "SELECT symbol, date, close FROM ohlcv WHERE timeframe='1D' ORDER BY symbol, date"
+    ).fetchdf()
     con.close()
     oh["date"] = pd.to_datetime(oh["date"])
-    piv = oh.pivot_table(index="date", columns="symbol", values="close", aggfunc="last").sort_index()
+    piv = oh.pivot_table(
+        index="date", columns="symbol", values="close", aggfunc="last"
+    ).sort_index()
     # A symbol may only cast a breadth vote on a date where it actually TRADES. A NaN price
     # (not-yet-listed / delisted / halted) compares as ``NaN > ma == False`` in pandas — a
     # *finite* False that silently counts as a bearish vote AND inflates the denominator,
@@ -1694,7 +1748,9 @@ def _load_market_breadth(metric: str = "pct_above_ma50", ma_win: int = 50,
 _XSEC_CACHE: dict = {}
 
 
-def _load_xsec_features(metrics: list[str], duck: str = "market_data/market.duckdb") -> pd.DataFrame:
+def _load_xsec_features(
+    metrics: list[str], duck: str = "market_data/market.duckdb"
+) -> pd.DataFrame:
     """Per-symbol CROSS-SECTIONAL features from the FULL universe (this stock's momentum RANK vs ALL
     symbols + the TREND of that rank = leadership rotation / accumulation-vs-distribution at the
     market tier). The strongest per-symbol signal found (cs_rank_trend IC_winner +0.17 vs the champ's
@@ -1705,16 +1761,24 @@ def _load_xsec_features(metrics: list[str], duck: str = "market_data/market.duck
     if key in _XSEC_CACHE:
         return _XSEC_CACHE[key]
     import duckdb
+
     con = duckdb.connect(duck, read_only=True)
-    oh = con.execute("SELECT symbol, date, close FROM ohlcv WHERE timeframe='1D' "
-                     "ORDER BY symbol, date").fetchdf()
+    oh = con.execute(
+        "SELECT symbol, date, close FROM ohlcv WHERE timeframe='1D' ORDER BY symbol, date"
+    ).fetchdf()
     con.close()
     oh["date"] = pd.to_datetime(oh["date"])
-    piv = oh.pivot_table(index="date", columns="symbol", values="close", aggfunc="last").sort_index()
+    piv = oh.pivot_table(
+        index="date", columns="symbol", values="close", aggfunc="last"
+    ).sort_index()
     r20 = piv.pct_change(20).rank(axis=1, pct=True)
     r60 = piv.pct_change(60).rank(axis=1, pct=True)
-    series = {"cs_rank20": r20, "cs_rank60": r60,
-              "cs_rank_trend": r20 - r20.shift(10), "cs_rank_trend_long": r60 - r60.shift(20)}
+    series = {
+        "cs_rank20": r20,
+        "cs_rank60": r60,
+        "cs_rank_trend": r20 - r20.shift(10),
+        "cs_rank_trend_long": r60 - r60.shift(20),
+    }
     # RS-vs-MARKET (vs VNINDEX, 2026-06-21): the strongest per-trade separator found (corr +0.16; strong-
     # RS dips win 72%% vs weak 52%%). RS line = close/VNINDEX; slope/vs-trend/dist-to-high. Causal.
     # Unified with engine._load_vnindex (ENGINE_UPGRADE §1.1): one reader, one fail-loud semantics.
@@ -1722,6 +1786,7 @@ def _load_xsec_features(metrics: list[str], duck: str = "market_data/market.duck
     # (a downstream KeyError for a requested rs_ metric preserves the prior fail-if-requested behavior).
     if any(m.startswith("rs_") for m in metrics):
         from stock_ml.src.backtest.engine import _load_vnindex
+
         _vni = _load_vnindex()
         if _vni is not None:
             _vni = _vni.copy()
@@ -1742,18 +1807,23 @@ def _load_xsec_features(metrics: list[str], duck: str = "market_data/market.duck
     return long
 
 
-def _rs_market_mask(df: pd.DataFrame, feature: str = "rs_vsma", threshold: float = 0.0) -> np.ndarray:
+def _rs_market_mask(
+    df: pd.DataFrame, feature: str = "rs_vsma", threshold: float = 0.0
+) -> np.ndarray:
     """Per-row True where the stock's RS-vs-VNINDEX (`feature`) is WEAK (< threshold) — a LAGGARD whose
     dip is more likely a knife. The RS-vs-market SELECTION strategy suppresses buys here (trade only
     LEADER dips: strong-RS dips win 72%% vs weak 52%%). Causal (RS up to the bar)."""
     long = _load_xsec_features([feature])
     col = f"xsec_{feature}"
-    m = df[["symbol", "date"]].merge(long[["symbol", "date", col]], on=["symbol", "date"], how="left")
-    return (m[col].to_numpy() < threshold)
+    m = df[["symbol", "date"]].merge(
+        long[["symbol", "date", col]], on=["symbol", "date"], how="left"
+    )
+    return m[col].to_numpy() < threshold
 
 
-def _rs_drop_mask(df: pd.DataFrame, drop: float = 0.12, lookback: int = 10,
-                  metric: str = "cs_rank20") -> np.ndarray:
+def _rs_drop_mask(
+    df: pd.DataFrame, drop: float = 0.12, lookback: int = 10, metric: str = "cs_rank20"
+) -> np.ndarray:
     """Per-row force-SELL where the symbol's CROSS-SECTIONAL RS rank fell more than `drop` over
     `lookback` bars — RS ROLLOVER = the stock is losing relative strength = round-tripping. Exit
     forensic (t1844): giveback trades' RS goes peak 0.73 -> exit 0.54 (rolls over) while WINNERS'
@@ -1762,13 +1832,21 @@ def _rs_drop_mask(df: pd.DataFrame, drop: float = 0.12, lookback: int = 10,
     long = _load_xsec_features([metric]).copy()
     col = f"xsec_{metric}"
     long = long.sort_values(["symbol", "date"])
-    long["__fire"] = (long.groupby("symbol")[col].diff(lookback) < -float(drop))
-    merged = df[["symbol", "date"]].merge(long[["symbol", "date", "__fire"]], on=["symbol", "date"], how="left")
+    long["__fire"] = long.groupby("symbol")[col].diff(lookback) < -float(drop)
+    merged = df[["symbol", "date"]].merge(
+        long[["symbol", "date", "__fire"]], on=["symbol", "date"], how="left"
+    )
     return merged["__fire"].fillna(False).to_numpy().astype(bool)
 
 
-def _market_breadth_mask(df: pd.DataFrame, metric: str, threshold: float, ma_win: int = 50,
-                         mode: str = "level", z_lookback: int = 60) -> np.ndarray:
+def _market_breadth_mask(
+    df: pd.DataFrame,
+    metric: str,
+    threshold: float,
+    ma_win: int = 50,
+    mode: str = "level",
+    z_lookback: int = 60,
+) -> np.ndarray:
     """Per-row bool: True where broad-market breadth is WEAK (suppress BUYS here). 'level' =
     breadth < threshold; 'zscore' = causal z of breadth < threshold (adapts across regimes)."""
     br = _load_market_breadth(metric, ma_win)
@@ -1780,14 +1858,22 @@ def _market_breadth_mask(df: pd.DataFrame, metric: str, threshold: float, ma_win
         sig = br < threshold
     sig = sig.fillna(False)
     key = {d.strftime("%Y-%m-%d"): bool(v) for d, v in sig.items()}
-    return df["date"].map(
-        lambda x: key.get(pd.Timestamp(x).strftime("%Y-%m-%d"), False)
-    ).to_numpy().astype(bool)
+    return (
+        df["date"]
+        .map(lambda x: key.get(pd.Timestamp(x).strftime("%Y-%m-%d"), False))
+        .to_numpy()
+        .astype(bool)
+    )
 
 
-def _vn30_regime_mask(df: pd.DataFrame, index_symbol: str = "VN30F1M",
-                      mode: str = "downtrend", ma_short: int = 20, ma_long: int = 50,
-                      dd_thresh: float = 0.10) -> np.ndarray:
+def _vn30_regime_mask(
+    df: pd.DataFrame,
+    index_symbol: str = "VN30F1M",
+    mode: str = "downtrend",
+    ma_short: int = 20,
+    ma_long: int = 50,
+    dd_thresh: float = 0.10,
+) -> np.ndarray:
     """Per-row bool: True where the REAL market index (VN30F1M futures = large-cap index, genuinely
     new info vs the equal-weight 488-univ breadth) is in a risk-OFF regime. The validated winning
     pattern is regime-cluster EXIT tightening; this is the real-index analog of the EW breadth-
@@ -1804,13 +1890,17 @@ def _vn30_regime_mask(df: pd.DataFrame, index_symbol: str = "VN30F1M",
         sig = (lvl < ms) & (ms < ml)
     sig = sig.fillna(False)
     key = {d.strftime("%Y-%m-%d"): bool(v) for d, v in sig.items()}
-    return df["date"].map(
-        lambda x: key.get(pd.Timestamp(x).strftime("%Y-%m-%d"), False)
-    ).to_numpy().astype(bool)
+    return (
+        df["date"]
+        .map(lambda x: key.get(pd.Timestamp(x).strftime("%Y-%m-%d"), False))
+        .to_numpy()
+        .astype(bool)
+    )
 
 
-def _market_nonbull_mask(df: pd.DataFrame, ma_win: int = 50, persist: int = 3,
-                         index_symbol: str | None = None) -> np.ndarray:
+def _market_nonbull_mask(
+    df: pd.DataFrame, ma_win: int = 50, persist: int = 3, index_symbol: str | None = None
+) -> np.ndarray:
     """Per-row bool: True where the market is NOT bull. STICKY (the jumpy MA50+slope version cut
     bull winners during normal pullbacks): nonbull only after the index sits below its `ma_win`-bar
     MA for `persist` CONSECUTIVE days. The regime index is the traded-universe EW proxy by default,
@@ -1818,12 +1908,14 @@ def _market_nonbull_mask(df: pd.DataFrame, ma_win: int = 50, persist: int = 3,
     if index_symbol:
         lvl = _load_regime_index(index_symbol)
     else:
-        piv = df.pivot_table(index="date", columns="symbol", values="close", aggfunc="last").sort_index()
+        piv = df.pivot_table(
+            index="date", columns="symbol", values="close", aggfunc="last"
+        ).sort_index()
         mret = piv.pct_change().replace([np.inf, -np.inf], np.nan).clip(-0.5, 0.5).mean(axis=1)
         lvl = (1.0 + mret.fillna(0.0)).cumprod()
     ma = lvl.rolling(ma_win, min_periods=ma_win).mean()
-    below = (lvl < ma)
-    nonbull = (below.rolling(persist, min_periods=persist).sum() >= persist)
+    below = lvl < ma
+    nonbull = below.rolling(persist, min_periods=persist).sum() >= persist
     nonbull = nonbull.where(ma.notna(), True)  # warmup -> nonbull (apply the tight cut)
     if index_symbol:
         # index has its own calendar -> ffill across all days, then map df dates by string key
@@ -1832,16 +1924,23 @@ def _market_nonbull_mask(df: pd.DataFrame, ma_win: int = 50, persist: int = 3,
         nb = nb[~nb.index.duplicated(keep="last")].sort_index()
         nb = nb.reindex(pd.date_range(nb.index.min(), nb.index.max(), freq="D")).ffill()
         key = {d.strftime("%Y-%m-%d"): bool(v) for d, v in nb.items() if v == v}
-        return df["date"].map(
-            lambda x: key.get(pd.Timestamp(x).strftime("%Y-%m-%d"), True)
-        ).to_numpy().astype(bool)
+        return (
+            df["date"]
+            .map(lambda x: key.get(pd.Timestamp(x).strftime("%Y-%m-%d"), True))
+            .to_numpy()
+            .astype(bool)
+        )
     nonbull_by_date = nonbull.astype(bool).to_dict()
     return df["date"].map(nonbull_by_date).fillna(True).to_numpy().astype(bool)
 
 
-def _market_bull_mask(df: pd.DataFrame, ma_win: int = 50, persist: int = 3,
-                      index_symbol: str | None = None,
-                      crash_dd: float | None = None) -> np.ndarray:
+def _market_bull_mask(
+    df: pd.DataFrame,
+    ma_win: int = 50,
+    persist: int = 3,
+    index_symbol: str | None = None,
+    crash_dd: float | None = None,
+) -> np.ndarray:
     """Per-row bool: True where the market is in a SUSTAINED bull — the regime index sits
     ABOVE its `ma_win`-bar MA for `persist` CONSECUTIVE days (the bullish mirror of
     _market_nonbull_mask, same sticky/causal idiom). Used by downleg_skip_bull to release
@@ -1854,12 +1953,14 @@ def _market_bull_mask(df: pd.DataFrame, ma_win: int = 50, persist: int = 3,
     if index_symbol:
         lvl = _load_regime_index(index_symbol)
     else:
-        piv = df.pivot_table(index="date", columns="symbol", values="close", aggfunc="last").sort_index()
+        piv = df.pivot_table(
+            index="date", columns="symbol", values="close", aggfunc="last"
+        ).sort_index()
         mret = piv.pct_change().replace([np.inf, -np.inf], np.nan).clip(-0.5, 0.5).mean(axis=1)
         lvl = (1.0 + mret.fillna(0.0)).cumprod()
     ma = lvl.rolling(ma_win, min_periods=ma_win).mean()
-    above = (lvl > ma)
-    bull = (above.rolling(persist, min_periods=persist).sum() >= persist)
+    above = lvl > ma
+    bull = above.rolling(persist, min_periods=persist).sum() >= persist
     bull = bull.where(ma.notna(), False)  # warmup -> not bull (keep the tight cut)
     if crash_dd is not None:
         # drawdown vs rolling 20-bar peak (window includes only the last 20 bars -> causal)
@@ -1872,9 +1973,12 @@ def _market_bull_mask(df: pd.DataFrame, ma_win: int = 50, persist: int = 3,
         bb = bb[~bb.index.duplicated(keep="last")].sort_index()
         bb = bb.reindex(pd.date_range(bb.index.min(), bb.index.max(), freq="D")).ffill()
         key = {d.strftime("%Y-%m-%d"): bool(v) for d, v in bb.items() if v == v}
-        return df["date"].map(
-            lambda x: key.get(pd.Timestamp(x).strftime("%Y-%m-%d"), False)
-        ).to_numpy().astype(bool)
+        return (
+            df["date"]
+            .map(lambda x: key.get(pd.Timestamp(x).strftime("%Y-%m-%d"), False))
+            .to_numpy()
+            .astype(bool)
+        )
     bull_by_date = bull.astype(bool).to_dict()
     return df["date"].map(bull_by_date).fillna(False).to_numpy().astype(bool)
 
@@ -1882,11 +1986,14 @@ def _market_bull_mask(df: pd.DataFrame, ma_win: int = 50, persist: int = 3,
 def _wilder_rsi_np(close: np.ndarray, n: int = 14) -> np.ndarray:
     """Causal Wilder RSI on a 1-symbol close array (NaN until bar n)."""
     d = np.diff(close, prepend=close[0])
-    up = np.where(d > 0, d, 0.0); dn = np.where(d < 0, -d, 0.0)
-    ru = np.full(len(close), np.nan); rd = np.full(len(close), np.nan)
+    up = np.where(d > 0, d, 0.0)
+    dn = np.where(d < 0, -d, 0.0)
+    ru = np.full(len(close), np.nan)
+    rd = np.full(len(close), np.nan)
     if len(close) <= n:
         return ru
-    ru[n] = up[1:n + 1].mean(); rd[n] = dn[1:n + 1].mean()
+    ru[n] = up[1 : n + 1].mean()
+    rd[n] = dn[1 : n + 1].mean()
     for i in range(n + 1, len(close)):
         ru[i] = (ru[i - 1] * (n - 1) + up[i]) / n
         rd[i] = (rd[i - 1] * (n - 1) + dn[i]) / n
@@ -1905,13 +2012,13 @@ def _force_healthy_mask(c: np.ndarray, suppress: str) -> np.ndarray:
     healthy = np.ones(len(c), dtype=bool)
     for tok in suppress.split("_"):
         if tok.startswith("abovema"):
-            n = int(tok[len("abovema"):])
+            n = int(tok[len("abovema") :])
             ma = cs.rolling(n, min_periods=n).mean().to_numpy()
             cond = c > ma
             cond[np.isnan(ma)] = False  # warmup: trend unknown -> not healthy -> allow sell
             healthy &= cond
         elif tok.startswith("rsi"):
-            k = float(tok[len("rsi"):])
+            k = float(tok[len("rsi") :])
             r = _wilder_rsi_np(c, 14)
             cond = r > k
             cond[np.isnan(r)] = False
@@ -1938,18 +2045,18 @@ def _exit_force_mask(df: pd.DataFrame, gate: str, suppress: str | None = None) -
         c = df["close"].to_numpy()[idx]
         cs = pd.Series(c)
         backstop = np.zeros(len(idx), dtype=bool)  # downleg deep reversal — ALWAYS fires
-        soft = np.zeros(len(idx), dtype=bool)        # belowma/bear3/etc — suppressible
+        soft = np.zeros(len(idx), dtype=bool)  # belowma/bear3/etc — suppressible
         for tok in toks:
             if tok.startswith("dlvol"):
                 # VOL-CONDITIONAL downleg: 'dlvol12' = base 12% reversal, threshold scaled by
                 # realized-vol rank (high vol -> sell earlier ~8%, low vol -> wait ~16%).
-                suf = tok[len("dlvol"):]
+                suf = tok[len("dlvol") :]
                 base = (float(suf) / 100.0) if suf else 0.12
                 backstop |= _causal_leg_dir_vol(c, base) < 0
             elif tok.startswith("downleg"):
                 # 'downleg' = 6% reversal (default); 'downleg12' = 12% — deeper = only force
                 # a sell on a real reversal, not on every shallow pullback inside an uptrend.
-                suf = tok[len("downleg"):]
+                suf = tok[len("downleg") :]
                 pct = (float(suf) / 100.0) if suf else 0.06
                 backstop |= _causal_leg_dir(c, pct) < 0
             elif tok in ("machist", "macdhist"):
@@ -1966,7 +2073,7 @@ def _exit_force_mask(df: pd.DataFrame, gate: str, suppress: str | None = None) -
                 # firing — vetoes a transient shakeout dip (1..K-1 bars then bounce,
                 # the sell-rebuy-higher whipsaw) while still exiting fast on a sustained
                 # break. All causal (current+past bars only).
-                suf = tok[len("belowma"):] if tok.startswith("belowma") else tok[len("bma"):]
+                suf = tok[len("belowma") :] if tok.startswith("belowma") else tok[len("bma") :]
                 persist = 1
                 if "p" in suf:
                     win_s, p_s = suf.split("p", 1)
@@ -1978,8 +2085,10 @@ def _exit_force_mask(df: pd.DataFrame, gate: str, suppress: str | None = None) -
                 below = c < ma
                 below[np.isnan(ma)] = False  # warmup: trend unknown -> don't force
                 if persist > 1:
-                    cond = (pd.Series(below).rolling(persist, min_periods=persist).sum()
-                            .to_numpy() >= persist)
+                    cond = (
+                        pd.Series(below).rolling(persist, min_periods=persist).sum().to_numpy()
+                        >= persist
+                    )
                 else:
                     cond = below
                 soft |= cond
@@ -1990,7 +2099,7 @@ def _exit_force_mask(df: pd.DataFrame, gate: str, suppress: str | None = None) -
                 # the bounce; only a real break below BOTH forces the sell — aims for the high-pnl of
                 # patient exits WITHOUT the mdd of holding true breakdowns. Format 'mabreak20p3m50'
                 # = below MA20 for 3 consecutive bars AND below MA50. Causal (current+past only).
-                body = tok[len("mabreak"):]
+                body = tok[len("mabreak") :]
                 short_part, long_s = body.split("m", 1)
                 if "p" in short_part:
                     win_s, p_s = short_part.split("p", 1)
@@ -2004,8 +2113,10 @@ def _exit_force_mask(df: pd.DataFrame, gate: str, suppress: str | None = None) -
                 ma_l = cs.rolling(longw, min_periods=longw).mean().to_numpy()
                 below_s = c < ma_s
                 if persist > 1:
-                    below_s = (pd.Series(below_s).rolling(persist, min_periods=persist).sum()
-                               .to_numpy() >= persist)
+                    below_s = (
+                        pd.Series(below_s).rolling(persist, min_periods=persist).sum().to_numpy()
+                        >= persist
+                    )
                 cond = below_s & (c < ma_l)
                 cond[np.isnan(ma_s) | np.isnan(ma_l)] = False  # warmup -> don't force
                 soft |= cond
@@ -2025,7 +2136,7 @@ def _exit_force_mask(df: pd.DataFrame, gate: str, suppress: str | None = None) -
                     raise ValueError("exit_force_gate 'bear3' needs an 'open' column in signals")
                 persist = 1
                 if tok.startswith("bear3p"):
-                    p_s = tok[len("bear3p"):]
+                    p_s = tok[len("bear3p") :]
                     persist = int(p_s) if p_s else 1
                 macd = cs.ewm(span=12, adjust=False).mean() - cs.ewm(span=26, adjust=False).mean()
                 hist = (macd - macd.ewm(span=9, adjust=False).mean()).to_numpy()
@@ -2034,8 +2145,10 @@ def _exit_force_mask(df: pd.DataFrame, gate: str, suppress: str | None = None) -
                 cond = (hist < 0.0) & (c < ma20) & (c < o)
                 cond[np.isnan(ma20)] = False
                 if persist > 1:
-                    cond = (pd.Series(cond).rolling(persist, min_periods=persist).sum()
-                            .to_numpy() >= persist)
+                    cond = (
+                        pd.Series(cond).rolling(persist, min_periods=persist).sum().to_numpy()
+                        >= persist
+                    )
                 soft |= cond
         if suppress is not None:
             soft = soft & ~_force_healthy_mask(c, suppress)
@@ -2076,7 +2189,12 @@ def _exit_gate_mask(df: pd.DataFrame, gate: str) -> np.ndarray:
             # distribution/sideways zone, the SOLD_THEN_RAN premature exits fire in a CLEAN-uptrend pullback
             # (low consolidation). Blocking the ML sell there holds the healthy pullback (the mechanical
             # overext/trailing exits stay the ungated downside backstop). Causal. Needs high/low carried.
-            elif tok.startswith("cons") and tok[4:].isdigit() and "high" in df.columns and "low" in df.columns:
+            elif (
+                tok.startswith("cons")
+                and tok[4:].isdigit()
+                and "high" in df.columns
+                and "low" in df.columns
+            ):
                 n_thr = float(tok[4:])
                 # optional window/range overrides via sibling tokens: 'w<bars>' and 'r<range*1000>'
                 # (e.g. 'cons2_w20_r25' = count over 20 bars of daily-range<2.5%, >=2). Default 10/2.0%.
@@ -2086,9 +2204,15 @@ def _exit_gate_mask(df: pd.DataFrame, gate: str) -> np.ndarray:
                         win = int(tt[1:])
                     elif tt.startswith("r") and tt[1:].isdigit():
                         rng = int(tt[1:]) / 1000.0
-                h = df["high"].to_numpy()[idx]; lo = df["low"].to_numpy()[idx]
+                h = df["high"].to_numpy()[idx]
+                lo = df["low"].to_numpy()[idx]
                 hlp = (h - lo) / np.where(c > 0, c, np.nan)
-                consol = pd.Series((hlp < rng).astype(float)).rolling(win, min_periods=3).sum().to_numpy()
+                consol = (
+                    pd.Series((hlp < rng).astype(float))
+                    .rolling(win, min_periods=3)
+                    .sum()
+                    .to_numpy()
+                )
                 cond = consol >= n_thr
                 cond[np.isnan(consol)] = False  # warmup: regime unknown -> don't allow ML sell
                 m &= cond
@@ -2102,8 +2226,9 @@ def _exit_gate_mask(df: pd.DataFrame, gate: str) -> np.ndarray:
             # best of the new multi-period family, below consolidation +0.82). Causal (ewm).
             elif tok == "ribbon":
                 cs = pd.Series(c)
-                rib = ((cs.ewm(span=5, adjust=False).mean() - cs.ewm(span=50, adjust=False).mean())
-                       / np.where(c > 0, c, np.nan))
+                rib = (
+                    cs.ewm(span=5, adjust=False).mean() - cs.ewm(span=50, adjust=False).mean()
+                ) / np.where(c > 0, c, np.nan)
                 chg = (rib - rib.shift(5)).to_numpy()
                 cond = chg <= 0
                 cond[np.isnan(chg)] = False
@@ -2155,15 +2280,15 @@ def _reversal_early_mask(
         c = pd.Series(df["close"].to_numpy()[idx])
         c1, c2 = c.shift(1), c.shift(2)
         sma5 = c.rolling(5, min_periods=2).mean()
-        nc = ((c > c1) & (c1 > c2)).astype(np.int8)                       # up2
-        nc = nc + ((c >= sma5) & (c1 < sma5.shift(1))).astype(np.int8)    # reclaim5
+        nc = ((c > c1) & (c1 > c2)).astype(np.int8)  # up2
+        nc = nc + ((c >= sma5) & (c1 < sma5.shift(1))).astype(np.int8)  # reclaim5
         if has_lv:
             low = pd.Series(df["low"].to_numpy()[idx])
-            nc = nc + (low > low.shift(1)).astype(np.int8)                # higher low
+            nc = nc + (low > low.shift(1)).astype(np.int8)  # higher low
         if has_vol:
             vol = pd.Series(df["volume"].to_numpy()[idx])
             volavg = vol.rolling(20, min_periods=5).mean()
-            nc = nc + ((c > c1) & (vol > 1.3 * volavg)).astype(np.int8)   # volume thrust
+            nc = nc + ((c > c1) & (vol > 1.3 * volavg)).astype(np.int8)  # volume thrust
         dist20 = c / c.rolling(20, min_periods=5).max() - 1.0
         confirms[idx] = nc.to_numpy()
         cheap[idx] = (dist20 <= dd_thresh).fillna(False).to_numpy()
@@ -2199,19 +2324,19 @@ def _reversal_top_mask(
         c = pd.Series(df["close"].to_numpy()[idx])
         c1, c2 = c.shift(1), c.shift(2)
         sma5 = c.rolling(5, min_periods=2).mean()
-        nc = ((c < c1) & (c1 < c2)).astype(np.int8)                       # down2
-        nc = nc + ((c < sma5) & (c1 >= sma5.shift(1))).astype(np.int8)    # lose MA5
+        nc = ((c < c1) & (c1 < c2)).astype(np.int8)  # down2
+        nc = nc + ((c < sma5) & (c1 >= sma5.shift(1))).astype(np.int8)  # lose MA5
         if has_hi:
             high = pd.Series(df["high"].to_numpy()[idx])
-            nc = nc + (high < high.shift(1)).astype(np.int8)             # lower high
+            nc = nc + (high < high.shift(1)).astype(np.int8)  # lower high
         if has_vol:
             vol = pd.Series(df["volume"].to_numpy()[idx])
             volavg = vol.rolling(20, min_periods=5).mean()
             nc = nc + ((c < c1) & (vol > 1.3 * volavg)).astype(np.int8)  # distribution
         roll_max = c.rolling(20, min_periods=5).max()
         roll_min = c.rolling(20, min_periods=5).min()
-        dist20high = c / roll_max - 1.0    # <= 0; 0 == at the 20-bar high
-        dist20low = c / roll_min - 1.0     # >= 0; size of the up-leg
+        dist20high = c / roll_max - 1.0  # <= 0; 0 == at the 20-bar high
+        dist20low = c / roll_min - 1.0  # >= 0; size of the up-leg
         zone = (dist20high >= -near_thresh) & (dist20low >= run_thresh)
         confirms[idx] = nc.to_numpy()
         at_top[idx] = zone.fillna(False).to_numpy()
@@ -2358,6 +2483,7 @@ def _recombine_dual_ml_signals(
             buy = buy | (zE_eval.to_numpy() < entry_z_low_threshold)
     else:
         buy = combined > sum_threshold
+
     # ENSEMBLE union buy: a 2nd entry head (score2, e.g. reversal-trained) fires an independent
     # buy when its causal z exceeds entry2_z_threshold. The union keeps BOTH heads' winners
     # (momentum continuation + dip reversal) instead of the single-head trade-off. zE2 is
@@ -2380,6 +2506,7 @@ def _recombine_dual_ml_signals(
         else:
             sc = _causal_zscore_by_symbol(df[scol], df["symbol"], window, min_periods).to_numpy()
         return sc > float(thr)
+
     rev_buy = _ens_buy("score2", entry2_z_threshold, entry2_norm)
     brk_buy = _ens_buy("score3", entry3_z_threshold, entry3_norm)
     brk_buy2 = _ens_buy("score4", entry4_z_threshold, entry4_norm)
@@ -2473,9 +2600,12 @@ def _recombine_dual_ml_signals(
         if downleg_skip_bull:
             _cd = downleg_skip_bull.get("crash_dd")
             fm = fm & ~_market_bull_mask(
-                df, int(downleg_skip_bull.get("ma_win", 50)),
-                int(downleg_skip_bull.get("persist", 3)), regime_index_symbol,
-                crash_dd=(float(_cd) if _cd is not None else None))
+                df,
+                int(downleg_skip_bull.get("ma_win", 50)),
+                int(downleg_skip_bull.get("persist", 3)),
+                regime_index_symbol,
+                crash_dd=(float(_cd) if _cd is not None else None),
+            )
         sell = sell | fm
     # Regime-conditional TIGHT force-gate: apply this (eager) gate ONLY where the market is NOT
     # bull, so chop/bear positions are cut fast while bull positions hold through the wave. The
@@ -2491,39 +2621,55 @@ def _recombine_dual_ml_signals(
                 _ix = np.asarray(_idx)
                 _h = _force_healthy_mask(df["close"].to_numpy()[_ix], exit_force_suppress)
                 _nb[_ix] = _nb[_ix] & ~_h
-        sell = sell | (_nb & _market_nonbull_mask(df, nonbull_ma_win, nonbull_persist, regime_index_symbol))
+        sell = sell | (
+            _nb & _market_nonbull_mask(df, nonbull_ma_win, nonbull_persist, regime_index_symbol)
+        )
     # Regime-conditional TIGHT force-gate keyed on the ORTHOGONAL 488-universe breadth: in a
     # broad-market breadth COLLAPSE (the 2022 mdd cluster, pct_above_ma50 0.263 vs 2021 0.548),
     # apply a tighter cut (e.g. downleg8) to bleed the bear-cluster losers faster. Breadth flags
     # the 2022 leg the 61-EW proxy under-reads. Off by default.
     if exit_force_gate_lowbreadth:
         _g = exit_force_gate_lowbreadth
-        sell = sell | (_exit_force_mask(df, _g.get("gate", "downleg8"))
-                       & _market_breadth_mask(df, _g.get("metric", "pct_above_ma50"),
-                                              float(_g.get("threshold", 0.35)),
-                                              int(_g.get("ma_win", 50)),
-                                              _g.get("mode", "level"),
-                                              int(_g.get("z_lookback", 60))))
+        sell = sell | (
+            _exit_force_mask(df, _g.get("gate", "downleg8"))
+            & _market_breadth_mask(
+                df,
+                _g.get("metric", "pct_above_ma50"),
+                float(_g.get("threshold", 0.35)),
+                int(_g.get("ma_win", 50)),
+                _g.get("mode", "level"),
+                int(_g.get("z_lookback", 60)),
+            )
+        )
     # REAL-INDEX (VN30F1M) regime-cluster EXIT gate: real-index analog of the EW breadth-collapse
     # cut — apply a tighter force-gate (e.g. downleg6) only while the actual VN30 large-cap index is
     # in a risk-OFF regime (confirmed downtrend / drawdown). New info vs the 488-EW proxy. Off by
     # default. A/B both standalone and STACKED on exit_force_gate_lowbreadth (they may overlap).
     if exit_force_gate_vn30:
         _v = exit_force_gate_vn30
-        sell = sell | (_exit_force_mask(df, _v.get("gate", "downleg6"))
-                       & _vn30_regime_mask(df, _v.get("index_symbol", "VN30F1M"),
-                                           _v.get("mode", "downtrend"),
-                                           int(_v.get("ma_short", 20)),
-                                           int(_v.get("ma_long", 50)),
-                                           float(_v.get("dd_thresh", 0.10))))
+        sell = sell | (
+            _exit_force_mask(df, _v.get("gate", "downleg6"))
+            & _vn30_regime_mask(
+                df,
+                _v.get("index_symbol", "VN30F1M"),
+                _v.get("mode", "downtrend"),
+                int(_v.get("ma_short", 20)),
+                int(_v.get("ma_long", 50)),
+                float(_v.get("dd_thresh", 0.10)),
+            )
+        )
     # RS-ROLLOVER protective exit: force-sell a HELD trade when its cross-sectional RS rank rolls
     # over (drops > `drop` over `lookback`) — the REALIZABILITY signal (rejected on entry as
     # momentum-redundant, strong on exit: IC(RS-change, giveback) -0.19; givebacks roll over while
     # winners hold RS). Targets the deadband-giveback leak. Off by default.
     if exit_rs_drop:
         _r = exit_rs_drop
-        sell = sell | _rs_drop_mask(df, float(_r.get("drop", 0.12)),
-                                    int(_r.get("lookback", 10)), _r.get("metric", "cs_rank20"))
+        sell = sell | _rs_drop_mask(
+            df,
+            float(_r.get("drop", 0.12)),
+            int(_r.get("lookback", 10)),
+            _r.get("metric", "cs_rank20"),
+        )
     # Downleg VETO for fresh V-bottom entries. 73% of the confirmed V-bottom buys land in an
     # active 12% downleg, so the same-bar downleg force-SELL (sell wins over buy in `sig`)
     # CANCELS the buy at the source — the verified blocker on the bottom alpha. Where a
@@ -2625,18 +2771,21 @@ def _recombine_dual_ml_signals(
     # default. Applied AFTER the unions so it filters every entry style.
     if entry_breadth_gate:
         weak = _market_breadth_mask(
-            df, entry_breadth_gate.get("metric", "pct_above_ma50"),
+            df,
+            entry_breadth_gate.get("metric", "pct_above_ma50"),
             float(entry_breadth_gate.get("threshold", 0.35)),
             int(entry_breadth_gate.get("ma_win", 50)),
             entry_breadth_gate.get("mode", "level"),
-            int(entry_breadth_gate.get("z_lookback", 60)))
+            int(entry_breadth_gate.get("z_lookback", 60)),
+        )
         buy = buy & ~weak
     # RS-vs-MARKET SELECTION gate: trade only LEADER dips (strong RS-vs-VNINDEX); suppress laggard dips
     # (more likely knives). The realization of the strongest separator (win 72%% vs 52%%) as its own
     # selection strategy. Applied after the unions so it filters every entry style. Off by default.
     if entry_rs_gate:
-        weak_rs = _rs_market_mask(df, entry_rs_gate.get("feature", "rs_vsma"),
-                                  float(entry_rs_gate.get("threshold", 0.0)))
+        weak_rs = _rs_market_mask(
+            df, entry_rs_gate.get("feature", "rs_vsma"), float(entry_rs_gate.get("threshold", 0.0))
+        )
         buy = buy & ~weak_rs
     sig = np.where(sell, -1, np.where(buy, 1, 0)).astype(np.int8)
     if direction == "short":
@@ -2700,11 +2849,13 @@ def _xsec_rank_membership_signals(signals: pd.DataFrame, cfg: ExperimentConfig) 
         members = new_members
     buy = np.fromiter(
         ((sym, d) in buy_keys for sym, d in zip(df["symbol"], df["date"])),
-        dtype=bool, count=len(df),
+        dtype=bool,
+        count=len(df),
     )
     sell = np.fromiter(
         ((sym, d) in sell_keys for sym, d in zip(df["symbol"], df["date"])),
-        dtype=bool, count=len(df),
+        dtype=bool,
+        count=len(df),
     )
     if force_gate:
         sell = sell | _exit_force_mask(df, force_gate)
@@ -2721,9 +2872,9 @@ def _xsec_rank_membership_signals(signals: pd.DataFrame, cfg: ExperimentConfig) 
 
 
 _XRISE_STRATEGIES = (
-    "regression_dual_ml_recombine_xrise",       # sell z(exit) > k (raw exit off)
-    "regression_dual_ml_recombine_xrise_ema",   # sell EMA(z(exit)) > k — denoise
-    "regression_dual_ml_recombine_xrise_raw",   # sell z(exit) > k OR raw exit > thr
+    "regression_dual_ml_recombine_xrise",  # sell z(exit) > k (raw exit off)
+    "regression_dual_ml_recombine_xrise_ema",  # sell EMA(z(exit)) > k — denoise
+    "regression_dual_ml_recombine_xrise_raw",  # sell z(exit) > k OR raw exit > thr
 )
 _DECOUPLED_STRATEGIES = (
     # Heads fully decoupled: BUY z(entry) > entry_threshold, SELL z(exit) > signal_threshold.
@@ -2766,9 +2917,13 @@ def recombine_signals(signals_all: pd.DataFrame, cfg: ExperimentConfig) -> pd.Da
     _bg = cfg.engine.get("entry_breadth_gate") if isinstance(cfg.engine, dict) else None
     if _bg and cfg.strategy not in _RECOMBINE_STRATEGIES and "date" in signals_all.columns:
         weak = _market_breadth_mask(
-            signals_all, _bg.get("metric", "pct_above_ma50"),
-            float(_bg.get("threshold", 0.35)), int(_bg.get("ma_win", 50)),
-            _bg.get("mode", "level"), int(_bg.get("z_lookback", 60)))
+            signals_all,
+            _bg.get("metric", "pct_above_ma50"),
+            float(_bg.get("threshold", 0.35)),
+            int(_bg.get("ma_win", 50)),
+            _bg.get("mode", "level"),
+            int(_bg.get("z_lookback", 60)),
+        )
         signals_all = signals_all.copy()
         signals_all.loc[(signals_all["signal"] > 0) & weak, "signal"] = 0
 
@@ -2794,13 +2949,17 @@ def recombine_signals(signals_all: pd.DataFrame, cfg: ExperimentConfig) -> pd.Da
         # exit_z_threshold path. _ema EMA5-smooths both z's.
         decoupled = cfg.strategy in _DECOUPLED_STRATEGIES
         sell_on_zexit = x_rise or decoupled
-        exit_z_ema = 5 if cfg.strategy in (
-            "regression_dual_ml_recombine_xrise_ema",
-            "regression_dual_ml_recombine_decoupled_ema",
-        ) else None
+        exit_z_ema = (
+            5
+            if cfg.strategy
+            in (
+                "regression_dual_ml_recombine_xrise_ema",
+                "regression_dual_ml_recombine_decoupled_ema",
+            )
+            else None
+        )
         entry_z_threshold = (
-            (cfg.entry_threshold if cfg.entry_threshold is not None else 1.0)
-            if decoupled else None
+            (cfg.entry_threshold if cfg.entry_threshold is not None else 1.0) if decoupled else None
         )
         entry_z_ema = 5 if cfg.strategy == "regression_dual_ml_recombine_decoupled_ema" else None
         use_raw_exit = cfg.strategy not in (
@@ -2817,7 +2976,9 @@ def recombine_signals(signals_all: pd.DataFrame, cfg: ExperimentConfig) -> pd.Da
                 int(cfg.engine.get("z_norm_window", 252)) if isinstance(cfg.engine, dict) else 252
             ),
             min_periods=(
-                int(cfg.engine.get("z_norm_min_periods", 60)) if isinstance(cfg.engine, dict) else 60
+                int(cfg.engine.get("z_norm_min_periods", 60))
+                if isinstance(cfg.engine, dict)
+                else 60
             ),
             direction=cfg.direction,
             lower_threshold=cfg.signal_threshold if two_sided else None,
@@ -2845,14 +3006,14 @@ def recombine_signals(signals_all: pd.DataFrame, cfg: ExperimentConfig) -> pd.Da
                 cfg.engine.get("exit_force_gate_nonbull") if isinstance(cfg.engine, dict) else None
             ),
             exit_force_gate_lowbreadth=(
-                cfg.engine.get("exit_force_gate_lowbreadth") if isinstance(cfg.engine, dict) else None
+                cfg.engine.get("exit_force_gate_lowbreadth")
+                if isinstance(cfg.engine, dict)
+                else None
             ),
             exit_force_gate_vn30=(
                 cfg.engine.get("exit_force_gate_vn30") if isinstance(cfg.engine, dict) else None
             ),
-            exit_rs_drop=(
-                cfg.engine.get("exit_rs_drop") if isinstance(cfg.engine, dict) else None
-            ),
+            exit_rs_drop=(cfg.engine.get("exit_rs_drop") if isinstance(cfg.engine, dict) else None),
             exit_force_suppress=(
                 cfg.engine.get("exit_force_suppress") if isinstance(cfg.engine, dict) else None
             ),
@@ -2863,7 +3024,9 @@ def recombine_signals(signals_all: pd.DataFrame, cfg: ExperimentConfig) -> pd.Da
                 cfg.engine.get("nonbull_persist", 3) if isinstance(cfg.engine, dict) else 3
             ),
             entry_skip_nonbull_persist=(
-                cfg.engine.get("entry_skip_nonbull_persist", 0) if isinstance(cfg.engine, dict) else 0
+                cfg.engine.get("entry_skip_nonbull_persist", 0)
+                if isinstance(cfg.engine, dict)
+                else 0
             ),
             regime_index_symbol=(
                 cfg.engine.get("regime_index_symbol") if isinstance(cfg.engine, dict) else None
@@ -2882,29 +3045,54 @@ def recombine_signals(signals_all: pd.DataFrame, cfg: ExperimentConfig) -> pd.Da
             ),
             entry2_z_threshold=(
                 (cfg.engine.get("entry_ensemble") or {}).get("z_threshold")
-                if isinstance(cfg.engine, dict) else None
+                if isinstance(cfg.engine, dict)
+                else None
             ),
             entry3_z_threshold=(
                 (cfg.engine.get("entry_ensemble2") or {}).get("z_threshold")
-                if isinstance(cfg.engine, dict) else None
+                if isinstance(cfg.engine, dict)
+                else None
             ),
             entry4_z_threshold=(
                 (cfg.engine.get("entry_ensemble3") or {}).get("z_threshold")
-                if isinstance(cfg.engine, dict) else None
+                if isinstance(cfg.engine, dict)
+                else None
             ),
             entry6_z_threshold=(
                 (cfg.engine.get("entry_ensemble5") or {}).get("z_threshold")
-                if isinstance(cfg.engine, dict) else None
+                if isinstance(cfg.engine, dict)
+                else None
             ),
-            entry6_norm=((cfg.engine.get("entry_ensemble5") or {}).get("norm") if isinstance(cfg.engine, dict) else None),
+            entry6_norm=(
+                (cfg.engine.get("entry_ensemble5") or {}).get("norm")
+                if isinstance(cfg.engine, dict)
+                else None
+            ),
             entry5_z_threshold=(
                 (cfg.engine.get("entry_ensemble4") or {}).get("z_threshold")
-                if isinstance(cfg.engine, dict) else None
+                if isinstance(cfg.engine, dict)
+                else None
             ),
-            entry2_norm=((cfg.engine.get("entry_ensemble") or {}).get("norm") if isinstance(cfg.engine, dict) else None),
-            entry3_norm=((cfg.engine.get("entry_ensemble2") or {}).get("norm") if isinstance(cfg.engine, dict) else None),
-            entry4_norm=((cfg.engine.get("entry_ensemble3") or {}).get("norm") if isinstance(cfg.engine, dict) else None),
-            entry5_norm=((cfg.engine.get("entry_ensemble4") or {}).get("norm") if isinstance(cfg.engine, dict) else None),
+            entry2_norm=(
+                (cfg.engine.get("entry_ensemble") or {}).get("norm")
+                if isinstance(cfg.engine, dict)
+                else None
+            ),
+            entry3_norm=(
+                (cfg.engine.get("entry_ensemble2") or {}).get("norm")
+                if isinstance(cfg.engine, dict)
+                else None
+            ),
+            entry4_norm=(
+                (cfg.engine.get("entry_ensemble3") or {}).get("norm")
+                if isinstance(cfg.engine, dict)
+                else None
+            ),
+            entry5_norm=(
+                (cfg.engine.get("entry_ensemble4") or {}).get("norm")
+                if isinstance(cfg.engine, dict)
+                else None
+            ),
             entry_rs_gate=(
                 cfg.engine.get("entry_rs_gate") if isinstance(cfg.engine, dict) else None
             ),
@@ -2919,18 +3107,24 @@ def recombine_signals(signals_all: pd.DataFrame, cfg: ExperimentConfig) -> pd.Da
             ),
             exit2_z_threshold=(
                 (cfg.engine.get("exit_ensemble") or {}).get("z_threshold")
-                if isinstance(cfg.engine, dict) else None
+                if isinstance(cfg.engine, dict)
+                else None
             ),
         )
         _buy_desc = (
             f"buy {'EMA' if entry_z_ema else ''}z(entry) > {cfg.entry_threshold}"
-            if decoupled else f"buy z-sum > {cfg.entry_threshold}"
+            if decoupled
+            else f"buy z-sum > {cfg.entry_threshold}"
         )
         print(
             f"[{cfg.name}] dual-ML recombine ({cfg.strategy}): {_buy_desc}"
             + (f" (EMA{ema_span})" if ema_span else "")
             + (f"; sell z-sum < {cfg.signal_threshold}" if two_sided else "")
-            + (f"; sell {'EMA' if exit_z_ema else ''}z(exit) > {cfg.signal_threshold}" if sell_on_zexit else "")
+            + (
+                f"; sell {'EMA' if exit_z_ema else ''}z(exit) > {cfg.signal_threshold}"
+                if sell_on_zexit
+                else ""
+            )
             + (f"; raw-exit > {cfg.exit_threshold}" if use_raw_exit else "")
             + f"; buys {n_buys_before} -> {int((signals_all['signal'] > 0).sum())}, "
             f"sells {int((signals_all['signal'] < 0).sum())} (causal z, 252/60)"
@@ -3034,6 +3228,7 @@ def build_feature_frame(
                 feat[cname] = feat["date"].map(br).astype("float32").fillna(0.5)
             names.append(cname)
         return list(cols if cols else entry_feat_cols) + names
+
     entry3_feat_cols = _breadth_append(_ens2, entry3_feat_cols)
     entry4_feat_cols = _breadth_append(_ens3, entry4_feat_cols)
     entry5_feat_cols = _breadth_append(_ens4, entry5_feat_cols)
@@ -3050,14 +3245,18 @@ def build_feature_frame(
     # rotation — the strongest per-symbol signal, cs_rank_trend IC_winner +0.17). Any
     # entry_ensembleN.xsec_features (list) merges those per-(symbol,date) columns into that head's
     # feature set (the per-symbol use of the broad universe the breadth-EXIT only used market-wide).
-    _exit_xsec = (cfg.engine.get("exit_xsec_features") if isinstance(cfg.engine, dict) else None) or []
-    _entry_xsec = (cfg.engine.get("entry_xsec_features") if isinstance(cfg.engine, dict) else None) or []
+    _exit_xsec = (
+        cfg.engine.get("exit_xsec_features") if isinstance(cfg.engine, dict) else None
+    ) or []
+    _entry_xsec = (
+        cfg.engine.get("entry_xsec_features") if isinstance(cfg.engine, dict) else None
+    ) or []
     _xsec_reqs = []
     for _ec in (_ens, _ens2, _ens3, _ens4):
-        for _m in ((_ec or {}).get("xsec_features") or []):
+        for _m in (_ec or {}).get("xsec_features") or []:
             if _m not in _xsec_reqs:
                 _xsec_reqs.append(_m)
-    for _m in (_exit_xsec + _entry_xsec):
+    for _m in _exit_xsec + _entry_xsec:
         if _m not in _xsec_reqs:
             _xsec_reqs.append(_m)
     if _xsec_reqs:
@@ -3071,6 +3270,7 @@ def build_feature_frame(
         if not xf:
             return cols
         return list(cols if cols else entry_feat_cols) + [f"xsec_{m}" for m in xf]
+
     entry2_feat_cols = _xsec_append(_ens, entry2_feat_cols)
     entry3_feat_cols = _xsec_append(_ens2, entry3_feat_cols)
     entry4_feat_cols = _xsec_append(_ens3, entry4_feat_cols)
@@ -3089,9 +3289,15 @@ def build_feature_frame(
 
     # Abort loudly if features are pathologically NaN before any silent dropna shrinks
     # the universe (e.g. the leading_v2 ADX index-misalignment bug).
-    _all_feat_cols = (set(entry_feat_cols) | set(exit_feat_cols) | set(entry2_feat_cols or [])
-                      | set(entry3_feat_cols or []) | set(entry4_feat_cols or [])
-                      | set(entry5_feat_cols or []) | set(entry6_feat_cols or []))
+    _all_feat_cols = (
+        set(entry_feat_cols)
+        | set(exit_feat_cols)
+        | set(entry2_feat_cols or [])
+        | set(entry3_feat_cols or [])
+        | set(entry4_feat_cols or [])
+        | set(entry5_feat_cols or [])
+        | set(entry6_feat_cols or [])
+    )
     assert_feature_integrity(feat, sorted(_all_feat_cols))
 
     # Per-slot targets
@@ -3154,9 +3360,18 @@ def build_feature_frame(
     # Symmetric to the warmup trim: drop the trailing NaN-label block of DELISTED symbols
     # (their forward-window tail lands inside a train fold and would trip require_no_nan).
     feat = trim_target_tail(feat, ["target_entry", "target_exit", "target"], name=cfg.name)
-    return (feat, entry_feat_cols, exit_feat_cols, entry_target_cfg, exit_target_cfg,
-            entry2_feat_cols, entry3_feat_cols, entry4_feat_cols, entry5_feat_cols,
-            entry6_feat_cols)
+    return (
+        feat,
+        entry_feat_cols,
+        exit_feat_cols,
+        entry_target_cfg,
+        exit_target_cfg,
+        entry2_feat_cols,
+        entry3_feat_cols,
+        entry4_feat_cols,
+        entry5_feat_cols,
+        entry6_feat_cols,
+    )
 
 
 def run_experiment(
@@ -3263,9 +3478,18 @@ def run_experiment(
     # Resolve features + targets + warmup-trim (extracted to build_feature_frame so the
     # serving path reuses the exact feature pipeline). entry_target_cfg/exit_target_cfg
     # are returned for the downstream leakage-gap audit.
-    (feat, entry_feat_cols, exit_feat_cols, entry_target_cfg, exit_target_cfg,
-     entry2_feat_cols, entry3_feat_cols, entry4_feat_cols,
-     entry5_feat_cols, entry6_feat_cols) = build_feature_frame(
+    (
+        feat,
+        entry_feat_cols,
+        exit_feat_cols,
+        entry_target_cfg,
+        exit_target_cfg,
+        entry2_feat_cols,
+        entry3_feat_cols,
+        entry4_feat_cols,
+        entry5_feat_cols,
+        entry6_feat_cols,
+    ) = build_feature_frame(
         ohlcv, cfg, requested_symbols=requested, data_root=data_root, with_targets=True
     )
 
@@ -3307,7 +3531,9 @@ def run_experiment(
         data_max = pd.to_datetime(feat["date"]).max()
         splitter.last_test_end = data_max + pd.Timedelta(days=1)
         last_win_end = splitter.windows()[-1].test_end
-        if last_win_end > pd.Timestamp(year=splitter.last_test_year + splitter.test_years, month=1, day=1):
+        if last_win_end > pd.Timestamp(
+            year=splitter.last_test_year + splitter.test_years, month=1, day=1
+        ):
             print(
                 f"  [split] last fold extended to {last_win_end.date()} "
                 f"to score post-window tail (data ends {data_max.date()})"
@@ -3410,7 +3636,11 @@ def run_experiment(
         # THIS backtest by construction (attest 100%). Opt-in via env so ordinary runs pay no disk cost;
         # the re-baseline runner sets it. Export re-training a fold-model differs by ~0.01 in score and
         # flips band-edge signals, which is why the model must come from here, not be refitted downstream.
-        if fold_cache_path and os.environ.get("STOCKML_PERSIST_FOLD_MODELS") and hasattr(w, "test_year"):
+        if (
+            fold_cache_path
+            and os.environ.get("STOCKML_PERSIST_FOLD_MODELS")
+            and hasattr(w, "test_year")
+        ):
             import joblib
 
             fold_model_set: dict[str, Any] = {"entry": entry_model}
@@ -3506,8 +3736,15 @@ def run_experiment(
     # (same bug-class as the per-slot leak above, one slot-type deeper).
     _ens_target_cfgs = []
     if isinstance(cfg.engine, dict):
-        for _ens_key in ("entry_ensemble", "entry_ensemble2", "entry_ensemble3",
-                         "entry_ensemble4", "entry_ensemble5", "exit_ensemble", "exit_force_gate_vn30"):
+        for _ens_key in (
+            "entry_ensemble",
+            "entry_ensemble2",
+            "entry_ensemble3",
+            "entry_ensemble4",
+            "entry_ensemble5",
+            "exit_ensemble",
+            "exit_force_gate_vn30",
+        ):
             _ens = cfg.engine.get(_ens_key)
             if isinstance(_ens, dict) and _ens.get("target"):
                 _ens_target_cfgs.append(_ens["target"])
@@ -3522,7 +3759,10 @@ def run_experiment(
         windows if windows is not None else windows_list if "windows_list" in locals() else None
     )
     report = audit_report(
-        trades_df, signals_all, windows=audit_windows, min_gap_days=required_gap,
+        trades_df,
+        signals_all,
+        windows=audit_windows,
+        min_gap_days=required_gap,
         portfolio_mode=False,
     )
     print_report(report)

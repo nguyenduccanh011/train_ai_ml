@@ -14,6 +14,7 @@ healthy-dip entries). Same v1 exit policy; only the entry label changes.
 
 Usage: python stock_ml/scripts/build_smac_v5_regime.py
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -57,13 +58,15 @@ async def make_template(new_name: str, thr: float) -> int:
             if sl.slot_type == "entry":
                 tc = dict(tc)
                 tc["entry_min_ret_120"] = thr
-            slots.append({
-                "slot_type": sl.slot_type,
-                "ml_component_id": sl.ml_component_id,
-                "rule_component_id": sl.rule_component_id,
-                "feature_set_name": sl.feature_set_name,
-                "target_config": tc,
-            })
+            slots.append(
+                {
+                    "slot_type": sl.slot_type,
+                    "ml_component_id": sl.ml_component_id,
+                    "rule_component_id": sl.rule_component_id,
+                    "feature_set_name": sl.feature_set_name,
+                    "target_config": tc,
+                }
+            )
         t = await repo.create(
             name=new_name,
             market=base.market,
@@ -81,11 +84,11 @@ async def make_template(new_name: str, thr: float) -> int:
             validation_config=base.validation_config,
             seed=42,
             description=f"SMAC v5: regime-aware ENTER oracle (entry_min_ret_120={thr}) — only "
-                        "ENTER bottoms whose trailing-120d return exceeds the threshold, "
-                        "dropping the downtrend knife-catch cohort. Same v1 exit. Pure-ML, no rule.",
+            "ENTER bottoms whose trailing-120d return exceeds the threshold, "
+            "dropping the downtrend knife-catch cohort. Same v1 exit. Pure-ML, no rule.",
             hypothesis="Recurring bad trades = bottoms bought in a 120d downtrend (7% catastrophic). "
-                       "Gating the ENTER LABEL on trailing trend removes them from training so the "
-                       "model stops taking knives, keeping the net-positive momentum/healthy-dip entries.",
+            "Gating the ENTER LABEL on trailing trend removes them from training so the "
+            "model stops taking knives, keeping the net-positive momentum/healthy-dip entries.",
             universe_slug=base.universe_slug,
             model_mode="ml_only",
         )
@@ -130,7 +133,9 @@ def main():
             mean = statistics.mean(comps)
             std = statistics.pstdev(comps) if len(comps) > 1 else 0.0
             print(f"== {new_name} (ret120>{thr}): MEAN={mean:.1f} std={std:.1f} seeds={seeds}\n")
-    print("== vs SMAC v1 (no regime gate) MEAN=-201.0 mdd0.518 WR0.62 hold28 tr1259 ; baselines 197.4/397.8 ; champ 704")
+    print(
+        "== vs SMAC v1 (no regime gate) MEAN=-201.0 mdd0.518 WR0.62 hold28 tr1259 ; baselines 197.4/397.8 ; champ 704"
+    )
     print("BUILD_SMAC_V5_DONE")
 
 

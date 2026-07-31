@@ -84,7 +84,7 @@ def _downleg_depth(
                     label[t] = drop if drop > 0.0 else 0.0
     # Tail-NaN: the last max_span bars cannot observe their full forward window.
     if max_span > 0 and n > 0:
-        label[max(0, n - max_span):] = np.nan
+        label[max(0, n - max_span) :] = np.nan
     return label
 
 

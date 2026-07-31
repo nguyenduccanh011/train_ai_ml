@@ -16,6 +16,7 @@ parabolas keep running until they truly cross down (capturing the +9.4% they cur
 leave). skip_ma_slope protects strong per-symbol uptrends. Clone t1378, change ONLY
 overext params, A/B vs FRESH t1378 (re-run = 405.0).
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -42,14 +43,35 @@ GRID = [
     # turn improve the proven overext sells, which currently leave +9.4% on the table?)
     ("ox14_ema", {"overext_pct": 0.14, "overext_reversal_mode": "ema_cross"}),
     # reach into the faded band (+11%/+9%) WITH reversal-confirm + uptrend skip-guard
-    ("ox11_ema_skip", {"overext_pct": 0.11, "overext_reversal_mode": "ema_cross",
-                       "overext_skip_ma_slope_pct": 0.02, "overext_skip_lookback": 5}),
-    ("ox09_ema_skip", {"overext_pct": 0.09, "overext_reversal_mode": "ema_cross",
-                       "overext_skip_ma_slope_pct": 0.02, "overext_skip_lookback": 5}),
+    (
+        "ox11_ema_skip",
+        {
+            "overext_pct": 0.11,
+            "overext_reversal_mode": "ema_cross",
+            "overext_skip_ma_slope_pct": 0.02,
+            "overext_skip_lookback": 5,
+        },
+    ),
+    (
+        "ox09_ema_skip",
+        {
+            "overext_pct": 0.09,
+            "overext_reversal_mode": "ema_cross",
+            "overext_skip_ma_slope_pct": 0.02,
+            "overext_skip_lookback": 5,
+        },
+    ),
     # deepest reach + stronger candlestick confirm (red bar, >=2% drop) instead of ema_cross
-    ("ox09_strongdown_skip", {"overext_pct": 0.09, "overext_reversal_mode": "strong_down",
-                              "overext_strong_down_pct": 0.02,
-                              "overext_skip_ma_slope_pct": 0.02, "overext_skip_lookback": 5}),
+    (
+        "ox09_strongdown_skip",
+        {
+            "overext_pct": 0.09,
+            "overext_reversal_mode": "strong_down",
+            "overext_strong_down_pct": 0.02,
+            "overext_skip_ma_slope_pct": 0.02,
+            "overext_skip_lookback": 5,
+        },
+    ),
 ]
 
 
@@ -79,28 +101,40 @@ async def main():
             ec = copy.deepcopy(base_ec)
             ec.update(ov)
             new_slots = [
-                {"slot_type": s.slot_type, "ml_component_id": s.ml_component_id,
-                 "rule_component_id": s.rule_component_id, "feature_set_name": s.feature_set_name,
-                 "target_config": _tc(s)}
+                {
+                    "slot_type": s.slot_type,
+                    "ml_component_id": s.ml_component_id,
+                    "rule_component_id": s.rule_component_id,
+                    "feature_set_name": s.feature_set_name,
+                    "target_config": _tc(s),
+                }
                 for s in base.component_slots
             ]
             tmpl = await repo.create(
-                name=name, market=base.market, strategy=base.strategy,
-                feature_set_id=base.feature_set_id, target_id=base.target_id,
-                component_slots=new_slots, direction=base.direction,
-                signal_mode=base.signal_mode, signal_threshold=base.signal_threshold,
-                entry_threshold=base.entry_threshold, exit_threshold=base.exit_threshold,
-                split_config=base.split_config, engine_config=ec,
-                validation_config=base.validation_config, seed=base.seed,
+                name=name,
+                market=base.market,
+                strategy=base.strategy,
+                feature_set_id=base.feature_set_id,
+                target_id=base.target_id,
+                component_slots=new_slots,
+                direction=base.direction,
+                signal_mode=base.signal_mode,
+                signal_threshold=base.signal_threshold,
+                entry_threshold=base.entry_threshold,
+                exit_threshold=base.exit_threshold,
+                split_config=base.split_config,
+                engine_config=ec,
+                validation_config=base.validation_config,
+                seed=base.seed,
                 description=(
                     f"Reversal-confirmed overext {tag} on t1378: {ov}; everything else = t1378. "
                     f"Sell the faded band AT a confirmed turn instead of a blind trail."
                 ),
                 hypothesis="723 signal-exit faded winners peak +9.3% then give back ~9.6% (lag 7.4 "
-                           "bars), below the +14% overext / +15% trail. Lowering overext_pct + an "
-                           "ema_cross/strong_down reversal-confirm should sell the faded band at its "
-                           "roll-over AND let parabolas run to the true cross (skip_ma_slope guards "
-                           "strong uptrends). Test vs fresh t1378 405.0.",
+                "bars), below the +14% overext / +15% trail. Lowering overext_pct + an "
+                "ema_cross/strong_down reversal-confirm should sell the faded band at its "
+                "roll-over AND let parabolas run to the true cross (skip_ma_slope guards "
+                "strong uptrends). Test vs fresh t1378 405.0.",
                 universe_slug=base.universe_slug,
             )
             print(f"* {name} created (id={tmpl.id})")

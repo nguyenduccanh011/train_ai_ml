@@ -19,7 +19,7 @@ ONLY the ``target`` column — features stay past-only.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 import pandas as pd
 

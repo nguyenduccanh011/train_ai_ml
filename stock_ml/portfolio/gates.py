@@ -7,6 +7,7 @@ known non-causal label, parity-preserved (doc §6).
 SKIP causal mode: each year's gate uses PAST convictions only (expanding), so
 adding a future fold never changes an earlier year's gate.
 """
+
 from __future__ import annotations
 
 import statistics
@@ -20,9 +21,13 @@ def overshoot_map(rw, DIDX, LO, CLO) -> dict:
     """{(symbol, entry_date): (entry_price - min(low[signal..fill])) / close[signal]}"""
     osm = {}
     for r in rw.itertuples():
-        di = DIDX.get(r.symbol, {}); si_ = di.get(str(r.sigd.date())); fi = di.get(r.ed)
+        di = DIDX.get(r.symbol, {})
+        si_ = di.get(str(r.sigd.date()))
+        fi = di.get(r.ed)
         if si_ is not None and fi is not None and fi >= si_:
-            osm[(r.symbol, r.ed)] = (r.entry_price - LO[r.symbol][si_:fi + 1].min()) / CLO[r.symbol][si_]
+            osm[(r.symbol, r.ed)] = (r.entry_price - LO[r.symbol][si_ : fi + 1].min()) / CLO[
+                r.symbol
+            ][si_]
     return osm
 
 
@@ -46,8 +51,11 @@ def skip_by_year_map(rw, cm: dict, C: PortfolioConstants):
     skip_by_year = {}
     for _y in sorted({y for y, _ in _ty}):
         _past = [c for (yy, c) in _ty if yy < _y]
-        skip_by_year[_y] = (C.skip if len(_past) < 30
-                            else C.skip + max(0.0, statistics.mean(_past) - C.skip_mu_ref) * C.skip_gain)
+        skip_by_year[_y] = (
+            C.skip
+            if len(_past) < 30
+            else C.skip + max(0.0, statistics.mean(_past) - C.skip_mu_ref) * C.skip_gain
+        )
     return skip_by_year
 
 

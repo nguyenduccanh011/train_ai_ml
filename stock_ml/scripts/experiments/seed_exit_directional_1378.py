@@ -5,9 +5,11 @@ BOTTOMS not tops because the vol-magnitude features are direction-symmetric (~0.
 Drop them; keep only directional features (extension/dist-high/macd/slope/divergence).
 Verify at the PREDICTION level whether exit_z now spikes at tops.
 """
+
 from __future__ import annotations
 import asyncio, copy, json, sys
 from pathlib import Path
+
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT))
 from sqlalchemy.ext.asyncio import AsyncSession  # noqa: E402
@@ -42,32 +44,54 @@ async def main():
             name = f"n2_1378_{tag}"
             ex = await repo.get_by_name(name)
             if ex:
-                print(f"= {name} exists (id={ex.id})"); created.append((ex.id, name)); continue
+                print(f"= {name} exists (id={ex.id})")
+                created.append((ex.id, name))
+                continue
             new_slots = []
             for s in base.component_slots:
-                tc = _tc(s); fsn = s.feature_set_name
+                tc = _tc(s)
+                fsn = s.feature_set_name
                 if s.slot_type == "exit":
                     fsn = fs
-                    if xt is not None: tc = copy.deepcopy(xt)
-                new_slots.append({"slot_type": s.slot_type, "ml_component_id": s.ml_component_id,
-                                  "rule_component_id": s.rule_component_id, "feature_set_name": fsn,
-                                  "target_config": tc})
+                    if xt is not None:
+                        tc = copy.deepcopy(xt)
+                new_slots.append(
+                    {
+                        "slot_type": s.slot_type,
+                        "ml_component_id": s.ml_component_id,
+                        "rule_component_id": s.rule_component_id,
+                        "feature_set_name": fsn,
+                        "target_config": tc,
+                    }
+                )
             tmpl = await repo.create(
-                name=name, market=base.market, strategy=base.strategy, feature_set_id=base.feature_set_id,
-                target_id=base.target_id, component_slots=new_slots, direction=base.direction,
-                signal_mode=base.signal_mode, signal_threshold=base.signal_threshold,
-                entry_threshold=base.entry_threshold, exit_threshold=base.exit_threshold,
-                split_config=base.split_config, engine_config=copy.deepcopy(base_ec),
-                validation_config=base.validation_config, seed=base.seed,
+                name=name,
+                market=base.market,
+                strategy=base.strategy,
+                feature_set_id=base.feature_set_id,
+                target_id=base.target_id,
+                component_slots=new_slots,
+                direction=base.direction,
+                signal_mode=base.signal_mode,
+                signal_threshold=base.signal_threshold,
+                entry_threshold=base.entry_threshold,
+                exit_threshold=base.exit_threshold,
+                split_config=base.split_config,
+                engine_config=copy.deepcopy(base_ec),
+                validation_config=base.validation_config,
+                seed=base.seed,
                 description=f"Directional-only exit head ({fs}) {tag} on t1378; target="
-                            f"{'reward_risk' if xt is None else xt['type']}. Drops symmetric vol feats.",
+                f"{'reward_risk' if xt is None else xt['type']}. Drops symmetric vol feats.",
                 hypothesis="Symmetric vol feats make the head fire at bottoms; directional-only feats "
-                           "should let exit_z spike at tops. Verify prediction shape; test vs t1378 405.0.",
-                universe_slug=base.universe_slug)
-            print(f"* {name} created (id={tmpl.id})"); created.append((tmpl.id, name))
+                "should let exit_z spike at tops. Verify prediction shape; test vs t1378 405.0.",
+                universe_slug=base.universe_slug,
+            )
+            print(f"* {name} created (id={tmpl.id})")
+            created.append((tmpl.id, name))
         await session.commit()
         print("\nIDS=" + ",".join(str(t) for t, _ in created))
     await async_engine.dispose()
+
 
 if __name__ == "__main__":
     asyncio.run(main())

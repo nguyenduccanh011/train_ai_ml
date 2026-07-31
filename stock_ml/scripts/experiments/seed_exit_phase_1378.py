@@ -13,6 +13,7 @@ A/B: clone t1378, swap ONLY the exit feature_set_name -> exit_vol_phase, across 
 current exit target and two top-shaped targets. VERIFY at the PREDICTION level (does
 exit_z now spike at tops?) before judging the masked backtest. Compare vs FRESH t1378.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -36,7 +37,10 @@ EXIT_FS = "exit_vol_phase"
 GRID = [
     ("xph_rr", None),
     ("xph_fdd", {"type": "forward_drawdown_regression", "horizon": 10}),
-    ("xph_tb10", {"type": "triple_barrier", "horizon": 20, "pt": 0.10, "sl": 0.05, "direction": "short"}),
+    (
+        "xph_tb10",
+        {"type": "triple_barrier", "horizon": 20, "pt": 0.10, "sl": 0.05, "direction": "short"},
+    ),
 ]
 
 
@@ -71,23 +75,36 @@ async def main():
                     fs = EXIT_FS
                     if xt is not None:
                         tc = copy.deepcopy(xt)
-                new_slots.append({
-                    "slot_type": s.slot_type, "ml_component_id": s.ml_component_id,
-                    "rule_component_id": s.rule_component_id, "feature_set_name": fs,
-                    "target_config": tc})
+                new_slots.append(
+                    {
+                        "slot_type": s.slot_type,
+                        "ml_component_id": s.ml_component_id,
+                        "rule_component_id": s.rule_component_id,
+                        "feature_set_name": fs,
+                        "target_config": tc,
+                    }
+                )
             tmpl = await repo.create(
-                name=name, market=base.market, strategy=base.strategy,
-                feature_set_id=base.feature_set_id, target_id=base.target_id,
-                component_slots=new_slots, direction=base.direction,
-                signal_mode=base.signal_mode, signal_threshold=base.signal_threshold,
-                entry_threshold=base.entry_threshold, exit_threshold=base.exit_threshold,
-                split_config=base.split_config, engine_config=copy.deepcopy(base_ec),
-                validation_config=base.validation_config, seed=base.seed,
+                name=name,
+                market=base.market,
+                strategy=base.strategy,
+                feature_set_id=base.feature_set_id,
+                target_id=base.target_id,
+                component_slots=new_slots,
+                direction=base.direction,
+                signal_mode=base.signal_mode,
+                signal_threshold=base.signal_threshold,
+                entry_threshold=base.entry_threshold,
+                exit_threshold=base.exit_threshold,
+                split_config=base.split_config,
+                engine_config=copy.deepcopy(base_ec),
+                validation_config=base.validation_config,
+                seed=base.seed,
                 description=f"Exit head on LEADING phase features (exit_vol_phase) {tag} on t1378; "
-                            f"target={'base reward_risk' if xt is None else xt['type']}. All else = t1378.",
+                f"target={'base reward_risk' if xt is None else xt['type']}. All else = t1378.",
                 hypothesis="Exit head fires at BOTTOMS not tops because exit_vol_market features lag. "
-                           "exit_vol_phase adds decel/divergence/extension (leading) so the head can fire "
-                           "AT tops. Verify exit_z spikes at tops; test vs fresh t1378 405.0.",
+                "exit_vol_phase adds decel/divergence/extension (leading) so the head can fire "
+                "AT tops. Verify exit_z spikes at tops; test vs fresh t1378 405.0.",
                 universe_slug=base.universe_slug,
             )
             print(f"* {name} created (id={tmpl.id})")

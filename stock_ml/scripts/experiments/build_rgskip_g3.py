@@ -7,6 +7,7 @@ Seed 42 first; NAV-score after via score_nav_leaderboard.py --run-like xg_.
 
 Usage: venv/Scripts/python.exe stock_ml/scripts/experiments/build_rgskip_g3.py
 """
+
 from __future__ import annotations
 import asyncio, copy, json, sys
 from pathlib import Path
@@ -30,8 +31,10 @@ VARIANTS = [
     ("xg_skip500w", {"signal_exit_skip_if_mkt_above_ma": 500}),
     ("xg_skip300_all", {"signal_exit_skip_if_mkt_winner_only": False}),  # skip even losers in bull
     ("xg_skip300m5w", {"signal_exit_skip_if_mkt_margin": 0.05}),
-    ("xg_skip350_all", {"signal_exit_skip_if_mkt_above_ma": 350,
-                        "signal_exit_skip_if_mkt_winner_only": False}),
+    (
+        "xg_skip350_all",
+        {"signal_exit_skip_if_mkt_above_ma": 350, "signal_exit_skip_if_mkt_winner_only": False},
+    ),
 ]
 
 
@@ -45,27 +48,46 @@ async def make_all() -> dict:
         for sl in base.component_slots:
             tc = sl.target_config
             tc = json.loads(tc) if isinstance(tc, str) else copy.deepcopy(tc)
-            slots.append({"slot_type": sl.slot_type, "ml_component_id": sl.ml_component_id,
-                          "rule_component_id": sl.rule_component_id,
-                          "feature_set_name": sl.feature_set_name, "target_config": tc})
+            slots.append(
+                {
+                    "slot_type": sl.slot_type,
+                    "ml_component_id": sl.ml_component_id,
+                    "rule_component_id": sl.rule_component_id,
+                    "feature_set_name": sl.feature_set_name,
+                    "target_config": tc,
+                }
+            )
         base_eng = base.engine_config
         base_eng = json.loads(base_eng) if isinstance(base_eng, str) else dict(base_eng)
         for new_name, ov in VARIANTS:
             ex = await repo.get_by_name(new_name)
             if ex:
-                print(f"clone exists: id={ex.id} name={new_name}"); ids[new_name] = ex.id; continue
-            eng = copy.deepcopy(base_eng); eng.update(ov)
+                print(f"clone exists: id={ex.id} name={new_name}")
+                ids[new_name] = ex.id
+                continue
+            eng = copy.deepcopy(base_eng)
+            eng.update(ov)
             t = await repo.create(
-                name=new_name, market=base.market, strategy=base.strategy,
-                feature_set_id=base.feature_set_id, target_id=base.target_id,
-                component_slots=copy.deepcopy(slots), direction=base.direction,
-                signal_mode=base.signal_mode, signal_threshold=base.signal_threshold,
-                entry_threshold=base.entry_threshold, exit_threshold=base.exit_threshold,
-                split_config=base.split_config, engine_config=eng,
-                validation_config=base.validation_config, seed=base.seed,
+                name=new_name,
+                market=base.market,
+                strategy=base.strategy,
+                feature_set_id=base.feature_set_id,
+                target_id=base.target_id,
+                component_slots=copy.deepcopy(slots),
+                direction=base.direction,
+                signal_mode=base.signal_mode,
+                signal_threshold=base.signal_threshold,
+                entry_threshold=base.entry_threshold,
+                exit_threshold=base.exit_threshold,
+                split_config=base.split_config,
+                engine_config=eng,
+                validation_config=base.validation_config,
+                seed=base.seed,
                 description=f"xh_skip300w (3064) + rgskip gap-fill {ov} (G3 exit-rule regime sweep).",
                 hypothesis="rgskip MA-window jumped 150->300; test >300, winner_only=False, margin.",
-                universe_slug=base.universe_slug, model_mode=base.model_mode)
+                universe_slug=base.universe_slug,
+                model_mode=base.model_mode,
+            )
             await s.commit()
             print(f"created id={t.id} name={new_name} ov={ov}")
             ids[new_name] = t.id
@@ -73,9 +95,15 @@ async def make_all() -> dict:
 
 
 def read(run_id):
-    con = psycopg2.connect(**PG); cur = con.cursor()
-    cur.execute("SELECT composite_score,total_pnl,avg_pnl,trades,avg_hold FROM leaderboard_runs WHERE run_id=%s", (run_id,))
-    r = cur.fetchone(); con.close(); return r
+    con = psycopg2.connect(**PG)
+    cur = con.cursor()
+    cur.execute(
+        "SELECT composite_score,total_pnl,avg_pnl,trades,avg_hold FROM leaderboard_runs WHERE run_id=%s",
+        (run_id,),
+    )
+    r = cur.fetchone()
+    con.close()
+    return r
 
 
 def main():
@@ -84,10 +112,14 @@ def main():
     for name, tid in ids.items():
         for sd in SEEDS:
             r = run_template_experiment(template_id=tid, seed=sd)
-            rid = r.get("run_id"); row = read(rid)
+            rid = r.get("run_id")
+            row = read(rid)
             if row:
-                print(f"  {name}(t{tid}) seed={sd}: comp={row[0]} pnl={row[1]:.1f} avg={row[2]:.4f} "
-                      f"tr={row[3]} hold={row[4]:.1f} run_id={rid}", flush=True)
+                print(
+                    f"  {name}(t{tid}) seed={sd}: comp={row[0]} pnl={row[1]:.1f} avg={row[2]:.4f} "
+                    f"tr={row[3]} hold={row[4]:.1f} run_id={rid}",
+                    flush=True,
+                )
             else:
                 print(f"  {name} seed={sd}: NO ROW run_id={rid}", flush=True)
     print("BUILD_RGSKIP_G3_DONE")

@@ -5,6 +5,7 @@ PortfolioContext; logic is identical by construction.
 Golden-guarded byte-exact vs the champion production replay
 (stock_ml/tests/test_portfolio_golden.py) — any numeric drift here is a bug.
 """
+
 from __future__ import annotations
 
 import statistics
@@ -25,8 +26,13 @@ from stock_ml.portfolio.sim import run_sim
 _OVERLAY_EXIT_REASONS = {"preempt", "green_trail", "early_cut"}
 
 
-def run_portfolio(base_trades: pd.DataFrame, signals: pd.DataFrame, *,
-                  ctx: PortfolioContext, C: PortfolioConstants | None = None) -> dict:
+def run_portfolio(
+    base_trades: pd.DataFrame,
+    signals: pd.DataFrame,
+    *,
+    ctx: PortfolioContext,
+    C: PortfolioConstants | None = None,
+) -> dict:
     """Full Stage-2 on BASE (engine-level) trades. Returns metrics + equity/holdings/trades/skipped."""
     C = C or PortfolioConstants()
     bad = set(base_trades["exit_reason"].dropna().unique()) & _OVERLAY_EXIT_REASONS
@@ -37,8 +43,10 @@ def run_portfolio(base_trades: pd.DataFrame, signals: pd.DataFrame, *,
             "(see PORTFOLIO_LAYER_UNIFICATION §1). Feed run_template_experiment BASE trades."
         )
     base = base_trades.copy()
-    base["entry_date"] = pd.to_datetime(base["entry_date"]); base["exit_date"] = pd.to_datetime(base["exit_date"])
-    base["sigd"] = pd.to_datetime(base["entry_signal_date"]); base["ed"] = base["entry_date"].dt.strftime("%Y-%m-%d")
+    base["entry_date"] = pd.to_datetime(base["entry_date"])
+    base["exit_date"] = pd.to_datetime(base["exit_date"])
+    base["sigd"] = pd.to_datetime(base["entry_signal_date"])
+    base["ed"] = base["entry_date"].dt.strftime("%Y-%m-%d")
     closed = base[base.exit_date.notna()].copy()
 
     syms = sorted(closed.symbol.unique().tolist())
@@ -53,8 +61,10 @@ def run_portfolio(base_trades: pd.DataFrame, signals: pd.DataFrame, *,
         _m = mf[["symbol", "date", "close", "volume"]].copy()
         _m["date"] = pd.to_datetime(_m["date"])
         _m["tvv"] = _m["close"].astype(float) * _m["volume"].astype(float)
-        _tv = {s: (g["date"].to_numpy(), g["tvv"].to_numpy())
-               for s, g in _m.sort_values(["symbol", "date"]).groupby("symbol")}
+        _tv = {
+            s: (g["date"].to_numpy(), g["tvv"].to_numpy())
+            for s, g in _m.sort_values(["symbol", "date"]).groupby("symbol")
+        }
     rw = rewrite(closed, CLO, DIDX, INV, C.gt, C.ec_check_bar) if C.rewrite_on else closed.copy()
 
     cm = {(r.symbol, r.ed): CSm.get((r.symbol, str(r.sigd.date())), 0.5) for r in rw.itertuples()}
@@ -64,7 +74,8 @@ def run_portfolio(base_trades: pd.DataFrame, signals: pd.DataFrame, *,
     cv = [cm.get((r.symbol, r.ed), 0.5) for r in rw.itertuples()]
     # stat_mode="full": KNOWN non-causal full-period stats (mu/sd + the `off` recenter below):
     # champion parity (design doc §6). stat_mode="causal": expanding per-year, mirrors SKIP.
-    mu = statistics.mean(cv) if cv else 0.5; sd = statistics.pstdev(cv) or 1.0
+    mu = statistics.mean(cv) if cv else 0.5
+    sd = statistics.pstdev(cv) or 1.0
     mu_by = sd_by = osthr_by = None
     if C.stat_mode == "causal":
         yr_conv = [(int(r.ed[:4]), cm.get((r.symbol, r.ed), 0.5)) for r in rw.itertuples()]
@@ -73,7 +84,8 @@ def run_portfolio(base_trades: pd.DataFrame, signals: pd.DataFrame, *,
         for y in sorted({y for y, _ in yr_conv}):
             past = [c for yy, c in yr_conv if yy < y]
             if len(past) >= 30:
-                mu_by[y] = statistics.mean(past); sd_by[y] = statistics.pstdev(past) or 1.0
+                mu_by[y] = statistics.mean(past)
+                sd_by[y] = statistics.pstdev(past) or 1.0
             past_os = [v for yy, v in yr_os if yy < y]
             if len(past_os) >= 30:
                 osthr_by[y] = float(np.nanpercentile(past_os, C.os_pct))
@@ -87,7 +99,9 @@ def run_portfolio(base_trades: pd.DataFrame, signals: pd.DataFrame, *,
     legs_src, skipped = [], []
     raw_w = []
     for r in rw.itertuples():
-        s = r.symbol; ed = r.ed; xd = str(r.exit_date)[:10]
+        s = r.symbol
+        ed = r.ed
+        xd = str(r.exit_date)[:10]
         if ed not in sym_idx.get(s, {}) or xd not in sym_idx.get(s, {}):
             continue
         i0, oi1 = sym_idx[s][ed], sym_idx[s][xd]
@@ -96,20 +110,39 @@ def run_portfolio(base_trades: pd.DataFrame, signals: pd.DataFrame, *,
         # ohlcv close of the extended bar (NO slippage-unwind); un-extended legs use the REWRITTEN
         # exit_price (market panel-derived) / (1-S0). Mixing the two stores here would drift net.
         if C.tplus and (oi1 - i0) < C.tplus:
-            i1 = min(i0 + C.tplus, len(sym_close[s]) - 1); x_raw = float(sym_close[s][i1])
+            i1 = min(i0 + C.tplus, len(sym_close[s]) - 1)
+            x_raw = float(sym_close[s][i1])
         else:
-            i1 = oi1; x_raw = float(r.exit_price) / (1.0 - S0)
+            i1 = oi1
+            x_raw = float(r.exit_price) / (1.0 - S0)
         net = (x_raw * (1.0 - s_new)) / (e_raw * (1.0 + s_new)) - 1.0 - FEE
-        conv = cm.get((s, ed), 0.5); prio = pm.get((s, ed), -9.9)
+        conv = cm.get((s, ed), 0.5)
+        prio = pm.get((s, ed), -9.9)
         if mu_by is None:
             _w = min(max(1.0 + C.kconv * ((conv - mu) / sd), 0.4), 1.8)
         else:
             _y = int(ed[:4])
-            _w = (1.0 if _y not in mu_by
-                  else min(max(1.0 + C.kconv * ((conv - mu_by[_y]) / sd_by[_y]), 0.4), 1.8))
+            _w = (
+                1.0
+                if _y not in mu_by
+                else min(max(1.0 + C.kconv * ((conv - mu_by[_y]) / sd_by[_y]), 0.4), 1.8)
+            )
         raw_w.append(_w)
-        legs_src.append(dict(symbol=s, entry_date=ed, exit_date=xd, i0=i0, i1=i1, p0=float(r.entry_price),
-                             net=net, prio=prio, conv=conv, _w=_w, reason=r.exit_reason))
+        legs_src.append(
+            dict(
+                symbol=s,
+                entry_date=ed,
+                exit_date=xd,
+                i0=i0,
+                i1=i1,
+                p0=float(r.entry_price),
+                net=net,
+                prio=prio,
+                conv=conv,
+                _w=_w,
+                reason=r.exit_reason,
+            )
+        )
     if mu_by is None:
         off = 1.0 - (statistics.mean(raw_w) if raw_w else 1.0)
         off_by = None
@@ -135,13 +168,13 @@ def run_portfolio(base_trades: pd.DataFrame, signals: pd.DataFrame, *,
                     if a[i] > ma[i]:
                         above[d] = above.get(d, 0) + 1
         weak_breadth_dates = frozenset(
-            d for d, n in total.items() if n >= 30 and above.get(d, 0) / n < C.regime_breadth_thr)
+            d for d, n in total.items() if n >= 30 and above.get(d, 0) / n < C.regime_breadth_thr
+        )
 
     # sizing-experiment data (default off)
     _vol20 = None
     if C.w_invvol is not None:
-        _vol20 = {s: pd.Series(a).pct_change().rolling(20).std().to_numpy()
-                  for s, a in CLO.items()}
+        _vol20 = {s: pd.Series(a).pct_change().rolling(20).std().to_numpy() for s, a in CLO.items()}
 
     def _adv10_of(leg):
         arr = _tv.get(leg["symbol"]) if _tv is not None else None
@@ -154,7 +187,10 @@ def run_portfolio(base_trades: pd.DataFrame, signals: pd.DataFrame, *,
 
     gated = []
     for leg in legs_src:
-        leg["w"] = max(0.3, leg["_w"] + (off if off_by is None else off_by.get(int(leg["entry_date"][:4]), 0.0)))
+        leg["w"] = max(
+            0.3,
+            leg["_w"] + (off if off_by is None else off_by.get(int(leg["entry_date"][:4]), 0.0)),
+        )
         if weak_breadth_dates is not None and leg["entry_date"] in weak_breadth_dates:
             leg["w"] *= C.regime_w_scale
         if _vol20 is not None:
@@ -166,33 +202,42 @@ def run_portfolio(base_trades: pd.DataFrame, signals: pd.DataFrame, *,
             a10 = _adv10_of(leg)
             if a10 is not None:
                 leg["w"] *= float(np.clip(a10 / (C.w_liq_full_ty * 1e6), 0.3, 1.0))
-        conv = leg["conv"]; key = (leg["symbol"], leg["entry_date"])
+        conv = leg["conv"]
+        key = (leg["symbol"], leg["entry_date"])
         if conv < skip_for(skip_by_year, C, leg["entry_date"]):
-            skipped.append((leg["symbol"], leg["entry_date"], "conv_skip")); continue
+            skipped.append((leg["symbol"], leg["entry_date"], "conv_skip"))
+            continue
         v = r5.get(key, np.nan)
         if not np.isnan(v) and v < C.r5thr:
-            skipped.append((leg["symbol"], leg["entry_date"], "ret7_gate")); continue
+            skipped.append((leg["symbol"], leg["entry_date"], "ret7_gate"))
+            continue
         ov = osm.get(key)
         thr = osthr if osthr_by is None else osthr_by.get(int(leg["entry_date"][:4]), np.inf)
         if ov is not None and ov > thr:
-            skipped.append((leg["symbol"], leg["entry_date"], "overshoot_fallknife")); continue
+            skipped.append((leg["symbol"], leg["entry_date"], "overshoot_fallknife"))
+            continue
         if _tv is not None and C.liqcol_adv10_ty is not None:
             arr = _tv.get(leg["symbol"])
             if arr is not None:
                 _dts, _tvs = arr
                 _i = int(np.searchsorted(_dts, np.datetime64(pd.Timestamp(leg["entry_date"]))))
                 _h = _tvs[:_i]
-                if len(_h) >= 20 and float(_h[-10:].mean()) < C.liqcol_adv10_ty * 1e6 \
-                        and float(_h[-252:].mean()) >= C.liqcol_adv252_ty * 1e6:
-                    skipped.append((leg["symbol"], leg["entry_date"], "liq_collapse")); continue
+                if (
+                    len(_h) >= 20
+                    and float(_h[-10:].mean()) < C.liqcol_adv10_ty * 1e6
+                    and float(_h[-252:].mean()) >= C.liqcol_adv252_ty * 1e6
+                ):
+                    skipped.append((leg["symbol"], leg["entry_date"], "liq_collapse"))
+                    continue
         gated.append(leg)
 
     # DD-signature valves (loss forensic 2026-07-29). Both OFF by default — this whole
     # block is skipped and run_sim receives paused=None -> byte-identical to the golden.
     paused = riskoff = None
     if C.crash_pause_ret5 is not None or C.vol_cap_q is not None or C.riskoff_ret5 is not None:
-        vol_by_sym = {s: pd.Series(a).pct_change().rolling(20).std().to_numpy()
-                      for s, a in CLO.items()}
+        vol_by_sym = {
+            s: pd.Series(a).pct_change().rolling(20).std().to_numpy() for s, a in CLO.items()
+        }
         by_date: dict = {}
         for s, dmap in DIDX.items():
             for d, i in dmap.items():
@@ -221,13 +266,36 @@ def run_portfolio(base_trades: pd.DataFrame, signals: pd.DataFrame, *,
                 thr_by_date[d] = float(np.quantile(vals, C.vol_cap_q)) if vals else np.inf
             i = DIDX.get(leg["symbol"], {}).get(d)
             v = vol_by_sym.get(leg["symbol"])
-            leg["hv"] = bool(i is not None and v is not None and i < len(v)
-                             and np.isfinite(v[i]) and v[i] >= thr_by_date[d])
+            leg["hv"] = bool(
+                i is not None
+                and v is not None
+                and i < len(v)
+                and np.isfinite(v[i])
+                and v[i] >= thr_by_date[d]
+            )
 
-    eq, holdings, trades, hbd = run_sim(gated, sym_close, sym_idx, calendar, C,
-                                        paused=paused, riskoff=riskoff)
-    nav = eq["nav"]; fin = float(nav.iloc[-1]); yrs = (eq["date"].iloc[-1] - eq["date"].iloc[0]).days / 365.25
-    cagr = fin ** (1 / yrs) - 1 if yrs > 0 else 0.0; dd = float((nav / nav.cummax() - 1).min())
-    return dict(nav=fin, cagr=cagr, maxdd=dd, years=yrs, osthr=osthr, conv_mu=mu, conv_sd=sd,
-                equity=eq, holdings=holdings, trades=trades, skipped=skipped, rewritten=rw,
-                n_base=len(closed), n_gated=len(gated), n_skipped=len(skipped))
+    eq, holdings, trades, hbd = run_sim(
+        gated, sym_close, sym_idx, calendar, C, paused=paused, riskoff=riskoff
+    )
+    nav = eq["nav"]
+    fin = float(nav.iloc[-1])
+    yrs = (eq["date"].iloc[-1] - eq["date"].iloc[0]).days / 365.25
+    cagr = fin ** (1 / yrs) - 1 if yrs > 0 else 0.0
+    dd = float((nav / nav.cummax() - 1).min())
+    return dict(
+        nav=fin,
+        cagr=cagr,
+        maxdd=dd,
+        years=yrs,
+        osthr=osthr,
+        conv_mu=mu,
+        conv_sd=sd,
+        equity=eq,
+        holdings=holdings,
+        trades=trades,
+        skipped=skipped,
+        rewritten=rw,
+        n_base=len(closed),
+        n_gated=len(gated),
+        n_skipped=len(skipped),
+    )

@@ -152,7 +152,12 @@ async def get_set(set_id: int, session: AsyncSession = Depends(get_db)):
         "name": s.name,
         "description": s.description,
         "members": [
-            {"position": m.position, "id": m.feature.id, "name": m.feature.name, "kind": m.feature.kind}
+            {
+                "position": m.position,
+                "id": m.feature.id,
+                "name": m.feature.name,
+                "kind": m.feature.kind,
+            }
             for m in members
         ],
     }

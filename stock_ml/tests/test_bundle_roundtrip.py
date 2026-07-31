@@ -32,7 +32,11 @@ def _make(tmp_path) -> Path:
         models={"entry": _ToyModel(1.5), "exit": _ToyModel(-0.3)},
         config={"strategy": "regression_dual_ml_recombine", "signal_threshold": 5.0},
         feature_spec={"entry_features": "leading_v4", "feature_cols": ["atr", "adx"]},
-        manifest_extra={"template_id": 958, "cutoff_date": "2026-01-01", "universe": ["VNM", "FPT"]},
+        manifest_extra={
+            "template_id": 958,
+            "cutoff_date": "2026-01-01",
+            "universe": ["VNM", "FPT"],
+        },
     )
 
 

@@ -8,9 +8,18 @@ import pandas as pd
 from ._helpers import dsl_series
 
 ZZ_OUTPUTS = [
-    "last_dir", "last_leg_return", "last_leg_dur", "prev_leg_return", "prev_leg_dur",
-    "bars_since_pivot", "return_since_pivot", "progress_to_deviation",
-    "dist_to_confirm", "price_pos_in_swing", "max_adverse_since_pivot", "n_pivots",
+    "last_dir",
+    "last_leg_return",
+    "last_leg_dur",
+    "prev_leg_return",
+    "prev_leg_dur",
+    "bars_since_pivot",
+    "return_since_pivot",
+    "progress_to_deviation",
+    "dist_to_confirm",
+    "price_pos_in_swing",
+    "max_adverse_since_pivot",
+    "n_pivots",
 ]
 
 
@@ -18,15 +27,17 @@ def _one_symbol_df(closes: list[float], symbol: str = "AAA") -> pd.DataFrame:
     n = len(closes)
     dates = pd.bdate_range("2020-01-01", periods=n)
     c = np.asarray(closes, dtype=float)
-    return pd.DataFrame({
-        "symbol": symbol,
-        "date": dates,
-        "open": c,
-        "high": c * 1.001,
-        "low": c * 0.999,
-        "close": c,
-        "volume": 1000.0,
-    })
+    return pd.DataFrame(
+        {
+            "symbol": symbol,
+            "date": dates,
+            "open": c,
+            "high": c * 1.001,
+            "low": c * 0.999,
+            "close": c,
+            "volume": 1000.0,
+        }
+    )
 
 
 def _wave(n=200, seed=11) -> list[float]:
@@ -77,9 +88,9 @@ def test_progress_in_range_and_confirms_late():
 def test_leg_dir_sign_after_confirmation():
     """After a confirmed peak then bottom, leg_dir reflects the last pivot type."""
     closes = (
-        list(np.linspace(60, 100, 11))   # up → peak at idx 10
+        list(np.linspace(60, 100, 11))  # up → peak at idx 10
         + list(np.linspace(95, 60, 10))  # down → bottom at idx 20
-        + list(np.linspace(63, 90, 9))   # up (confirms the bottom)
+        + list(np.linspace(63, 90, 9))  # up (confirms the bottom)
     )
     df = _one_symbol_df(closes)
     leg = dsl_series(df, "ZigZag($close, 0.10).last_dir").reset_index(drop=True).dropna()

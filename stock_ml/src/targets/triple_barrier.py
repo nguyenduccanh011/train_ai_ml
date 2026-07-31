@@ -72,7 +72,8 @@ class TripleBarrierTarget:
         # observable window: i has a full horizon iff i + h < n
         obs = np.arange(n) < (n - h)
         lab = np.where(
-            prof_first < stop_first, 1.0,
+            prof_first < stop_first,
+            1.0,
             np.where(np.isinf(prof_first) & np.isinf(stop_first), self.neutral_label, 0.0),
         )
         out[obs] = lab[obs].astype(np.float32)

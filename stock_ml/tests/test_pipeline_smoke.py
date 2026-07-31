@@ -69,9 +69,7 @@ def _warm_split(symbols, win_start, split, end, *, horizon=5, seed=0):
     bound — not by dropna — so the rows handed to ``train_fold`` are already warm and
     the fail-loud NaN guard stays meaningful (it only fires on genuine bugs).
     """
-    buffer_start = (pd.Timestamp(win_start) - pd.Timedelta(days=_WARMUP_DAYS)).strftime(
-        "%Y-%m-%d"
-    )
+    buffer_start = (pd.Timestamp(win_start) - pd.Timedelta(days=_WARMUP_DAYS)).strftime("%Y-%m-%d")
     data = ForwardReturnRegressionTarget(horizon=horizon).apply(
         add_features(_synthetic_ohlcv(symbols, buffer_start, end, seed=seed))
     )

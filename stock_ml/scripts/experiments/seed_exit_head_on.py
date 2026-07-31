@@ -5,9 +5,11 @@ USEFUL, re-enable the signal exit (signal_threshold 2.0) and A/B the exit featur
   dist   = exit_vol_dist     (+ distribution-day pressure)
   candle = exit_vol_candle   (+ bearish engulfing + doji)
 """
+
 from __future__ import annotations
 import asyncio, copy, json, sys
 from pathlib import Path
+
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT))
 from sqlalchemy.ext.asyncio import AsyncSession  # noqa: E402
@@ -19,8 +21,8 @@ BASE_ID = 1327
 SIG_THR = 2.0
 # (name, exit_feature_set)
 GRID = [
-    ("n2_exiton_base",   "exit_vol_market"),
-    ("n2_exiton_dist",   "exit_vol_dist"),
+    ("n2_exiton_base", "exit_vol_market"),
+    ("n2_exiton_dist", "exit_vol_dist"),
     ("n2_exiton_candle", "exit_vol_candle"),
 ]
 
@@ -43,26 +45,47 @@ async def main():
         for name, exit_fs in GRID:
             ex = await repo.get_by_name(name)
             if ex:
-                print(f"= {name} ({ex.id})"); created.append((ex.id, name)); continue
+                print(f"= {name} ({ex.id})")
+                created.append((ex.id, name))
+                continue
             slots = [
-                {"slot_type": "entry", "ml_component_id": es.ml_component_id, "rule_component_id": None,
-                 "feature_set_name": es.feature_set_name, "target_config": tc(es)},
-                {"slot_type": "exit", "ml_component_id": xs.ml_component_id, "rule_component_id": None,
-                 "feature_set_name": exit_fs, "target_config": tc(xs)},
+                {
+                    "slot_type": "entry",
+                    "ml_component_id": es.ml_component_id,
+                    "rule_component_id": None,
+                    "feature_set_name": es.feature_set_name,
+                    "target_config": tc(es),
+                },
+                {
+                    "slot_type": "exit",
+                    "ml_component_id": xs.ml_component_id,
+                    "rule_component_id": None,
+                    "feature_set_name": exit_fs,
+                    "target_config": tc(xs),
+                },
             ]
             tmpl = await repo.create(
-                name=name, market=base.market, strategy=base.strategy,
-                feature_set_id=base.feature_set_id, target_id=base.target_id,
-                component_slots=copy.deepcopy(slots), direction=base.direction,
-                signal_mode=base.signal_mode, signal_threshold=SIG_THR,
-                entry_threshold=base.entry_threshold, exit_threshold=base.exit_threshold,
-                split_config=base.split_config, engine_config=copy.deepcopy(be),
-                validation_config=base.validation_config, seed=base.seed,
+                name=name,
+                market=base.market,
+                strategy=base.strategy,
+                feature_set_id=base.feature_set_id,
+                target_id=base.target_id,
+                component_slots=copy.deepcopy(slots),
+                direction=base.direction,
+                signal_mode=base.signal_mode,
+                signal_threshold=SIG_THR,
+                entry_threshold=base.entry_threshold,
+                exit_threshold=base.exit_threshold,
+                split_config=base.split_config,
+                engine_config=copy.deepcopy(be),
+                validation_config=base.validation_config,
+                seed=base.seed,
                 description=f"{name}: champion 1327, exit head ON (sig_thr {SIG_THR}), exit={exit_fs}.",
                 hypothesis="With the exit head active, do distribution/candle features improve downside detection?",
                 universe_slug=base.universe_slug,
             )
-            print(f"* {name} ({tmpl.id})"); created.append((tmpl.id, name))
+            print(f"* {name} ({tmpl.id})")
+            created.append((tmpl.id, name))
         await session.commit()
         print("IDS=" + ",".join(str(t) for t, _ in created))
     await async_engine.dispose()

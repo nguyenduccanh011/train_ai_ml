@@ -44,8 +44,10 @@ def main() -> None:
 
     bundle = load_bundle(args.bundle)
     print(f"[verify] loaded bundle {Path(args.bundle).name}")
-    print(f"[verify] strategy={bundle.manifest.get('strategy')} "
-          f"cutoff={bundle.manifest.get('cutoff_date')} models={sorted(bundle.models)}")
+    print(
+        f"[verify] strategy={bundle.manifest.get('strategy')} "
+        f"cutoff={bundle.manifest.get('cutoff_date')} models={sorted(bundle.models)}"
+    )
 
     from src.data.loader import get_loader
 
@@ -57,8 +59,10 @@ def main() -> None:
     ohlcv = raw[["symbol", "date", "open", "high", "low", "close", "volume"]].copy()
     if args.since:
         ohlcv = ohlcv[pd.to_datetime(ohlcv["date"]) >= pd.Timestamp(args.since)].copy()
-    print(f"[verify] {len(ohlcv)} bars, {ohlcv['symbol'].nunique()} symbols, "
-          f"{pd.to_datetime(ohlcv['date']).min().date()} .. {pd.to_datetime(ohlcv['date']).max().date()}")
+    print(
+        f"[verify] {len(ohlcv)} bars, {ohlcv['symbol'].nunique()} symbols, "
+        f"{pd.to_datetime(ohlcv['date']).min().date()} .. {pd.to_datetime(ohlcv['date']).max().date()}"
+    )
 
     sig1 = _serving_chain(bundle, ohlcv)
     sig2 = _serving_chain(bundle, ohlcv)
@@ -73,10 +77,12 @@ def main() -> None:
 
     n_buy = int((sig1["signal"] > 0).sum())
     n_sell = int((sig1["signal"] < 0).sum())
-    print(f"[verify] signals: buy={n_buy} sell={n_sell} neutral={int((sig1['signal']==0).sum())}")
-    print(f"[verify] POST-cutoff (production-relevant): "
-          f"buy={int((post['signal']>0).sum())} sell={int((post['signal']<0).sum())} "
-          f"over {post['date'].nunique()} dates")
+    print(f"[verify] signals: buy={n_buy} sell={n_sell} neutral={int((sig1['signal'] == 0).sum())}")
+    print(
+        f"[verify] POST-cutoff (production-relevant): "
+        f"buy={int((post['signal'] > 0).sum())} sell={int((post['signal'] < 0).sum())} "
+        f"over {post['date'].nunique()} dates"
+    )
     print(f"[verify] deterministic: {deterministic}")
 
     problems = []

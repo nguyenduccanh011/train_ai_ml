@@ -67,8 +67,13 @@ def fetch_universe(
     Fails loud if the server omits a requested ``as_of`` (never a silent universe shrink).
     """
     dates = [as_of] if isinstance(as_of, str) else list(as_of)
-    params: dict = {"as_of": ",".join(dates), "sessions": int(sessions), "basis": basis,
-                    "asset_type": asset_type, "require_full_window": str(require_full_window).lower()}
+    params: dict = {
+        "as_of": ",".join(dates),
+        "sessions": int(sessions),
+        "basis": basis,
+        "asset_type": asset_type,
+        "require_full_window": str(require_full_window).lower(),
+    }
     if min_sessions_traded is not None:
         params["min_sessions_traded"] = int(min_sessions_traded)
     if min_adtv is not None:
@@ -78,7 +83,9 @@ def fetch_universe(
 
     payload = _get("symbols/universe", params)
     if not isinstance(payload, dict) or "dates" not in payload:
-        raise RuntimeError(f"sieutinhieu: unexpected /symbols/universe payload: {str(payload)[:200]}")
+        raise RuntimeError(
+            f"sieutinhieu: unexpected /symbols/universe payload: {str(payload)[:200]}"
+        )
     out: dict[str, list[dict]] = {d.get("as_of"): d.get("symbols", []) for d in payload["dates"]}
     missing = [d for d in dates if d not in out]
     if missing:
@@ -95,13 +102,17 @@ def _rows_to_df(symbol: str, items: list[dict]) -> pd.DataFrame:
         if it.get("id", None) == 0:  # today's still-forming (preliminary) bar
             continue
         try:
-            rows.append({
-                "symbol": symbol,
-                "date": pd.to_datetime(it["timestamp"]).tz_localize(None).normalize(),
-                "open": float(it["open"]), "high": float(it["high"]),
-                "low": float(it["low"]), "close": float(it["close"]),
-                "volume": int(it["volume"]),
-            })
+            rows.append(
+                {
+                    "symbol": symbol,
+                    "date": pd.to_datetime(it["timestamp"]).tz_localize(None).normalize(),
+                    "open": float(it["open"]),
+                    "high": float(it["high"]),
+                    "low": float(it["low"]),
+                    "close": float(it["close"]),
+                    "volume": int(it["volume"]),
+                }
+            )
         except (KeyError, TypeError, ValueError) as e:
             raise ValueError(f"sieutinhieu: bad OHLCV row for {symbol}: {it!r} ({e})") from e
     if not rows:
@@ -117,7 +128,10 @@ def fetch_history(symbol: str, *, limit: int = _OHLCV_API_MAX) -> pd.DataFrame:
     items: list = []
     offset = 0
     while len(items) < limit:
-        page = _get("ohlcv/", {"symbol": symbol, "timeframe": "1D", "limit": _OHLCV_API_MAX, "offset": offset})
+        page = _get(
+            "ohlcv/",
+            {"symbol": symbol, "timeframe": "1D", "limit": _OHLCV_API_MAX, "offset": offset},
+        )
         page_items = page["items"] if isinstance(page, dict) else page
         if not page_items:
             break

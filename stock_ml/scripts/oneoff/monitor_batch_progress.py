@@ -22,9 +22,9 @@ def main():
 
     data = json.loads(log_path.read_text(encoding="utf-8"))
 
-    print("="*80)
+    print("=" * 80)
     print("BATCH RETRAIN PROGRESS")
-    print("="*80)
+    print("=" * 80)
     print(f"Last update: {data['timestamp']}")
     print(f"Target: {data['batch_size']} models")
     print(f"Completed: {data['completed']}")
@@ -33,22 +33,24 @@ def main():
     print(f"Failed: {data['failed']}")
     print(f"Total time: {data['total_time_minutes']:.1f} minutes")
 
-    if data['completed'] > 0:
-        avg_time = data['total_time_minutes'] * 60 / data['completed']
-        remaining = data['batch_size'] - data['completed'] - data['skipped']
+    if data["completed"] > 0:
+        avg_time = data["total_time_minutes"] * 60 / data["completed"]
+        remaining = data["batch_size"] - data["completed"] - data["skipped"]
         eta_minutes = remaining * avg_time / 60
         print(f"\nAvg time per model: {avg_time:.1f}s")
         print(f"Remaining: {remaining} models")
-        print(f"ETA: {eta_minutes:.1f} minutes ({eta_minutes/60:.1f} hours)")
+        print(f"ETA: {eta_minutes:.1f} minutes ({eta_minutes / 60:.1f} hours)")
 
     # Recent results
     print("\nRecent 5 results:")
-    for r in data['results'][-5:]:
-        status_icon = "✓" if r['status'] == 'success' else "✗"
+    for r in data["results"][-5:]:
+        status_icon = "✓" if r["status"] == "success" else "✗"
         print(f"  {status_icon} {r['bundle'][:40]:40} | {r['elapsed']:.0f}s")
-        if r['status'] == 'success':
-            m = r['metrics']
-            print(f"      WR={m['wr']:.2f}% PF={m['pf']:.2f} Trades={m['trades']} Score={m['composite_score']:.1f}")
+        if r["status"] == "success":
+            m = r["metrics"]
+            print(
+                f"      WR={m['wr']:.2f}% PF={m['pf']:.2f} Trades={m['trades']} Score={m['composite_score']:.1f}"
+            )
 
     return 0
 

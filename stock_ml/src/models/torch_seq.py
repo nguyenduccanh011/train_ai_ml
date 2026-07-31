@@ -53,9 +53,20 @@ class TorchGRUClassifier:
     def __init__(self, params: dict | None = None, seed: int = 42, rnn: str = "gru"):
         self.params = dict(params or {})
         # LightGBM-only knobs may leak in via the SMAC branch; ignore them.
-        for k in ("class_weight", "n_estimators", "num_leaves", "learning_rate",
-                  "min_child_samples", "reg_lambda", "subsample", "colsample_bytree",
-                  "deterministic", "force_col_wise", "verbosity", "n_jobs"):
+        for k in (
+            "class_weight",
+            "n_estimators",
+            "num_leaves",
+            "learning_rate",
+            "min_child_samples",
+            "reg_lambda",
+            "subsample",
+            "colsample_bytree",
+            "deterministic",
+            "force_col_wise",
+            "verbosity",
+            "n_jobs",
+        ):
             self.params.pop(k, None)
         self.seed = int(seed)
         self.rnn = rnn
@@ -80,7 +91,7 @@ class TorchGRUClassifier:
     def _standardize(self, X3: np.ndarray) -> np.ndarray:
         return (X3 - self._mu) / self._sd
 
-    def fit(self, X3: np.ndarray, y: np.ndarray) -> "TorchGRUClassifier":
+    def fit(self, X3: np.ndarray, y: np.ndarray) -> TorchGRUClassifier:
         import torch
         import torch.nn as nn
 

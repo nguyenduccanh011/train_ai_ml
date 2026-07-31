@@ -43,7 +43,9 @@ def upgrade() -> None:
         sa.Column("pct_to_limit", sa.Double(), nullable=True),
         sa.Column("outcome", sa.String(length=16), nullable=True),
         sa.Column("result_date", sa.Date(), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+        ),
     )
     op.create_index("ix_run_pending_run_date", "run_pending", ["run_id", "date"])
 

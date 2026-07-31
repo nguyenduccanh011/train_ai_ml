@@ -89,7 +89,7 @@ def _trim_leading_phantom(df: pd.DataFrame) -> pd.DataFrame:
         # forward-looking fraction of real-range bars over the next WIN sessions
         fwd = pd.Series(traded[::-1]).rolling(WIN, min_periods=1).mean().to_numpy()[::-1]
         ok = fwd >= FRAC
-        g = g.iloc[int(ok.argmax()):] if ok.any() else g.iloc[int(traded.argmax()):]
+        g = g.iloc[int(ok.argmax()) :] if ok.any() else g.iloc[int(traded.argmax()) :]
         # A backfill head can pass the range-majority test yet still end in an IPO/re-listing
         # SEAM: a single >40% price jump from the placeholder level to the true opening price
         # (VHM: 17.47 flat -> 64.36 on 2018-05-17, +268%). If such a jump sits in the first 120
@@ -129,8 +129,12 @@ def ensure_symbols_cached(
         raise FileNotFoundError(f"ensure_symbols_cached: DuckDB file not found: {db_path}")
     con = duckdb.connect(str(db_path), read_only=True)
     try:
-        have = {r[0] for r in con.execute(
-            "SELECT DISTINCT symbol FROM ohlcv WHERE timeframe = ?", [timeframe]).fetchall()}
+        have = {
+            r[0]
+            for r in con.execute(
+                "SELECT DISTINCT symbol FROM ohlcv WHERE timeframe = ?", [timeframe]
+            ).fetchall()
+        }
     finally:
         con.close()
     missing = [s for s in dict.fromkeys(symbols) if s not in have]
@@ -150,8 +154,10 @@ def ensure_symbols_cached(
         except Exception as e:  # noqa: BLE001 — collect, decide after the loop
             failed.append((sym, str(e)[:80]))
     if failed:
-        print(f"[cache] WARNING {len(failed)}/{len(missing)} symbol(s) have NO OHLCV on source "
-              f"(untradeable → dropped): {[s for s, _ in failed]}")
+        print(
+            f"[cache] WARNING {len(failed)}/{len(missing)} symbol(s) have NO OHLCV on source "
+            f"(untradeable → dropped): {[s for s, _ in failed]}"
+        )
     if not frames:
         # Nothing fetched. Distinguish a DOWN source (connection error → abort, we must not run on a
         # silently-shrunk universe) from "every missing symbol genuinely has no price series"
@@ -160,7 +166,8 @@ def ensure_symbols_cached(
         if conn_errs:
             raise RuntimeError(
                 f"ensure_symbols_cached: source unreachable — {len(conn_errs)} connection failure(s) "
-                f"(e.g. {conn_errs[:3]})")
+                f"(e.g. {conn_errs[:3]})"
+            )
         return []
     df = pd.concat(frames, ignore_index=True)
     df["timeframe"] = timeframe
@@ -171,13 +178,17 @@ def ensure_symbols_cached(
     con = duckdb.connect(str(db_path))  # write connection
     try:
         con.register("_incoming", df[cols])
-        con.execute(f"INSERT INTO ohlcv ({', '.join(cols)}) SELECT {', '.join(cols)} FROM _incoming")
+        con.execute(
+            f"INSERT INTO ohlcv ({', '.join(cols)}) SELECT {', '.join(cols)} FROM _incoming"
+        )
         con.unregister("_incoming")
     finally:
         con.close()
     fetched = sorted(df["symbol"].unique())
-    print(f"[cache] fetched-on-miss {len(fetched)} symbol(s) into {db_path.name}: {fetched[:8]}"
-          + ("…" if len(fetched) > 8 else ""))
+    print(
+        f"[cache] fetched-on-miss {len(fetched)} symbol(s) into {db_path.name}: {fetched[:8]}"
+        + ("…" if len(fetched) > 8 else "")
+    )
     return fetched
 
 
@@ -226,7 +237,9 @@ class DuckDBLoader:
         finally:
             conn.close()
 
-    def load_symbol(self, symbol: str, start_date: date | None = None, end_date: date | None = None) -> pd.DataFrame:
+    def load_symbol(
+        self, symbol: str, start_date: date | None = None, end_date: date | None = None
+    ) -> pd.DataFrame:
         """Load single symbol OHLCV data.
 
         Args:
@@ -280,7 +293,9 @@ class DuckDBLoader:
             Concatenated DataFrame with all symbols and columns [date, open, high, low, close, volume, symbol]
         """
         if not symbols:
-            return pd.DataFrame(columns=["date", "open", "high", "low", "close", "volume", "symbol"])
+            return pd.DataFrame(
+                columns=["date", "open", "high", "low", "close", "volume", "symbol"]
+            )
 
         try:
             conn = self._conn()
@@ -299,14 +314,14 @@ class DuckDBLoader:
 
             result = conn.execute(query, params).fetchdf()
             if result.empty:
-                return pd.DataFrame(columns=["date", "open", "high", "low", "close", "volume", "symbol"])
+                return pd.DataFrame(
+                    columns=["date", "open", "high", "low", "close", "volume", "symbol"]
+                )
             return _trim_leading_phantom(_sanitize_prices(result))
         finally:
             conn.close()
 
-    def load_date_range(
-        self, symbols: list[str], start_date: date, end_date: date
-    ) -> pd.DataFrame:
+    def load_date_range(self, symbols: list[str], start_date: date, end_date: date) -> pd.DataFrame:
         """Load multiple symbols for a specific date range.
 
         Convenience method that enforces date bounds.

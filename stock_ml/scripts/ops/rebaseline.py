@@ -17,6 +17,7 @@ Usage:
   python stock_ml/scripts/ops/rebaseline.py --seeds 42 7 99    # multi-seed (deployed books, §11.7)
   python stock_ml/scripts/ops/rebaseline.py --models dyn900    # subset by model key
 """
+
 from __future__ import annotations
 
 import argparse
@@ -86,8 +87,10 @@ def _read_curve(run_name: str, seed: int | None) -> dict | None:
     con = psycopg2.connect(**PG)
     try:
         cur = con.cursor()
-        q = (f"SELECT {', '.join(_CURVE_COLS)} FROM leaderboard_runs "
-             "WHERE run_name=%s AND superseded=false")
+        q = (
+            f"SELECT {', '.join(_CURVE_COLS)} FROM leaderboard_runs "
+            "WHERE run_name=%s AND superseded=false"
+        )
         params: list = [run_name]
         if seed is not None:
             q += " AND run_seed=%s"
@@ -97,8 +100,10 @@ def _read_curve(run_name: str, seed: int | None) -> dict | None:
         r = cur.fetchone()
         if r is None:
             return None
-        return {c: (float(v) if v is not None and c != "trades" else v)
-                for c, v in zip(_CURVE_COLS, r, strict=True)}
+        return {
+            c: (float(v) if v is not None and c != "trades" else v)
+            for c, v in zip(_CURVE_COLS, r, strict=True)
+        }
     finally:
         con.close()
 
@@ -116,17 +121,30 @@ def _delta(before: dict | None, after: dict | None) -> dict:
 
 def main() -> None:
     p = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    p.add_argument("--dry-run", action="store_true", help="show the plan + before-values, run nothing")
-    p.add_argument("--seeds", type=int, nargs="*", default=None,
-                   help="seeds to re-baseline (default: single run on the template's own seed)")
-    p.add_argument("--models", nargs="*", default=None,
-                   help=f"subset of model keys (default all): {', '.join(MODEL_TEMPLATES)}")
+    p.add_argument(
+        "--dry-run", action="store_true", help="show the plan + before-values, run nothing"
+    )
+    p.add_argument(
+        "--seeds",
+        type=int,
+        nargs="*",
+        default=None,
+        help="seeds to re-baseline (default: single run on the template's own seed)",
+    )
+    p.add_argument(
+        "--models",
+        nargs="*",
+        default=None,
+        help=f"subset of model keys (default all): {', '.join(MODEL_TEMPLATES)}",
+    )
     a = p.parse_args()
 
     keys = a.models or list(MODEL_TEMPLATES)
     unknown = [k for k in keys if k not in MODEL_TEMPLATES]
     if unknown:
-        raise SystemExit(f"rebaseline: unknown model key(s) {unknown}; choose from {list(MODEL_TEMPLATES)}")
+        raise SystemExit(
+            f"rebaseline: unknown model key(s) {unknown}; choose from {list(MODEL_TEMPLATES)}"
+        )
     seeds = a.seeds if a.seeds else [None]
 
     # A re-baseline = recompute the catalogue on the CURRENT engine/data (§11.1). Fold checkpoints are
@@ -143,8 +161,10 @@ def main() -> None:
 
     wheel, fp = _wheel_version(), _catalog_fingerprint()
     print(f"[rebaseline] engine wheel={wheel} catalog_fingerprint={fp[:12]}")
-    print(f"[rebaseline] {len(keys)} model(s) × {len(seeds)} seed(s): "
-          + ", ".join(f"{k}(tmpl {ids[k]})" for k in keys))
+    print(
+        f"[rebaseline] {len(keys)} model(s) × {len(seeds)} seed(s): "
+        + ", ".join(f"{k}(tmpl {ids[k]})" for k in keys)
+    )
 
     results: list[dict] = []
     for k in keys:
@@ -155,13 +175,24 @@ def main() -> None:
                 print(f"  [dry] {k} seed={sd or 'default'}: before={before}")
                 results.append({"model": k, "template_id": ids[k], "seed": sd, "before": before})
                 continue
-            print(f"[rebaseline] cold-train {k} (tmpl {ids[k]}) seed={sd or 'default'} ...", flush=True)
+            print(
+                f"[rebaseline] cold-train {k} (tmpl {ids[k]}) seed={sd or 'default'} ...",
+                flush=True,
+            )
             run_template_experiment(template_id=ids[k], seed=sd)
             after = _read_curve(name, sd)
             d = _delta(before, after)
             print(f"  {k} seed={sd or 'default'}: before={before} after={after} Δ={d}", flush=True)
-            results.append({"model": k, "template_id": ids[k], "seed": sd,
-                            "before": before, "after": after, "delta": d})
+            results.append(
+                {
+                    "model": k,
+                    "template_id": ids[k],
+                    "seed": sd,
+                    "before": before,
+                    "after": after,
+                    "delta": d,
+                }
+            )
 
     if a.dry_run:
         print("[rebaseline] --dry-run: nothing trained, no audit line written.")
@@ -169,14 +200,21 @@ def main() -> None:
 
     _LOG.parent.mkdir(parents=True, exist_ok=True)
     with open(_LOG, "a", encoding="utf-8") as f:
-        f.write(json.dumps({
-            "ts": datetime.now(UTC).isoformat(timespec="seconds"),
-            "who": getpass.getuser(),
-            "wheel_version": wheel,
-            "catalog_fingerprint": fp,
-            "seeds": seeds,
-            "models": results,
-        }, ensure_ascii=False, default=str) + "\n")
+        f.write(
+            json.dumps(
+                {
+                    "ts": datetime.now(UTC).isoformat(timespec="seconds"),
+                    "who": getpass.getuser(),
+                    "wheel_version": wheel,
+                    "catalog_fingerprint": fp,
+                    "seeds": seeds,
+                    "models": results,
+                },
+                ensure_ascii=False,
+                default=str,
+            )
+            + "\n"
+        )
     print(f"[rebaseline] DONE — appended 1 audit line to {_LOG.relative_to(REPO)}")
 
 

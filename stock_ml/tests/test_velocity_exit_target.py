@@ -46,9 +46,7 @@ def test_fast_pop_is_hold():
 
 
 def test_imminent_drop_is_high_sell():
-    out = VelocityExitRegressionTarget(horizon=1, upside_horizon=1).apply(
-        _series_df([100, 80, 80])
-    )
+    out = VelocityExitRegressionTarget(horizon=1, upside_horizon=1).apply(_series_df([100, 80, 80]))
     assert out["target"].iloc[0] == pytest.approx(0.40)
 
 

@@ -71,7 +71,7 @@ def _tokenize(expr: str) -> list[_Token]:
     while pos < n:
         m = _TOKEN_RE.match(expr, pos)
         if not m or m.start() != pos:
-            raise DSLSyntaxError(f"Unexpected character at {pos}: {expr[pos:pos + 10]!r}")
+            raise DSLSyntaxError(f"Unexpected character at {pos}: {expr[pos : pos + 10]!r}")
         pos = m.end()
         kind = m.lastgroup
         if kind == "WS":
@@ -194,9 +194,7 @@ class _Parser:
                 kwargs[key] = value
             else:
                 if kwargs:
-                    raise DSLSyntaxError(
-                        f"Positional arg after keyword arg in {name}()"
-                    )
+                    raise DSLSyntaxError(f"Positional arg after keyword arg in {name}()")
                 args.append(self._comparison())
             tok = self._next()
             if tok.value == ")":

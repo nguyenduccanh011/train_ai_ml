@@ -1,5 +1,5 @@
-from pathlib import Path
 import sys
+from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
@@ -28,7 +28,10 @@ def test_phase0_bundle_maps_leaderboard_row():
     assert isinstance(bundle, DashboardBundle)
     assert bundle.model.id == model_id_for_row(row)
     assert bundle.run.id == row.run_id
-    assert bundle.run.config_path == "/tmp/stock_ml/results/experiments/champions_2020_2025_fair/v22/config.resolved.yaml"
+    assert (
+        bundle.run.config_path
+        == "/tmp/stock_ml/results/experiments/champions_2020_2025_fair/v22/config.resolved.yaml"
+    )
     assert bundle.metrics_snapshot.run_id == row.run_id
     assert bundle.model.visible_in_dashboard is True
     assert [artifact.kind for artifact in bundle.artifacts] == list(ARTIFACT_KIND_FILENAMES)
@@ -39,8 +42,14 @@ def test_phase0_paths_follow_canonical_layout():
     root = Path("/tmp/stock_ml")
 
     assert canonical_run_dir(row, root=root) == root / "results" / "experiments" / "rule"
-    assert canonical_artifact_path(row, "trades", root=root) == root / "results" / "experiments" / "rule" / "trades.csv"
-    assert canonical_artifact_path(row, "unknown_kind", root=root) == root / "results" / "experiments" / "rule" / "unknown_kind.json"
+    assert (
+        canonical_artifact_path(row, "trades", root=root)
+        == root / "results" / "experiments" / "rule" / "trades.csv"
+    )
+    assert (
+        canonical_artifact_path(row, "unknown_kind", root=root)
+        == root / "results" / "experiments" / "rule" / "unknown_kind.json"
+    )
     assert artifact_root("models", root=root) == root / "models"
 
 

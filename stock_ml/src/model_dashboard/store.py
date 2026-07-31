@@ -2,14 +2,16 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from collections.abc import Iterable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
+from src.leaderboard.schema import LeaderboardRow
 from src.model_dashboard.schema import (
-    AuditLogRecord,
     ArtifactRecord,
+    AuditLogRecord,
     DashboardBundle,
     LeaderboardEntry,
     MetricsSnapshotRecord,
@@ -17,7 +19,6 @@ from src.model_dashboard.schema import (
     RunRecord,
     leaderboard_row_to_dashboard_bundle,
 )
-from src.leaderboard.schema import LeaderboardRow
 
 SCHEMA_PATH = Path(__file__).resolve().parents[2] / "db" / "init" / "001_model_dashboard_schema.sql"
 
@@ -102,13 +103,16 @@ class DashboardStore:
         visible_only: bool = False,
         include_superseded: bool = True,
     ) -> list[LeaderboardRow]:
-        return [entry.row for entry in self.list_leaderboard_entries(
-            market=market,
-            market_family=market_family,
-            timeframe=timeframe,
-            visible_only=visible_only,
-            include_superseded=include_superseded,
-        )]
+        return [
+            entry.row
+            for entry in self.list_leaderboard_entries(
+                market=market,
+                market_family=market_family,
+                timeframe=timeframe,
+                visible_only=visible_only,
+                include_superseded=include_superseded,
+            )
+        ]
 
     def list_leaderboard_entries(
         self,
@@ -499,7 +503,9 @@ class DashboardStore:
             ),
         )
 
-    def _upsert_artifacts(self, conn: sqlite3.Connection, artifacts: Iterable[ArtifactRecord]) -> None:
+    def _upsert_artifacts(
+        self, conn: sqlite3.Connection, artifacts: Iterable[ArtifactRecord]
+    ) -> None:
         for artifact in artifacts:
             conn.execute(
                 "INSERT INTO artifacts (id, run_id, kind, path, size_bytes, checksum, created_at, "
@@ -620,7 +626,9 @@ class DashboardStore:
             "INSERT INTO audit_log (id, entity_type, entity_id, action, actor, reason, payload_json, "
             "created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             (
-                _stable_id("audit", entity_type, entity_id, action, actor, reason or "", created_at),
+                _stable_id(
+                    "audit", entity_type, entity_id, action, actor, reason or "", created_at
+                ),
                 entity_type,
                 entity_id,
                 action,

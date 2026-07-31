@@ -49,7 +49,7 @@ class TrendScanningExitTarget:
         Sy = cs[s + L] - cs[s]
         Syy = cs2[s + L] - cs2[s]
         Skc = csk[s + L] - csk[s]
-        Sxy = Skc - s * Sy                       # sum of (j*y) with j = position in window
+        Sxy = Skc - s * Sy  # sum of (j*y) with j = position in window
         Sx = L * (L - 1) / 2.0
         xc = np.arange(L) - (L - 1) / 2.0
         Sxx_c = float((xc * xc).sum())
@@ -57,7 +57,7 @@ class TrendScanningExitTarget:
         Syy_c = Syy - Sy * Sy / L
         SSE = np.clip(Syy_c - b * b * Sxx_c, 1e-12, None)
         se_b = np.sqrt(SSE / (L - 2) / Sxx_c)
-        return b / (se_b + 1e-12)                # indexed by s (window start)
+        return b / (se_b + 1e-12)  # indexed by s (window start)
 
     def _label(self, close: pd.Series) -> pd.Series:
         c = close.to_numpy(float)
@@ -69,17 +69,17 @@ class TrendScanningExitTarget:
         for L in self._wins():
             arr = np.full(n, np.nan)
             if n >= L + 1 and L >= 3:
-                tval = self._forward_tvalue(y, L)        # indexed by window-start s
+                tval = self._forward_tvalue(y, L)  # indexed by window-start s
                 s = np.arange(0, n - L + 1)
-                arr[s[1:] - 1] = tval[1:]                # bar t = s-1 (forward window starts at t+1)
+                arr[s[1:] - 1] = tval[1:]  # bar t = s-1 (forward window starts at t+1)
             mats.append(arr)
-        M = np.vstack(mats).T                            # (n, num_L)
+        M = np.vstack(mats).T  # (n, num_L)
         allnan = np.all(np.isnan(M), axis=1)
         absf = np.where(np.isnan(M), -1.0, np.abs(M))
         bi = absf.argmax(axis=1)
         best = M[np.arange(n), bi]
         best[allnan] = np.nan
-        return pd.Series(-best, index=close.index)       # high = forward downtrend = SELL
+        return pd.Series(-best, index=close.index)  # high = forward downtrend = SELL
 
     def apply(self, df: pd.DataFrame, close_col: str = "close") -> pd.DataFrame:
         if "symbol" not in df.columns:

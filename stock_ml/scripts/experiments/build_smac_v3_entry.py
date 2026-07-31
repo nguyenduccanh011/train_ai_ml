@@ -12,6 +12,7 @@ Variants (each clones v1 tmpl 2459, swaps feature_set_name only, multi-seed):
 
 Usage: python stock_ml/scripts/build_smac_v3_entry.py
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -52,13 +53,15 @@ async def make_template(new_name: str, feature_set: str) -> int:
         slots = []
         for sl in base.component_slots:
             fs = feature_set if sl.slot_type == "entry" else sl.feature_set_name
-            slots.append({
-                "slot_type": sl.slot_type,
-                "ml_component_id": sl.ml_component_id,
-                "rule_component_id": sl.rule_component_id,
-                "feature_set_name": fs,
-                "target_config": copy.deepcopy(sl.target_config),
-            })
+            slots.append(
+                {
+                    "slot_type": sl.slot_type,
+                    "ml_component_id": sl.ml_component_id,
+                    "rule_component_id": sl.rule_component_id,
+                    "feature_set_name": fs,
+                    "target_config": copy.deepcopy(sl.target_config),
+                }
+            )
         t = await repo.create(
             name=new_name,
             market=base.market,
@@ -76,11 +79,11 @@ async def make_template(new_name: str, feature_set: str) -> int:
             validation_config=base.validation_config,
             seed=42,
             description=f"SMAC v3 entry-fix: action model with ENTER feature set '{feature_set}' "
-                        "(knife/structural-decliner +/- market regime). Same v1 exit policy; "
-                        "addresses 2022 bear knife-catches at the source. Pure-ML, no rule.",
+            "(knife/structural-decliner +/- market regime). Same v1 exit policy; "
+            "addresses 2022 bear knife-catches at the source. Pure-ML, no rule.",
             hypothesis="v1's worst losers are bear-market knife entries; recov is blind to the "
-                       "falling-knife profile + tape regime. Richer ENTER context lets the single "
-                       "model avoid those buys natively (vs an exit rule that would mask the ML).",
+            "falling-knife profile + tape regime. Richer ENTER context lets the single "
+            "model avoid those buys natively (vs an exit rule that would mask the ML).",
             universe_slug=base.universe_slug,
             model_mode="ml_only",
         )

@@ -54,21 +54,27 @@ async def _run(dry_run: bool) -> int:
                 snap = await repo.get_version_snapshot(slug, existing.version)
                 cur = _sha([d["symbol"] for d in snap]) if snap else None
                 ok = cur == want
-                print(f"[skip] {slug}: exists (v{existing.version} locked={existing.is_locked} "
-                      f"sha={'OK' if ok else 'DIFF'})")
+                print(
+                    f"[skip] {slug}: exists (v{existing.version} locked={existing.is_locked} "
+                    f"sha={'OK' if ok else 'DIFF'})"
+                )
                 if not ok:
                     print(f"       WARNING existing sha {cur} != expected {want}")
                     rc = 2
                 continue
 
             if dry_run:
-                print(f"[dry-run] would create+lock {slug}: {s['symbol_count']} symbols sha={want[:16]}")
+                print(
+                    f"[dry-run] would create+lock {slug}: {s['symbol_count']} symbols sha={want[:16]}"
+                )
                 continue
 
             await repo.create(
-                slug=slug, name=s["name"], market=s["market"],
+                slug=slug,
+                name=s["name"],
+                market=s["market"],
                 description=f"{s['derivation']} · pinned nguyên trạng (ENGINE_UPGRADE §9.9) · "
-                            f"source {s['source_bundle']}",
+                f"source {s['source_bundle']}",
                 symbols=[{"symbol": x} for x in s["symbols"]],
             )
             await repo.update_meta(slug, is_locked=True, notes=f"symbols_sha256={want}")
@@ -77,15 +83,19 @@ async def _run(dry_run: bool) -> int:
             back = await repo.get_by_slug_all(slug)
             snap = await repo.get_version_snapshot(slug, back.version)
             ok = bool(snap) and _sha([d["symbol"] for d in snap]) == want and back.is_locked
-            print(f"[create] {slug}: {s['symbol_count']} symbols v{back.version} "
-                  f"locked={back.is_locked} sha={'OK' if ok else 'FAIL'}")
+            print(
+                f"[create] {slug}: {s['symbol_count']} symbols v{back.version} "
+                f"locked={back.is_locked} sha={'OK' if ok else 'FAIL'}"
+            )
             if not ok:
                 rc = 1
     return rc
 
 
 def main() -> int:
-    p = argparse.ArgumentParser(description="Register static bundle universes as locked versioned sets")
+    p = argparse.ArgumentParser(
+        description="Register static bundle universes as locked versioned sets"
+    )
     p.add_argument("--dry-run", action="store_true", help="show what would happen, write nothing")
     return asyncio.run(_run(p.parse_args().dry_run))
 

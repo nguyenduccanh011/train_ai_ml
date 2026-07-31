@@ -3,9 +3,11 @@
 trailing protection and are cut late by the downleg (giveback ~100%, lag 6.3 bars). Sweep an
 earlier+tighter trail to protect modest gains. No prediction needed. A/B vs champion 404.3.
 """
+
 from __future__ import annotations
 import asyncio, copy, json, sys
 from pathlib import Path
+
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT))
 from sqlalchemy.ext.asyncio import AsyncSession  # noqa: E402
@@ -41,30 +43,51 @@ async def main():
         for name, act, atr, stp in GRID:
             ex = await repo.get_by_name(name)
             if ex:
-                print(f"= {name} ({ex.id})"); created.append((ex.id, name)); continue
+                print(f"= {name} ({ex.id})")
+                created.append((ex.id, name))
+                continue
             eng = copy.deepcopy(be)
             eng["trailing_activate_pct"] = act
             eng["trailing_atr_mult"] = atr
             eng["trailing_stop_pct"] = stp
             slots = [
-                {"slot_type": "entry", "ml_component_id": es.ml_component_id, "rule_component_id": None,
-                 "feature_set_name": es.feature_set_name, "target_config": tc(es)},
-                {"slot_type": "exit", "ml_component_id": xs.ml_component_id, "rule_component_id": None,
-                 "feature_set_name": xs.feature_set_name, "target_config": tc(xs)},
+                {
+                    "slot_type": "entry",
+                    "ml_component_id": es.ml_component_id,
+                    "rule_component_id": None,
+                    "feature_set_name": es.feature_set_name,
+                    "target_config": tc(es),
+                },
+                {
+                    "slot_type": "exit",
+                    "ml_component_id": xs.ml_component_id,
+                    "rule_component_id": None,
+                    "feature_set_name": xs.feature_set_name,
+                    "target_config": tc(xs),
+                },
             ]
             tmpl = await repo.create(
-                name=name, market=base.market, strategy=base.strategy,
-                feature_set_id=base.feature_set_id, target_id=base.target_id,
-                component_slots=copy.deepcopy(slots), direction=base.direction,
-                signal_mode=base.signal_mode, signal_threshold=base.signal_threshold,
-                entry_threshold=base.entry_threshold, exit_threshold=base.exit_threshold,
-                split_config=base.split_config, engine_config=eng,
-                validation_config=base.validation_config, seed=base.seed,
+                name=name,
+                market=base.market,
+                strategy=base.strategy,
+                feature_set_id=base.feature_set_id,
+                target_id=base.target_id,
+                component_slots=copy.deepcopy(slots),
+                direction=base.direction,
+                signal_mode=base.signal_mode,
+                signal_threshold=base.signal_threshold,
+                entry_threshold=base.entry_threshold,
+                exit_threshold=base.exit_threshold,
+                split_config=base.split_config,
+                engine_config=eng,
+                validation_config=base.validation_config,
+                seed=base.seed,
                 description=f"{name}: champion 1327, trailing activate {act}/atr {atr}/stop {stp}.",
                 hypothesis="Protect the +5-10% MFE faders with an earlier+tighter trail. Beat 404.3?",
                 universe_slug=base.universe_slug,
             )
-            print(f"* {name} ({tmpl.id})"); created.append((tmpl.id, name))
+            print(f"* {name} ({tmpl.id})")
+            created.append((tmpl.id, name))
         await session.commit()
         print("IDS=" + ",".join(str(t) for t, _ in created))
     await async_engine.dispose()

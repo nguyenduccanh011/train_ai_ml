@@ -12,6 +12,7 @@ delta vs the pullback-OFF baselines (n2_abl_nopullback 197.4 / n2_nopullback_red
 
 Usage: python stock_ml/scripts/build_smac_action.py
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -45,9 +46,9 @@ SEEDS = [42, 7, 99]
 # Oracle action labels (zigzag swing segmentation).
 ACTION_TARGET = {
     "type": "action_oracle",
-    "pct": 0.10,        # 10% reversal = a swing
+    "pct": 0.10,  # 10% reversal = a swing
     "min_fwd_leg": 0.10,  # only ENTER bottoms with a >=10% up-leg ahead
-    "min_leg_bars": 3,   # drop sub-3-bar noise legs
+    "min_leg_bars": 3,  # drop sub-3-bar noise legs
 }
 
 # Rules-OFF sandbox: clean next-close fill (NO pullback discount), the model's own signal
@@ -56,7 +57,7 @@ ACTION_TARGET = {
 SANDBOX_ENGINE = {
     "costs": {"tax": 0.001, "slippage": 0.0015, "commission": 0.0015},
     "hard_stop_pct": None,
-    "max_hold_bars": 40,   # backstop only (model is expected to EXIT at peaks)
+    "max_hold_bars": 40,  # backstop only (model is expected to EXIT at peaks)
     "min_hold_bars": 2,
     "entry_bar_fill_type": "close_next",
     "exit_priority": ["signal"],
@@ -96,19 +97,19 @@ async def make_template() -> int:
             signal_mode=base.signal_mode,
             signal_threshold=base.signal_threshold,
             entry_threshold=None,  # v1: argmax decision (tune P(ENTER) cutoff later)
-            exit_threshold=None,   # v1: argmax decision (tune P(EXIT) cutoff later)
+            exit_threshold=None,  # v1: argmax decision (tune P(EXIT) cutoff later)
             split_config=copy.deepcopy(base.split_config),
             engine_config=copy.deepcopy(SANDBOX_ENGINE),
             validation_config=base.validation_config,
             seed=42,
             description="SMAC: a SINGLE multiclass model decides per-bar action "
-                        "{OUT,ENTER,HOLD,EXIT} (action_oracle target, entry_lvup126_recov "
-                        "features). No decoupled entry/exit heads, no recombine; rules-off "
-                        "sandbox so the model's own decision drives entry & exit.",
+            "{OUT,ENTER,HOLD,EXIT} (action_oracle target, entry_lvup126_recov "
+            "features). No decoupled entry/exit heads, no recombine; rules-off "
+            "sandbox so the model's own decision drives entry & exit.",
             hypothesis="A single coherent model trained on a whole-trade oracle avoids the "
-                       "decoupled 2-slot masking (each trade's realized PnL couples the two "
-                       "heads, blocking independent improvement). Judge by sandbox delta vs "
-                       "the pullback-OFF baselines (197.4 / 397.8), not the crutch champion.",
+            "decoupled 2-slot masking (each trade's realized PnL couples the two "
+            "heads, blocking independent improvement). Judge by sandbox delta vs "
+            "the pullback-OFF baselines (197.4 / 397.8), not the crutch champion.",
             universe_slug=base.universe_slug,
             model_mode="ml_only",
         )
@@ -152,8 +153,10 @@ def main():
         mean = statistics.mean(comps)
         std = statistics.pstdev(comps) if len(comps) > 1 else 0.0
         print(f"\n== {NEW_NAME}: MEAN={mean:.1f} std={std:.1f} seeds={seeds}")
-        print("== baselines (pullback-OFF sandbox): n2_abl_nopullback=197.4 / "
-              "n2_nopullback_red_dcf_ma8=397.8 ; champion(crutch)=704")
+        print(
+            "== baselines (pullback-OFF sandbox): n2_abl_nopullback=197.4 / "
+            "n2_nopullback_red_dcf_ma8=397.8 ; champion(crutch)=704"
+        )
     print("BUILD_SMAC_DONE")
 
 

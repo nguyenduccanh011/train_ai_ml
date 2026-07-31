@@ -36,7 +36,15 @@ from stock_ml.src.serving import BUNDLE_FORMAT_VERSION
 # pickled estimator internals, so a MAJOR-version mismatch between export host and serving host is
 # rejected outright (§11.5.2, was lightgbm-only). ``stock_ml_core`` is the wheel that GENERATED the
 # stored curves — tracked so §11.5.2's exact-wheel gate can refuse a silent measuring-stick change.
-_TRACKED_LIBS = ["stock_ml_core", "lightgbm", "scikit-learn", "numpy", "pandas", "joblib", "xgboost"]
+_TRACKED_LIBS = [
+    "stock_ml_core",
+    "lightgbm",
+    "scikit-learn",
+    "numpy",
+    "pandas",
+    "joblib",
+    "xgboost",
+]
 
 # Libs whose MAJOR-version skew breaks pickle compatibility (hard gate under strict_libs).
 _PICKLE_CRITICAL_LIBS = ("lightgbm", "scikit-learn", "numpy")
@@ -51,6 +59,7 @@ def _engine_pin_required() -> bool:
     import os
 
     return os.environ.get("ENGINE_WHEEL_PIN", "").strip().lower() in ("1", "true", "yes")
+
 
 _MODELS_SUBDIR = "models"
 _FOLD_MODELS_SUBDIR = "fold_models"  # §11.9: per-fold models at fold_models/<year>/<head>.joblib
@@ -70,7 +79,9 @@ _PRED_HISTORY_NAME = "prediction_history.parquet"
 class LoadedBundle:
     """Result of :func:`load_bundle` — everything a serving host needs to infer."""
 
-    models: dict[str, Any]  # name -> fitted model object (entry, exit, entry2, ...) — the last/serve fold
+    models: dict[
+        str, Any
+    ]  # name -> fitted model object (entry, exit, entry2, ...) — the last/serve fold
     config: dict[str, Any]  # resolved ExperimentConfig as a dict
     feature_spec: dict[str, Any]  # feature-set names + resolved feature columns
     manifest: dict[str, Any]  # provenance + checksums
@@ -173,7 +184,9 @@ def write_bundle(
         _payloads.append((_RESOLVED_NAME, resolved_config))
     for rel, payload in _payloads:
         dest = out / rel
-        dest.write_text(json.dumps(payload, indent=2, sort_keys=True, default=str), encoding="utf-8")
+        dest.write_text(
+            json.dumps(payload, indent=2, sort_keys=True, default=str), encoding="utf-8"
+        )
         checksums[rel] = _sha256_file(dest)
 
     # --- optional prediction history (z-window seed) ---

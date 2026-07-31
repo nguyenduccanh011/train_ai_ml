@@ -47,12 +47,15 @@ def _market_context_required() -> bool:
     return os.environ.get("MARKET_CONTEXT_REQUIRED", "").strip().lower() in ("1", "true", "yes")
 
 
-def _load_vnindex(path="portable_data/vn_stock_ai_dataset_cleaned/context_features/symbol=VNINDEX/timeframe=1D/data.csv"):
+def _load_vnindex(
+    path="portable_data/vn_stock_ai_dataset_cleaned/context_features/symbol=VNINDEX/timeframe=1D/data.csv",
+):
     """VNINDEX daily close (date->close), for RS-vs-market (close/VNINDEX). Cached.
     Returns None if the source is absent — UNLESS ``MARKET_CONTEXT_REQUIRED`` is set, then RAISES."""
     if "vni" in _VNI_CACHE:
         return _VNI_CACHE["vni"]
     import os
+
     if not os.path.exists(path):
         if _market_context_required():
             raise RuntimeError(
@@ -78,6 +81,7 @@ def _load_runscore(path="results/_research_2429/runscore.parquet"):
     if "rs" in _RUNSCORE_CACHE:
         return _RUNSCORE_CACHE["rs"]
     import os
+
     if not os.path.exists(path):
         if _market_context_required():
             raise RuntimeError(
@@ -93,7 +97,9 @@ def _load_runscore(path="results/_research_2429/runscore.parquet"):
     return by
 
 
-def _atr_ratio(highs: np.ndarray, lows: np.ndarray, closes: np.ndarray, win: int = 14) -> np.ndarray:
+def _atr_ratio(
+    highs: np.ndarray, lows: np.ndarray, closes: np.ndarray, win: int = 14
+) -> np.ndarray:
     """Causal ATR(win)/close ratio: rolling mean of the true range, divided by close.
 
     The engine's canonical per-symbol volatility scale (Wilder true range, `win`-bar simple
@@ -143,16 +149,26 @@ def _causal_leg_age(closes: np.ndarray, pct: float):
     for i in range(1, n):
         p = closes[i]
         if direction >= 0 and p > ext_price:
-            ext_price = p; ext_idx = i; direction = 1
+            ext_price = p
+            ext_idx = i
+            direction = 1
         elif direction <= 0 and p < ext_price:
-            ext_price = p; ext_idx = i; direction = -1
+            ext_price = p
+            ext_idx = i
+            direction = -1
         elif direction == 1 and p <= ext_price * (1.0 - pct):
             _amp = abs(closes[ext_idx] / closes[prev_pidx] - 1.0) if closes[prev_pidx] else None
             confirm[i] = (ext_idx, +1, ext_idx - prev_pidx, _amp)  # up-leg just ended at a peak
-            prev_pidx = ext_idx; direction = -1; ext_price = p; ext_idx = i
+            prev_pidx = ext_idx
+            direction = -1
+            ext_price = p
+            ext_idx = i
         elif direction == -1 and p >= ext_price * (1.0 + pct):
             confirm[i] = (ext_idx, -1, None, None)
-            prev_pidx = ext_idx; direction = 1; ext_price = p; ext_idx = i
+            prev_pidx = ext_idx
+            direction = 1
+            ext_price = p
+            ext_idx = i
     active = np.zeros(n, dtype=np.int64)
     typ_len = np.full(n, np.nan)
     typ_amp = np.full(n, np.nan)
@@ -166,9 +182,11 @@ def _causal_leg_age(closes: np.ndarray, pct: float):
             pidx, kind, ulen, uamp = confirm[i]
             last_pidx = pidx
             if kind == +1 and ulen:
-                ulens.append(ulen); cur_tl = float(np.median(ulens))
+                ulens.append(ulen)
+                cur_tl = float(np.median(ulens))
                 if uamp:
-                    uamps.append(uamp); cur_ta = float(np.median(uamps))
+                    uamps.append(uamp)
+                    cur_ta = float(np.median(uamps))
         active[i] = last_pidx
         typ_len[i] = cur_tl
         typ_amp[i] = cur_ta
@@ -314,7 +332,7 @@ class EngineConfig:
     # exit LAGGARDS sooner. K_eff *= clip(1 + rs_scale*rs_vsma, 0.5, 2.0). Tunes the EXIT per-stock, does
     # NOT gate entries — so it can realize RS under the total-PnL objective where the gate could not.
     signal_exit_hold_rs_scale: float = 0.0
-    signal_exit_hold_rs_feature: str = "rs_vsma"   # rs_vsma | rs_sl5 | rs_sl20 | rs_nh
+    signal_exit_hold_rs_feature: str = "rs_vsma"  # rs_vsma | rs_sl5 | rs_sl20 | rs_nh
     # RS-vs-MARKET adaptive RELEASE (2026-06-21, symmetric to the hold): scale the protect early-release
     # drop-threshold by RS — release a LAGGARD's protect SOONER (smaller drop triggers the exit; its
     # giveback is more likely terminal, it won't bounce) and a LEADER's LATER (let it ride). drop_k_eff
@@ -330,7 +348,7 @@ class EngineConfig:
     # mkt_scale*mkt_trend, 0.5, 2.0). Multiplies orthogonally with rs_scale/volscale. 0 = off. Causal
     # (VNINDEX up to the bar, same-day). Needs the VNINDEX csv.
     signal_exit_hold_mkt_scale: float = 0.0
-    signal_exit_hold_mkt_feature: str = "ma100"   # ma100 | ma200 | pos120 | dd120
+    signal_exit_hold_mkt_feature: str = "ma100"  # ma100 | ma200 | pos120 | dd120
     # WAVE-STRUCTURE (current-leg AGE) adaptive hold depth (2026-06-21, wave_head_probe): the age of
     # the current unconfirmed zigzag leg predicts remaining forward run with incremental IC -0.27 AFTER
     # removing momentum (orthogonal — NOT subsumed like market-trend). A YOUNG impulse leg has more run
@@ -721,7 +739,7 @@ class EngineConfig:
     entry_pullback_topstruct_scale: bool = False
     entry_pullback_topstruct_k: float = 0.012
     entry_pullback_topstruct_cap: float = 0.04
-    entry_pullback_topstruct_thr: float = 0.0   # only deepen when the top-struct z-sum >= thr (leave
+    entry_pullback_topstruct_thr: float = 0.0  # only deepen when the top-struct z-sum >= thr (leave
     #                                             healthy-trend entries at the base depth = preserve PnL)
     # REGIME-CONDITIONAL ENTRY/EXIT (downtrend_timing_review): the symbol's per-bar trend regime
     # is "downtrend" when close < SMA50 AND SMA50 is falling over the trailing 20 bars (the same
@@ -1089,16 +1107,45 @@ class EngineConfig:
 # serving trade path strip EXACTLY the same keys (§10.3: train used to raise on strays, serving to drop
 # silently). Anything NOT in this set and NOT an EngineConfig field reaches EngineConfig and raises
 # TypeError — loudly, on BOTH sides.
-_RECOMBINE_KEYS: frozenset[str] = frozenset({
-    "entry_gate", "entry_xs_mom_pct", "exit_gate", "entry_raw_threshold", "rule_only_no_ml",
-    "entry_z_low_threshold", "z_norm_window", "z_norm_min_periods", "exit_force_gate",
-    "exit_force_gate_nonbull", "exit_force_gate_lowbreadth", "exit_force_gate_vn30", "exit_rs_drop",
-    "exit_xsec_features", "entry_xsec_features", "exit_force_suppress", "nonbull_ma_win",
-    "nonbull_persist", "entry_skip_nonbull_persist", "regime_index_symbol", "early_entry_reversal",
-    "top_reversal_exit", "entry_zX_floor", "entry_rollover_exit", "entry_ensemble", "entry_ensemble2",
-    "entry_ensemble3", "entry_ensemble4", "entry_ensemble5", "entry_breadth_gate", "entry_rs_gate",
-    "downleg_skip_bull", "entry_head_csrank_gate", "exit_ensemble", "xsec_rank",
-})
+_RECOMBINE_KEYS: frozenset[str] = frozenset(
+    {
+        "entry_gate",
+        "entry_xs_mom_pct",
+        "exit_gate",
+        "entry_raw_threshold",
+        "rule_only_no_ml",
+        "entry_z_low_threshold",
+        "z_norm_window",
+        "z_norm_min_periods",
+        "exit_force_gate",
+        "exit_force_gate_nonbull",
+        "exit_force_gate_lowbreadth",
+        "exit_force_gate_vn30",
+        "exit_rs_drop",
+        "exit_xsec_features",
+        "entry_xsec_features",
+        "exit_force_suppress",
+        "nonbull_ma_win",
+        "nonbull_persist",
+        "entry_skip_nonbull_persist",
+        "regime_index_symbol",
+        "early_entry_reversal",
+        "top_reversal_exit",
+        "entry_zX_floor",
+        "entry_rollover_exit",
+        "entry_ensemble",
+        "entry_ensemble2",
+        "entry_ensemble3",
+        "entry_ensemble4",
+        "entry_ensemble5",
+        "entry_breadth_gate",
+        "entry_rs_gate",
+        "downleg_skip_bull",
+        "entry_head_csrank_gate",
+        "exit_ensemble",
+        "xsec_rank",
+    }
+)
 
 
 def engine_config_from_dict(engine_cfg: dict) -> tuple[EngineConfig, dict]:
@@ -1205,8 +1252,11 @@ def _run_symbol(
 
     # Vol-adaptive trailing: precompute causal ATR14/close ratio for this symbol.
     atr_ratio = None
-    if (cfg.trailing_atr_mult is not None or cfg.overext_atr_mult is not None
-            or cfg.hard_stop_atr_mult is not None) and n > 1:
+    if (
+        cfg.trailing_atr_mult is not None
+        or cfg.overext_atr_mult is not None
+        or cfg.hard_stop_atr_mult is not None
+    ) and n > 1:
         atr_ratio = _atr_ratio(highs, lows, closes, win=14)
 
     # Protect-RELEASE vol (ATR(release_vol_window)/close): sizes the vol-scaled give-back that releases
@@ -1236,8 +1286,11 @@ def _run_symbol(
         emfe_z = _causal_z(pd.Series(emfe, dtype=float)).to_numpy()
 
     escore_z = None
-    if ((cfg.signal_exit_skip_if_entry_z is not None or cfg.entry_pullback_conv_head_w > 0)
-            and escore is not None and n > 1):
+    if (
+        (cfg.signal_exit_skip_if_entry_z is not None or cfg.entry_pullback_conv_head_w > 0)
+        and escore is not None
+        and n > 1
+    ):
         escore_z = _causal_z(pd.Series(escore, dtype=float)).to_numpy()
 
     # BOTTOM-shallow gate: causal per-symbol z of the bottom-structure head (score6), same
@@ -1253,59 +1306,108 @@ def _run_symbol(
 
     # score3 continuation veto: causal per-symbol z of the continuation head (same 252/60 window).
     s3z = None
-    if ((cfg.signal_exit_skip_if_score3_z is not None
-         or cfg.signal_exit_hold_min_score3_z is not None
-         or cfg.entry_pullback_conv_score3_w > 0) and es3 is not None and n > 1):
+    if (
+        (
+            cfg.signal_exit_skip_if_score3_z is not None
+            or cfg.signal_exit_hold_min_score3_z is not None
+            or cfg.entry_pullback_conv_score3_w > 0
+        )
+        and es3 is not None
+        and n > 1
+    ):
         s3z = _causal_z(pd.Series(es3, dtype=float)).to_numpy()
 
     # EXP1 conditional pullback: causal SMA used to cancel a pending pullback limit once the
     # trend rolls over (close < SMA) while waiting for the fill.
     pb_ma = None
-    if (cfg.entry_pullback_pct is not None and cfg.entry_pullback_cancel_below_ma is not None
-            and cfg.entry_pullback_cancel_below_ma > 0 and n > 1):
-        pb_ma = pd.Series(closes).rolling(
-            int(cfg.entry_pullback_cancel_below_ma), min_periods=1).mean().to_numpy()
+    if (
+        cfg.entry_pullback_pct is not None
+        and cfg.entry_pullback_cancel_below_ma is not None
+        and cfg.entry_pullback_cancel_below_ma > 0
+        and n > 1
+    ):
+        pb_ma = (
+            pd.Series(closes)
+            .rolling(int(cfg.entry_pullback_cancel_below_ma), min_periods=1)
+            .mean()
+            .to_numpy()
+        )
 
     # B-channel below-MA context: causal SMA defining the wave-start zone (below the trend MA
     # the core channel is quiet in). Only computed when the B-channel is armed.
     bch_ma = None
-    if (cfg.entry_bchannel_z is not None and cfg.entry_bchannel_below_ma is not None
-            and cfg.entry_bchannel_below_ma > 0 and n > 1):
-        bch_ma = pd.Series(closes).rolling(
-            int(cfg.entry_bchannel_below_ma), min_periods=1).mean().to_numpy()
+    if (
+        cfg.entry_bchannel_z is not None
+        and cfg.entry_bchannel_below_ma is not None
+        and cfg.entry_bchannel_below_ma > 0
+        and n > 1
+    ):
+        bch_ma = (
+            pd.Series(closes)
+            .rolling(int(cfg.entry_bchannel_below_ma), min_periods=1)
+            .mean()
+            .to_numpy()
+        )
 
     # EXP-D trend-scaled pullback depth: causal SMA used to FLOOR the pullback limit (keep the
     # fill above the trend MA — auto-shallows the effective pullback when price is near the MA).
     pb_floor_ma = None
-    if (cfg.entry_pullback_pct is not None and cfg.entry_pullback_floor_ma is not None
-            and cfg.entry_pullback_floor_ma > 0 and n > 1):
-        pb_floor_ma = pd.Series(closes).rolling(
-            int(cfg.entry_pullback_floor_ma), min_periods=1).mean().to_numpy()
+    if (
+        cfg.entry_pullback_pct is not None
+        and cfg.entry_pullback_floor_ma is not None
+        and cfg.entry_pullback_floor_ma > 0
+        and n > 1
+    ):
+        pb_floor_ma = (
+            pd.Series(closes)
+            .rolling(int(cfg.entry_pullback_floor_ma), min_periods=1)
+            .mean()
+            .to_numpy()
+        )
 
     # Structural-low fill anchor: causal rolling MIN of lows over the lookback ending at the signal
     # bar -> the recent swing-low / base of the current leg. Used to DEEPEN the pullback limit toward
     # the leg bottom (the oracle FILL-PRICE lever). Off by default.
     pb_struct_low = None
-    if (cfg.entry_pullback_pct is not None and cfg.entry_pullback_structural_lookback is not None
-            and cfg.entry_pullback_structural_lookback > 0 and n > 1):
-        pb_struct_low = pd.Series(lows).rolling(
-            int(cfg.entry_pullback_structural_lookback), min_periods=1).min().to_numpy()
+    if (
+        cfg.entry_pullback_pct is not None
+        and cfg.entry_pullback_structural_lookback is not None
+        and cfg.entry_pullback_structural_lookback > 0
+        and n > 1
+    ):
+        pb_struct_low = (
+            pd.Series(lows)
+            .rolling(int(cfg.entry_pullback_structural_lookback), min_periods=1)
+            .min()
+            .to_numpy()
+        )
 
     # Regime-adaptive trail: per-bar consolidation_score (count of last trailing_cons_window bars whose
     # daily range < trailing_cons_range) -> tighten the trail band in a distribution/sideways regime.
     cons_trail = None
     if cfg.trailing_cons_tight_mult is not None and n > 1:
         _hlp = (highs - lows) / np.where(closes > 0, closes, np.nan)
-        cons_trail = pd.Series((_hlp < cfg.trailing_cons_range).astype(float)).rolling(
-            int(cfg.trailing_cons_window), min_periods=3).sum().to_numpy()
+        cons_trail = (
+            pd.Series((_hlp < cfg.trailing_cons_range).astype(float))
+            .rolling(int(cfg.trailing_cons_window), min_periods=3)
+            .sum()
+            .to_numpy()
+        )
 
     # Vol-adaptive pullback depth (causal trailing return-vol * k, clamped). Off by default.
     pb_vol_depth = None
     if cfg.entry_pullback_pct is not None and cfg.entry_pullback_vol_scale and n > 1:
-        _rv = pd.Series(closes).pct_change().rolling(
-            int(cfg.entry_pullback_vol_window), min_periods=2).std()
-        pb_vol_depth = (cfg.entry_pullback_vol_k * _rv).clip(
-            lower=cfg.entry_pullback_vol_lo, upper=cfg.entry_pullback_vol_hi).to_numpy()
+        _rv = (
+            pd.Series(closes)
+            .pct_change()
+            .rolling(int(cfg.entry_pullback_vol_window), min_periods=2)
+            .std()
+        )
+        pb_vol_depth = (
+            (cfg.entry_pullback_vol_k * _rv)
+            .clip(lower=cfg.entry_pullback_vol_lo, upper=cfg.entry_pullback_vol_hi)
+            .to_numpy()
+        )
 
     # Top-structure adaptive EXTRA pullback depth (C', causal z 252/60 of Dow lower-high + upper-wick).
     pb_wk_down = None
@@ -1317,7 +1419,8 @@ def _run_symbol(
 
     pb_topstruct_depth = None
     if cfg.entry_pullback_pct is not None and cfg.entry_pullback_topstruct_scale and n > 1:
-        _hi = pd.Series(highs); _lo = pd.Series(lows)
+        _hi = pd.Series(highs)
+        _lo = pd.Series(lows)
         _mx = np.maximum(opens, closes)
         _h20 = _hi.rolling(20, min_periods=1).max()
         _lower_high = (_h20 < _h20.shift(20)).astype(float)
@@ -1327,16 +1430,22 @@ def _run_symbol(
         _ts = (_causal_z(_lower_high) + _causal_z(_upwick)).clip(lower=0.0)
         if cfg.entry_pullback_topstruct_thr > 0.0:
             _ts = _ts.where(_ts >= cfg.entry_pullback_topstruct_thr, 0.0)
-        pb_topstruct_depth = (cfg.entry_pullback_topstruct_k * _ts).clip(
-            upper=cfg.entry_pullback_topstruct_cap).fillna(0.0).to_numpy()
+        pb_topstruct_depth = (
+            (cfg.entry_pullback_topstruct_k * _ts)
+            .clip(upper=cfg.entry_pullback_topstruct_cap)
+            .fillna(0.0)
+            .to_numpy()
+        )
 
     # MACD last-line shield (user 2026-06-18): per-bar 3-way decline-confirmation mask. Causal —
     # MACD hist from close EMAs, SMA(ma_win), and a red bar (close < prior close).
     macd_shield_arr = None
     if cfg.macd_shield_enabled and n > 1:
         _c = pd.Series(closes)
-        _macd = _c.ewm(span=cfg.macd_shield_fast, adjust=False).mean() - \
-            _c.ewm(span=cfg.macd_shield_slow, adjust=False).mean()
+        _macd = (
+            _c.ewm(span=cfg.macd_shield_fast, adjust=False).mean()
+            - _c.ewm(span=cfg.macd_shield_slow, adjust=False).mean()
+        )
         _hist = (_macd - _macd.ewm(span=cfg.macd_shield_signal, adjust=False).mean()).to_numpy()
         _smN = _c.rolling(int(cfg.macd_shield_ma_win), min_periods=1).mean().to_numpy()
         _red = (_c < _c.shift(1)).to_numpy()
@@ -1345,7 +1454,8 @@ def _run_symbol(
     # RSI-slope shield (research: rsi_slope_5 = strongest top-signal). Wilder RSI14 + slope_win-bar slope.
     rsi_shield_arr = None
     if cfg.rsi_shield_enabled and n > 1:
-        _c = pd.Series(closes); _d = _c.diff()
+        _c = pd.Series(closes)
+        _d = _c.diff()
         _up = _d.clip(lower=0).ewm(alpha=1 / 14, adjust=False).mean()
         _dn = (-_d.clip(upper=0)).ewm(alpha=1 / 14, adjust=False).mean()
         _rsi = 100.0 - 100.0 / (1.0 + _up / (_dn + 1e-9))
@@ -1371,7 +1481,7 @@ def _run_symbol(
         w = int(cfg.trailing_skip_above_ma)
         sma = pd.Series(closes).rolling(w, min_periods=1).mean()
         slope = sma - sma.shift(int(cfg.trailing_skip_ma_slope_lb))
-        trend_up = ((closes > sma.to_numpy()) & (slope.to_numpy() > 0))
+        trend_up = (closes > sma.to_numpy()) & (slope.to_numpy() > 0)
 
     # Vol-adaptive extension hold (signal_exit_hold_ext_atr): per-stock extension in ATR units + a
     # trend gate, so the signal-exit can be held on un-stretched trending winners (sell the stretch,
@@ -1385,7 +1495,9 @@ def _run_symbol(
         atr_hold_ratio = _atr_ratio(highs, lows, closes, win=14)
         _mav = _ma.to_numpy()
         _exth = closes / np.where(np.isnan(_mav) | (_mav == 0), np.nan, _mav) - 1.0
-        ext_atr_hold = _exth / np.where((atr_hold_ratio <= 0) | np.isnan(atr_hold_ratio), np.nan, atr_hold_ratio)
+        ext_atr_hold = _exth / np.where(
+            (atr_hold_ratio <= 0) | np.isnan(atr_hold_ratio), np.nan, atr_hold_ratio
+        )
         _slh = (_ma - _ma.shift(5)).to_numpy()
         hold_trend_ok = (closes > _mav) & (_slh > 0)
 
@@ -1431,9 +1543,13 @@ def _run_symbol(
             elif _mf == "pos120":
                 _hi = _vc.rolling(120, min_periods=40).max()
                 _lo = _vc.rolling(120, min_periods=40).min()
-                _mt = (2.0 * (_vc - _lo) / (_hi - _lo + 1e-9) - 1.0).to_numpy()   # [-1,1], +1=at wave high
+                _mt = (
+                    2.0 * (_vc - _lo) / (_hi - _lo + 1e-9) - 1.0
+                ).to_numpy()  # [-1,1], +1=at wave high
             elif _mf == "dd120":
-                _mt = (_vc / _vc.rolling(120, min_periods=40).max() - 1.0).to_numpy()  # <=0 drawdown from peak
+                _mt = (
+                    _vc / _vc.rolling(120, min_periods=40).max() - 1.0
+                ).to_numpy()  # <=0 drawdown from peak
             else:  # ma100 (big-trend strength vs 100d MA)
                 _mma = _vc.rolling(100, min_periods=30).mean()
                 _mt = (_vc / _mma - 1.0).to_numpy()
@@ -1463,12 +1579,16 @@ def _run_symbol(
         _rsm = _load_runscore()
         if _rsm is not None and sym in _rsm:
             _ds = pd.to_datetime(pd.Series(dates)).dt.tz_localize(None).dt.normalize()
-            runscore_arr = np.nan_to_num(_rsm[sym].reindex(_ds.to_numpy()).to_numpy(dtype=float), nan=0.0)
+            runscore_arr = np.nan_to_num(
+                _rsm[sym].reindex(_ds.to_numpy()).to_numpy(dtype=float), nan=0.0
+            )
 
     # TREND-BREAK profit-lock MA (chartist trend-break exit) — precompute SMA(window).
     tb_ma_arr = None
     if cfg.trend_break_lock_gain is not None and n > 1:
-        tb_ma_arr = pd.Series(closes).rolling(int(cfg.trend_break_lock_ma), min_periods=1).mean().to_numpy()
+        tb_ma_arr = (
+            pd.Series(closes).rolling(int(cfg.trend_break_lock_ma), min_periods=1).mean().to_numpy()
+        )
 
     # SLOW per-stock trend for the signal-exit protect band (regime-masking 2026-06-17): the protect's
     # default trend uses the SHORT MA10 (trailing_skip_above_ma), so a pullback breaking MA10 releases
@@ -1481,7 +1601,7 @@ def _run_symbol(
         ws = int(cfg.signal_exit_protect_ma)
         smas = pd.Series(closes).rolling(ws, min_periods=1).mean()
         slopes = smas - smas.shift(int(cfg.trailing_skip_ma_slope_lb))
-        trend_up_slow = ((closes > smas.to_numpy()) & (slopes.to_numpy() > 0))
+        trend_up_slow = (closes > smas.to_numpy()) & (slopes.to_numpy() > 0)
 
     # Strength-router skip-pullback: causal RSI14 + ext-vs-MA20 per bar; a STRONG signal bar skips the
     # pullback and fills at-market (capture the early-wave runner the dip-wait would otherwise drop).
@@ -1500,13 +1620,18 @@ def _run_symbol(
     # for strong signals (high RSI14 + extended above MA20), full depth (mult=1) for weak/warmup. Causal.
     pb_conv_mult = None
     if cfg.entry_pullback_conv_scale and cfg.entry_pullback_pct is not None and n > 1:
-        _c2 = pd.Series(closes); _d2 = _c2.diff()
+        _c2 = pd.Series(closes)
+        _d2 = _c2.diff()
         _g2 = _d2.clip(lower=0).rolling(14, min_periods=14).mean()
         _l2 = (-_d2.clip(upper=0)).rolling(14, min_periods=14).mean()
         _rsi2 = (100.0 - 100.0 / (1.0 + _g2 / (_l2 + 1e-9))).to_numpy()
         _ext2 = (_c2 / _c2.rolling(20, min_periods=20).mean() - 1.0).to_numpy()
-        _rsi_s = np.clip((_rsi2 - cfg.entry_pullback_conv_rsi_lo)
-                         / (100.0 - cfg.entry_pullback_conv_rsi_lo + 1e-9), 0.0, 1.0)
+        _rsi_s = np.clip(
+            (_rsi2 - cfg.entry_pullback_conv_rsi_lo)
+            / (100.0 - cfg.entry_pullback_conv_rsi_lo + 1e-9),
+            0.0,
+            1.0,
+        )
         _ext_s = np.clip(_ext2 / (cfg.entry_pullback_conv_ext_cap + 1e-9), 0.0, 1.0)
         # Combined-signal conviction (2026-06-19, loop iter-5): a 3-fold-OOF blend of eff/ext/rsi/
         # range-pos predicts realized pnl at IC 0.184 (> any single feature), with a wide-but-all-
@@ -1514,8 +1639,10 @@ def _run_symbol(
         # conv already uses rsi+ext; blend in efficiency (trend cleanliness) + range-position so the
         # shallow fill concentrates on the cleanest, best-positioned setups. Pure price, causal.
         if cfg.entry_pullback_conv_use_combo:
-            _eff2 = ((_c2 - _c2.shift(10)).abs()
-                     / (_c2.diff().abs().rolling(10, min_periods=10).sum() + 1e-9)).to_numpy()
+            _eff2 = (
+                (_c2 - _c2.shift(10)).abs()
+                / (_c2.diff().abs().rolling(10, min_periods=10).sum() + 1e-9)
+            ).to_numpy()
             _lo20 = pd.Series(lows).rolling(20, min_periods=10).min().to_numpy()
             _hi20 = pd.Series(highs).rolling(20, min_periods=10).max().to_numpy()
             _rpos2 = np.clip((closes - _lo20) / (_hi20 - _lo20 + 1e-9), 0.0, 1.0)
@@ -1539,8 +1666,9 @@ def _run_symbol(
                 # per-symbol SNR = mean/std of 20-bar log returns (em_01/em_04 definition), then
                 # the system-standard causal 252/60 rolling z. Data <= current bar only.
                 _lr2 = pd.Series(np.log(np.where(closes > 0, closes, np.nan))).diff()
-                _snr_raw = (_lr2.rolling(20, min_periods=20).mean()
-                            / (_lr2.rolling(20, min_periods=20).std() + 1e-12))
+                _snr_raw = _lr2.rolling(20, min_periods=20).mean() / (
+                    _lr2.rolling(20, min_periods=20).std() + 1e-12
+                )
                 _snr_z = _causal_z(_snr_raw).to_numpy()
             _dma_z = None
             if _dmw > 0:
@@ -1549,8 +1677,14 @@ def _run_symbol(
             _leg_strength = None
             if _lw > 0:
                 _lan, _lamp = _causal_leg_age(closes, cfg.entry_pullback_conv_leg_pct)
-                _leg_strength = np.nan_to_num(np.clip(
-                    0.5 + (_lamp - _lan) / (2.0 * cfg.entry_pullback_conv_leg_cap + 1e-9), 0.0, 1.0), nan=0.5)
+                _leg_strength = np.nan_to_num(
+                    np.clip(
+                        0.5 + (_lamp - _lan) / (2.0 * cfg.entry_pullback_conv_leg_cap + 1e-9),
+                        0.0,
+                        1.0,
+                    ),
+                    nan=0.5,
+                )
             _rs_strength = None
             if _rw > 0:
                 _vni = _load_vnindex()
@@ -1560,18 +1694,26 @@ def _run_symbol(
                     _rsl = closes / np.where((_vni_a <= 0) | np.isnan(_vni_a), np.nan, _vni_a)
                     _rsma = pd.Series(_rsl).rolling(50, min_periods=20).mean().to_numpy()
                     _rsvsma = _rsl / np.where(np.isnan(_rsma) | (_rsma == 0), np.nan, _rsma) - 1.0
-                    _rs_strength = np.nan_to_num(np.clip(
-                        0.5 + _rsvsma / (2.0 * cfg.entry_pullback_conv_rs_cap + 1e-9), 0.0, 1.0), nan=0.5)
+                    _rs_strength = np.nan_to_num(
+                        np.clip(
+                            0.5 + _rsvsma / (2.0 * cfg.entry_pullback_conv_rs_cap + 1e-9), 0.0, 1.0
+                        ),
+                        nan=0.5,
+                    )
                 if _rs_strength is None:
                     _rw = 0.0
             _vwap_sig = None
             if _ww > 0:
                 _vv2 = bars["volume"].to_numpy(dtype=float)
                 _vwin = max(2, int(cfg.entry_pullback_conv_vwap_win))
-                _pv = pd.Series(closes * _vv2).rolling(_vwin, min_periods=_vwin // 2).sum().to_numpy()
+                _pv = (
+                    pd.Series(closes * _vv2).rolling(_vwin, min_periods=_vwin // 2).sum().to_numpy()
+                )
                 _vs = pd.Series(_vv2).rolling(_vwin, min_periods=_vwin // 2).sum().to_numpy()
                 _vwap = _pv / np.where((_vs <= 0) | np.isnan(_vs), np.nan, _vs)
-                _dvw = closes / _vwap - 1.0   # >0 price above the heavy-volume zone, <0 below (value)
+                _dvw = (
+                    closes / _vwap - 1.0
+                )  # >0 price above the heavy-volume zone, <0 below (value)
                 _cap = cfg.entry_pullback_conv_vwap_cap + 1e-9
                 _vwap_sig = np.nan_to_num(np.clip(0.5 - _dvw / (2.0 * _cap), 0.0, 1.0), nan=0.0)
             _vol_acc = None
@@ -1583,18 +1725,34 @@ def _run_symbol(
                 _volr = _vv / np.where((_vavg <= 0) | np.isnan(_vavg), np.nan, _vavg)
                 _accb = ((_volr > 1.2) & (_clpos > 0.55)).astype(float)
                 _distb = ((_volr > 1.2) & (_clpos < 0.45)).astype(float)
-                _adb = (pd.Series(_accb).rolling(20, min_periods=10).sum()
-                        - pd.Series(_distb).rolling(20, min_periods=10).sum()).to_numpy()
+                _adb = (
+                    pd.Series(_accb).rolling(20, min_periods=10).sum()
+                    - pd.Series(_distb).rolling(20, min_periods=10).sum()
+                ).to_numpy()
                 _vol_acc = np.nan_to_num(
-                    np.clip(_adb / (cfg.entry_pullback_conv_vol_conf_scale + 1e-9), 0.0, 1.0), nan=0.0)
-            if (_hw > 0 or _mw > 0 or _vw > 0 or _ww > 0 or _sw > 0 or _rw > 0 or _lw > 0
-                    or _snw > 0 or _dmw > 0):
+                    np.clip(_adb / (cfg.entry_pullback_conv_vol_conf_scale + 1e-9), 0.0, 1.0),
+                    nan=0.0,
+                )
+            if (
+                _hw > 0
+                or _mw > 0
+                or _vw > 0
+                or _ww > 0
+                or _sw > 0
+                or _rw > 0
+                or _lw > 0
+                or _snw > 0
+                or _dmw > 0
+            ):
                 _blend = (1.0 - _hw - _mw - _vw - _ww - _sw - _rw - _lw - _snw - _dmw) * _strength
                 if _hw > 0:
                     if cfg.entry_pullback_conv_head_raw and escore is not None:
-                        _esr = np.nan_to_num(np.asarray(escore, dtype=float),
-                                             nan=cfg.entry_pullback_conv_head_raw_b)
-                        _harg = cfg.entry_pullback_conv_head_raw_a * (_esr - cfg.entry_pullback_conv_head_raw_b)
+                        _esr = np.nan_to_num(
+                            np.asarray(escore, dtype=float), nan=cfg.entry_pullback_conv_head_raw_b
+                        )
+                        _harg = cfg.entry_pullback_conv_head_raw_a * (
+                            _esr - cfg.entry_pullback_conv_head_raw_b
+                        )
                     else:
                         _harg = np.nan_to_num(escore_z, nan=0.0)
                     _blend = _blend + _hw / (1.0 + np.exp(-_harg))
@@ -1617,9 +1775,10 @@ def _run_symbol(
                 _strength = _blend
         else:
             _strength = 0.5 * _rsi_s + 0.5 * _ext_s
-        pb_conv_mult = np.clip(1.0 - cfg.entry_pullback_conv_k * _strength,
-                               cfg.entry_pullback_conv_floor, 1.0)
-        pb_conv_mult[np.isnan(_rsi2) | np.isnan(_ext2)] = 1.0   # warmup -> full depth
+        pb_conv_mult = np.clip(
+            1.0 - cfg.entry_pullback_conv_k * _strength, cfg.entry_pullback_conv_floor, 1.0
+        )
+        pb_conv_mult[np.isnan(_rsi2) | np.isnan(_ext2)] = 1.0  # warmup -> full depth
         # Regime-adaptive gate: in high-vol bars force full depth (disable the conv discount), since
         # the conv shallow-fill there is ~all drawdown and ~no PnL (probe_conv_regime_sep, 2409).
         if cfg.entry_pullback_conv_vol_z is not None:
@@ -1648,13 +1807,19 @@ def _run_symbol(
         _l = (-_cc.diff().clip(upper=0)).rolling(14, min_periods=14).mean()
         _rsi_c = (100.0 - 100.0 / (1.0 + _g / (_l + 1e-9))).to_numpy()
         _ext_c = (_cc / _cc.rolling(20, min_periods=20).mean() - 1.0).to_numpy()
-        _eff_c = ((_cc - _cc.shift(10)).abs()
-                  / (_cc.diff().abs().rolling(10, min_periods=10).sum() + 1e-9)).to_numpy()
+        _eff_c = (
+            (_cc - _cc.shift(10)).abs()
+            / (_cc.diff().abs().rolling(10, min_periods=10).sum() + 1e-9)
+        ).to_numpy()
         _lo = pd.Series(lows).rolling(20, min_periods=10).min().to_numpy()
         _hi = pd.Series(highs).rolling(20, min_periods=10).max().to_numpy()
         _rp = np.clip((closes - _lo) / (_hi - _lo + 1e-9), 0.0, 1.0)
-        _rsi_cs = np.clip((_rsi_c - cfg.entry_pullback_conv_rsi_lo)
-                          / (100.0 - cfg.entry_pullback_conv_rsi_lo + 1e-9), 0.0, 1.0)
+        _rsi_cs = np.clip(
+            (_rsi_c - cfg.entry_pullback_conv_rsi_lo)
+            / (100.0 - cfg.entry_pullback_conv_rsi_lo + 1e-9),
+            0.0,
+            1.0,
+        )
         _ext_cs = np.clip(_ext_c / (cfg.entry_pullback_conv_ext_cap + 1e-9), 0.0, 1.0)
         combo_arr = 0.35 * _rsi_cs + 0.30 * _ext_cs + 0.20 * np.clip(_eff_c, 0, 1) + 0.15 * _rp
         combo_arr = np.nan_to_num(combo_arr, nan=cfg.trailing_combo_mid)
@@ -1662,18 +1827,21 @@ def _run_symbol(
     # Reversal-confirmed overext: precompute the causal EMA once if the ema_cross mode is used.
     overext_ema = None
     if cfg.overext_ma_window > 0 and cfg.overext_reversal_mode == "ema_cross":
-        overext_ema = pd.Series(closes).ewm(span=cfg.overext_ema_span, adjust=False).mean().to_numpy()
+        overext_ema = (
+            pd.Series(closes).ewm(span=cfg.overext_ema_span, adjust=False).mean().to_numpy()
+        )
 
     # Bearish-divergence overext: causal TsRank(close,w) - TsRank(macd_hist,w), normalized to
     # [-1,1]. Positive = price ranks higher than momentum within the window = bearish divergence.
     overext_div = None
     if cfg.overext_ma_window > 0 and cfg.overext_reversal_mode == "bear_div":
         cs = pd.Series(closes)
-        macd_hist = (cs.ewm(span=12, adjust=False).mean() - cs.ewm(span=26, adjust=False).mean())
-        macd_hist = (macd_hist - macd_hist.ewm(span=9, adjust=False).mean())
+        macd_hist = cs.ewm(span=12, adjust=False).mean() - cs.ewm(span=26, adjust=False).mean()
+        macd_hist = macd_hist - macd_hist.ewm(span=9, adjust=False).mean()
         w = max(2, int(cfg.overext_div_window))
         rank = lambda s: s.rolling(w, min_periods=w).apply(
-            lambda a: (a.argsort().argsort()[-1] + 1) / len(a), raw=True)
+            lambda a: (a.argsort().argsort()[-1] + 1) / len(a), raw=True
+        )
         overext_div = (rank(cs) - rank(macd_hist)).to_numpy()
 
     # DISTRIBUTION-CONDITIONED overext: causal accumulation-minus-distribution balance over the
@@ -1681,9 +1849,11 @@ def _run_symbol(
     # bar range); accum candle = high relative volume + strong close (upper 45%). The 20-bar sum of
     # (accum - dist) shifts the effective overext_pct. Pure price/volume, causal.
     overext_ad_balance = None
-    if (cfg.overext_dist_slope is not None
-            or cfg.overext_dist_neg_thresh is not None
-            or cfg.dist_arm_neg_thresh is not None):
+    if (
+        cfg.overext_dist_slope is not None
+        or cfg.overext_dist_neg_thresh is not None
+        or cfg.dist_arm_neg_thresh is not None
+    ):
         vol = bars["volume"].to_numpy(dtype=float)
         rng = highs - lows
         rng = np.where(rng <= 0, 1e-9, rng)
@@ -1711,10 +1881,16 @@ def _run_symbol(
 
     def _overext_pct(i: int) -> float:
         """Effective overext extension threshold at bar i (distribution-conditioned if enabled)."""
-        if (cfg.overext_atr_mult is not None and atr_ratio is not None
-                and not np.isnan(atr_ratio[i])):
-            return float(min(cfg.overext_atr_hi,
-                             max(cfg.overext_atr_lo, cfg.overext_atr_mult * atr_ratio[i])))
+        if (
+            cfg.overext_atr_mult is not None
+            and atr_ratio is not None
+            and not np.isnan(atr_ratio[i])
+        ):
+            return float(
+                min(
+                    cfg.overext_atr_hi, max(cfg.overext_atr_lo, cfg.overext_atr_mult * atr_ratio[i])
+                )
+            )
         if overext_ad_balance is None or np.isnan(overext_ad_balance[i]):
             return cfg.overext_pct
         if cfg.overext_dist_neg_thresh is not None:
@@ -1740,7 +1916,9 @@ def _run_symbol(
         if mode == "down1":
             return closes[i] < closes[i - 1]
         if mode == "strong_down":
-            return closes[i] < opens[i] and closes[i] <= closes[i - 1] * (1.0 - cfg.overext_strong_down_pct)
+            return closes[i] < opens[i] and closes[i] <= closes[i - 1] * (
+                1.0 - cfg.overext_strong_down_pct
+            )
         if mode == "engulf2":
             prev_up = closes[i - 1] > opens[i - 1]
             cur_down = closes[i] < opens[i]
@@ -1749,7 +1927,11 @@ def _run_symbol(
         if mode == "three_down":
             return i >= 2 and closes[i] < closes[i - 1] < closes[i - 2]
         if mode == "ema_cross":
-            return overext_ema is not None and closes[i] < overext_ema[i] and closes[i - 1] >= overext_ema[i - 1]
+            return (
+                overext_ema is not None
+                and closes[i] < overext_ema[i]
+                and closes[i - 1] >= overext_ema[i - 1]
+            )
         if mode == "bear_div":
             if overext_div is None or np.isnan(overext_div[i]):
                 return False
@@ -1763,13 +1945,13 @@ def _run_symbol(
     entry_fill = 0.0
     peak_high = 0.0  # highest high since entry — drives the trailing give-back stop
     pop_evaluated = False  # strength-gated pop lock: classified weak/strong yet?
-    pop_is_weak = False    # True => this position pops weakly -> tight trail
+    pop_is_weak = False  # True => this position pops weakly -> tight trail
     overext_armed = False  # overext->tight-trail: once extended, ride with a tight give-back band
-    last_loss_exit_idx = -10**9  # re-entry cooldown: bar of the last LOSING exit on this symbol
-    last_exit_idx = -10**9       # re-entry premium cap: bar of the last exit (any reason)
+    last_loss_exit_idx = -(10**9)  # re-entry cooldown: bar of the last LOSING exit on this symbol
+    last_exit_idx = -(10**9)  # re-entry premium cap: bar of the last exit (any reason)
     last_exit_price: float | None = None  # fill price of that last exit
-    last_exit_reason: str | None = None    # resumption re-entry: reason of the last exit
-    last_new_high_idx = -10**9   # stale exit: bar of the most recent new peak high (this trade)
+    last_exit_reason: str | None = None  # resumption re-entry: reason of the last exit
+    last_new_high_idx = -(10**9)  # stale exit: bar of the most recent new peak high (this trade)
 
     # Determine loop boundary based on entry fill type
     loop_limit = n if cfg.entry_bar_fill_type == "close_same" else n - 1
@@ -1785,66 +1967,70 @@ def _run_symbol(
             # the core's patient limit; W3-A4: capture 89%, +10.6%/21bar, false-fill 41% vs
             # 86% for raw -2% limits). Respects the loss cooldown like the core path; the
             # market gates are not applied (mirror of resume_reentry — react, not predict).
-            if (cfg.entry_bchannel_z is not None and bot_z is not None
-                    and i >= cfg.entry_bchannel_break_lookback and i < n - 1
-                    and not np.isnan(bot_z[i])
-                    and float(bot_z[i]) >= cfg.entry_bchannel_z
-                    and closes[i] > float(highs[i - cfg.entry_bchannel_break_lookback:i].max())
-                    and (bch_ma is None or closes[i] < bch_ma[i])
-                    and (cfg.reentry_cooldown_bars <= 0
-                         or i - last_loss_exit_idx >= cfg.reentry_cooldown_bars)):
+            if (
+                cfg.entry_bchannel_z is not None
+                and bot_z is not None
+                and i >= cfg.entry_bchannel_break_lookback
+                and i < n - 1
+                and not np.isnan(bot_z[i])
+                and float(bot_z[i]) >= cfg.entry_bchannel_z
+                and closes[i] > float(highs[i - cfg.entry_bchannel_break_lookback : i].max())
+                and (bch_ma is None or closes[i] < bch_ma[i])
+                and (
+                    cfg.reentry_cooldown_bars <= 0
+                    or i - last_loss_exit_idx >= cfg.reentry_cooldown_bars
+                )
+            ):
                 entry_signal_idx = i
                 entry_idx = i + 1
                 entry_fill = cfg.cost.fill_buy(closes[entry_idx])
                 peak_high = float(highs[entry_idx])
                 in_pos = True
                 b_pos = True
-                BCH_ENTRY_LOG.append({
-                    "symbol": sym,
-                    "signal_date": pd.Timestamp(dates[i]),
-                    "entry_date": pd.Timestamp(dates[entry_idx]),
-                })
+                BCH_ENTRY_LOG.append(
+                    {
+                        "symbol": sym,
+                        "signal_date": pd.Timestamp(dates[i]),
+                        "entry_date": pd.Timestamp(dates[entry_idx]),
+                    }
+                )
                 i = entry_idx
                 continue
             if sig > 0:
                 # Market-regime entry gate: don't open new risk into a market washout
                 # (the per-symbol model is blind to the tape; buys into a falling market
                 # are low-WR). Causal — market_weak_dates uses data up to the signal bar.
-                if (
-                    market_weak_dates is not None
-                    and pd.Timestamp(dates[i]) in market_weak_dates
-                ):
+                if market_weak_dates is not None and pd.Timestamp(dates[i]) in market_weak_dates:
                     i += 1
                     continue
                 # Market-chop entry gate: skip new entries while the tape is whippy/directionless
                 # (low trend efficiency) — the fast-fail churn regime the per-symbol head is blind to.
-                if (
-                    market_chop_dates is not None
-                    and pd.Timestamp(dates[i]) in market_chop_dates
-                ):
+                if market_chop_dates is not None and pd.Timestamp(dates[i]) in market_chop_dates:
                     i += 1
                     continue
                 # Re-entry cooldown: skip a buy too soon after a losing exit (anti-whipsaw).
-                if cfg.reentry_cooldown_bars > 0 and i - last_loss_exit_idx < cfg.reentry_cooldown_bars:
+                if (
+                    cfg.reentry_cooldown_bars > 0
+                    and i - last_loss_exit_idx < cfg.reentry_cooldown_bars
+                ):
                     i += 1
                     continue
                 # Re-entry premium cap for AT-MARKET fills (no pullback wait): skip a gap-up chase
                 # of the same name within the window. The pullback path caps its limit instead.
-                if (cfg.reentry_max_premium_pct is not None and last_exit_price is not None
-                        and cfg.entry_pullback_pct is None
-                        and i - last_exit_idx <= cfg.reentry_max_premium_bars
-                        and closes[i] > last_exit_price * (1.0 + cfg.reentry_max_premium_pct)):
+                if (
+                    cfg.reentry_max_premium_pct is not None
+                    and last_exit_price is not None
+                    and cfg.entry_pullback_pct is None
+                    and i - last_exit_idx <= cfg.reentry_max_premium_bars
+                    and closes[i] > last_exit_price * (1.0 + cfg.reentry_max_premium_pct)
+                ):
                     i += 1
                     continue
                 entry_signal_idx = i
                 b_pos = False  # core-channel entry (any fill path below)
                 _skip_pb = (
-                    cfg.downtrend_skip_pullback
-                    and downtrend_arr is not None
-                    and downtrend_arr[i]
-                ) or (
-                    strength_skip_arr is not None and strength_skip_arr[i]
-                )
+                    cfg.downtrend_skip_pullback and downtrend_arr is not None and downtrend_arr[i]
+                ) or (strength_skip_arr is not None and strength_skip_arr[i])
                 if cfg.entry_pullback_pct is not None and not _skip_pb:
                     # Patient limit fill: wait for a pullback to close[i]*(1-pct) within window;
                     # skip the signal if price never trades down to it (don't chase the runaway).
@@ -1861,21 +2047,24 @@ def _run_symbol(
                     # WEEKLY-DOWN deepen: knives concentrate where the weekly trend is not up — demand
                     # a deeper buffer there (knife fills lower / skips); weekly-up keeps normal depth.
                     if pb_wk_down is not None and bool(pb_wk_down[i]):
-                        _depth = _depth * min(1.0 + cfg.entry_pullback_wk_deepen_k,
-                                              cfg.entry_pullback_wk_deepen_cap)
+                        _depth = _depth * min(
+                            1.0 + cfg.entry_pullback_wk_deepen_k, cfg.entry_pullback_wk_deepen_cap
+                        )
                     # BOTTOM-deepen: a PRE-sided bottom head (score6) anticipating a bottom DEEPENS the
                     # required pullback so the fill lands nearer the true low (enter the same trade
                     # cheaper). Conditioned -> the deeper limit is the level price is expected to reach.
-                    if (cfg.bot_deepen_k is not None and bot is not None and not np.isnan(bot[i])):
-                        _depth = _depth * float(np.clip(
-                            1.0 + cfg.bot_deepen_k * bot[i], 1.0, cfg.bot_deepen_cap))
+                    if cfg.bot_deepen_k is not None and bot is not None and not np.isnan(bot[i]):
+                        _depth = _depth * float(
+                            np.clip(1.0 + cfg.bot_deepen_k * bot[i], 1.0, cfg.bot_deepen_cap)
+                        )
                     # BOTTOM-shallow: HIGH z(score6) (bottom-structure head) = a genuine wave start
                     # that only dips ~2% — SHRINK the depth so it fills; low z keeps the full
                     # knife-filter depth. After bot_deepen (shrinks the deepened depth if both on).
                     if cfg.bot_shallow_k > 0 and bot_z is not None and not np.isnan(bot_z[i]):
                         _depth = _depth * max(
                             cfg.bot_shallow_floor,
-                            1.0 - cfg.bot_shallow_k * max(float(bot_z[i]), 0.0))
+                            1.0 - cfg.bot_shallow_k * max(float(bot_z[i]), 0.0),
+                        )
                     limit = closes[i] * (1.0 - _depth)
                     # EXP-D: floor the limit at the trend MA so the fill stays above it (the deep
                     # fixed pullback otherwise drags ~half the fills below MA20 = the weak cohort).
@@ -1887,15 +2076,20 @@ def _run_symbol(
                     # clamp <= close[i]. With fill_if_missed, legs that never return to the base still
                     # fill at-market window-end (re-prices fills WITHOUT cutting trades).
                     if pb_struct_low is not None and not np.isnan(pb_struct_low[i]):
-                        struct_price = pb_struct_low[i] * (1.0 + cfg.entry_pullback_structural_buffer)
+                        struct_price = pb_struct_low[i] * (
+                            1.0 + cfg.entry_pullback_structural_buffer
+                        )
                         limit = min(limit, max(struct_price, 0.0))
                         if limit > closes[i]:
                             limit = closes[i]
                     # Re-entry premium cap (anti gap-up-chase): within the window after an exit, force
                     # the limit at/below prior_exit_price*(1+pct) so the wait fills only at a non-chase
                     # price; if price never dips that low the signal is skipped (no chase). Causal.
-                    if (cfg.reentry_max_premium_pct is not None and last_exit_price is not None
-                            and i - last_exit_idx <= cfg.reentry_max_premium_bars):
+                    if (
+                        cfg.reentry_max_premium_pct is not None
+                        and last_exit_price is not None
+                        and i - last_exit_idx <= cfg.reentry_max_premium_bars
+                    ):
                         limit = min(limit, last_exit_price * (1.0 + cfg.reentry_max_premium_pct))
                     j_end = min(i + cfg.entry_pullback_window, n - 1)
                     fill_j = -1
@@ -1912,9 +2106,15 @@ def _run_symbol(
                             break
                     if fill_j < 0:
                         # Hybrid: take the runaway at-market at the window-end close instead of dropping.
-                        if (cfg.entry_pullback_fill_if_missed and j_end > i
-                                and (cfg.fill_if_missed_max_premium is None
-                                     or closes[j_end] <= closes[i] * (1.0 + cfg.fill_if_missed_max_premium))):
+                        if (
+                            cfg.entry_pullback_fill_if_missed
+                            and j_end > i
+                            and (
+                                cfg.fill_if_missed_max_premium is None
+                                or closes[j_end]
+                                <= closes[i] * (1.0 + cfg.fill_if_missed_max_premium)
+                            )
+                        ):
                             entry_idx = j_end
                             entry_fill = cfg.cost.fill_buy(closes[entry_idx])
                             peak_high = float(highs[entry_idx])
@@ -1923,15 +2123,17 @@ def _run_symbol(
                             continue
                         fwd8 = closes[min(i + 8, n - 1)] / closes[i] - 1
                         fwd20 = closes[min(i + 20, n - 1)] / closes[i] - 1
-                        MISSED_SIGNAL_LOG.append({
-                            "symbol": sym,
-                            "signal_date": pd.Timestamp(dates[i]),
-                            "signal_close": float(closes[i]),
-                            "limit_price": float(limit),
-                            "pullback_depth": float(_depth),
-                            "fwd8d_return": float(fwd8),
-                            "fwd20d_return": float(fwd20),
-                        })
+                        MISSED_SIGNAL_LOG.append(
+                            {
+                                "symbol": sym,
+                                "signal_date": pd.Timestamp(dates[i]),
+                                "signal_close": float(closes[i]),
+                                "limit_price": float(limit),
+                                "pullback_depth": float(_depth),
+                                "fwd8d_return": float(fwd8),
+                                "fwd20d_return": float(fwd20),
+                            }
+                        )
                         i += 1  # missed — never pulled back; skip this signal
                         continue
                     entry_idx = fill_j
@@ -1968,15 +2170,19 @@ def _run_symbol(
             # RESUMPTION RE-ENTRY (no fresh signal needed): after a trailing exit, if the trend
             # reasserts (close breaks back above the exit bar's high) within the window, re-enter
             # AT-MARKET — recover the continuation the trail handed back. React, not predict.
-            if (cfg.resume_reentry_win is not None
-                    and last_exit_reason in ("overext_trail", "trailing_stop")
-                    and 0 <= last_exit_idx < n
-                    and 1 <= i - last_exit_idx <= cfg.resume_reentry_win
-                    and closes[i] > highs[last_exit_idx]
-                    and closes[i] <= highs[last_exit_idx] * (1.0 + cfg.resume_reentry_max_premium)
-                    and (cfg.reentry_cooldown_bars <= 0
-                         or i - last_loss_exit_idx >= cfg.reentry_cooldown_bars)
-                    and i < n - 1):
+            if (
+                cfg.resume_reentry_win is not None
+                and last_exit_reason in ("overext_trail", "trailing_stop")
+                and 0 <= last_exit_idx < n
+                and 1 <= i - last_exit_idx <= cfg.resume_reentry_win
+                and closes[i] > highs[last_exit_idx]
+                and closes[i] <= highs[last_exit_idx] * (1.0 + cfg.resume_reentry_max_premium)
+                and (
+                    cfg.reentry_cooldown_bars <= 0
+                    or i - last_loss_exit_idx >= cfg.reentry_cooldown_bars
+                )
+                and i < n - 1
+            ):
                 entry_signal_idx = i
                 b_pos = False  # resumption re-entry rides the core machinery
                 entry_idx = i + 1
@@ -1991,40 +2197,54 @@ def _run_symbol(
 
         # In position. Check exit conditions in configured priority order.
         hold_bars = i - entry_idx
-        if last_new_high_idx < entry_idx:           # baseline at entry (stale exit)
+        if last_new_high_idx < entry_idx:  # baseline at entry (stale exit)
             last_new_high_idx = entry_idx
         # Track the running peak high so the trailing stop measures peak-to-current.
         if highs[i] > peak_high:
             peak_high = float(highs[i])
-            last_new_high_idx = i                    # new peak -> reset stale counter
+            last_new_high_idx = i  # new peak -> reset stale counter
         reason: str | None = None
 
         # WR-expression csrank hard stop: cut a PREDICTED-LOSER (high entry-csrank) trade once
         # it drops below the shallow floor — checked ahead of exit_priority, only for the gated
         # cohort, so winners (which barely dip) are untouched. Causal.
-        if (cfg.csr_hard_stop_pct is not None and cfg.csr_hard_stop_threshold is not None
-                and hold_bars >= cfg.min_hold_bars and ecsr is not None
-                and entry_signal_idx >= 0 and not np.isnan(ecsr[entry_signal_idx])
-                and ecsr[entry_signal_idx] >= cfg.csr_hard_stop_threshold
-                and lows[i] / entry_fill - 1.0 <= cfg.csr_hard_stop_pct):
+        if (
+            cfg.csr_hard_stop_pct is not None
+            and cfg.csr_hard_stop_threshold is not None
+            and hold_bars >= cfg.min_hold_bars
+            and ecsr is not None
+            and entry_signal_idx >= 0
+            and not np.isnan(ecsr[entry_signal_idx])
+            and ecsr[entry_signal_idx] >= cfg.csr_hard_stop_threshold
+            and lows[i] / entry_fill - 1.0 <= cfg.csr_hard_stop_pct
+        ):
             reason = "csr_hard_stop"
 
         # Regime-conditional tighter stop: cut a trade ENTERED in a downtrend once it drops
         # below the tight floor (failed bounce) — checked ahead of exit_priority, only for the
         # downtrend cohort, so uptrend trades keep the loose downleg force-gate. Causal.
-        if (reason is None and cfg.downtrend_hard_stop_pct is not None
-                and hold_bars >= cfg.min_hold_bars and downtrend_arr is not None
-                and entry_signal_idx >= 0 and downtrend_arr[entry_signal_idx]
-                and lows[i] / entry_fill - 1.0 <= cfg.downtrend_hard_stop_pct):
+        if (
+            reason is None
+            and cfg.downtrend_hard_stop_pct is not None
+            and hold_bars >= cfg.min_hold_bars
+            and downtrend_arr is not None
+            and entry_signal_idx >= 0
+            and downtrend_arr[entry_signal_idx]
+            and lows[i] / entry_fill - 1.0 <= cfg.downtrend_hard_stop_pct
+        ):
             reason = "downtrend_stop"
 
         # Structural stop (EXP-3 pattern-anchored buffer): exit if price breaks the pre-entry swing
         # low — the consolidation/base support that supplies the price buffer a waited-for dip gives.
         # Per-trade loss is capped at (entry - support)/entry. Checked ahead of exit_priority. Causal.
-        if (reason is None and cfg.structural_stop_lookback is not None
-                and hold_bars >= cfg.min_hold_bars and entry_signal_idx >= 0):
+        if (
+            reason is None
+            and cfg.structural_stop_lookback is not None
+            and hold_bars >= cfg.min_hold_bars
+            and entry_signal_idx >= 0
+        ):
             _lo0 = max(0, entry_signal_idx - cfg.structural_stop_lookback + 1)
-            _support = float(lows[_lo0:entry_signal_idx + 1].min())
+            _support = float(lows[_lo0 : entry_signal_idx + 1].min())
             if lows[i] <= _support * (1.0 - cfg.structural_stop_buffer):
                 reason = "structural_stop"
 
@@ -2032,43 +2252,69 @@ def _run_symbol(
         # core-channel pullback buffer — exit when the low breaks the pre-trigger structural
         # low (min low over stop_lookback bars ending at the trigger bar). Next-bar close
         # fill like the other stops. Only for B-channel positions; reason 'bch_stop'.
-        if (reason is None and b_pos and cfg.entry_bchannel_stop_lookback is not None
-                and hold_bars >= cfg.min_hold_bars and entry_signal_idx >= 0):
+        if (
+            reason is None
+            and b_pos
+            and cfg.entry_bchannel_stop_lookback is not None
+            and hold_bars >= cfg.min_hold_bars
+            and entry_signal_idx >= 0
+        ):
             _blo0 = max(0, entry_signal_idx - cfg.entry_bchannel_stop_lookback + 1)
-            if lows[i] <= float(lows[_blo0:entry_signal_idx + 1].min()):
+            if lows[i] <= float(lows[_blo0 : entry_signal_idx + 1].min()):
                 reason = "bch_stop"
 
         # Vol-adaptive hard stop: cut every name at the SAME ATR distance below entry (constant risk),
         # so the fixed-%% stop stops letting low-vol losers bleed deeper. Checked ahead of exit_priority.
-        if (reason is None and cfg.hard_stop_atr_mult is not None and atr_ratio is not None
-                and hold_bars >= cfg.min_hold_bars and entry_signal_idx >= 0
-                and not np.isnan(atr_ratio[entry_signal_idx]) and atr_ratio[entry_signal_idx] > 0
-                and lows[i] / entry_fill - 1.0 <= -cfg.hard_stop_atr_mult * atr_ratio[entry_signal_idx]):
+        if (
+            reason is None
+            and cfg.hard_stop_atr_mult is not None
+            and atr_ratio is not None
+            and hold_bars >= cfg.min_hold_bars
+            and entry_signal_idx >= 0
+            and not np.isnan(atr_ratio[entry_signal_idx])
+            and atr_ratio[entry_signal_idx] > 0
+            and lows[i] / entry_fill - 1.0 <= -cfg.hard_stop_atr_mult * atr_ratio[entry_signal_idx]
+        ):
             reason = "atr_stop"
 
         # Breakeven lock (non-selection RIDE mechanic): once peak gain proved >= breakeven_lock_mfe,
         # floor the trade at entry*(1+offset) — cut the winner-round-trip-to-loss cohort without
         # clipping runners (which stay well above the floor). Checked ahead of exit_priority. Causal.
-        if (reason is None and cfg.breakeven_lock_mfe is not None
-                and hold_bars >= cfg.min_hold_bars
-                and peak_high / entry_fill - 1.0 >= cfg.breakeven_lock_mfe
-                and lows[i] <= entry_fill * (1.0 + cfg.breakeven_lock_offset)):
+        if (
+            reason is None
+            and cfg.breakeven_lock_mfe is not None
+            and hold_bars >= cfg.min_hold_bars
+            and peak_high / entry_fill - 1.0 >= cfg.breakeven_lock_mfe
+            and lows[i] <= entry_fill * (1.0 + cfg.breakeven_lock_offset)
+        ):
             reason = "breakeven_lock"
 
         # MACD last-line shield (user 2026-06-18): force an exit on a 3-way decline confirmation
         # (MACD hist<0 AND close<MA AND red bar). Ahead of exit_priority so it bypasses the protect
         # band / market-washout deferral. Catches the du-dinh round-top the velocity head is blind to.
-        if (reason is None and macd_shield_arr is not None
-                and hold_bars >= cfg.min_hold_bars and macd_shield_arr[i]
-                and (cfg.macd_shield_min_gain <= 0.0
-                     or peak_high / entry_fill - 1.0 >= cfg.macd_shield_min_gain)):
+        if (
+            reason is None
+            and macd_shield_arr is not None
+            and hold_bars >= cfg.min_hold_bars
+            and macd_shield_arr[i]
+            and (
+                cfg.macd_shield_min_gain <= 0.0
+                or peak_high / entry_fill - 1.0 >= cfg.macd_shield_min_gain
+            )
+        ):
             reason = "macd_shield"
 
         # RSI-slope last-line shield (research: rsi_slope_5 -0.155 = strongest top-signal). Backstop.
-        if (reason is None and rsi_shield_arr is not None
-                and hold_bars >= cfg.min_hold_bars and rsi_shield_arr[i]
-                and (cfg.rsi_shield_min_gain <= 0.0
-                     or peak_high / entry_fill - 1.0 >= cfg.rsi_shield_min_gain)):
+        if (
+            reason is None
+            and rsi_shield_arr is not None
+            and hold_bars >= cfg.min_hold_bars
+            and rsi_shield_arr[i]
+            and (
+                cfg.rsi_shield_min_gain <= 0.0
+                or peak_high / entry_fill - 1.0 >= cfg.rsi_shield_min_gain
+            )
+        ):
             reason = "rsi_shield"
 
         for exit_rule in cfg.exit_priority:
@@ -2099,9 +2345,13 @@ def _run_symbol(
                         and entry_signal_idx >= 0
                         and not np.isnan(emfe[entry_signal_idx])
                     ):
-                        act_pct = float(np.clip(
-                            cfg.mfe_act_k * emfe[entry_signal_idx],
-                            cfg.mfe_act_floor, cfg.mfe_act_cap))
+                        act_pct = float(
+                            np.clip(
+                                cfg.mfe_act_k * emfe[entry_signal_idx],
+                                cfg.mfe_act_floor,
+                                cfg.mfe_act_cap,
+                            )
+                        )
                     if (
                         cfg.entry_momentum_window > 0
                         and cfg.cold_trailing_stop_pct is not None
@@ -2109,9 +2359,7 @@ def _run_symbol(
                         and closes[entry_idx - cfg.entry_momentum_window] > 0.0
                     ):
                         runup = (
-                            closes[entry_idx]
-                            / closes[entry_idx - cfg.entry_momentum_window]
-                            - 1.0
+                            closes[entry_idx] / closes[entry_idx - cfg.entry_momentum_window] - 1.0
                         )
                         if runup <= cfg.entry_cold_threshold:
                             act_pct = cfg.cold_trailing_activate_pct
@@ -2126,29 +2374,29 @@ def _run_symbol(
                     tier2_ok = True
                     if cfg.tier2_csr_threshold is not None:
                         tier2_ok = (
-                            ecsr is not None and entry_signal_idx >= 0
+                            ecsr is not None
+                            and entry_signal_idx >= 0
                             and not np.isnan(ecsr[entry_signal_idx])
                             and ecsr[entry_signal_idx] >= cfg.tier2_csr_threshold
                         )
-                    if (cfg.trailing_tier2_activate_pct is not None
-                            and cfg.trailing_tier2_stop_pct is not None
-                            and act_pct is not None
-                            and tier2_ok
-                            and cfg.trailing_tier2_activate_pct <= peak_gain < act_pct):
+                    if (
+                        cfg.trailing_tier2_activate_pct is not None
+                        and cfg.trailing_tier2_stop_pct is not None
+                        and act_pct is not None
+                        and tier2_ok
+                        and cfg.trailing_tier2_activate_pct <= peak_gain < act_pct
+                    ):
                         act_pct = cfg.trailing_tier2_activate_pct
                         trail_pct = cfg.trailing_tier2_stop_pct
                         tier2_active = True
                     # Strength-gated pop lock: at the first bar peak-gain crosses the arm level,
                     # classify weak (close barely above short MA) vs strong; weak pops get the
                     # tight trail armed from here, strong pops keep the loose default trail.
-                    if (
-                        cfg.pop_lock_arm_pct is not None
-                        and cfg.pop_lock_trail_pct is not None
-                    ):
+                    if cfg.pop_lock_arm_pct is not None and cfg.pop_lock_trail_pct is not None:
                         if not pop_evaluated and peak_gain >= cfg.pop_lock_arm_pct:
                             w = cfg.pop_lock_ext_window
                             lo_w = max(0, i - w + 1)
-                            ma = closes[lo_w:i + 1].mean()
+                            ma = closes[lo_w : i + 1].mean()
                             ext = closes[i] / ma - 1.0 if ma > 0 else 0.0
                             pop_is_weak = ext < cfg.pop_lock_ext_threshold
                             pop_evaluated = True
@@ -2157,15 +2405,28 @@ def _run_symbol(
                             trail_pct = cfg.pop_lock_trail_pct
                     # Vol-adaptive trail width: scale by the stock's own ATR/close.
                     if atr_ratio is not None and not tier2_active:
-                        trail_pct = float(np.clip(
-                            cfg.trailing_atr_mult * atr_ratio[i],
-                            cfg.trailing_atr_floor, cfg.trailing_atr_cap))
+                        trail_pct = float(
+                            np.clip(
+                                cfg.trailing_atr_mult * atr_ratio[i],
+                                cfg.trailing_atr_floor,
+                                cfg.trailing_atr_cap,
+                            )
+                        )
                     # ML-magnitude modulation: tighten the band when the exit head predicts a
                     # big forward drop (high z), widen it when it predicts calm (low z).
-                    if (xscore_z is not None and trail_pct is not None and not tier2_active
-                            and not np.isnan(xscore_z[i])):
-                        m = float(np.clip(1.0 - cfg.trailing_score_k * xscore_z[i],
-                                          cfg.trailing_score_mult_floor, cfg.trailing_score_mult_cap))
+                    if (
+                        xscore_z is not None
+                        and trail_pct is not None
+                        and not tier2_active
+                        and not np.isnan(xscore_z[i])
+                    ):
+                        m = float(
+                            np.clip(
+                                1.0 - cfg.trailing_score_k * xscore_z[i],
+                                cfg.trailing_score_mult_floor,
+                                cfg.trailing_score_mult_cap,
+                            )
+                        )
                         trail_pct = trail_pct * m
                     armed = act_pct is None or peak_gain >= act_pct
                     exit_reason_trail = "trailing_stop"
@@ -2179,54 +2440,90 @@ def _run_symbol(
                     # combo (IC 0.248 vs realized MFE) — widen for high-combo runners (let them ride
                     # to the 21% MFE they reach), tighten for low-combo (take the 12% sooner). Applies
                     # to whichever band is active (trailing_stop or overext_trail). Causal (entry bar).
-                    if (cfg.trailing_combo_k is not None and combo_arr is not None and trail_pct is not None
-                            and entry_signal_idx >= 0 and not np.isnan(combo_arr[entry_signal_idx])):
-                        mc = float(np.clip(
-                            1.0 + cfg.trailing_combo_k * (combo_arr[entry_signal_idx] - cfg.trailing_combo_mid),
-                            cfg.trailing_combo_floor, cfg.trailing_combo_cap))
+                    if (
+                        cfg.trailing_combo_k is not None
+                        and combo_arr is not None
+                        and trail_pct is not None
+                        and entry_signal_idx >= 0
+                        and not np.isnan(combo_arr[entry_signal_idx])
+                    ):
+                        mc = float(
+                            np.clip(
+                                1.0
+                                + cfg.trailing_combo_k
+                                * (combo_arr[entry_signal_idx] - cfg.trailing_combo_mid),
+                                cfg.trailing_combo_floor,
+                                cfg.trailing_combo_cap,
+                            )
+                        )
                         trail_pct = trail_pct * mc
                     # BOTTOM-ride coupling: a trade entered at a true zigzag bottom (high score6 =
                     # low MAE) rides a WIDER give-back band to a better exit (the entry bought the
                     # MDD budget). Widen only (floor 1.0); low/absent score6 -> no change. Causal.
-                    if (cfg.bot_ride_k is not None and bot is not None and trail_pct is not None
-                            and entry_signal_idx >= 0 and not np.isnan(bot[entry_signal_idx])):
-                        mb = float(np.clip(
-                            1.0 + cfg.bot_ride_k * (bot[entry_signal_idx] - cfg.bot_ride_mid),
-                            cfg.bot_ride_floor, cfg.bot_ride_cap))
+                    if (
+                        cfg.bot_ride_k is not None
+                        and bot is not None
+                        and trail_pct is not None
+                        and entry_signal_idx >= 0
+                        and not np.isnan(bot[entry_signal_idx])
+                    ):
+                        mb = float(
+                            np.clip(
+                                1.0 + cfg.bot_ride_k * (bot[entry_signal_idx] - cfg.bot_ride_mid),
+                                cfg.bot_ride_floor,
+                                cfg.bot_ride_cap,
+                            )
+                        )
                         trail_pct = trail_pct * mb
                     # Trend-intact suppression: hold a healthy-uptrend pullback (price still above a
                     # rising trend MA) instead of trailing out mid-wave; the overext_trail handoff is
                     # exempt. Defers protection to overext / downleg / belowma20.
-                    if (cfg.trailing_skip_above_ma is not None and exit_reason_trail == "trailing_stop"
-                            and trend_up is not None and trend_up[i]):
+                    if (
+                        cfg.trailing_skip_above_ma is not None
+                        and exit_reason_trail == "trailing_stop"
+                        and trend_up is not None
+                        and trend_up[i]
+                    ):
                         armed = False
                     # EXP-C vol-expansion protective arm: a vol spike on an in-profit position arms a
                     # tight give-back band — react to risk MAGNITUDE, not top direction. Overrides the
                     # trend-intact suppression (a vol spike mid-uptrend = the parabolic climax to lock).
                     # The deliberate overext_trail tight ride is left as-is (already protective).
-                    if (cfg.vol_spike_z_threshold is not None and vol_z is not None
-                            and not overext_armed and not np.isnan(vol_z[i])
-                            and vol_z[i] >= cfg.vol_spike_z_threshold
-                            and (peak_high / entry_fill - 1.0) >= cfg.vol_spike_min_gain):
+                    if (
+                        cfg.vol_spike_z_threshold is not None
+                        and vol_z is not None
+                        and not overext_armed
+                        and not np.isnan(vol_z[i])
+                        and vol_z[i] >= cfg.vol_spike_z_threshold
+                        and (peak_high / entry_fill - 1.0) >= cfg.vol_spike_min_gain
+                    ):
                         trail_pct = cfg.vol_spike_trail_pct
                         armed = True
                         exit_reason_trail = "vol_protect"
                     # REALIZABILITY arm: distribution-heavy 20-bar internals on an in-profit position
                     # arm a tight give-back band (round-trippers separate from riders on ad_balance).
-                    if (cfg.dist_arm_neg_thresh is not None and overext_ad_balance is not None
-                            and not overext_armed and not np.isnan(overext_ad_balance[i])
-                            and overext_ad_balance[i] <= cfg.dist_arm_neg_thresh
-                            and (peak_high / entry_fill - 1.0) >= cfg.dist_arm_min_gain):
+                    if (
+                        cfg.dist_arm_neg_thresh is not None
+                        and overext_ad_balance is not None
+                        and not overext_armed
+                        and not np.isnan(overext_ad_balance[i])
+                        and overext_ad_balance[i] <= cfg.dist_arm_neg_thresh
+                        and (peak_high / entry_fill - 1.0) >= cfg.dist_arm_min_gain
+                    ):
                         trail_pct = cfg.dist_arm_trail_pct
                         armed = True
                         exit_reason_trail = "dist_protect"
                     # ML-SWING-TOP arm: the swing-top detector fires (prob>=thr) on an in-profit
                     # position -> arm a tight give-back band to sell near the top (Phase D). The
                     # downleg/overext gate stays the always-on backstop for tops it misses.
-                    if (cfg.ml_swing_trail_thr is not None and swing_prob is not None
-                            and not overext_armed and not np.isnan(swing_prob[i])
-                            and swing_prob[i] >= cfg.ml_swing_trail_thr
-                            and (peak_high / entry_fill - 1.0) >= cfg.ml_swing_min_gain):
+                    if (
+                        cfg.ml_swing_trail_thr is not None
+                        and swing_prob is not None
+                        and not overext_armed
+                        and not np.isnan(swing_prob[i])
+                        and swing_prob[i] >= cfg.ml_swing_trail_thr
+                        and (peak_high / entry_fill - 1.0) >= cfg.ml_swing_min_gain
+                    ):
                         trail_pct = cfg.ml_swing_trail_pct
                         armed = True
                         exit_reason_trail = "ml_swing"
@@ -2235,29 +2532,38 @@ def _run_symbol(
                     # real top is locked faster (cuts LATE_EXIT); a clean trend (low consolidation) keeps
                     # the loose default and rides the pullback (holds SOLD_THEN_RAN). Applies to whatever
                     # band is active (default/overext/vol_protect). Causal.
-                    if (cons_trail is not None and trail_pct is not None
-                            and not np.isnan(cons_trail[i]) and cons_trail[i] >= cfg.trailing_cons_thr):
+                    if (
+                        cons_trail is not None
+                        and trail_pct is not None
+                        and not np.isnan(cons_trail[i])
+                        and cons_trail[i] >= cfg.trailing_cons_thr
+                    ):
                         trail_pct = trail_pct * cfg.trailing_cons_tight_mult
                     # TREND-BREAK profit-lock (chartist): an in-profit winner that closes below the
                     # trend MA is locked NOW (don't wait for the lagging %-trail re-arm). Flexible —
                     # only winners (peak gain >= thr); the deliberate overext tight ride is exempt.
-                    if (cfg.trend_break_lock_gain is not None and tb_ma_arr is not None
-                            and not overext_armed
-                            and (peak_high / entry_fill - 1.0) >= cfg.trend_break_lock_gain
-                            and closes[i] < tb_ma_arr[i]):
+                    if (
+                        cfg.trend_break_lock_gain is not None
+                        and tb_ma_arr is not None
+                        and not overext_armed
+                        and (peak_high / entry_fill - 1.0) >= cfg.trend_break_lock_gain
+                        and closes[i] < tb_ma_arr[i]
+                    ):
                         reason = "trend_break"
                         break
                     if armed:
                         # STRUCTURE trail on the DEFAULT tier: exit on a structural break (close <
                         # prior-N-bar low) instead of the fixed %-giveback, so runners ride through
                         # shallow pullbacks. Protective arms (overext/vol/dist) keep their %-band.
-                        _struct_tier = (exit_reason_trail == "trailing_stop"
-                                        or (cfg.trailing_struct_apply_overext
-                                            and exit_reason_trail == "overext_trail"))
+                        _struct_tier = exit_reason_trail == "trailing_stop" or (
+                            cfg.trailing_struct_apply_overext
+                            and exit_reason_trail == "overext_trail"
+                        )
                         if struct_trend_ok is not None and not bool(struct_trend_ok[i]):
-                            _struct_tier = False  # trend weak -> use tight %-trail (exit fader sooner)
-                        if (don_low is not None and _struct_tier
-                                and not np.isnan(don_low[i])):
+                            _struct_tier = (
+                                False  # trend weak -> use tight %-trail (exit fader sooner)
+                            )
+                        if don_low is not None and _struct_tier and not np.isnan(don_low[i]):
                             if closes[i] < don_low[i]:
                                 reason = exit_reason_trail
                                 break
@@ -2289,94 +2595,172 @@ def _run_symbol(
                     # — hold until it stretches K*ATR above its MA (sell the extension, not the mean). The
                     # un-stretched winner then rides toward overext/trail; protective gates still backstop.
                     _hold_k = cfg.signal_exit_hold_ext_atr
-                    if (_hold_k is not None and cfg.signal_exit_hold_volscale
-                            and atr_hold_ratio is not None and not np.isnan(atr_hold_ratio[i])
-                            and atr_hold_ratio[i] > 0):
-                        _hold_k = _hold_k * float(np.clip(
-                            cfg.signal_exit_hold_volscale_ref / atr_hold_ratio[i], 0.5, 2.0))
-                    if (_hold_k is not None and cfg.signal_exit_hold_rs_scale > 0
-                            and rs_vsma_arr is not None):
-                        _hold_k = _hold_k * float(np.clip(
-                            1.0 + cfg.signal_exit_hold_rs_scale * rs_vsma_arr[i], 0.5, 2.0))
-                    if (_hold_k is not None and cfg.signal_exit_hold_mkt_scale > 0
-                            and mkt_trend_arr is not None):
-                        _hold_k = _hold_k * float(np.clip(
-                            1.0 + cfg.signal_exit_hold_mkt_scale * mkt_trend_arr[i], 0.5, 2.0))
-                    if (_hold_k is not None and cfg.signal_exit_hold_legage_scale > 0
-                            and legage_norm_arr is not None):
-                        _hold_k = _hold_k * float(np.clip(
-                            1.0 - cfg.signal_exit_hold_legage_scale * legage_norm_arr[i], 0.5, 2.0))
-                    if (_hold_k is not None and cfg.signal_exit_hold_legamp_scale > 0
-                            and legamp_norm_arr is not None):
-                        _hold_k = _hold_k * float(np.clip(
-                            1.0 + cfg.signal_exit_hold_legamp_scale * legamp_norm_arr[i], 0.5, 2.0))
-                    if (_hold_k is not None and cfg.signal_exit_hold_runscore_scale > 0
-                            and runscore_arr is not None):
-                        _hold_k = _hold_k * float(np.clip(
-                            1.0 + cfg.signal_exit_hold_runscore_scale * runscore_arr[i], 0.5, 2.0))
-                    if (cfg.signal_exit_hold_ext_atr is not None and ext_atr_hold is not None
-                            and closes[i] > entry_fill * (1.0 + cfg.signal_exit_hold_profit_floor)
-                            and not np.isnan(ext_atr_hold[i])
-                            and ext_atr_hold[i] < _hold_k
-                            and hold_trend_ok is not None and hold_trend_ok[i]
-                            and (cfg.signal_exit_hold_min_score3_z is None or (
-                                s3z is not None and not np.isnan(s3z[i])
-                                and s3z[i] >= cfg.signal_exit_hold_min_score3_z))
-                            and (cfg.signal_exit_hold_max_atrpct is None or (
-                                atr_hold_ratio is not None and not np.isnan(atr_hold_ratio[i])
-                                and atr_hold_ratio[i] <= cfg.signal_exit_hold_max_atrpct))):
+                    if (
+                        _hold_k is not None
+                        and cfg.signal_exit_hold_volscale
+                        and atr_hold_ratio is not None
+                        and not np.isnan(atr_hold_ratio[i])
+                        and atr_hold_ratio[i] > 0
+                    ):
+                        _hold_k = _hold_k * float(
+                            np.clip(cfg.signal_exit_hold_volscale_ref / atr_hold_ratio[i], 0.5, 2.0)
+                        )
+                    if (
+                        _hold_k is not None
+                        and cfg.signal_exit_hold_rs_scale > 0
+                        and rs_vsma_arr is not None
+                    ):
+                        _hold_k = _hold_k * float(
+                            np.clip(1.0 + cfg.signal_exit_hold_rs_scale * rs_vsma_arr[i], 0.5, 2.0)
+                        )
+                    if (
+                        _hold_k is not None
+                        and cfg.signal_exit_hold_mkt_scale > 0
+                        and mkt_trend_arr is not None
+                    ):
+                        _hold_k = _hold_k * float(
+                            np.clip(
+                                1.0 + cfg.signal_exit_hold_mkt_scale * mkt_trend_arr[i], 0.5, 2.0
+                            )
+                        )
+                    if (
+                        _hold_k is not None
+                        and cfg.signal_exit_hold_legage_scale > 0
+                        and legage_norm_arr is not None
+                    ):
+                        _hold_k = _hold_k * float(
+                            np.clip(
+                                1.0 - cfg.signal_exit_hold_legage_scale * legage_norm_arr[i],
+                                0.5,
+                                2.0,
+                            )
+                        )
+                    if (
+                        _hold_k is not None
+                        and cfg.signal_exit_hold_legamp_scale > 0
+                        and legamp_norm_arr is not None
+                    ):
+                        _hold_k = _hold_k * float(
+                            np.clip(
+                                1.0 + cfg.signal_exit_hold_legamp_scale * legamp_norm_arr[i],
+                                0.5,
+                                2.0,
+                            )
+                        )
+                    if (
+                        _hold_k is not None
+                        and cfg.signal_exit_hold_runscore_scale > 0
+                        and runscore_arr is not None
+                    ):
+                        _hold_k = _hold_k * float(
+                            np.clip(
+                                1.0 + cfg.signal_exit_hold_runscore_scale * runscore_arr[i],
+                                0.5,
+                                2.0,
+                            )
+                        )
+                    if (
+                        cfg.signal_exit_hold_ext_atr is not None
+                        and ext_atr_hold is not None
+                        and closes[i] > entry_fill * (1.0 + cfg.signal_exit_hold_profit_floor)
+                        and not np.isnan(ext_atr_hold[i])
+                        and ext_atr_hold[i] < _hold_k
+                        and hold_trend_ok is not None
+                        and hold_trend_ok[i]
+                        and (
+                            cfg.signal_exit_hold_min_score3_z is None
+                            or (
+                                s3z is not None
+                                and not np.isnan(s3z[i])
+                                and s3z[i] >= cfg.signal_exit_hold_min_score3_z
+                            )
+                        )
+                        and (
+                            cfg.signal_exit_hold_max_atrpct is None
+                            or (
+                                atr_hold_ratio is not None
+                                and not np.isnan(atr_hold_ratio[i])
+                                and atr_hold_ratio[i] <= cfg.signal_exit_hold_max_atrpct
+                            )
+                        )
+                    ):
                         continue
                     # EXP3 MFE protect band: don't dump a winner mid-give-back in the unprotected
                     # 10-27% MFE zone; defer to trailing/overext/downleg so it can ride to the arm.
-                    if (cfg.signal_exit_protect_lo is not None
-                            and cfg.signal_exit_protect_hi is not None):
+                    if (
+                        cfg.signal_exit_protect_lo is not None
+                        and cfg.signal_exit_protect_hi is not None
+                    ):
                         pg = peak_high / entry_fill - 1.0
                         _tr = trend_up_slow if trend_up_slow is not None else trend_up
-                        if (cfg.signal_exit_protect_lo <= pg < cfg.signal_exit_protect_hi
-                                and (not cfg.signal_exit_protect_require_trend
-                                     or (_tr is not None and _tr[i]))):
+                        if cfg.signal_exit_protect_lo <= pg < cfg.signal_exit_protect_hi and (
+                            not cfg.signal_exit_protect_require_trend
+                            or (_tr is not None and _tr[i])
+                        ):
                             # Early-release escape: a large vol-scaled give-back from the peak overrides
                             # the protect so the already-firing signal exit fires now (catch the down-leg
                             # in a few bars) instead of waiting ~20-30 bars for the slow MA to break.
                             released = False
-                            if (cfg.signal_exit_protect_release_drop_k is not None
-                                    and protect_release_vol is not None and peak_high > 0.0
-                                    and not np.isnan(protect_release_vol[i])):
+                            if (
+                                cfg.signal_exit_protect_release_drop_k is not None
+                                and protect_release_vol is not None
+                                and peak_high > 0.0
+                                and not np.isnan(protect_release_vol[i])
+                            ):
                                 drop_pk = 1.0 - closes[i] / peak_high
                                 _rel_k = cfg.signal_exit_protect_release_drop_k
                                 if cfg.signal_exit_release_rs_scale > 0 and rs_vsma_arr is not None:
-                                    _rel_k = _rel_k * float(np.clip(
-                                        1.0 + cfg.signal_exit_release_rs_scale * rs_vsma_arr[i], 0.5, 2.0))
+                                    _rel_k = _rel_k * float(
+                                        np.clip(
+                                            1.0 + cfg.signal_exit_release_rs_scale * rs_vsma_arr[i],
+                                            0.5,
+                                            2.0,
+                                        )
+                                    )
                                 if drop_pk >= _rel_k * protect_release_vol[i]:
                                     released = True
                             if not released:
                                 continue
                     # EXP3 coherence veto: don't sell while the entry head still says BUY.
-                    if (cfg.signal_exit_skip_if_entry_z is not None and escore_z is not None
-                            and not np.isnan(escore_z[i])
-                            and escore_z[i] >= cfg.signal_exit_skip_if_entry_z):
+                    if (
+                        cfg.signal_exit_skip_if_entry_z is not None
+                        and escore_z is not None
+                        and not np.isnan(escore_z[i])
+                        and escore_z[i] >= cfg.signal_exit_skip_if_entry_z
+                    ):
                         continue
                     # score3 continuation veto: hold while the continuation head still predicts run.
-                    if (cfg.signal_exit_skip_if_score3_z is not None and s3z is not None
-                            and not np.isnan(s3z[i])
-                            and s3z[i] >= cfg.signal_exit_skip_if_score3_z):
+                    if (
+                        cfg.signal_exit_skip_if_score3_z is not None
+                        and s3z is not None
+                        and not np.isnan(s3z[i])
+                        and s3z[i] >= cfg.signal_exit_skip_if_score3_z
+                    ):
                         continue
                     # MARKET-REGIME veto (shakeout_vs_top hard rule): don't sell into a bull-tape
                     # shakeout — while VNINDEX/MA(N) - 1 >= margin (broad uptrend => dip likely
                     # recovers, AUC 0.78), defer to trail/overext/max_hold. Only holds in a BULL
                     # tape so it never rides into a bear-flip; winner_only keeps losers cutting.
-                    if (cfg.signal_exit_skip_if_mkt_above_ma is not None and mkt_skip_arr is not None
-                            and mkt_skip_arr[i] >= cfg.signal_exit_skip_if_mkt_margin
-                            and (not cfg.signal_exit_skip_if_mkt_winner_only or closes[i] > entry_fill)):
+                    if (
+                        cfg.signal_exit_skip_if_mkt_above_ma is not None
+                        and mkt_skip_arr is not None
+                        and mkt_skip_arr[i] >= cfg.signal_exit_skip_if_mkt_margin
+                        and (not cfg.signal_exit_skip_if_mkt_winner_only or closes[i] > entry_fill)
+                    ):
                         continue
                     # SNR runner-extension: in a clean-trend universe regime, let winners ride the
                     # trail instead of dumping on the signal (only when the trade is already a winner).
-                    if (cfg.exit_snr_extend_threshold is not None and market_snr_dates is not None
-                            and peak_high / entry_fill - 1.0 >= cfg.exit_snr_min_gain
-                            and (cfg.exit_snr_defer_min_giveback <= 0.0
-                                 or (peak_high - closes[i]) / entry_fill
-                                 >= cfg.exit_snr_defer_min_giveback)
-                            and pd.Timestamp(dates[i]) in market_snr_dates):
+                    if (
+                        cfg.exit_snr_extend_threshold is not None
+                        and market_snr_dates is not None
+                        and peak_high / entry_fill - 1.0 >= cfg.exit_snr_min_gain
+                        and (
+                            cfg.exit_snr_defer_min_giveback <= 0.0
+                            or (peak_high - closes[i]) / entry_fill
+                            >= cfg.exit_snr_defer_min_giveback
+                        )
+                        and pd.Timestamp(dates[i]) in market_snr_dates
+                    ):
                         continue
                     reason = "signal"
                     break
@@ -2387,7 +2771,7 @@ def _run_symbol(
                 # signal-exit age/market gates by design. Causal (current+past closes only).
                 if cfg.overext_ma_window > 0 and hold_bars >= cfg.min_hold_bars:
                     lo_w = max(0, i - cfg.overext_ma_window + 1)
-                    ma = closes[lo_w:i + 1].mean()
+                    ma = closes[lo_w : i + 1].mean()
                     if ma > 0.0:
                         ext = closes[i] / ma - 1.0
                         trig = ext >= _overext_pct(i) and _overext_rev_ok(i)
@@ -2400,10 +2784,19 @@ def _run_symbol(
                         if trig and cfg.overext_skip_ma_slope_pct is not None:
                             p = i - cfg.overext_skip_lookback
                             if p - cfg.overext_ma_window + 1 >= 0:
-                                ma_prev = closes[max(0, p - cfg.overext_ma_window + 1):p + 1].mean()
-                                if ma_prev > 0.0 and (ma / ma_prev - 1.0) >= cfg.overext_skip_ma_slope_pct:
+                                ma_prev = closes[
+                                    max(0, p - cfg.overext_ma_window + 1) : p + 1
+                                ].mean()
+                                if (
+                                    ma_prev > 0.0
+                                    and (ma / ma_prev - 1.0) >= cfg.overext_skip_ma_slope_pct
+                                ):
                                     trig = False  # strong uptrend -> let the runner run
-                        if trig and market_bull_dates is not None and pd.Timestamp(dates[i]) in market_bull_dates:
+                        if (
+                            trig
+                            and market_bull_dates is not None
+                            and pd.Timestamp(dates[i]) in market_bull_dates
+                        ):
                             trig = False  # strong MARKET bull -> let runners run with the tape
                         if trig:
                             if cfg.overext_trail_pct is not None:
@@ -2419,30 +2812,51 @@ def _run_symbol(
 
         # DEAD-MONEY / STALE exit (lowest priority): an in-profit trade that hasn't made a new high
         # in stale_exit_bars bars is dead money -> free it to lift per-bar. Reactive, causal.
-        if (reason is None and cfg.stale_exit_bars is not None and hold_bars >= cfg.min_hold_bars
-                and (peak_high / entry_fill - 1.0) >= cfg.stale_exit_min_gain
-                and (i - last_new_high_idx) >= cfg.stale_exit_bars):
+        if (
+            reason is None
+            and cfg.stale_exit_bars is not None
+            and hold_bars >= cfg.min_hold_bars
+            and (peak_high / entry_fill - 1.0) >= cfg.stale_exit_min_gain
+            and (i - last_new_high_idx) >= cfg.stale_exit_bars
+        ):
             reason = "stale"
 
         # Conditional TAKE-PROFIT: lock the pop at a per-trade target (resting limit, fills AT target
         # intraday). Target conditioned on the mfe head (score4): low predicted peak -> tight TP, high
         # -> loose (ride). Ahead of the next-bar exit fill so it does not give back the band. Causal.
-        if (reason is None and cfg.take_profit_k is not None and hold_bars >= cfg.min_hold_bars
-                and emfe is not None and entry_signal_idx >= 0
-                and not np.isnan(emfe[entry_signal_idx])):
-            tp_pct = float(np.clip(cfg.take_profit_k * emfe[entry_signal_idx],
-                                   cfg.take_profit_floor, cfg.take_profit_cap))
+        if (
+            reason is None
+            and cfg.take_profit_k is not None
+            and hold_bars >= cfg.min_hold_bars
+            and emfe is not None
+            and entry_signal_idx >= 0
+            and not np.isnan(emfe[entry_signal_idx])
+        ):
+            tp_pct = float(
+                np.clip(
+                    cfg.take_profit_k * emfe[entry_signal_idx],
+                    cfg.take_profit_floor,
+                    cfg.take_profit_cap,
+                )
+            )
             tp_price = entry_fill * (1.0 + tp_pct)
             if highs[i] >= tp_price:
                 exit_fill = cfg.cost.fill_sell(tp_price)
                 gross = exit_fill / entry_fill - 1.0
                 net = gross - cfg.cost.round_trip_cost()
-                trades.append(Trade(
-                    symbol=sym, entry_date=pd.Timestamp(dates[entry_idx]),
-                    entry_price=float(entry_fill), exit_date=pd.Timestamp(dates[i]),
-                    exit_price=float(exit_fill), holding_days=int(i - entry_idx),
-                    pnl_pct=float(net), exit_reason="take_profit",
-                    entry_signal_date=pd.Timestamp(dates[entry_signal_idx])))
+                trades.append(
+                    Trade(
+                        symbol=sym,
+                        entry_date=pd.Timestamp(dates[entry_idx]),
+                        entry_price=float(entry_fill),
+                        exit_date=pd.Timestamp(dates[i]),
+                        exit_price=float(exit_fill),
+                        holding_days=int(i - entry_idx),
+                        pnl_pct=float(net),
+                        exit_reason="take_profit",
+                        entry_signal_date=pd.Timestamp(dates[entry_signal_idx]),
+                    )
+                )
                 in_pos = False
                 pop_evaluated = False
                 pop_is_weak = False
@@ -2457,7 +2871,8 @@ def _run_symbol(
 
         if reason is not None:
             if cfg.exit_rally_pct is not None and (
-                    not cfg.exit_rally_signal_only or reason == "signal"):
+                not cfg.exit_rally_signal_only or reason == "signal"
+            ):
                 # Sell into strength: limit above close[i]; fill when a later HIGH reaches it
                 # within the window, else market-fill at the window-end close (must exit).
                 limit = closes[i] * (1.0 + cfg.exit_rally_pct)
@@ -2667,7 +3082,10 @@ def run_backtest(
         if cfg.entry_market_abs_floor is not None:
             # Union an absolute-drop catch for the sustained bear the adaptive zscore misses.
             market_weak_dates = market_weak_dates | _market_drop_dates(
-                bars, cfg.entry_market_window, cfg.entry_market_abs_floor, "cumret",
+                bars,
+                cfg.entry_market_window,
+                cfg.entry_market_abs_floor,
+                "cumret",
                 cfg.entry_market_z_lookback,
             )
 
@@ -2695,22 +3113,30 @@ def run_backtest(
             bars, cfg.exit_snr_extend_window, cfg.exit_snr_extend_threshold
         )
 
-
     use_xscore = cfg.trailing_score_k is not None and "exit_score" in sig.columns
-    use_escore = ((cfg.signal_exit_skip_if_entry_z is not None or cfg.entry_pullback_conv_head_w > 0)
-                  and "score" in sig.columns)
+    use_escore = (
+        cfg.signal_exit_skip_if_entry_z is not None or cfg.entry_pullback_conv_head_w > 0
+    ) and "score" in sig.columns
     use_ecsr = (
-        (cfg.tier2_csr_threshold is not None or cfg.csr_hard_stop_pct is not None)
-        and "entry_csr" in sig.columns
-    )
-    use_emfe = (cfg.mfe_act_k is not None or cfg.entry_pullback_conv_mfe_w > 0
-                or cfg.take_profit_k is not None) and "score4" in sig.columns
-    use_es3 = (cfg.signal_exit_skip_if_score3_z is not None
-               or cfg.signal_exit_hold_min_score3_z is not None
-               or cfg.entry_pullback_conv_score3_w > 0) and "score3" in sig.columns
+        cfg.tier2_csr_threshold is not None or cfg.csr_hard_stop_pct is not None
+    ) and "entry_csr" in sig.columns
+    use_emfe = (
+        cfg.mfe_act_k is not None
+        or cfg.entry_pullback_conv_mfe_w > 0
+        or cfg.take_profit_k is not None
+    ) and "score4" in sig.columns
+    use_es3 = (
+        cfg.signal_exit_skip_if_score3_z is not None
+        or cfg.signal_exit_hold_min_score3_z is not None
+        or cfg.entry_pullback_conv_score3_w > 0
+    ) and "score3" in sig.columns
     use_swing = cfg.ml_swing_trail_thr is not None and "swing_top_prob" in sig.columns
-    use_bot = (cfg.bot_ride_k is not None or cfg.bot_deepen_k is not None
-               or cfg.bot_shallow_k > 0 or cfg.entry_bchannel_z is not None) and "score6" in sig.columns
+    use_bot = (
+        cfg.bot_ride_k is not None
+        or cfg.bot_deepen_k is not None
+        or cfg.bot_shallow_k > 0
+        or cfg.entry_bchannel_z is not None
+    ) and "score6" in sig.columns
     trades: list[Trade] = []
     for sym, g in bars.groupby("symbol", sort=False):
         g = g.reset_index(drop=True)
@@ -2745,9 +3171,24 @@ def run_backtest(
             bbmap = dict(zip(sym_sig["date"], sym_sig["score6"]))
             bot = g["date"].map(bbmap).to_numpy(dtype=float)
         trades.extend(
-            _run_symbol(str(sym), g, sig_map, cfg, market_drop_dates, market_weak_dates,
-                        market_bull_dates, xscore, escore, ecsr, emfe, market_chop_dates, es3=es3,
-                        market_snr_dates=market_snr_dates, swing_prob=swing_prob, bot=bot)
+            _run_symbol(
+                str(sym),
+                g,
+                sig_map,
+                cfg,
+                market_drop_dates,
+                market_weak_dates,
+                market_bull_dates,
+                xscore,
+                escore,
+                ecsr,
+                emfe,
+                market_chop_dates,
+                es3=es3,
+                market_snr_dates=market_snr_dates,
+                swing_prob=swing_prob,
+                bot=bot,
+            )
         )
     return trades
 
@@ -2760,10 +3201,12 @@ def _market_snr_dates(
     """Causal set of dates the universe is in a clean-TREND (high signal-to-noise) regime.
     SNR = rolling(window) universe-mean return / cross-sectional dispersion of per-symbol window
     returns. High SNR = broad market trending up with low dispersion = winners run. Causal."""
-    piv = bars.pivot_table(index="date", columns="symbol", values="close", aggfunc="last").sort_index()
+    piv = bars.pivot_table(
+        index="date", columns="symbol", values="close", aggfunc="last"
+    ).sort_index()
     rets = piv.pct_change()
-    uni = rets.mean(axis=1).rolling(window).sum()        # universe trend (window return)
-    disp = rets.rolling(window).sum().std(axis=1)         # cross-sectional dispersion (noise)
+    uni = rets.mean(axis=1).rolling(window).sum()  # universe trend (window return)
+    disp = rets.rolling(window).sum().std(axis=1)  # cross-sectional dispersion (noise)
     snr = uni / (disp + 1e-9)
     return set(snr.index[snr >= threshold])
 
@@ -2778,7 +3221,9 @@ def _market_strong_dates(
     """Causal set of dates the EW universe is in a strong UP regime (mirror of _market_drop_dates).
     zscore: window-return z >= threshold; trend: EW index level >= z_lookback-bar SMA*(1+threshold).
     """
-    piv = bars.pivot_table(index="date", columns="symbol", values="close", aggfunc="last").sort_index()
+    piv = bars.pivot_table(
+        index="date", columns="symbol", values="close", aggfunc="last"
+    ).sort_index()
     mret = piv.pct_change().mean(axis=1)
     roll = mret.rolling(window).sum()
     if mode == "zscore":
@@ -2829,9 +3274,7 @@ def _market_drop_dates(
         ma = lvl.rolling(z_lookback).mean()
         return set(lvl.index[lvl <= ma * (1.0 + threshold)])
     if mode != "cumret":
-        raise ValueError(
-            f"market_drop_mode must be 'cumret'|'zscore'|'trend', got {mode!r}"
-        )
+        raise ValueError(f"market_drop_mode must be 'cumret'|'zscore'|'trend', got {mode!r}")
     return set(roll.index[roll <= threshold])
 
 
@@ -2854,10 +3297,9 @@ def _market_chop_dates(
     ).sort_index()
     # Replace inf (a 0/near-0 close poisons the cumprod) and clip extremes, mirroring the
     # EW-index build in _market_drop_dates' caller — without this one bad bar NaNs the whole tail.
-    mret = (piv.pct_change()
-            .replace([np.inf, -np.inf], np.nan)
-            .clip(-0.5, 0.5)
-            .mean(axis=1))  # equal-weight across symbols trading that day
+    mret = (
+        piv.pct_change().replace([np.inf, -np.inf], np.nan).clip(-0.5, 0.5).mean(axis=1)
+    )  # equal-weight across symbols trading that day
     lvl = (1.0 + mret.fillna(0.0)).cumprod()
     direction = (lvl - lvl.shift(window)).abs()
     volatility = lvl.diff().abs().rolling(window).sum()
@@ -2889,4 +3331,3 @@ def trades_to_dataframe(trades: Iterable[Trade]) -> pd.DataFrame:
     df["exit_date"] = pd.to_datetime(df["exit_date"])
     df["entry_signal_date"] = pd.to_datetime(df["entry_signal_date"])
     return df
-

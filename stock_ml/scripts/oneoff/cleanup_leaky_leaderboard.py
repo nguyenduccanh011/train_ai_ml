@@ -48,7 +48,11 @@ def main():
 
     if args.dry_run:
         print("\n[DRY RUN] Would delete these entries:")
-        print(leaky[["bundle", "run_name", "feature_set", "wr", "pf", "composite_score"]].head(20).to_string(index=False))
+        print(
+            leaky[["bundle", "run_name", "feature_set", "wr", "pf", "composite_score"]]
+            .head(20)
+            .to_string(index=False)
+        )
         print(f"\n... and {len(leaky) - 20} more")
         print(f"\nBackup would be saved to: {backup_path}")
         print(f"Clean leaderboard would have {len(clean)} entries")
@@ -82,6 +86,7 @@ def main():
     except Exception as e:
         print(f"ERROR rebuilding leaderboard: {e}")
         import traceback
+
         traceback.print_exc()
         return 1
 

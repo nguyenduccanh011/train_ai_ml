@@ -9,6 +9,7 @@ Run:
   python stock_ml/scripts/rescore_leaderboard.py            # dry-run preview
   python stock_ml/scripts/rescore_leaderboard.py --apply    # write new scores
 """
+
 from __future__ import annotations
 
 import argparse
@@ -26,18 +27,31 @@ from stock_ml.src.evaluation.scoring import calc_metrics, composite_score  # noq
 
 
 async def _load_runs(conn):
-    return (await conn.execute(text(
-        "SELECT run_id, run_name, composite_score, n_symbols FROM leaderboard_runs WHERE superseded=false"
-    ))).all()
+    return (
+        await conn.execute(
+            text(
+                "SELECT run_id, run_name, composite_score, n_symbols FROM leaderboard_runs WHERE superseded=false"
+            )
+        )
+    ).all()
 
 
 async def _load_trades(conn, run_id: str) -> list[dict]:
-    rows = (await conn.execute(text(
-        "SELECT symbol, entry_date, pnl_pct, holding_days FROM run_trades WHERE run_id=:r"
-    ), {"r": run_id})).all()
+    rows = (
+        await conn.execute(
+            text(
+                "SELECT symbol, entry_date, pnl_pct, holding_days FROM run_trades WHERE run_id=:r"
+            ),
+            {"r": run_id},
+        )
+    ).all()
     return [
-        {"symbol": r.symbol, "entry_date": str(r.entry_date),
-         "pnl_pct": float(r.pnl_pct), "holding_days": int(r.holding_days or 0)}
+        {
+            "symbol": r.symbol,
+            "entry_date": str(r.entry_date),
+            "pnl_pct": float(r.pnl_pct),
+            "holding_days": int(r.holding_days or 0),
+        }
         for r in rows
     ]
 
@@ -60,8 +74,18 @@ async def main() -> None:
             metrics = calc_metrics(trades)
             metrics["n_symbols"] = int(r.n_symbols or 0)  # universe size → confidence target
             new = composite_score(metrics, trades)
-            results.append((r.run_id, r.run_name, r.composite_score, new, metrics["avg_pnl"],
-                            metrics["trades"], metrics["avg_hold"], metrics["total_pnl"]))
+            results.append(
+                (
+                    r.run_id,
+                    r.run_name,
+                    r.composite_score,
+                    new,
+                    metrics["avg_pnl"],
+                    metrics["trades"],
+                    metrics["avg_hold"],
+                    metrics["total_pnl"],
+                )
+            )
 
         if args.apply:
             for run_id, _, _, new, *_ in results:
@@ -75,11 +99,13 @@ async def main() -> None:
 
     results.sort(key=lambda x: -x[3])
     mode = "APPLIED" if args.apply else "DRY-RUN"
-    print(f"[{mode}] rescored {len(results)} runs ({skipped} skipped, no trades). "
-          f"Top {args.top} by NEW composite:\n")
+    print(
+        f"[{mode}] rescored {len(results)} runs ({skipped} skipped, no trades). "
+        f"Top {args.top} by NEW composite:\n"
+    )
     print(f"{'run':30} {'trd':>5} {'hold':>5} {'totpnl':>7} {'OLD':>7} {'NEW':>7}")
     print("-" * 70)
-    for _, name, old, new, avg_pnl, trd, hold, totpnl in results[:args.top]:
+    for _, name, old, new, avg_pnl, trd, hold, totpnl in results[: args.top]:
         print(f"{name[:30]:30} {trd:5d} {hold:5.1f} {totpnl:7.1f} {old:7.1f} {new:7.1f}")
 
 

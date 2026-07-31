@@ -103,11 +103,19 @@ class ActionOracleTarget:
             n = len(close)
             g = g.copy()
             g[self.target_col] = _action_labels(
-                close, self.pct, self.min_leg_bars, self.min_fwd_leg,
-                self.cut_drawdown, self.entry_min_ret_120, self.entry_confirm_pct,
-                self.cut_struct_ma, self.cut_struct_supp,
-                self.exit_overext_ma, self.exit_overext_pct,
-                self.entry_weekly_ma, self.entry_weekly_lb,
+                close,
+                self.pct,
+                self.min_leg_bars,
+                self.min_fwd_leg,
+                self.cut_drawdown,
+                self.entry_min_ret_120,
+                self.entry_confirm_pct,
+                self.cut_struct_ma,
+                self.cut_struct_supp,
+                self.exit_overext_ma,
+                self.exit_overext_pct,
+                self.entry_weekly_ma,
+                self.entry_weekly_lb,
                 self.inner_swing_pct,
             )
             return g
@@ -182,7 +190,9 @@ def _action_labels(
     # >= exit_overext_pct above it — a more learnable/mean-revertible signal than the precise top.
     oe_ma = None
     if exit_overext_ma is not None:
-        oe_ma = pd.Series(close).rolling(exit_overext_ma, min_periods=exit_overext_ma).mean().to_numpy()
+        oe_ma = (
+            pd.Series(close).rolling(exit_overext_ma, min_periods=exit_overext_ma).mean().to_numpy()
+        )
 
     # MULTI-TIMEFRAME entry gate: a long MA (proxy for the WEEKLY trend, e.g. 50d ~= 10 weeks)
     # that is RISING = the higher timeframe has turned up. Only ENTER a daily bottom when the
@@ -190,7 +200,9 @@ def _action_labels(
     # the weekly). Causal (trailing MA + past slope).
     wk_ma = None
     if entry_weekly_ma is not None:
-        wk_ma = pd.Series(close).rolling(entry_weekly_ma, min_periods=entry_weekly_ma).mean().to_numpy()
+        wk_ma = (
+            pd.Series(close).rolling(entry_weekly_ma, min_periods=entry_weekly_ma).mean().to_numpy()
+        )
 
     # Carve each profitable bottom -> next-peak interval as a holding period.
     for k, (idx, typ) in enumerate(piv):
@@ -208,7 +220,11 @@ def _action_labels(
         if wk_ma is not None:
             if idx < entry_weekly_ma + entry_weekly_lb:
                 continue
-            if np.isnan(wk_ma[idx]) or np.isnan(wk_ma[idx - entry_weekly_lb]) or wk_ma[idx] <= wk_ma[idx - entry_weekly_lb]:
+            if (
+                np.isnan(wk_ma[idx])
+                or np.isnan(wk_ma[idx - entry_weekly_lb])
+                or wk_ma[idx] <= wk_ma[idx - entry_weekly_lb]
+            ):
                 continue
         peak_idx = piv[k + 1][0]  # pivots alternate, so the next pivot is the peak
         # ENTRY CONFIRMATION: optionally wait for price to reclaim entry_confirm_pct above
@@ -228,14 +244,17 @@ def _action_labels(
         exit_idx = peak_idx
         if oe_ma is not None:
             for j in range(enter_idx + 1, peak_idx + 1):
-                if (not np.isnan(oe_ma[j]) and oe_ma[j] > 0
-                        and close[j] / oe_ma[j] - 1.0 >= exit_overext_pct):
+                if (
+                    not np.isnan(oe_ma[j])
+                    and oe_ma[j] > 0
+                    and close[j] / oe_ma[j] - 1.0 >= exit_overext_pct
+                ):
                     exit_idx = j
                     break
         # INNER SUB-SWING decomposition: instead of holding the whole leg, trade the internal
         # counter-swings >= inner_swing_pct (sell the sub-peak, re-buy the sub-trough) — kills the
         # buy-and-hold bias that misses the sub-waves. Only with the plain peak-exit (no overext/cut).
-        if (inner_swing_pct > 0 and oe_ma is None and exit_idx == peak_idx):
+        if inner_swing_pct > 0 and oe_ma is None and exit_idx == peak_idx:
             spos = _inner_subtrade_pos(close[enter_idx : exit_idx + 1], inner_swing_pct)
             for k in range(len(spos)):
                 gk = enter_idx + k
@@ -266,7 +285,9 @@ def _action_labels(
             cser = pd.Series(close)
             ma_arr = cser.rolling(cut_struct_ma, min_periods=cut_struct_ma).mean().to_numpy()
             # trailing support = min close over the prior cut_struct_supp bars (shifted, causal)
-            supp_arr = cser.rolling(cut_struct_supp, min_periods=cut_struct_supp).min().shift(1).to_numpy()
+            supp_arr = (
+                cser.rolling(cut_struct_supp, min_periods=cut_struct_supp).min().shift(1).to_numpy()
+            )
         for k, (idx, typ) in enumerate(piv):
             if typ != "p" or k + 1 >= len(piv):
                 continue
@@ -279,8 +300,12 @@ def _action_labels(
                 if cut_struct_ma is not None:
                     # CONFIRMED structure break: close pierces BOTH the trailing support AND
                     # the MA (trend) — a real breakdown, not a shallow pullback.
-                    if (not np.isnan(supp_arr[j]) and not np.isnan(ma_arr[j])
-                            and close[j] < supp_arr[j] and close[j] < ma_arr[j]):
+                    if (
+                        not np.isnan(supp_arr[j])
+                        and not np.isnan(ma_arr[j])
+                        and close[j] < supp_arr[j]
+                        and close[j] < ma_arr[j]
+                    ):
                         labels[j] = CUT
                 elif floor is not None and close[j] <= floor:
                     labels[j] = CUT

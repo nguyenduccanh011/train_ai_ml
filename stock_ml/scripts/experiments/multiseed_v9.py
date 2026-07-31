@@ -1,7 +1,9 @@
 """Multi-seed v9 nonbull-MA refine candidates vs base 1725 (nb_ma40, 416.0)."""
+
 from __future__ import annotations
 import subprocess, sys
 from pathlib import Path
+
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT))
 from stock_ml.scripts.run_template import run_template_experiment  # noqa: E402
@@ -9,19 +11,37 @@ from stock_ml.scripts.run_template import run_template_experiment  # noqa: E402
 SEEDS = [7, 99, 42]
 CONFIGS = {
     1725: "nb_ma40_base",
-    1728: "ma30", 1729: "ma35", 1730: "ma45",
-    1731: "ma40_p2", 1732: "ma40_nb15", 1733: "ma40_div08",
-    1734: "ma40_sl10", 1735: "ma35_p2",
+    1728: "ma30",
+    1729: "ma35",
+    1730: "ma45",
+    1731: "ma40_p2",
+    1732: "ma40_nb15",
+    1733: "ma40_div08",
+    1734: "ma40_sl10",
+    1735: "ma35_p2",
 }
 
 
 def read_comp(run_id: str):
     out = subprocess.run(
-        ["docker", "exec", "stock-ml-postgres", "psql", "-U", "stockml", "-d", "stockml",
-         "-t", "-A", "-c",
-         f"SELECT round(composite_score::numeric,1)||'/'||trades||'/'||round(total_pnl::numeric,1) "
-         f"FROM leaderboard_runs WHERE run_id='{run_id}'"],
-        capture_output=True, text=True)
+        [
+            "docker",
+            "exec",
+            "stock-ml-postgres",
+            "psql",
+            "-U",
+            "stockml",
+            "-d",
+            "stockml",
+            "-t",
+            "-A",
+            "-c",
+            f"SELECT round(composite_score::numeric,1)||'/'||trades||'/'||round(total_pnl::numeric,1) "
+            f"FROM leaderboard_runs WHERE run_id='{run_id}'",
+        ],
+        capture_output=True,
+        text=True,
+    )
     return out.stdout.strip()
 
 

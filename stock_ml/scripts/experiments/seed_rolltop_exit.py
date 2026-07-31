@@ -9,9 +9,11 @@ and overext_skip_ma_slope_pct set (skip when the MA is still rising fast = stron
 let the runner run). overext runs BEFORE signal in exit_priority, so it replaces the late
 signal exit at these tops with an earlier rollover sell. Sweep pct x slope-skip x MA window.
 """
+
 from __future__ import annotations
 import asyncio, copy, json, sys
 from pathlib import Path
+
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT))
 from sqlalchemy.ext.asyncio import AsyncSession  # noqa: E402
@@ -22,17 +24,52 @@ from stock_ml.db.repositories.template_repo import StrategyTemplateRepository  #
 BASE = 1327
 # (name, overext overrides) — keep everything else (incl. the +14% overext is replaced)
 GRID = [
-    ("n2_af04_rt08_sk04", {"overext_pct": 0.08, "overext_reversal": True,
-                           "overext_skip_ma_slope_pct": 0.04, "overext_skip_lookback": 5}),
-    ("n2_af04_rt06_sk04", {"overext_pct": 0.06, "overext_reversal": True,
-                           "overext_skip_ma_slope_pct": 0.04, "overext_skip_lookback": 5}),
-    ("n2_af04_rt08_sk025", {"overext_pct": 0.08, "overext_reversal": True,
-                            "overext_skip_ma_slope_pct": 0.025, "overext_skip_lookback": 5}),
-    ("n2_af04_rt10_sk04", {"overext_pct": 0.10, "overext_reversal": True,
-                           "overext_skip_ma_slope_pct": 0.04, "overext_skip_lookback": 5}),
-    ("n2_af04_rt08_sk04_m10", {"overext_pct": 0.08, "overext_reversal": True,
-                               "overext_ma_window": 10, "overext_skip_ma_slope_pct": 0.04,
-                               "overext_skip_lookback": 5}),
+    (
+        "n2_af04_rt08_sk04",
+        {
+            "overext_pct": 0.08,
+            "overext_reversal": True,
+            "overext_skip_ma_slope_pct": 0.04,
+            "overext_skip_lookback": 5,
+        },
+    ),
+    (
+        "n2_af04_rt06_sk04",
+        {
+            "overext_pct": 0.06,
+            "overext_reversal": True,
+            "overext_skip_ma_slope_pct": 0.04,
+            "overext_skip_lookback": 5,
+        },
+    ),
+    (
+        "n2_af04_rt08_sk025",
+        {
+            "overext_pct": 0.08,
+            "overext_reversal": True,
+            "overext_skip_ma_slope_pct": 0.025,
+            "overext_skip_lookback": 5,
+        },
+    ),
+    (
+        "n2_af04_rt10_sk04",
+        {
+            "overext_pct": 0.10,
+            "overext_reversal": True,
+            "overext_skip_ma_slope_pct": 0.04,
+            "overext_skip_lookback": 5,
+        },
+    ),
+    (
+        "n2_af04_rt08_sk04_m10",
+        {
+            "overext_pct": 0.08,
+            "overext_reversal": True,
+            "overext_ma_window": 10,
+            "overext_skip_ma_slope_pct": 0.04,
+            "overext_skip_lookback": 5,
+        },
+    ),
     ("n2_af04_rt08_noskip", {"overext_pct": 0.08, "overext_reversal": True}),
 ]
 
@@ -55,27 +92,49 @@ async def main():
         for name, ov in GRID:
             ex = await repo.get_by_name(name)
             if ex:
-                print(f"= {name} ({ex.id})"); created.append((ex.id, name)); continue
-            eng = copy.deepcopy(be); eng.update(ov)
+                print(f"= {name} ({ex.id})")
+                created.append((ex.id, name))
+                continue
+            eng = copy.deepcopy(be)
+            eng.update(ov)
             slots = [
-                {"slot_type": "entry", "ml_component_id": es.ml_component_id, "rule_component_id": None,
-                 "feature_set_name": es.feature_set_name, "target_config": tc(es)},
-                {"slot_type": "exit", "ml_component_id": xs.ml_component_id, "rule_component_id": None,
-                 "feature_set_name": xs.feature_set_name, "target_config": tc(xs)},
+                {
+                    "slot_type": "entry",
+                    "ml_component_id": es.ml_component_id,
+                    "rule_component_id": None,
+                    "feature_set_name": es.feature_set_name,
+                    "target_config": tc(es),
+                },
+                {
+                    "slot_type": "exit",
+                    "ml_component_id": xs.ml_component_id,
+                    "rule_component_id": None,
+                    "feature_set_name": xs.feature_set_name,
+                    "target_config": tc(xs),
+                },
             ]
             tmpl = await repo.create(
-                name=name, market=base.market, strategy=base.strategy,
-                feature_set_id=base.feature_set_id, target_id=base.target_id,
-                component_slots=copy.deepcopy(slots), direction=base.direction,
-                signal_mode=base.signal_mode, signal_threshold=base.signal_threshold,
-                entry_threshold=base.entry_threshold, exit_threshold=base.exit_threshold,
-                split_config=base.split_config, engine_config=eng,
-                validation_config=base.validation_config, seed=base.seed,
+                name=name,
+                market=base.market,
+                strategy=base.strategy,
+                feature_set_id=base.feature_set_id,
+                target_id=base.target_id,
+                component_slots=copy.deepcopy(slots),
+                direction=base.direction,
+                signal_mode=base.signal_mode,
+                signal_threshold=base.signal_threshold,
+                entry_threshold=base.entry_threshold,
+                exit_threshold=base.exit_threshold,
+                split_config=base.split_config,
+                engine_config=eng,
+                validation_config=base.validation_config,
+                seed=base.seed,
                 description=f"rolling-top reversal exit: {ov}; base {BASE}.",
                 hypothesis="Catch <14%-ext rolling tops on a reversal bar (skip strong trends) -> capture 104u giveback, beat 404.3.",
                 universe_slug=base.universe_slug,
             )
-            print(f"* {name} ({tmpl.id})"); created.append((tmpl.id, name))
+            print(f"* {name} ({tmpl.id})")
+            created.append((tmpl.id, name))
         await session.commit()
         print("IDS=" + ",".join(str(t) for t, _ in created))
     await async_engine.dispose()

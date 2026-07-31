@@ -46,7 +46,9 @@ def upgrade() -> None:
         sa.Column("cash", sa.Double(), nullable=True),
         sa.Column("exposure", sa.Double(), nullable=True),
         sa.Column("n_positions", sa.Integer(), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+        ),
     )
     op.create_index("ix_run_equity_run_date", "run_equity", ["run_id", "date"])
 
@@ -70,7 +72,9 @@ def upgrade() -> None:
         sa.Column("is_exit", sa.Boolean(), nullable=True),
         sa.Column("exit_reason", sa.String(length=32), nullable=True),
         sa.Column("conv", sa.Double(), nullable=True),
-        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
+        sa.Column(
+            "created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()
+        ),
     )
     op.create_index("ix_run_portfolio_daily_run_date", "run_portfolio_daily", ["run_id", "date"])
 

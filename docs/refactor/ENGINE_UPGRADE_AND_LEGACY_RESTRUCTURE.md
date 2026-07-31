@@ -1747,6 +1747,22 @@ Phase 0a** (`PRUNE_BUNDLES=0`, đã đánh dấu XONG bên đó); **serving D4 t
   sản khi copy `env.py`→`utils/env.py`), thay 2 site. Nay `get_results_dir()→stock_ml/results`,
   `resolve_data_dir("../portable_data/x")→repo_root/portable_data/x`. Suite 319/0. (CÒN: xoá cây orphan
   `stock_ml/src/results/cache` 93MB — gộp vào "một results root" §4.5, là data gitignore nên hoãn cùng convergence.)
+- ✅ **§1.6 (phần AN TOÀN) — guard bẫy-bất-đối-xứng + tương tác với env-fix.** Env-fix ở trên (`get_results_dir`
+  nay trỏ `stock_ml/results`) đã **sửa NỬA "nguồn referenced" của §1.6**: GC nay quét `stock_ml/results/experiments`
+  (TỒN TẠI, có `v22/predictions_meta.json`) thay vì `stock_ml/src/results/experiments` (vắng) ⇒ referenced hết rỗng.
+  **An toàn xác nhận:** cả 3 caller `sweep()` đều dry-run mặc định (`cache.py:39` cứng `dry_run=True`; `api_server
+  /api/gc/sweep` + `cache_gc --apply` gated explicit) ⇒ env-fix KHÔNG tự quarantine gì. Thêm **guard §1.6** (doc-mandate
+  "referenced rỗng thành lỗi cứng"): `sweep()` nay **raise** khi `not dry_run and orphans and referenced rỗng` — chặn
+  thảm hoạ "quarantine cả cache" nếu experiments dir mất/di chuyển. +1 test. Suite **320/0**.
+- ⏳ **§1.6 (phần NGUY HIỂM — HOÃN, cần thiết kế store-attribution):** glob `find_feature_cache_files` `*/*` tìm cache
+  kiểu-cũ `features/<set>/<key>.parquet` (41 file/8.75MB) nhưng MÙ với **FeatureStore** `features/store/<expr_hash>/
+  <ver>.parquet` (bulk ~51GB, sâu 1 cấp, key = expr_hash KHÁC hệ `cache_keys.features`). Sửa glob để gồm `store/**`
+  = 14.476 file bỗng "orphan" vì referenced (key cũ) không map key store ⇒ **bẫy thật**. Cần: thiết kế attribution
+  store→run (hoặc quyết định store do FeatureStore tự quản, GC KHÔNG đụng) + sửa test đang bảo-chứng-layout-cũ. Chưa làm.
+- ⏳ **§4.7 FeatureCacheManager — vẫn gated sau §1.6-đầy-đủ.** Đã verify: `feature_cache.py` (229 dòng) = **toàn bộ**
+  class `FeatureCacheManager`, 0 code-importer (chỉ re-export `cache/__init__` + 1 docstring `schema.py:31`); serving
+  KHÔNG import `stock_ml.src.cache`; `garbage_collector.py` cùng package độc lập. Xoá được về mặt kỹ thuật NHƯNG doc
+  gate "sau §1.6" (§1.6 store-fix chưa xong) ⇒ giữ nguyên, xoá cùng lúc dọn `stock_ml/src/results` orphan.
 - ⏳ **§4.5 (phần couple còn lại — HOÃN, cần verify chạy thật):**
   - **Convergence trọn `src.*`→`stock_ml.src.*`** (bỏ double-cache class/module): đòi MỌI entry có repo_root trên
     path (đổi run_template sys.path + convert model_dashboard/data/pipeline…) — thay đổi phối hợp, verify bằng chạy

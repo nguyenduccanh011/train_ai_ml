@@ -185,6 +185,17 @@ def sweep(
         dry_run=dry_run,
     )
 
+    if not dry_run and orphans and not (ref_features or ref_predictions):
+        # §1.6 asymmetric-trap guard: an EMPTY reference set means we failed to attribute
+        # ANY cache to a run (missing/moved experiments dir, or no predictions_meta.json with
+        # cache_keys). Quarantining here would move the ENTIRE cache to _trash. Refuse loudly
+        # instead of silently orphaning everything; the caller must fix the reference source.
+        raise RuntimeError(
+            f"cache-gc refused to APPLY: reference set is empty (no cache_keys found under "
+            f"{experiments_dir}); quarantining now would orphan the entire cache. "
+            f"Fix the referenced-key source before applying."
+        )
+
     if not dry_run and orphans:
         report.quarantined = quarantine(orphans, cache_root)
 

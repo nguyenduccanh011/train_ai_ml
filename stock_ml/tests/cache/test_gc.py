@@ -92,6 +92,24 @@ def test_sweep_apply_quarantines_orphans(tmp_path: Path) -> None:
     assert all(p.exists() for p in report.quarantined)
 
 
+def test_sweep_apply_refuses_when_reference_set_empty(tmp_path: Path) -> None:
+    # §1.6 asymmetric-trap guard: cache present but NO run metadata -> empty reference set.
+    # Applying would orphan the entire cache; sweep must refuse loudly instead.
+    import pytest
+
+    results = tmp_path / "results"
+    cache = results / "cache"
+    _make_feature_cache(cache, "leading", "feat_a")  # no run references it
+
+    with pytest.raises(RuntimeError, match="reference set is empty"):
+        sweep(results, dry_run=False)
+
+    # Dry-run must NOT raise (reporting everything as orphan is informational, not destructive).
+    report = sweep(results, dry_run=True)
+    assert report.orphan_count == 2
+    assert not report.quarantined
+
+
 def test_purge_trash_removes_old_batches(tmp_path: Path) -> None:
     cache = tmp_path / "cache"
     batch = cache / QUARANTINE_DIRNAME / "20200101_000000"

@@ -89,6 +89,37 @@ class RunSkippedModel(Base):
     )
 
 
+class RunTradesOverlayModel(Base):
+    """Stage-2 (portfolio-overlaid) trades — output of stock_ml.portfolio.run_portfolio.
+    Kept SEPARATE from run_trades so run_trades stays BASE-only (engine-level) — the
+    base-vs-output trap is closed at the data layer. conv/prio are the overlay's
+    conviction and meta-priority at entry (NULL for rows migrated from the legacy
+    mixed-provenance era)."""
+
+    __tablename__ = "run_trades_overlay"
+
+    id: Mapped[int] = mapped_column(Integer(), primary_key=True, autoincrement=True)
+    run_id: Mapped[str] = mapped_column(
+        String(512),
+        ForeignKey("leaderboard_runs.run_id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    symbol: Mapped[str] = mapped_column(String(32), nullable=False)
+    entry_date: Mapped[str | None] = mapped_column(Date(), nullable=True)
+    entry_price: Mapped[float | None] = mapped_column(Double(), nullable=True)
+    exit_date: Mapped[str | None] = mapped_column(Date(), nullable=True)
+    exit_price: Mapped[float | None] = mapped_column(Double(), nullable=True)
+    holding_days: Mapped[int | None] = mapped_column(Integer(), nullable=True)
+    pnl_pct: Mapped[float | None] = mapped_column(Double(), nullable=True)
+    exit_reason: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    conv: Mapped[float | None] = mapped_column(Double(), nullable=True)
+    prio: Mapped[float | None] = mapped_column(Double(), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=datetime.now
+    )
+
+
 class RunPendingModel(Base):
     """CAUSAL resting pullback order book: for each date, the buy signals still WAITING to fill (limit at
     close[signal]*(1-pct), within the pullback window, not yet filled, not held). outcome/result_date are

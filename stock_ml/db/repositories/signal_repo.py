@@ -40,8 +40,10 @@ class RunSignalRepository:
         dialect_name = self._session.bind.dialect.name if self._session.bind else None
         insert_fn = pg_insert if dialect_name == "postgresql" else sqlite_insert
 
-        # Chunk to stay under asyncpg's 32767 bind-parameter cap (6 cols/row here).
-        chunk_size = 2000
+        # Chunk to stay under asyncpg's 32767 bind-parameter cap. run_signals inserts 7 cols/row
+        # (run_id, symbol, date, signal, score, exit_score, + on-conflict target) -> 4681 max; 4000
+        # keeps a margin while 2x fewer round-trips than the old 2000 (persist is the bottleneck).
+        chunk_size = 4000
         total = 0
         for start in range(0, len(rows), chunk_size):
             chunk = rows[start : start + chunk_size]

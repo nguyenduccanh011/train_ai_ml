@@ -83,6 +83,10 @@ _intraday_feats.parquet
 bundles/
 whlchk/
 
+# Serving-golden test fixture is committed on purpose (the §11.5.3 "cái cân"): re-include its
+# parquet slice past the blanket *.parquet rule above. Bundle joblib/json/csv are not ignored.
+!stock_ml/tests/fixtures/serving_golden/ohlcv_slice.parquet
+
 # --- Feature / prediction caches ---
 stock_ml/src/results/cache/
 **/results/cache/
@@ -93,6 +97,12 @@ stock_ml/src/results/cache/
 # --- Large regenerable analysis dumps ---
 stock_ml/analysis/**/*_out.txt
 stock_ml/analysis/**/*.csv
+stock_ml/analysis/**/*.out
+stock_ml/analysis/**/*.log
+
+# --- Scratch / derived dumps (not source) ---
+_champ_src/
+results/_univ6/
 
 # golden fixtures are pinned test inputs - must be tracked
 !stock_ml/tests/goldens/fixtures/*.parquet

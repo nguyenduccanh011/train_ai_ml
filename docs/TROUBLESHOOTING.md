@@ -2,6 +2,8 @@
 
 Common issues và solutions.
 
+> 🆕 **Cập nhật 2026-07-31:** DB sống là **PostgreSQL** (`stock-ml-postgres`, port 5433). Lệnh `docker exec … alembic upgrade head` bên dưới chạy TRONG container nên Postgres thắng (đúng). ⚠️ Các lệnh `sqlite3 /app/results/leaderboard.db` chỉ đọc **file SQLite CŨ (rev 0025, lỗi thời)** — KHÔNG phải dữ liệu sống; dùng `psql`/API thay thế. (Bug "alembic tạo nhầm SQLite" chỉ xảy ra khi chạy từ shell HOST thiếu `DATABASE_URL` — xem `ENGINE_UPGRADE_AND_LEGACY_RESTRUCTURE.md` §1.4.)
+
 ## 429 Too Many Requests
 
 **Problem**: API returns 429 when accessing endpoints

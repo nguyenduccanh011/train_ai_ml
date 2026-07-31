@@ -93,7 +93,7 @@ curl -X POST http://localhost/api/v1/templates/ \
 | Service | Port | Purpose |
 |---------|------|---------|
 | API | 8000 | FastAPI endpoints |
-| Database | N/A | SQLite (file-based) |
+| Database | 5433 | PostgreSQL (`stockml`, container `stock-ml-postgres`) |
 | Dashboard | 9001 | Static files (Node) |
 | Nginx | 80 | Proxy + routing |
 

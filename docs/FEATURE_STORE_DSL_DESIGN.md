@@ -3,6 +3,8 @@
 > **Trạng thái**: DONE (đã implement Phase 1–6) — quyết định kiến trúc 2026-06-01.
 > Thay thế hệ thống feature hiện tại đang phân mảnh ở 3 nơi không đồng bộ.
 > Tài liệu này là nguồn chân lý (SoT) cho việc triển khai. Cập nhật `Trạng thái` từng phase khi hoàn thành.
+>
+> 🆕 **Cập nhật 2026-07-31 — HỒ SƠ THIẾT KẾ (đã xong), không phải hướng dẫn vận hành.** SoT thật của feature là `src/features/catalog.py`. ⚠️ Script `seed_features.py` (§3.4, §6 bước 2) **đã mất** — chưa từng được git track, chỉ còn `.pyc`; **mọi lệnh `python -m stock_ml.scripts.seed_features` KHÔNG còn chạy được**. Bảng mirror `feature_def`/`feature_set` là tùy chọn (read-only cho API/UI), không phải bước bắt buộc.
 
 ---
 

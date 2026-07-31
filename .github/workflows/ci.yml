@@ -48,9 +48,7 @@ jobs:
           # Skip heavy ML deps that don't affect type checking
           pip install lightgbm xgboost --no-deps || true
 
-      - name: mypy src/components/
-        run: mypy src/components/ --ignore-missing-imports
-
+      # (src/components/ was removed in the DB-first migration — no longer type-checked.)
       - name: mypy src/pipeline/
         run: mypy src/pipeline/ --ignore-missing-imports
 
@@ -68,11 +66,16 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt -r requirements-dev.txt
 
-      - name: Run unit tests (no regression, no integration)
+      - name: Run unit tests (real tree)
         run: |
-          pytest tests/components/ -q --tb=short \
-            -k "not integration" \
-            --ignore=tests/components/test_legacy_adapter.py
+          # tests/ is the real suite (old path tests/components/ was removed in DB-first migration).
+          # Only two exclusions remain — see ENGINE_UPGRADE §15:
+          #   test_portfolio_engine.py -> tests engine #2 (§10.2; removed WITH the engine in Phase 6)
+          #   test_run_experiment_e2e  -> needs committed data/bundle (integration, not unit)
+          # (model_dashboard, dsl_ops/resolver FIXED; per_slot/loader dead tests DELETED — Phase-2 sweep.)
+          pytest tests/ -q --tb=short \
+            --ignore=tests/execution/test_portfolio_engine.py \
+            --ignore=tests/test_run_experiment_e2e.py
 
   db-migrations:
     name: DB migrations (fresh Postgres)
@@ -114,7 +117,7 @@ jobs:
 
       - name: Schema/leaderboard tests
         env:
-          DATABASE_URL: sqlite:///:memory:
+          DATABASE_URL: "sqlite:///:memory:"
         run: pytest tests/leaderboard/test_schema.py -q --tb=short
 
   test-regression:
@@ -141,6 +144,10 @@ jobs:
           path: stock_ml/tests/regression/golden
           key: golden-${{ hashFiles('stock_ml/tests/regression/golden/checksums.txt') }}
 
-      - name: Run champion hash regression
+      - name: Run snapshot/hash regression
         run: |
-          pytest tests/regression/test_champions.py -q --tb=short
+          # test_serving_golden.py (ENGINE_UPGRADE §11.5.3, Phase 2b) is the no-switch full-chain
+          # "cái cân": the production serving path (load_bundle -> generate_signals_from_bundle) on a
+          # committed self-contained bundle + OHLCV slice, asserting the discrete signal byte-for-byte.
+          # The two *_snapshot tests remain as narrow engine-config/recombine hash guards.
+          pytest tests/test_serving_golden.py tests/test_baseline_snapshot.py tests/test_recombine_snapshot.py -q --tb=short

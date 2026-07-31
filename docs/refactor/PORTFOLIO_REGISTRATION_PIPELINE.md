@@ -4,6 +4,18 @@
 > Module `stock_ml/portfolio` đã là single-source-of-truth cho LOGIC; tài liệu này chuẩn hóa nốt
 > tầng GHI (đăng ký kết quả overlay vào DB) và tầng ĐỌC (tab danh mục) — nơi bẫy base-vs-output
 > vẫn còn sống ở mức dữ liệu. Ngày lập: 2026-07-29.
+>
+> 🆕 **Cập nhật 2026-07-31 — đồng bộ với `ENGINE_UPGRADE_AND_LEGACY_RESTRUCTURE.md` §12/§13/§14.**
+> Doc này (B1/B4/B7 xong; B2/B3/B5 chưa) vẫn là **kế hoạch đúng cho tầng GHI**, nhưng vài tiền đề đã bị
+> vòng-3 vượt — thực thi B2/B3/B5 phải theo các sửa sau:
+> - **`overlay_config_hash` KHÔNG tự băm danh sách field viết tay** (§2 nguyên tắc 2) → rút từ
+>   **`resolved.json`** (§13.2/§14.1): một vật thể, một hash, phủ cả khối `portfolio:`. Hết danh sách tay để lệch.
+> - **Thước NAV = `stock_ml.portfolio`, KHÔNG phải nh_nav2** (Q4/§14.4): `register_overlay.py` chấm bằng
+>   chính module wheel; `score_nav_leaderboard.py` thôi import nh_nav2.
+> - **Bỏ mô hình "tier"** (§12/§14.1): overlay vào **config từng chiến lược**, mỗi chiến lược = 1 `config_hash`
+>   = 1 dòng board. Danh mục chính thức = **10 chiến lược**, không register per-tier rời.
+> - **`leaderboard_nav` cần migration 0030** nâng cả shape 18-cột (§4.1 main doc), không chỉ 0029 ADD một cột.
+> - **Số trong doc (131.4%/123.5%…) có TRƯỚC resync 901-mã + thước cũ** → sẽ re-baseline; đừng coi là hiện hành.
 
 ---
 
@@ -69,6 +81,8 @@ Dashboard mount trực tiếp — chỉ cần Ctrl+F5.
 2. **Overlay phải có danh tính**: mỗi lần đăng ký ghi `overlay_config_hash` = md5(JSON config:
    PortfolioConstants + market_db + ohlcv_db + date_hi + wheel version + base run_id). Idempotent
    như pattern `score_nav_leaderboard` (cùng hash → skip trừ `--force`).
+   ⚠️ **SỬA vòng-3 (§13.2/§14.4):** thay công thức md5-danh-sách-tay này bằng hash rút từ `resolved.json`
+   — một vật thể phủ cả `engine:` + `portfolio:`, hết danh sách field để lệch; thước = `stock_ml.portfolio`.
 3. **Module thuần, writer mỏng**: `stock_ml/portfolio` KHÔNG biết DB. Toàn bộ ghi nằm trong
    1 script ops. Không nhét SQLAlchemy vào wheel.
 4. **Ghi nguyên tử**: mỗi run 1 transaction (delete+insert 4 bảng + update leaderboard_nav).
@@ -154,7 +168,21 @@ migration phải `IF NOT EXISTS`-safe).
   "port đúng" khỏi "khác do panel/data".
 - Sau đó `register_overlay.py --run-id dl63bal --base-run x2_struct_to` (+opt/aggr).
 
-### B7 — (tùy chọn) View theo-mã: tín hiệu ↔ số phận danh mục (0.5 ngày)
+### B7 — View theo-mã: tín hiệu ↔ số phận danh mục — **ĐÃ LÀM 2026-07-29 (trước B1-B2, layer-aware)**
+
+Đã triển khai độc lập với migration (chịu được cả trạng thái pre-B2 lẫn post-B2):
+- `GET /runs/{id}/signal-symbols`: đếm tín hiệu fired per-symbol từ `run_signals` — nguồn
+  sidebar đầy đủ (883 mã vs 792 mã chỉ-có-trades ở `_static900`).
+- `GET /runs/{id}/symbol/{sym}/portfolio-fate`: mỗi tín hiệu buy 1 dòng
+  `became_base_trade / filled / skip_reason`. **Layer-aware theo RUN**: detector
+  `exit_reason IN (preempt, green_trail, early_cut)` → run OUTPUT thì `became_base=null`
+  (base chưa từng lưu), `filled` từ chính run_trades; run BASE thì `filled` từ
+  `run_trades_overlay` (bảng chưa có → null, tự lành sau B1-B3). Guard đếm PASS
+  (`_test_fate_endpoint.py`: signals == no_base + base/filled, 3 ca).
+- UI `model-details.html`: sidebar thêm mã signal-only (badge "0 lệnh · N tín hiệu"),
+  fate strip trên topbar ("N tín hiệu mua → n vào danh mục → bỏ: ..."). API đã rebuild.
+
+Thiết kế gốc (giữ để đối chiếu):
 - Endpoint mới `/runs/{id}/symbol/{sym}/portfolio-fate`: join `run_signals` (signal==1) ×
   `run_trades` BASE (thành setup?) × `run_trades_overlay` (được fill) × `run_skipped` (lý do loại)
   → mỗi tín hiệu 1 dòng: `signal_date, score, became_base_trade, filled, skip_reason`.

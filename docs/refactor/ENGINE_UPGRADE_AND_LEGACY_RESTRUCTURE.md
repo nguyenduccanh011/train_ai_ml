@@ -1773,13 +1773,20 @@ Phase 0a** (`PRUNE_BUNDLES=0`, đã đánh dấu XONG bên đó); **serving D4 t
   ruff sạch, apply live head 0030→**0031** (cột biến mất), ORM round-trip live OK. **CÒN §4.8:** `same_*_as_baseline`
   (6, NULL) + `is_baseline` (0 true) + `fairness_group_key` (populated degenerate, load-bearing dedup) = phần fairness,
   gắn §4.4 (xem dưới).
-- ⏳ **§4.4 fairness-mechanism removal (HOÃN — refactor entangled, unit riêng).** Map đầy đủ (agent): xoá phải phối
-  hợp ~13 file. Khó thật: (a) `fairness.py` trộn fairness-only (annotate_rows/resolve_baseline/load_config) VỚI helper
-  GENERAL (`backtest_window_key`, `resolve_market_family`) dùng cho field không-fairness ⇒ phải EXTRACT helper trước
-  khi xoá module; (b) `fairness_group_key` populated (3 giá trị/3612) + INDEXED + **load-bearing trong `_row_signature`
-  dedup** (aggregator) + `run_repo.get_by_fairness_group` + JS grouping ⇒ xoá đòi rewrite dedup; (c) fair-mode UI 2× JS
-  ĐÃ hỏng sẵn (API không emit field → `=== false` fail-closed) nên xoá = gỡ UI-chết, nhưng là quyết định product. Data
-  toàn chết/degenerate (same_* + is_baseline = 0). Cần làm trọn 1 lượt (doc: nửa-vời tệ hơn cả 2 lựa chọn).
+- ✅ **§4.4 fairness-mechanism removal (BACKEND) — commit `ddd52fbf` + migration 0032.** Data toàn chết: `same_*`
+  NULL 3612/3612, `is_baseline` false all, `fairness_group_key` populated nhưng degenerate (3 giá trị) + KHÔNG emit
+  qua API. Gỡ: **xoá `fairness.py`**, chuyển 3 helper GENERAL (`load_config`/`resolve_market_family`/`backtest_window_key`)
+  vào `loader.py` (consumer duy nhất còn lại); drop 8 field khỏi schema/ORM/adapter/aggregator(CSV+annotate per-market/
+  family+_summary)/`run_repo.get_by_fairness_group`(0 caller); **rewrite `_row_signature` dedup bỏ `fairness_group_key`**
+  (nó là hash của field đã có sẵn trong signature → giữ granularity; chỉ ảnh hưởng CSV rebuild, không phải board DB
+  live); xoá `test_fairness.py` (coverage resolve_market_family đã có ở test_loader) + gỡ field khỏi fixture/golden.
+  **Migration 0032** drop 8 cột + index `idx_runs_fairness_group`. Verify: suite **316/0**, ruff sạch, apply live head
+  0031→**0032**, ORM round-trip live OK.
+- ⏳ **§4.4 fair-mode UI (JS/HTML) — HOÃN (cosmetic, đã-hỏng-sẵn, untested/outward-facing).** `dashboard/leaderboard.js`
+  + `visualization/leaderboard.js` còn nhánh fair-mode (toggle global/fair, `getFairBaselineGroup`, cột `renderFairness`,
+  warnings `same_*===false`, `setScoreMode`) + nút trong 2 HTML. ĐÃ hỏng từ trước (API chưa từng emit field → đọc
+  undefined, fail-closed) ⇒ backend removal KHÔNG mới-làm-hỏng. Gỡ trọn = refactor UI (js+html, ~9 site/file) không có
+  test browser ⇒ tách pass cosmetic riêng, không barrel ở đuôi unit lớn.
 - ⏳ **§4.5 (phần couple còn lại — HOÃN, cần verify chạy thật):**
   - **Convergence trọn `src.*`→`stock_ml.src.*`** (bỏ double-cache class/module): đòi MỌI entry có repo_root trên
     path (đổi run_template sys.path + convert model_dashboard/data/pipeline…) — thay đổi phối hợp, verify bằng chạy

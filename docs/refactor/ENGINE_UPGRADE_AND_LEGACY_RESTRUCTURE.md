@@ -1789,6 +1789,20 @@ Phase 0a** (`PRUNE_BUNDLES=0`, đã đánh dấu XONG bên đó); **serving D4 t
   emit field → undefined fail-closed) nên backend removal không mới-làm-hỏng. Verify: `node --check` OK, 0 ref
   fair/scoreMode/renderFairness còn lại. **CÒN**: bản copy legacy `stock_ml/visualization/leaderboard.{js,html}` (629
   dòng, chỉ `serve.py` chết phục vụ, §4.6) — để cùng §4.6 dead-server cleanup.
+- ✅ **§4.6 dead-server + hợp nhất đường-data board LIVE — commit `a207965d`.** Board LIVE (`dashboard/`) đã DB-first:
+  `detectApi()` ép `apiAvailable=true` ("no JSON fallback") ⇒ toàn bộ nhánh file-based trong `loadData` là **code chết**,
+  và 2 chuỗi lệnh legacy nằm bên trong: banner read-only `python -m stock_ml.scripts.api_server` (`leaderboard.html`)
+  + hint `...build_leaderboard rebuild` (`leaderboard.js`) — cả hai trỏ **hệ CSV cũ** (api_server.py phục vụ
+  `visualization/`, không phải FastAPI phục vụ board). Sửa CHUẨN thay vì vá path: (1) `leaderboard.js` hợp nhất
+  `loadData` về **một đường DB** (gỡ nhánh `else` file-based + ternary `dataPath` + best-effort summary-fetch),
+  gỡ field config chết `apiUrl/dataUrl/summaryUrl/useApi` (chỉ `all` có `dataUrl/summaryUrl`; `apiUrl/useApi` 0-reader vì
+  `loadFromApi` hardcode `/leaderboard?limit=5000`), gỡ biến `summary` write-only (renderStats không đọc), error message
+  hợp nhất `Failed to load {label}: …` (bỏ guidance `build_leaderboard`); (2) `leaderboard.html` banner khởi tạo →
+  `Loading leaderboard…` (`detectApi()` ghi đè "Database mode" ngay khi API sống); (3) **xoá `dashboard/serve.py`** chết
+  (container dùng `http-server` npm, 0 code-importer, chỉ in URL `/visualization/*`). Verify: `node --check` OK,
+  0 ref legacy sót, 47 test api+model_dashboard pass, bản phục vụ qua nginx = bản mới (0 lệnh legacy, banner mới, API 200).
+  **CÒN §4.6:** `docs/API.md` 6 endpoint 404/405 + route `DELETE /api/v1/runs/bulk` trước catch-all (đổi hành-vi API,
+  tách riêng); copy legacy `visualization/leaderboard.{js,html}` (gắn xoá `visualization/` — cần tar backup, §5:385).
 - ⏳ **§4.5 (phần couple còn lại — HOÃN, cần verify chạy thật):**
   - **Convergence trọn `src.*`→`stock_ml.src.*`** (bỏ double-cache class/module): đòi MỌI entry có repo_root trên
     path (đổi run_template sys.path + convert model_dashboard/data/pipeline…) — thay đổi phối hợp, verify bằng chạy

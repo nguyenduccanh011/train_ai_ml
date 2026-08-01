@@ -49,7 +49,7 @@ ON CONFLICT (run_id) DO UPDATE SET
 """
 
 
-def fetch_batch(cur, *, pinned_only, limit, run_like, order_by="composite"):
+def fetch_batch(cur, *, pinned_only, limit, run_like, order_by="composite", only_missing=False):
     q = (
         "SELECT r.run_id FROM leaderboard_runs r "
         "LEFT JOIN leaderboard_nav n ON n.run_id = r.run_id "
@@ -57,6 +57,11 @@ def fetch_batch(cur, *, pinned_only, limit, run_like, order_by="composite"):
         "AND EXISTS (SELECT 1 FROM run_signals s WHERE s.run_id = r.run_id)"
     )
     params: list = []
+    if only_missing:
+        # skip runs that already carry ANY overlay (reference OR official per-strategy) so a
+        # broad backfill fills only the genuinely-empty runs and never churns/errors on the
+        # promoted OUTPUT runs (which keep their own config).
+        q += " AND n.cagr_overlay IS NULL"
     if pinned_only:
         q += " AND r.state = 'pinned'"
     else:
@@ -100,6 +105,9 @@ def main():
     ap.add_argument(
         "--order-by", choices=("composite", "cagr"), default="composite", help="batch ranking"
     )
+    ap.add_argument(
+        "--only-missing", action="store_true", help="batch: skip runs that already have any overlay"
+    )
     ap.add_argument("--force", action="store_true", help="re-score even if same config_hash")
     # per-strategy overlay overrides (default = board reference config)
     ap.add_argument("--k", type=int, default=None)
@@ -134,6 +142,7 @@ def main():
             limit=args.limit,
             run_like=args.run_like,
             order_by=args.order_by,
+            only_missing=args.only_missing,
         )
     print(f"config_hash={cfg_hash} note='{note}' | runs={len(run_ids)}", flush=True)
 

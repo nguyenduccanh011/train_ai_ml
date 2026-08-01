@@ -1855,6 +1855,13 @@ Phase 0a** (`PRUNE_BUNDLES=0`, đã đánh dấu XONG bên đó); **serving D4 t
   dry-run sweep không liệt store là orphan). §4.7: xoá `feature_cache.py` (`FeatureCacheManager` 229 dòng, 0 importer, chỉ
   __init__ re-export; docstring tả layout đã lỗi thời) — __init__ nay trỏ `garbage_collector`. Verify: **318 pass/11 skip** (+2),
   ruff sạch, cache pkg + FastAPI cache routes import OK.
-- ⏳ **CÒN (liên-kết/nguy hiểm):** drop 8 cột chết `leaderboard_runs` = cơ chế **fairness cũ** §4.4 (ripple ORM/adapter/
-  schema/API) · **⚠️ §3 config_hash re-identity** (368M dòng run_signals + 5043 fold dir + sổ tier live — D2 + dry-run
-  bản-sao + checkpoint). Liên quan memory: `phase5-progress-and-identity-danger`.
+- ✅ **§3 guard danh tính upsert — commit `c000421c` (KHÔNG rewrite 368M dòng).** **Premise doc §3 LỖI THỜI:**
+  config_hash nay hash **full cfg dict** (`sha256(json.dumps(cfg, sort_keys))`, run_template.py:354-356), KHÔNG phải
+  "projection 6-key thiếu seed/universe". Đo live: **3612/3612 run_id distinct** (0 mồ côi, 0 collision run_id; 205
+  config_hash trùng run_name = cùng-config-khác-tên, run_id vẫn duy nhất) ⇒ **re-identity phá hủy 368M dòng KHÔNG cần**,
+  rủi ro >> lợi. Chỉ sửa phần **an toàn tiến-tới**: (1) `on_conflict_do_update` loại `state/created_at/superseded` khỏi set
+  (chạy lại config = refresh metrics nhưng KHÔNG reset lifecycle — pinned giữ nguyên); (2) `mark_superseded` bỏ qua
+  `state='pinned'` (không tự động retire một pin). +2 test, 320 pass/11 skip, ruff sạch. `_seed_serving_tiers.py` KHÔNG có
+  trong repo xưởng (ở serving repo riêng) → hardcode-run_id không phải mối lo xưởng. `raw_config` rỗng 0/3612 = cột chết riêng.
+- ⏳ **CÒN:** Phase 4 deploy container (attest PASS + activate 6/6 sổ khách, §14.3) — **outward-facing tới khách, cần go/no-go
+  tường minh**; drop 8 cột chết fairness đã xong ở migration 0032 (§4.4). Liên quan memory: `phase5-progress-and-identity-danger`.

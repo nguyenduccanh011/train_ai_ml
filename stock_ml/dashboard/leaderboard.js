@@ -1,5 +1,5 @@
-// API-aware data URLs - Integrated with FastAPI backend
-// Uses dynamic API_CONFIG from api-config.js
+// Leaderboard data source — always the FastAPI DB endpoint (/api/v1).
+// Base URL comes from api-config.js; falls back to the Nginx-relative path.
 const getApiBase = () => {
   if (window.API_CONFIG && window.API_CONFIG.baseUrl) {
     return window.API_CONFIG.baseUrl;
@@ -8,53 +8,38 @@ const getApiBase = () => {
   return '/api/v1';
 };
 
+// Per-market client-side filter of the full board (market/timeframe/family).
 const MARKET_CONFIGS = {
   all: {
-    apiUrl: () => `${getApiBase()}/leaderboard`,
-    dataUrl: '/leaderboard.json',
-    summaryUrl: '/leaderboard.json',
-    label: 'All Markets',
-    useApi: true
+    label: 'All Markets'
   },
   vn_stock: {
-    apiUrl: () => `${getApiBase()}/leaderboard?market=vn_stock`,
     label: 'VN Stock',
-    market: 'vn_stock',
-    useApi: true
+    market: 'vn_stock'
   },
   vn_derivatives_family: {
-    apiUrl: () => `${getApiBase()}/leaderboard?market_family=vn_derivatives`,
     label: 'VN Derivatives (All Timeframes)',
-    marketFamily: 'vn_derivatives',
-    useApi: true
+    marketFamily: 'vn_derivatives'
   },
   vn_derivatives: {
-    apiUrl: () => `${getApiBase()}/leaderboard?market=vn_derivatives`,
     label: 'VN Derivatives 1H',
     market: 'vn_derivatives',
-    timeframe: '1H',
-    useApi: true
+    timeframe: '1H'
   },
   vn_derivatives_30m: {
-    apiUrl: () => `${getApiBase()}/leaderboard?market=vn_derivatives_30m`,
     label: 'VN Derivatives 30M',
     market: 'vn_derivatives_30m',
-    timeframe: '30m',
-    useApi: true
+    timeframe: '30m'
   },
   vn_derivatives_1d: {
-    apiUrl: () => `${getApiBase()}/leaderboard?market=vn_derivatives_1d`,
     label: 'VN Derivatives 1D',
     market: 'vn_derivatives_1d',
-    timeframe: '1D',
-    useApi: true
+    timeframe: '1D'
   },
   vn_derivatives_15m: {
-    apiUrl: () => `${getApiBase()}/leaderboard?market=vn_derivatives_15m`,
     label: 'VN Derivatives 15M',
     market: 'vn_derivatives_15m',
-    timeframe: '15m',
-    useApi: true
+    timeframe: '15m'
   }
 };
 
@@ -96,7 +81,6 @@ function persistMarketSelection(market) {
 
 let currentMarket = getInitialMarket();
 let allRows = [];
-let summary = {};
 let filteredRows = [];
 let sortCol = 'composite_score';
 let sortDir = -1;
@@ -511,43 +495,21 @@ async function loadData(market) {
   const cfg = MARKET_CONFIGS[market];
   if (!cfg) {
     allRows = [];
-    summary = {};
     els.body.innerHTML = tableMessageRow(`Unknown leaderboard selection: ${escapeHtml(market)}`, 'error');
     return;
   }
-  if (els.dataPath) els.dataPath.textContent = apiAvailable ? '/api/runs' : cfg.dataUrl;
+  if (els.dataPath) els.dataPath.textContent = '/api/runs';
   els.body.innerHTML = tableMessageRow(`Loading ${cfg.label}...`, 'empty');
 
   try {
-    if (apiAvailable) {
-      allRows = await loadFromApi(cfg);
-      // best-effort summary fetch (not required by the live API path)
-      try {
-        const sr = await fetch(cfg.summaryUrl, { cache: 'no-store' });
-        summary = sr.ok ? await sr.json() : {};
-      } catch (_) { summary = {}; }
-    } else {
-      const [dataResponse, summaryResponse] = await Promise.all([
-        fetch(cfg.dataUrl, { cache: 'no-store' }),
-        fetch(cfg.summaryUrl, { cache: 'no-store' }),
-      ]);
-      if (!dataResponse.ok) throw new Error(`${dataResponse.status} ${dataResponse.statusText}`);
-      const data = await dataResponse.json();
-      // Handle leaderboard.json structure: {generated_at, models, summary}
-      const models = data.models || (Array.isArray(data) ? data : []);
-      allRows = applyMarketConfigFilter(models, cfg);
-      const summaryData = await summaryResponse.json();
-      summary = (summaryData && summaryData.summary) || summaryData || {};
-    }
+    allRows = await loadFromApi(cfg);
     allRows.forEach(r => { r.cagr = computeCagr(r); });
     resetFilters();
     renderFilters();
     applyFilters();
   } catch (error) {
-    const msg = market !== 'all'
-      ? `${cfg.label} leaderboard not found. Run experiments then rebuild: python -m stock_ml.scripts.build_leaderboard rebuild`
-      : `Failed to load leaderboard: ${escapeHtml(error.message)}`;
-    els.body.innerHTML = tableMessageRow(msg, 'error');
+    els.body.innerHTML = tableMessageRow(
+      `Failed to load ${cfg.label}: ${escapeHtml(error.message)}`, 'error');
   }
 }
 

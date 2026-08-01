@@ -1815,6 +1815,17 @@ Phase 0a** (`PRUNE_BUNDLES=0`, đã đánh dấu XONG bên đó); **serving D4 t
   (quarantine), `POST /runs/{id}/retrain` (spawn job). ⇒ `docs/API.md` không "nói dối" — nó là **spec đúng của API đích**;
   việc cần làm là **PORT route** (không phải xoá docs). retrain/gc/purge có side-effect (spawn process, xoá file) ⇒
   feature-parity riêng, cần chốt trước khi làm.
+- ✅ **§4.6 hợp nhất panel Cache-Mgmt về FastAPI (một-bề-mặt) — commit `6608eb9d` + deploy.** Chủ dự án chốt "cho phép gỡ".
+  Chia 4 route theo có-backing-hay-không: **PORT 3** (logic sẵn) — `DELETE /runs/{id}/cache` (quarantine qua
+  garbage_collector, keys từ `predictions_meta.json`; đặt **trước** catch-all), `POST /gc/sweep` (dry-run mặc định, apply chỉ
+  khi `{"apply":true}`, guard §1.6 + **KHÔNG đụng FeatureStore** `features/store/**`), `POST /cache/purge-trash` (đo freed-MB
+  qua `_trash` trước/sau). **XOÁ 1** — nút Retrain + `doRetrain`/`pollJob` + section docs: entry `stock_ml.scripts.retrain_run`
+  **KHÔNG tồn tại** ⇒ chết cả ở legacy (muốn retrain thật = feature riêng). Genericize ví dụ `/jobs` khỏi retrain. +8 test
+  (routing-không-nuốt, gc dry-run, purge xoá batch cũ, quarantine empty/404). **325 pass/11 skip full-suite**, ruff sạch,
+  `node --check` OK. **Rebuild+restart container `api`** → verify LIVE: board 200, gc/sweep dry 200 (41 orphan/8.7GB cache
+  kiểu-cũ, dry không đụng), bulk validation 400. Panel Cache-Mgmt nay sống hoàn chỉnh trên **một** bề mặt FastAPI.
+  **CÒN:** `api_server.py` legacy chưa xoá (coupling `VIZ_DIR`→`visualization/`, gộp §4.6 visualization cleanup + tar-backup);
+  `/jobs` giữ (infra generic, 0 producer sau khi bỏ retrain).
 - ⏳ **§4.5 (phần couple còn lại — HOÃN, cần verify chạy thật):**
   - **Convergence trọn `src.*`→`stock_ml.src.*`** (bỏ double-cache class/module): đòi MỌI entry có repo_root trên
     path (đổi run_template sys.path + convert model_dashboard/data/pipeline…) — thay đổi phối hợp, verify bằng chạy

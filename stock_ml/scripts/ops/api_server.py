@@ -144,12 +144,16 @@ def _rebuild_leaderboard() -> None:
     rebuild_leaderboard(str(_results_dir() / "experiments"), str(out))
 
 
-def _quarantine_run_cache(row: dict[str, Any]) -> list[str]:
-    """Move this run's feature+prediction cache files to _trash. Returns moved paths."""
-    from src.cache.garbage_collector import quarantine
+def _quarantine_run_cache(run_dir: Path) -> list[str]:
+    """Move this run's feature+prediction cache files to _trash. Returns moved paths.
+
+    Cache keys come from the run's predictions_meta.json (the same file the GC reads), not
+    the leaderboard row.
+    """
+    from src.cache.garbage_collector import _read_cache_keys, quarantine
 
     cache_root = _results_dir() / "cache"
-    keys = row.get("cache_keys") or {}
+    keys = _read_cache_keys(run_dir / "predictions_meta.json")
     feat, pred = keys.get("features", ""), keys.get("predictions", "")
     targets: list[Path] = []
     if feat:
@@ -167,7 +171,7 @@ def _quarantine_run_cache(row: dict[str, Any]) -> list[str]:
 def _delete_run(run_dir: Path, row: dict[str, Any]) -> dict[str, Any]:
     import shutil
 
-    moved = _quarantine_run_cache(row)
+    moved = _quarantine_run_cache(run_dir)
     shutil.rmtree(run_dir, ignore_errors=True)
     _rebuild_leaderboard()
     _rebuild_pinned_manifest()
@@ -297,8 +301,8 @@ def create_app():
 
     @app.delete("/api/runs/cache")
     def delete_cache(run_id: str) -> dict:
-        row, _run_dir = _resolve(run_id)
-        moved = _quarantine_run_cache(row)
+        _row, run_dir = _resolve(run_id)
+        moved = _quarantine_run_cache(run_dir)
         return {"run_id": run_id, "quarantined_cache": moved}
 
     @app.delete("/api/runs")

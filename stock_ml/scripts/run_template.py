@@ -316,7 +316,6 @@ def run_template_experiment(
         from src.evaluation.scoring import composite_score
         from src.leaderboard.schema import (
             Artifacts,
-            CacheKeys,
             CostProfile,
             LeaderboardRow,
             LifecycleState,
@@ -444,7 +443,6 @@ def run_template_experiment(
                     tax=float(engine_cfg.get("tax", 0.001)),
                     slippage=float(engine_cfg.get("slippage", 0.0015)),
                 ),
-                cache_keys=CacheKeys(features="", predictions=""),
                 artifacts=Artifacts(trades_csv="", meta_json="", model_pkl=""),
                 state=LifecycleState.trained,
             )

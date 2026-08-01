@@ -7,7 +7,6 @@ from datetime import UTC, datetime
 from stock_ml.db.models.run import LeaderboardRunModel
 from stock_ml.src.leaderboard.schema import (
     Artifacts,
-    CacheKeys,
     CostProfile,
     LeaderboardRow,
     LifecycleState,
@@ -66,8 +65,6 @@ def row_to_model(
         generated_at=generated,
         superseded=row.superseded,
         state=row.state.value,
-        cache_key_features=row.cache_keys.features,
-        cache_key_predictions=row.cache_keys.predictions,
         artifact_trades_csv=row.artifacts.trades_csv,
         artifact_meta_json=row.artifacts.meta_json,
         artifact_model_pkl=row.artifacts.model_pkl,
@@ -148,7 +145,6 @@ def model_to_row(m: LeaderboardRunModel) -> LeaderboardRow:
         generated_at=m.generated_at.isoformat(),
         superseded=m.superseded,
         state=LifecycleState(m.state),
-        cache_keys=CacheKeys(features=m.cache_key_features, predictions=m.cache_key_predictions),
         artifacts=Artifacts(
             trades_csv=m.artifact_trades_csv,
             meta_json=m.artifact_meta_json,

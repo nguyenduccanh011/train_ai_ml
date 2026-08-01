@@ -25,18 +25,6 @@ class LifecycleState(StrEnum):
     retired = "retired"
 
 
-class CacheKeys(BaseModel):
-    """Cache keys owned by this run, used by the GC to attribute cache files.
-
-    features: FeatureCacheManager key (results/cache/features/<feature_set>/<key>)
-    predictions: PredictionCacheManager key (results/cache/predictions/<key>.pkl)
-    Empty string means unknown (legacy run; GC recomputes prediction key from config).
-    """
-
-    features: str = ""
-    predictions: str = ""
-
-
 class Artifacts(BaseModel):
     """Relative paths (from results/) to this run's on-disk artifacts."""
 
@@ -74,7 +62,6 @@ class LeaderboardRow(BaseModel):
 
     # Lifecycle (Model Lifecycle UI — single source of truth for dashboard)
     state: LifecycleState = LifecycleState.trained
-    cache_keys: CacheKeys = Field(default_factory=CacheKeys)
     artifacts: Artifacts = Field(default_factory=Artifacts)
 
     # Strategy / model identity

@@ -58,8 +58,6 @@ class LeaderboardRunModel(Base, TimestampMixin):
 
     # --- Lifecycle ---
     state: Mapped[str] = mapped_column(String(16), default="trained", nullable=False)
-    cache_key_features: Mapped[str] = mapped_column(Text, default="", nullable=False)
-    cache_key_predictions: Mapped[str] = mapped_column(Text, default="", nullable=False)
     artifact_trades_csv: Mapped[str] = mapped_column(Text, default="", nullable=False)
     artifact_meta_json: Mapped[str] = mapped_column(Text, default="", nullable=False)
     artifact_model_pkl: Mapped[str] = mapped_column(Text, default="", nullable=False)

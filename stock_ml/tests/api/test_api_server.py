@@ -71,7 +71,6 @@ def test_list_runs(client) -> None:
     rows = resp.json()
     assert len(rows) == 1
     assert rows[0]["state"] == "trained"
-    assert rows[0]["cache_keys"]["features"] == "featX"
 
 
 def test_patch_state_to_pinned(client) -> None:

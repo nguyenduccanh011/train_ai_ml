@@ -25,7 +25,6 @@ from stock_ml.src.leaderboard.fairness import (
 )
 from stock_ml.src.leaderboard.schema import (
     Artifacts,
-    CacheKeys,
     CostProfile,
     LeaderboardRow,
     LifecycleState,
@@ -123,7 +122,6 @@ def run_dir_to_row(run_dir: str | Path, *, bundle: str | None = None) -> Leaderb
         or resolve_market_family(market, timeframe, load_config())
     )
 
-    cache_keys = _cache_keys(predictions_meta)
     artifacts = _artifacts(run_path)
     state = _lifecycle_state(lifecycle)
 
@@ -139,7 +137,6 @@ def run_dir_to_row(run_dir: str | Path, *, bundle: str | None = None) -> Leaderb
         generated_at=generated_at,
         superseded=False,
         state=state,
-        cache_keys=cache_keys,
         artifacts=artifacts,
         market=market,
         market_family=market_family,
@@ -220,14 +217,6 @@ def _read_json(path: Path) -> dict[str, Any]:
         return {}
     with path.open("r", encoding="utf-8") as f:
         return json.load(f)
-
-
-def _cache_keys(predictions_meta: dict[str, Any]) -> CacheKeys:
-    raw = predictions_meta.get("cache_keys") or {}
-    return CacheKeys(
-        features=str(raw.get("features", "")),
-        predictions=str(raw.get("predictions", "")),
-    )
 
 
 def _artifacts(run_path: Path) -> Artifacts:

@@ -33,7 +33,6 @@ from stock_ml.db.repositories.trade_repo import RunTradeRepository
 from stock_ml.db.repositories.yearly_stat_repo import RunYearlyStatRepository
 from stock_ml.src.leaderboard.schema import (
     Artifacts,
-    CacheKeys,
     CostProfile,
     LeaderboardRow,
     LifecycleState,
@@ -74,7 +73,6 @@ def _make_row(**overrides) -> LeaderboardRow:
         last_test_year=2024,
         fairness_group_key="template_vn_stock",
         cost_profile=CostProfile(commission=0.0025, tax=0.001, slippage=0.0015),
-        cache_keys=CacheKeys(),
         artifacts=Artifacts(),
         state=LifecycleState.trained,
         universe_slug="vn30",

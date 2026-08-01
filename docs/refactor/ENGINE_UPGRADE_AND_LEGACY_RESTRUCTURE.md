@@ -1763,6 +1763,23 @@ Phase 0a** (`PRUNE_BUNDLES=0`, đã đánh dấu XONG bên đó); **serving D4 t
   class `FeatureCacheManager`, 0 code-importer (chỉ re-export `cache/__init__` + 1 docstring `schema.py:31`); serving
   KHÔNG import `stock_ml.src.cache`; `garbage_collector.py` cùng package độc lập. Xoá được về mặt kỹ thuật NHƯNG doc
   gate "sau §1.6" (§1.6 store-fix chưa xong) ⇒ giữ nguyên, xoá cùng lúc dọn `stock_ml/src/results` orphan.
+- ✅ **§4.8 dead-col (phần cache_keys) — XOÁ `cache_key_features`/`cache_key_predictions` + Pydantic `CacheKeys`.**
+  DB verify: cả 2 cột rỗng `''` trên **3612/3612** (write path DB-first chưa từng set); GC attribute cache từ
+  `predictions_meta.json` (nguồn FILE) chứ KHÔNG đọc cột này. Gỡ `CacheKeys` model + field `cache_keys` khỏi
+  schema/loader/aggregator/adapter/ORM(run.py)/run_template + 2 test. `api_server._quarantine_run_cache` (script cũ,
+  dùng cache_keys THẬT để quarantine cache khi xoá run) refactor **đọc keys từ `predictions_meta.json`** (giống GC)
+  thay row đã xoá — feature vẫn chạy, hết phụ thuộc field bỏ. **Migration 0031** drop 2 cột (guarded IF EXISTS,
+  downgrade re-add). Bonus: gỡ docstring `CacheKeys` trỏ `FeatureCacheManager` (dead §4.7). Verify: suite **320/0**,
+  ruff sạch, apply live head 0030→**0031** (cột biến mất), ORM round-trip live OK. **CÒN §4.8:** `same_*_as_baseline`
+  (6, NULL) + `is_baseline` (0 true) + `fairness_group_key` (populated degenerate, load-bearing dedup) = phần fairness,
+  gắn §4.4 (xem dưới).
+- ⏳ **§4.4 fairness-mechanism removal (HOÃN — refactor entangled, unit riêng).** Map đầy đủ (agent): xoá phải phối
+  hợp ~13 file. Khó thật: (a) `fairness.py` trộn fairness-only (annotate_rows/resolve_baseline/load_config) VỚI helper
+  GENERAL (`backtest_window_key`, `resolve_market_family`) dùng cho field không-fairness ⇒ phải EXTRACT helper trước
+  khi xoá module; (b) `fairness_group_key` populated (3 giá trị/3612) + INDEXED + **load-bearing trong `_row_signature`
+  dedup** (aggregator) + `run_repo.get_by_fairness_group` + JS grouping ⇒ xoá đòi rewrite dedup; (c) fair-mode UI 2× JS
+  ĐÃ hỏng sẵn (API không emit field → `=== false` fail-closed) nên xoá = gỡ UI-chết, nhưng là quyết định product. Data
+  toàn chết/degenerate (same_* + is_baseline = 0). Cần làm trọn 1 lượt (doc: nửa-vời tệ hơn cả 2 lựa chọn).
 - ⏳ **§4.5 (phần couple còn lại — HOÃN, cần verify chạy thật):**
   - **Convergence trọn `src.*`→`stock_ml.src.*`** (bỏ double-cache class/module): đòi MỌI entry có repo_root trên
     path (đổi run_template sys.path + convert model_dashboard/data/pipeline…) — thay đổi phối hợp, verify bằng chạy

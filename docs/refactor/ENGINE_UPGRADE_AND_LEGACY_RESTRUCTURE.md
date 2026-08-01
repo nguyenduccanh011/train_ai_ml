@@ -1826,6 +1826,17 @@ Phase 0a** (`PRUNE_BUNDLES=0`, đã đánh dấu XONG bên đó); **serving D4 t
   kiểu-cũ, dry không đụng), bulk validation 400. Panel Cache-Mgmt nay sống hoàn chỉnh trên **một** bề mặt FastAPI.
   **CÒN:** `api_server.py` legacy chưa xoá (coupling `VIZ_DIR`→`visualization/`, gộp §4.6 visualization cleanup + tar-backup);
   `/jobs` giữ (infra generic, 0 producer sau khi bỏ retrain).
+- ✅ **§4.6 khai tử server legacy + `visualization/` — commit `bf9579ed`.** Backend legacy của Model-Lifecycle UI
+  (`scripts/ops/api_server.py`, stdlib http.server phục vụ `stock_ml/visualization/*`) đã bị FastAPI thay HOÀN TOÀN (mọi route
+  đã port); consumer duy nhất còn lại = chính test của nó. Xoá: (1) `api_server.py` + `tests/api/test_api_server.py` (9 test
+  chứng nhận server chết); (2) `stock_ml/visualization/` (103MB, 4010 tracked + ~506 untracked) — bề mặt served-chết, chỉ 2
+  serve.py + api_server.py từng phục vụ, **dashboard LIVE (`stock_ml/dashboard/`, FastAPI-mount) KHÔNG ref `/visualization`
+  hay data_* snapshot** (đã verify grep sạch); **tar-backup** `/f/pg_backups/visualization_preP5_delete.tar.gz` (6.5MB, 4613
+  entry) TRƯỚC vì ~506 file untracked; (3) gỡ dòng ruff extend-exclude `stock_ml/visualization` khỏi 2 pyproject (là **lint
+  exclude, KHÔNG phải wheel-packaging** → 0 build-impact). Verify: 0 dangling code-ref, FastAPI app import (75 route), ruff sạch,
+  **316 pass/11 skip** (−9 do bỏ test server). **Container KHÔNG cần rebuild** (file xoá không nằm trong FastAPI đang chạy;
+  api container phục vụ FastAPI, dashboard container phục vụ `dashboard/`). `export_derivatives_ohlcv.py` còn tên dir
+  `visualization/` output (0 runner, tự tạo lại khi chạy) — để làm concern ops-script riêng. **§4.6 XONG cho bề mặt live.**
 - ⏳ **§4.5 (phần couple còn lại — HOÃN, cần verify chạy thật):**
   - **Convergence trọn `src.*`→`stock_ml.src.*`** (bỏ double-cache class/module): đòi MỌI entry có repo_root trên
     path (đổi run_template sys.path + convert model_dashboard/data/pipeline…) — thay đổi phối hợp, verify bằng chạy

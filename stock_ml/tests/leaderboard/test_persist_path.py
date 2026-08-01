@@ -22,6 +22,7 @@ from sqlalchemy.pool import StaticPool
 import stock_ml.db.models  # noqa: F401  — register every table on Base.metadata
 from stock_ml.db.adapters.leaderboard_adapter import model_to_row, row_to_model
 from stock_ml.db.base import Base
+from stock_ml.db.models.run import LeaderboardRunModel
 from stock_ml.db.models.signal import RunSignalModel
 from stock_ml.db.models.symbol_stat import RunSymbolStatModel
 from stock_ml.db.models.trade import RunTradeModel
@@ -177,3 +178,83 @@ def test_run_persists_to_leaderboard_and_child_tables():
     # Round-tripped DTO carries the component composition forward.
     assert result["row"].model_mode == "rule_only"
     assert result["row"].signal_mode == "entry_first"
+
+
+async def _fresh_session_maker():
+    engine = create_async_engine(
+        "sqlite+aiosqlite:///:memory:",
+        poolclass=StaticPool,
+        connect_args={"check_same_thread": False},
+    )
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    return engine, async_sessionmaker(engine, expire_on_commit=False)
+
+
+async def _rerun_preserves_lifecycle() -> dict:
+    from sqlalchemy import update as sa_update
+
+    rid = "template/persist_test-deadbeef"
+    engine, Session = await _fresh_session_maker()
+    try:
+        async with Session() as session:
+            repo = LeaderboardRunRepository(session)
+            await repo.upsert(_make_row(composite_score=42.0))
+            # user pins the run (a lifecycle decision the pipeline must not clobber)
+            await session.execute(
+                sa_update(LeaderboardRunModel)
+                .where(LeaderboardRunModel.run_id == rid)
+                .values(state="pinned")
+            )
+            await session.commit()
+            # re-run the SAME config (same run_id) with a fresh state + a better score
+            await repo.upsert(_make_row(composite_score=99.0, state=LifecycleState.trained))
+            await session.commit()
+            after = await repo.get_by_run_id(rid)
+            return {"state": after.state, "score": after.composite_score}
+    finally:
+        await engine.dispose()
+
+
+def test_upsert_preserves_state_on_rerun():
+    """§3: re-running a config refreshes metrics but never resets the user's lifecycle."""
+    res = asyncio.run(_rerun_preserves_lifecycle())
+    assert res["state"] == "pinned"  # lifecycle preserved
+    assert res["score"] == 99.0  # metrics refreshed
+
+
+async def _supersede_skips_pinned() -> dict:
+    from sqlalchemy import update as sa_update
+
+    engine, Session = await _fresh_session_maker()
+    try:
+        async with Session() as session:
+            repo = LeaderboardRunRepository(session)
+            # Run A (same run_name) gets pinned.
+            await repo.upsert(_make_row(run_id="template/persist_test-aaaaaaaa"))
+            await session.execute(
+                sa_update(LeaderboardRunModel)
+                .where(LeaderboardRunModel.run_id == "template/persist_test-aaaaaaaa")
+                .values(state="pinned")
+            )
+            await session.commit()
+            # Run B: same run_name, new run_id -> would supersede same-named siblings.
+            await repo.upsert(_make_row(run_id="template/persist_test-bbbbbbbb"))
+            await session.commit()
+            a = await repo.get_by_run_id("template/persist_test-aaaaaaaa")
+            b = await repo.get_by_run_id("template/persist_test-bbbbbbbb")
+            return {
+                "a_superseded": bool(a.superseded),
+                "a_state": a.state,
+                "b_superseded": bool(b.superseded),
+            }
+    finally:
+        await engine.dispose()
+
+
+def test_mark_superseded_skips_pinned():
+    """§3: a pinned run is never auto-superseded by a newer same-named variant."""
+    res = asyncio.run(_supersede_skips_pinned())
+    assert res["a_superseded"] is False  # pinned A protected
+    assert res["a_state"] == "pinned"
+    assert res["b_superseded"] is False  # B is the current row

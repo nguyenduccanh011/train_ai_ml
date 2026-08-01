@@ -11,6 +11,9 @@ from stock_ml.db.adapters.leaderboard_adapter import row_to_model
 from stock_ml.db.models.run import LeaderboardRunModel
 from stock_ml.src.leaderboard.schema import LeaderboardRow
 
+# Lifecycle columns the user owns — a re-run (same run_id) must not overwrite them (§3).
+_UPSERT_PRESERVE_ON_CONFLICT = ("state", "created_at", "superseded")
+
 
 class LeaderboardRunRepository:
     def __init__(self, session: AsyncSession) -> None:
@@ -70,9 +73,17 @@ class LeaderboardRunRepository:
         else:  # SQLite or others
             stmt = sqlite_insert(LeaderboardRunModel).values(**values)
 
+        # §3: a re-run of the SAME config hits the SAME run_id — refresh metrics/config
+        # but NEVER reset the lifecycle the user owns. Preserving created_at keeps the
+        # first-seen time; preserving state keeps a pinned/retired run as-is; preserving
+        # superseded keeps an older variant retired instead of silently reviving it.
         stmt = stmt.on_conflict_do_update(
             index_elements=["run_id"],
-            set_={k: stmt.excluded[k] for k in values if k != "run_id"},
+            set_={
+                k: stmt.excluded[k]
+                for k in values
+                if k not in ("run_id", *_UPSERT_PRESERVE_ON_CONFLICT)
+            },
         )
         await self._session.execute(stmt)
         await self._session.flush()
@@ -83,12 +94,15 @@ class LeaderboardRunRepository:
         return await self.get_by_run_id(row.run_id)  # type: ignore[return-value]
 
     async def mark_superseded(self, bundle: str, run_name: str, except_run_id: str) -> int:
+        # §3: never auto-supersede a pinned run — a pin is an explicit human decision that
+        # a newer same-named variant must not silently override.
         result = await self._session.execute(
             update(LeaderboardRunModel)
             .where(
                 LeaderboardRunModel.bundle == bundle,
                 LeaderboardRunModel.run_name == run_name,
                 LeaderboardRunModel.run_id != except_run_id,
+                LeaderboardRunModel.state != "pinned",
             )
             .values(superseded=True)
         )

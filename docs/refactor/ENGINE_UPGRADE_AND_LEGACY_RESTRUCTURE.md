@@ -1837,11 +1837,17 @@ Phase 0a** (`PRUNE_BUNDLES=0`, đã đánh dấu XONG bên đó); **serving D4 t
   **316 pass/11 skip** (−9 do bỏ test server). **Container KHÔNG cần rebuild** (file xoá không nằm trong FastAPI đang chạy;
   api container phục vụ FastAPI, dashboard container phục vụ `dashboard/`). `export_derivatives_ohlcv.py` còn tên dir
   `visualization/` output (0 runner, tự tạo lại khi chạy) — để làm concern ops-script riêng. **§4.6 XONG cho bề mặt live.**
-- ⏳ **§4.5 (phần couple còn lại — HOÃN, cần verify chạy thật):**
-  - **Convergence trọn `src.*`→`stock_ml.src.*`** (bỏ double-cache class/module): đòi MỌI entry có repo_root trên
-    path (đổi run_template sys.path + convert model_dashboard/data/pipeline…) — thay đổi phối hợp, verify bằng chạy
-    pipeline thật, không chỉ pytest. **fix-vs-xoá 3 script** cache_gc/api_server/build_leaderboard (có bị `stock_ml/api`
-    thay chưa?) = quyết định kiến trúc, hiện chọn "fix" (bảo thủ, đảo được), delete để sau.
+- ✅ **§4.5 convergence trọn `src.*`/`db.*` → `stock_ml.src.*`/`stock_ml.db.*` — commit `885ef795`.** Dual sys.path
+  (repo_root + repo_root/stock_ml) khiến module nạp dưới 2 tên (`src.X` ⟂ `stock_ml.src.X`) = 2 module-cache độc lập ⇒
+  (a) vỡ hợp-đồng-wheel (`import stock_ml.src.model_dashboard` raise `ModuleNotFoundError: 'src'` ở env sạch vì __init__
+  `from src.model_dashboard.schema`), (b) monkeypatch trượt (test patch `src.data.sieutinhieu` không chạm bản
+  `stock_ml.src.*` resolver dùng → 10 test universe_resolver fail khi mới đổi nửa vời). Hội tụ về dạng tuyệt đối:
+  `stock_ml/src/**` 10 import (8 file) + 3 docstring; **tests+scripts 104 import**; **4 script 17 bare `db.`**; **gỡ
+  `sys.path.insert(repo_root/stock_ml)`** (enabler bare-name) khắp scripts/tests, chỉ giữ repo_root (stock_ml = namespace
+  pkg). `analysis/` scratch để nguyên (ruff-excluded, standalone, tự chèn NH_NAV2). Verify: **316 pass/11 skip**, ruff sạch,
+  **8/8 module serving-critical import ở env chỉ-repo_root**, và **chạy thật** `run_template --template-id 999999` đi tới DB
+  qua `stock_ml.db.*` (fail "template not found", KHÔNG ImportError) ⇒ double-cache đã hết. (3 script cache_gc/build_leaderboard
+  giữ, không phải server — api_server đã xoá ở `bf9579ed`.)
 - ⏳ **CÒN (liên-kết/nguy hiểm):** drop 8 cột chết `leaderboard_runs` = cơ chế **fairness cũ** §4.4 (ripple ORM/adapter/
   schema/API) · **⚠️ §3 config_hash re-identity** (368M dòng run_signals + 5043 fold dir + sổ tier live — D2 + dry-run
   bản-sao + checkpoint) · §4.7 FeatureCacheManager (partial-file). Liên quan memory: `phase5-progress-and-identity-danger`.

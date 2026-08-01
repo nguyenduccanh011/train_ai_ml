@@ -295,7 +295,6 @@ function renderActions(row) {
   return `<div class="actions">
     <button class="act-btn pin" data-act="state" data-id="${id}" data-state="${pinTarget}">${pinLabel}</button>
     <button class="act-btn" data-act="state" data-id="${id}" data-state="${retireTarget}">${retireLabel}</button>
-    <button class="act-btn" data-act="retrain" data-id="${id}">Retrain</button>
     <button class="act-btn danger" data-act="delcache" data-id="${id}">Del cache</button>
     <button class="act-btn danger" data-act="delete" data-id="${id}">Delete</button>
   </div>`;
@@ -375,38 +374,6 @@ async function doSetState(runId, state) {
   }
 }
 
-async function doRetrain(runId) {
-  try {
-    const res = await apiFetch(`/runs/${encodeURIComponent(runId)}/retrain`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({}),
-    });
-    toast(`Retrain started (job ${res.job_id})`, 'info', 6000);
-    pollJob(res.job_id, runId);
-  } catch (err) {
-    toast(`Retrain failed: ${err.message}`, 'error');
-  }
-}
-
-async function pollJob(jobId, runId) {
-  try {
-    const status = await apiFetch(`/jobs/${jobId}`);
-    if (status.status === 'running') {
-      setTimeout(() => pollJob(jobId, runId), 4000);
-      return;
-    }
-    if (status.status === 'done') {
-      toast(`Retrain done: ${runId.split('/').pop()}`, 'success', 6000);
-      loadData(currentMarket);
-    } else {
-      toast(`Retrain error (exit ${status.exit_code}) — see ${status.log}`, 'error', 8000);
-    }
-  } catch (err) {
-    toast(`Job poll failed: ${err.message}`, 'error');
-  }
-}
-
 async function doDeleteCache(runId) {
   if (!window.confirm(`Quarantine cache for this run? Backtest metrics stay on the leaderboard.\n\n${runId}`)) return;
   try {
@@ -433,7 +400,6 @@ function bindRowActions() {
     btn.addEventListener('click', () => {
       const { act, id, state } = btn.dataset;
       if (act === 'state') doSetState(id, state);
-      else if (act === 'retrain') doRetrain(id);
       else if (act === 'delcache') doDeleteCache(id);
       else if (act === 'delete') doDelete(id);
     });

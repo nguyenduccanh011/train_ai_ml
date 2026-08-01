@@ -238,3 +238,51 @@ def test_bulk_set_state_retires_trained(runs_client):
     assert resp.json()["updated"] == 2
     assert len(runs_client.get("/api/v1/runs?state=retired").json()) == 3
     assert len(runs_client.get("/api/v1/runs?state=trained").json()) == 0
+
+
+# --- Cache-panel routes (/gc/sweep, /cache/purge-trash, /runs/{id}/cache) --------
+
+
+def test_gc_sweep_dry_run(client, monkeypatch, tmp_path):
+    """Dry-run sweep over an isolated empty results dir -> 200, 0 orphans, nothing moved."""
+    (tmp_path / "cache" / "features").mkdir(parents=True)
+    (tmp_path / "experiments").mkdir()
+    monkeypatch.setattr("stock_ml.api.routes.cache._results_dir", lambda: tmp_path)
+    resp = client.post("/api/v1/gc/sweep", json={})
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["dry_run"] is True
+    assert data["orphan_count"] == 0
+    assert data["quarantined"] == 0
+
+
+def test_purge_trash_removes_old_batches(client, monkeypatch, tmp_path):
+    """Purge deletes trash batches older than the cutoff and reports freed bytes."""
+    import os
+    import time
+
+    old_batch = tmp_path / "cache" / "_trash" / "batch_old"
+    old_batch.mkdir(parents=True)
+    (old_batch / "f.parquet").write_bytes(b"x" * 4096)
+    stale = time.time() - 10 * 86400
+    os.utime(old_batch, (stale, stale))
+
+    monkeypatch.setattr("stock_ml.api.routes.cache._results_dir", lambda: tmp_path)
+    resp = client.post("/api/v1/cache/purge-trash", json={"older_than_days": 7.0})
+    assert resp.status_code == 200
+    assert resp.json()["purged_dirs"] == 1
+    assert not old_batch.exists()
+
+
+def test_quarantine_run_cache_empty(runs_client):
+    """Seeded run has no on-disk dir -> nothing to quarantine, still 200 (route not
+    swallowed by the /runs/{run_id} catch-all)."""
+    resp = runs_client.request("DELETE", "/api/v1/runs/r-trained-1/cache")
+    assert resp.status_code == 200
+    assert resp.json()["quarantined_cache"] == []
+
+
+def test_quarantine_nonexistent_run_404(runs_client):
+    """Unknown run id -> 404 from _resolve."""
+    resp = runs_client.request("DELETE", "/api/v1/runs/does-not-exist/cache")
+    assert resp.status_code == 404

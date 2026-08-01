@@ -323,33 +323,6 @@ Transition a model between lifecycle states: `trained` → `pinned` → `retired
 
 ---
 
-### Spawn Retrain Job
-
-**POST** `/api/v1/runs/{run_id}/retrain`
-
-Start async retraining of a model run.
-
-**Path Parameters**:
-- `run_id` (string): Model run identifier
-
-**Request Body** (optional):
-```json
-{
-  "device": "cpu"
-}
-```
-
-**Response (200)**:
-```json
-{
-  "job_id": "abc123def456",
-  "run_id": "matrix_001/v22#abc12345",
-  "status": "running"
-}
-```
-
----
-
 ### Delete Run Cache
 
 **DELETE** `/api/v1/runs/{run_id}/cache`
@@ -565,7 +538,7 @@ Delete trash batches older than N days (permanently removes quarantined files).
 
 **GET** `/api/v1/jobs`
 
-List all background jobs (retrain, backtest, etc.).
+List all background jobs.
 
 **Query Parameters**:
 - `status` (string, optional): Filter by status — `running`, `done`, or `error`
@@ -575,11 +548,10 @@ List all background jobs (retrain, backtest, etc.).
 [
   {
     "job_id": "abc123def456",
-    "type": "retrain",
     "run_id": "matrix_001/v22#abc12345",
     "status": "running",
     "started_at": "2026-05-30T14:32:15.123456",
-    "log": "logs/retrain_abc123def456.log"
+    "log": "logs/job_abc123def456.log"
   }
 ]
 ```
@@ -602,7 +574,7 @@ Poll status of a background job.
   "status": "done",
   "started_at": "2026-05-30T14:32:15.123456",
   "exit_code": 0,
-  "log": "logs/retrain_abc123def456.log"
+  "log": "logs/job_abc123def456.log"
 }
 ```
 

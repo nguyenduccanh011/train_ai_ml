@@ -63,10 +63,23 @@ async def _find_row(session: AsyncSession, run_id: str) -> dict[str, Any] | None
             "composite_score": row.composite_score,
             "bundle": row.bundle,
             "run_name": row.run_name,
+            "artifact_meta_json": row.artifact_meta_json,
         }
         if row
         else None
     )
+
+
+def _run_dir_for(row: dict[str, Any]) -> Path | None:
+    """Resolve a run's on-disk directory from its meta-json artifact, else the
+    experiments/<bundle>/<run_name> fallback. None when neither exists."""
+    meta_rel = row.get("artifact_meta_json") or ""
+    if meta_rel:
+        meta_path = (_results_dir() / meta_rel).resolve()
+        if meta_path.exists():
+            return meta_path.parent
+    candidate = _results_dir() / "experiments" / row.get("bundle", "") / row.get("run_name", "")
+    return candidate if candidate.exists() else None
 
 
 async def _resolve(session: AsyncSession, run_id: str):
@@ -723,6 +736,35 @@ async def bulk_delete_runs(body: dict, session: AsyncSession = Depends(get_db)) 
     # DB-first: this drops leaderboard rows only; on-disk artifacts/cache are
     # reclaimed separately by the GC sweep, so no bytes are freed here.
     return {"deleted": result.rowcount, "freed_mb": 0}
+
+
+@router.delete("/runs/{run_id:path}/cache")
+async def quarantine_run_cache(run_id: str, session: AsyncSession = Depends(get_db)) -> dict:
+    """Move this run's feature+prediction cache to _trash; leaderboard metrics stay.
+
+    Cache keys come from the run's predictions_meta.json (the same source the GC reads),
+    so a run with no on-disk meta simply quarantines nothing. Registered before the
+    ``/runs/{run_id:path}`` catch-all so the ``/cache`` suffix is not swallowed.
+    """
+    from stock_ml.src.cache.garbage_collector import _read_cache_keys, quarantine
+
+    row, _ = await _resolve(session, run_id)
+    run_dir = _run_dir_for(row)
+    moved: list[str] = []
+    if run_dir is not None:
+        cache_root = _results_dir() / "cache"
+        keys = _read_cache_keys(run_dir / "predictions_meta.json")
+        feat, pred = keys.get("features", ""), keys.get("predictions", "")
+        targets: list[Path] = []
+        if feat:
+            targets += list((cache_root / "features").glob(f"*/{feat}.*"))
+        if pred:
+            p = cache_root / "predictions" / f"{pred}.pkl"
+            if p.exists():
+                targets.append(p)
+        if targets:
+            moved = [str(p) for p in quarantine(targets, cache_root)]
+    return {"run_id": run_id, "quarantined_cache": moved}
 
 
 @router.patch("/runs/{run_id:path}/state")

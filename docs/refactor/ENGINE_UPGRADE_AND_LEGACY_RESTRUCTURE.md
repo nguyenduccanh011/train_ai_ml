@@ -1782,11 +1782,13 @@ Phase 0a** (`PRUNE_BUNDLES=0`, đã đánh dấu XONG bên đó); **serving D4 t
   live); xoá `test_fairness.py` (coverage resolve_market_family đã có ở test_loader) + gỡ field khỏi fixture/golden.
   **Migration 0032** drop 8 cột + index `idx_runs_fairness_group`. Verify: suite **316/0**, ruff sạch, apply live head
   0031→**0032**, ORM round-trip live OK.
-- ⏳ **§4.4 fair-mode UI (JS/HTML) — HOÃN (cosmetic, đã-hỏng-sẵn, untested/outward-facing).** `dashboard/leaderboard.js`
-  + `visualization/leaderboard.js` còn nhánh fair-mode (toggle global/fair, `getFairBaselineGroup`, cột `renderFairness`,
-  warnings `same_*===false`, `setScoreMode`) + nút trong 2 HTML. ĐÃ hỏng từ trước (API chưa từng emit field → đọc
-  undefined, fail-closed) ⇒ backend removal KHÔNG mới-làm-hỏng. Gỡ trọn = refactor UI (js+html, ~9 site/file) không có
-  test browser ⇒ tách pass cosmetic riêng, không barrel ở đuôi unit lớn.
+- ✅ **§4.4 fair-mode UI (LIVE dashboard) — commit `4b0a0f7c`.** Gỡ nhánh fair-mode khỏi board LIVE
+  (`stock_ml/dashboard/` — FastAPI mount `/dashboard` ở `api/main.py:86`): toggle global/fair, `getFairBaselineGroup`,
+  fair filter, `renderFairness` (define nhưng 0 call), `setScoreMode`, 2 stat-card (Fairness groups + Current mode),
+  warnings `same_*===false` — trong `leaderboard.js` + `leaderboard.html`. Fair-mode ĐÃ hỏng từ trước (API chưa từng
+  emit field → undefined fail-closed) nên backend removal không mới-làm-hỏng. Verify: `node --check` OK, 0 ref
+  fair/scoreMode/renderFairness còn lại. **CÒN**: bản copy legacy `stock_ml/visualization/leaderboard.{js,html}` (629
+  dòng, chỉ `serve.py` chết phục vụ, §4.6) — để cùng §4.6 dead-server cleanup.
 - ⏳ **§4.5 (phần couple còn lại — HOÃN, cần verify chạy thật):**
   - **Convergence trọn `src.*`→`stock_ml.src.*`** (bỏ double-cache class/module): đòi MỌI entry có repo_root trên
     path (đổi run_template sys.path + convert model_dashboard/data/pipeline…) — thay đổi phối hợp, verify bằng chạy

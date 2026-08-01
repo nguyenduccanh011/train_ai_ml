@@ -305,10 +305,6 @@
         <option value="vn_derivatives_1d">VN Derivatives 1D</option>
         <option value="vn_derivatives_15m">VN Derivatives 15M</option>
       </select>
-      <div class="toggle-group" aria-label="Score mode">
-        <button class="toggle-btn active" id="globalMode" type="button">Global</button>
-        <button class="toggle-btn" id="fairMode" type="button">Fair</button>
-      </div>
       <input id="searchInput" type="search" placeholder="Search run, bundle, model...">
       <select id="experimentGroupFilter"><option value="">All groups</option></select>
       <select id="bundleFilter"><option value="">All bundles</option></select>
@@ -348,8 +344,6 @@
   <section class="stats-bar">
     <div class="stat-card"><div class="stat-title">Visible rows</div><div class="stat-value" id="visibleCount">—</div></div>
     <div class="stat-card"><div class="stat-title">Active rows</div><div class="stat-value" id="activeCount">—</div></div>
-    <div class="stat-card"><div class="stat-title">Fairness groups</div><div class="stat-value" id="groupCount">—</div></div>
-    <div class="stat-card"><div class="stat-title">Current mode</div><div class="stat-value" id="modeLabel">Global</div></div>
   </section>
 
   <main class="table-wrap">

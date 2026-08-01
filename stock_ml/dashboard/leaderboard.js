@@ -100,7 +100,6 @@ let summary = {};
 let filteredRows = [];
 let sortCol = 'composite_score';
 let sortDir = -1;
-let scoreMode = 'global';
 let showSuperseded = false;
 let searchQuery = '';
 let apiAvailable = false;
@@ -118,10 +117,6 @@ const els = {
   body: document.getElementById('leaderboardBody'),
   visibleCount: document.getElementById('visibleCount'),
   activeCount: document.getElementById('activeCount'),
-  groupCount: document.getElementById('groupCount'),
-  modeLabel: document.getElementById('modeLabel'),
-  globalMode: document.getElementById('globalMode'),
-  fairMode: document.getElementById('fairMode'),
   searchInput: document.getElementById('searchInput'),
   showSuperseded: document.getElementById('showSuperseded'),
   experimentGroupFilter: document.getElementById('experimentGroupFilter'),
@@ -211,7 +206,6 @@ function rowMatchesSearch(row) {
     row.feature_set,
     row.entry_model,
     row.exit_model_type,
-    row.fairness_group_key,
   ].join(' ').toLowerCase();
   return haystack.includes(searchQuery);
 }
@@ -225,13 +219,6 @@ function computeCagr(row) {
   const nYears = (row.last_test_year || 0) - (row.first_test_year || 0) + 1;
   if (!row.total_pnl || n <= 0 || nYears <= 0) return null;
   return row.total_pnl / n / nYears;
-}
-
-function getFairBaselineGroup(rows) {
-  if (summary.baseline_fairness_group_key) return summary.baseline_fairness_group_key;
-  const activeRows = rows.filter((row) => !row.superseded);
-  const candidates = activeRows.length ? activeRows : rows;
-  return [...candidates].sort((a, b) => Number(b.composite_score) - Number(a.composite_score))[0]?.fairness_group_key || '';
 }
 
 function rowMarketFamily(row) {
@@ -253,11 +240,8 @@ function applyMarketConfigFilter(rows, cfg) {
 }
 
 function applyFilters() {
-  const fairGroup = scoreMode === 'fair' ? getFairBaselineGroup(allRows) : '';
-
   filteredRows = allRows.filter((row) => {
     if (!showSuperseded && row.superseded) return false;
-    if (fairGroup && row.fairness_group_key !== fairGroup) return false;
     if (filters.bundle && row.bundle !== filters.bundle) return false;
     if (filters.strategy && row.strategy !== filters.strategy) return false;
     if (filters.feature_set && row.feature_set !== filters.feature_set) return false;
@@ -272,17 +256,14 @@ function applyFilters() {
   rankedRows.forEach((row, index) => { row.rank = index + 1; });
 
   filteredRows.sort((a, b) => compareValues(a, b, sortCol) * sortDir);
-  renderStats(fairGroup);
+  renderStats();
   renderTable();
 }
 
-function renderStats(fairGroup) {
+function renderStats() {
   const activeRows = allRows.filter((row) => !row.superseded);
-  const groups = new Set(allRows.map((row) => row.fairness_group_key));
   els.visibleCount.textContent = filteredRows.length.toLocaleString();
   els.activeCount.textContent = activeRows.length.toLocaleString();
-  els.groupCount.textContent = groups.size.toLocaleString();
-  els.modeLabel.textContent = scoreMode === 'fair' ? `Fair ${fairGroup.slice(0, 6)}` : 'Global';
 }
 
 function rankBadge(rank) {
@@ -303,26 +284,9 @@ function rowClass(row) {
 
 function renderWarnings(row) {
   const warnings = row.warnings || [];
-  const fairnessWarnings = [];
-  if (row.same_symbols_as_baseline === false) fairnessWarnings.push('different symbol count');
-  if (row.same_window_as_baseline === false) fairnessWarnings.push('different test window');
-  if (row.same_cost_as_baseline === false) fairnessWarnings.push('different cost profile');
-  if (row.same_target_as_baseline === false) fairnessWarnings.push('different target');
-  const allWarnings = warnings.concat(fairnessWarnings);
-  if (!allWarnings.length) return '<span class="muted">—</span>';
-  const title = escapeHtml(allWarnings.join(' | '));
-  return `<span class="badge warn" title="${title}">${allWarnings.length}</span>`;
-}
-
-function renderFairness(row) {
-  const fairKey = escapeHtml(row.fairness_group_key || '');
-  const badges = [`<span class="badge" title="${fairKey}">${fairKey.slice(0, 6)}</span>`];
-  if (row.is_baseline) badges.push('<span class="badge baseline">Baseline</span>');
-  if (row.same_window_as_baseline) badges.push('<span class="badge fair-ok">Same window</span>');
-  if ([row.same_symbols_as_baseline, row.same_window_as_baseline, row.same_cost_as_baseline, row.same_target_as_baseline].includes(false)) {
-    badges.push('<span class="badge warn">Cross-group</span>');
-  }
-  return badges.join(' ');
+  if (!warnings.length) return '<span class="muted">—</span>';
+  const title = escapeHtml(warnings.join(' | '));
+  return `<span class="badge warn" title="${title}">${warnings.length}</span>`;
 }
 
 function renderExit(row) {
@@ -523,13 +487,6 @@ function resetFilters() {
   if (els.stateFilter) els.stateFilter.value = '';
 }
 
-function setScoreMode(nextMode) {
-  scoreMode = nextMode;
-  els.globalMode.classList.toggle('active', scoreMode === 'global');
-  els.fairMode.classList.toggle('active', scoreMode === 'fair');
-  applyFilters();
-}
-
 async function detectApi() {
   // Always use API - load from DB only, no JSON fallback
   apiAvailable = true;
@@ -564,7 +521,7 @@ async function loadData(market) {
   try {
     if (apiAvailable) {
       allRows = await loadFromApi(cfg);
-      // summary still from static file for fairness baseline (best-effort)
+      // best-effort summary fetch (not required by the live API path)
       try {
         const sr = await fetch(cfg.summaryUrl, { cache: 'no-store' });
         summary = sr.ok ? await sr.json() : {};
@@ -595,8 +552,6 @@ async function loadData(market) {
 }
 
 function bindEvents() {
-  els.globalMode.addEventListener('click', () => setScoreMode('global'));
-  els.fairMode.addEventListener('click', () => setScoreMode('fair'));
   els.searchInput.addEventListener('input', (event) => {
     searchQuery = event.target.value.trim().toLowerCase();
     applyFilters();
@@ -608,9 +563,6 @@ function bindEvents() {
   els.marketFilter.addEventListener('change', (event) => {
     currentMarket = event.target.value;
     persistMarketSelection(currentMarket);
-    scoreMode = 'global';
-    els.globalMode.classList.add('active');
-    els.fairMode.classList.remove('active');
     loadData(currentMarket);
   });
 

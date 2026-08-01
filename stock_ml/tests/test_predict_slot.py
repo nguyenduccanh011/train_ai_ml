@@ -15,12 +15,15 @@ import pandas as pd
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT))
-sys.path.insert(0, str(REPO_ROOT / "stock_ml"))
 
-from src.features.catalog import set_members  # noqa: E402
-from src.features.resolver import add_features  # noqa: E402
-from src.pipeline.experiment import ExperimentConfig, predict_slot_signals, train_fold  # noqa: E402
-from src.targets.forward_regression import ForwardReturnRegressionTarget  # noqa: E402
+from stock_ml.src.features.catalog import set_members  # noqa: E402
+from stock_ml.src.features.resolver import add_features  # noqa: E402
+from stock_ml.src.pipeline.experiment import (  # noqa: E402
+    ExperimentConfig,
+    predict_slot_signals,
+    train_fold,
+)
+from stock_ml.src.targets.forward_regression import ForwardReturnRegressionTarget  # noqa: E402
 
 FEATURE_COLS = set_members("basic_v1")
 

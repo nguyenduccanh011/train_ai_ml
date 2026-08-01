@@ -18,7 +18,6 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT))
-sys.path.insert(0, str(REPO_ROOT / "stock_ml"))
 
 OLD_DB = str(REPO_ROOT / "market_data" / "market.duckdb")
 ADJ_DB = str(REPO_ROOT / "market_data" / "market_adjusted.duckdb")
@@ -29,7 +28,7 @@ def _run_async(coro):
         try:
             return await coro
         finally:
-            from db.engine import async_engine
+            from stock_ml.db.engine import async_engine
 
             await async_engine.dispose()
 
@@ -37,10 +36,10 @@ def _run_async(coro):
 
 
 async def _load(template_id):
-    from db.engine import async_engine
+    from stock_ml.db.engine import async_engine
     from sqlalchemy.ext.asyncio import AsyncSession
     from sqlalchemy.orm import sessionmaker
-    from src.pipeline.experiment import ExperimentConfig
+    from stock_ml.src.pipeline.experiment import ExperimentConfig
 
     maker = sessionmaker(async_engine, class_=AsyncSession, expire_on_commit=False)
     async with maker() as s:
@@ -48,7 +47,7 @@ async def _load(template_id):
 
 
 def _score(summary):
-    from src.evaluation.scoring import composite_score
+    from stock_ml.src.evaluation.scoring import composite_score
 
     agg = summary.get("aggregate", {})
     frames = summary.get("_run_detail_frames", {})
@@ -80,7 +79,7 @@ def _score(summary):
 
 
 def _run_one(cfg, symbols, tag, db):
-    from src.pipeline.experiment import run_experiment
+    from stock_ml.src.pipeline.experiment import run_experiment
 
     print(f"\n===== RUN [{tag}] data={db} =====", flush=True)
     summary = run_experiment(
@@ -112,7 +111,7 @@ def main():
     ap.add_argument("--seed", type=int, default=42)
     args = ap.parse_args()
 
-    from src.utils.config_loader import get_pipeline_symbols
+    from stock_ml.src.utils.config_loader import get_pipeline_symbols
 
     cfg = _run_async(_load(args.template_id))
     cfg.seed = args.seed

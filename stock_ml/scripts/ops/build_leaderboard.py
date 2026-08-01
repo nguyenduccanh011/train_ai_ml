@@ -14,7 +14,7 @@ DEFAULT_OUTPUT_DIR = ROOT / "results" / "leaderboard"
 
 
 def cmd_rebuild(args: argparse.Namespace) -> int:
-    from src.leaderboard.aggregator import rebuild_leaderboard
+    from stock_ml.src.leaderboard.aggregator import rebuild_leaderboard
 
     rows = rebuild_leaderboard(args.experiments_dir, args.output_dir)
 
@@ -32,7 +32,7 @@ def cmd_rebuild(args: argparse.Namespace) -> int:
 
 
 def cmd_append(args: argparse.Namespace) -> int:
-    from src.leaderboard.aggregator import append_or_update
+    from stock_ml.src.leaderboard.aggregator import append_or_update
 
     row = append_or_update(args.run_dir, args.output_dir, bundle=args.bundle)
     print(f"appended {row.run_id} -> {args.output_dir}")
@@ -40,7 +40,7 @@ def cmd_append(args: argparse.Namespace) -> int:
 
 
 def cmd_validate(args: argparse.Namespace) -> int:
-    from src.leaderboard.aggregator import validate_leaderboard
+    from stock_ml.src.leaderboard.aggregator import validate_leaderboard
 
     rows = validate_leaderboard(args.leaderboard_json)
     print(f"validated {len(rows)} rows")

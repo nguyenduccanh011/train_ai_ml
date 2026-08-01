@@ -4,9 +4,10 @@ import tempfile
 from pathlib import Path
 
 import pytest
-from src.pipeline.run import build_default_config, run
-from src.seed import set_global_seed
-from src.tracking.mlflow_logger import MLFlowLogger, data_fingerprint, get_git_commit
+
+from stock_ml.src.pipeline.run import build_default_config, run
+from stock_ml.src.seed import set_global_seed
+from stock_ml.src.tracking.mlflow_logger import MLFlowLogger, data_fingerprint, get_git_commit
 
 
 def test_git_commit():

@@ -209,7 +209,7 @@ def _artifacts(run_path: Path) -> Artifacts:
         if not p.exists():
             return ""
         try:
-            from src.utils.env import get_results_dir
+            from stock_ml.src.utils.env import get_results_dir
 
             return p.resolve().relative_to(Path(get_results_dir()).resolve()).as_posix()
         except (ValueError, Exception):

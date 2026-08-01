@@ -5,7 +5,8 @@ from pathlib import Path
 
 import pytest
 import yaml
-from src.data.loader import DataLoader
+
+from stock_ml.src.data.loader import DataLoader
 
 
 def test_vn_derivatives_phase0_manifest_and_schema_sanity() -> None:

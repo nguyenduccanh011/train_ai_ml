@@ -16,10 +16,10 @@ import pandas as pd
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(REPO_ROOT / "stock_ml"))
+sys.path.insert(0, str(REPO_ROOT))
 
-from src.data.splitter import YearSplitter  # noqa: E402
-from src.data.universe_resolver import (  # noqa: E402
+from stock_ml.src.data.splitter import YearSplitter  # noqa: E402
+from stock_ml.src.data.universe_resolver import (  # noqa: E402
     is_nonstock,
     parse_universe_policy_slug,
     resolve_universes,
@@ -42,7 +42,7 @@ def fake_universe(monkeypatch):
                 for d in dates
             }
 
-        import src.data.sieutinhieu as sth
+        import stock_ml.src.data.sieutinhieu as sth
 
         monkeypatch.setattr(sth, "fetch_universe", _fetch)
 

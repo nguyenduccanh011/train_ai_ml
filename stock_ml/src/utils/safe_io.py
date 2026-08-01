@@ -9,7 +9,7 @@ error handling, so unencodable characters are replaced with '?' instead of
 raising UnicodeEncodeError.
 
 Usage: Import this module ONCE at the top of any entry-point script:
-    import src.safe_io  # noqa: F401  — auto-configures stdout/stderr
+    import stock_ml.src.safe_io  # noqa: F401  — auto-configures stdout/stderr
 """
 
 import io

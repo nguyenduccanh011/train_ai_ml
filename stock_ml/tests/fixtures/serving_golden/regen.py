@@ -35,7 +35,6 @@ import pandas as pd
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 sys.path.insert(0, str(REPO_ROOT))
-sys.path.insert(0, str(REPO_ROOT / "stock_ml"))
 
 FX = Path(__file__).resolve().parent
 DUCKDB = REPO_ROOT / "market_data" / "market.duckdb"
@@ -46,8 +45,7 @@ SLICE_START, SLICE_END = "2022-06-01", "2024-06-30"
 
 
 def main() -> None:
-    from src.data.loader import get_loader
-
+    from stock_ml.src.data.loader import get_loader
     from stock_ml.src.serving.bundle import load_bundle
     from stock_ml.src.serving.inference import generate_signals_from_bundle
 

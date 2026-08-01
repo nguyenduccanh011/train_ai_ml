@@ -25,7 +25,6 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO))
-sys.path.insert(0, str(REPO / "stock_ml"))
 
 import pandas as pd  # noqa: E402
 import psycopg2  # noqa: E402
@@ -81,7 +80,7 @@ def main() -> None:
         raise SystemExit("attest: no --window and no cutoff_date in manifest")
 
     # Production side: full history for warmup (z-window/trailing features), then keep the attest window.
-    from src.data.loader import get_loader
+    from stock_ml.src.data.loader import get_loader
 
     loader = get_loader(a.duckdb)
     available = set(loader.list_symbols())

@@ -85,7 +85,7 @@ def get_loader(data_root: str | Path, timeframe: str = "1D"):
 
     # If it's a DuckDB file, use DuckDBLoader
     if root.suffix == ".duckdb" or (root.is_file() and "duckdb" in root.name):
-        from src.data.duckdb_loader import DuckDBLoader
+        from stock_ml.src.data.duckdb_loader import DuckDBLoader
 
         return DuckDBLoader(root, timeframe=timeframe)
 

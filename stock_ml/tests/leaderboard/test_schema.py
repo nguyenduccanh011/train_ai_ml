@@ -17,7 +17,13 @@ from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
-from src.leaderboard.schema import CostProfile, LeaderboardRow, TargetConfig, export_json_schema
+
+from stock_ml.src.leaderboard.schema import (
+    CostProfile,
+    LeaderboardRow,
+    TargetConfig,
+    export_json_schema,
+)
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
 GOLDEN_DIR = Path(__file__).parent / "golden"

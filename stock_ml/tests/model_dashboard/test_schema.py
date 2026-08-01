@@ -7,8 +7,8 @@ from pydantic import ValidationError
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from src.leaderboard.loader import run_dir_to_row
-from src.model_dashboard.schema import (
+from stock_ml.src.leaderboard.loader import run_dir_to_row
+from stock_ml.src.model_dashboard.schema import (
     ARTIFACT_KIND_FILENAMES,
     DashboardBundle,
     artifact_root,

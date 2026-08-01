@@ -269,7 +269,7 @@ def get_pipeline_symbols(
     if run_context.resolved_data_dir is None:
         raise ValueError(f"Market {resolved_market!r} does not define data.data_dir")
 
-    from src.data.loader import get_loader
+    from stock_ml.src.data.loader import get_loader
 
     abs_data_dir = resolve_data_dir(run_context.resolved_data_dir)
     # Factory picks DuckDBLoader for a .duckdb path, CSV DataLoader otherwise.

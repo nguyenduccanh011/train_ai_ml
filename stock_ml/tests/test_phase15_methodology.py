@@ -5,10 +5,11 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 import pytest
-from src.data.splitter import PurgedKFoldSplitter
-from src.evaluation.bootstrap import bootstrap_metric, max_drawdown, sharpe_ratio, win_rate
-from src.evaluation.dsr import deflated_sharpe
-from src.evaluation.pbo import pbo
+
+from stock_ml.src.data.splitter import PurgedKFoldSplitter
+from stock_ml.src.evaluation.bootstrap import bootstrap_metric, max_drawdown, sharpe_ratio, win_rate
+from stock_ml.src.evaluation.dsr import deflated_sharpe
+from stock_ml.src.evaluation.pbo import pbo
 
 
 class TestPurgedKFold:

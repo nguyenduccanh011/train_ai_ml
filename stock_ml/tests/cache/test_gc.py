@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from src.cache.garbage_collector import (
+from stock_ml.src.cache.garbage_collector import (
     QUARANTINE_DIRNAME,
     gather_referenced_keys,
     purge_trash,

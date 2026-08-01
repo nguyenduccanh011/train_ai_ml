@@ -15,7 +15,7 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from src.leaderboard import rebuild_leaderboard
+from stock_ml.src.leaderboard import rebuild_leaderboard
 
 
 def main():

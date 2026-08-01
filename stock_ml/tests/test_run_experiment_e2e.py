@@ -21,9 +21,8 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT))
-sys.path.insert(0, str(REPO_ROOT / "stock_ml"))
 
-from src.pipeline.experiment import ExperimentConfig, run_experiment  # noqa: E402
+from stock_ml.src.pipeline.experiment import ExperimentConfig, run_experiment  # noqa: E402
 
 DUCKDB = REPO_ROOT / "market_data" / "market.duckdb"
 FIXTURE = Path(__file__).parent / "fixtures" / "run_experiment_e2e.json"

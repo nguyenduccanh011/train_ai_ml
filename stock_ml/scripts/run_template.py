@@ -22,16 +22,14 @@ import traceback
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-# Both roots are needed: src.* imports resolve via stock_ml/, while the source
-# modules use absolute stock_ml.src.* imports that need the repo root (stock_ml
-# is a namespace package with no __init__.py).
+# Only the repo root is needed: all imports are canonical stock_ml.src.* (stock_ml
+# is a namespace package with no __init__.py, so its parent must be on sys.path).
 sys.path.insert(0, str(REPO_ROOT))
-sys.path.insert(0, str(REPO_ROOT / "stock_ml"))
 
-from src.market_profile import resolve_run_context
-from src.pipeline.experiment import ExperimentConfig, run_experiment
-from src.utils.config_loader import get_pipeline_symbols
-from src.utils.env import resolve_data_dir
+from stock_ml.src.market_profile import resolve_run_context
+from stock_ml.src.pipeline.experiment import ExperimentConfig, run_experiment
+from stock_ml.src.utils.config_loader import get_pipeline_symbols
+from stock_ml.src.utils.env import resolve_data_dir
 
 
 def _run_async(coro):
@@ -47,7 +45,7 @@ def _run_async(coro):
         try:
             return await coro
         finally:
-            from db.engine import async_engine
+            from stock_ml.db.engine import async_engine
 
             await async_engine.dispose()
 
@@ -101,13 +99,14 @@ async def _persist_run_detail(run_id: str, frames: dict) -> None:
     import csv
     import io
 
-    from db.engine import async_engine
-    from db.repositories.signal_repo import RunSignalRepository
-    from db.repositories.symbol_stat_repo import RunSymbolStatRepository
-    from db.repositories.trade_repo import RunTradeRepository
-    from db.repositories.yearly_stat_repo import RunYearlyStatRepository
     from sqlalchemy.ext.asyncio import AsyncSession
     from sqlalchemy.orm import sessionmaker
+
+    from stock_ml.db.engine import async_engine
+    from stock_ml.db.repositories.signal_repo import RunSignalRepository
+    from stock_ml.db.repositories.symbol_stat_repo import RunSymbolStatRepository
+    from stock_ml.db.repositories.trade_repo import RunTradeRepository
+    from stock_ml.db.repositories.yearly_stat_repo import RunYearlyStatRepository
 
     def _rows(key: str) -> list[dict]:
         """DictReader over an in-memory CSV of the named frame (None/empty -> [])."""
@@ -219,9 +218,10 @@ async def _persist_run_detail(run_id: str, frames: dict) -> None:
 
 async def load_template_config(template_id: int) -> ExperimentConfig:
     """Load template from DB async."""
-    from db.engine import async_engine
     from sqlalchemy.ext.asyncio import AsyncSession
     from sqlalchemy.orm import sessionmaker
+
+    from stock_ml.db.engine import async_engine
 
     async_session_maker = sessionmaker(async_engine, class_=AsyncSession, expire_on_commit=False)
 
@@ -312,9 +312,9 @@ def run_template_experiment(
         # Upsert to DB leaderboard
         from datetime import UTC, datetime
 
-        from db.repositories.run_repo import LeaderboardRunRepository
-        from src.evaluation.scoring import composite_score
-        from src.leaderboard.schema import (
+        from stock_ml.db.repositories.run_repo import LeaderboardRunRepository
+        from stock_ml.src.evaluation.scoring import composite_score
+        from stock_ml.src.leaderboard.schema import (
             Artifacts,
             CostProfile,
             LeaderboardRow,
@@ -449,9 +449,10 @@ def run_template_experiment(
             git_sha, data_snapshot_date, lib_versions = _collect_provenance(str(data_root))
 
             async def upsert_to_leaderboard():
-                from db.engine import async_engine
                 from sqlalchemy.ext.asyncio import AsyncSession
                 from sqlalchemy.orm import sessionmaker
+
+                from stock_ml.db.engine import async_engine
 
                 async_session_maker = sessionmaker(
                     async_engine, class_=AsyncSession, expire_on_commit=False

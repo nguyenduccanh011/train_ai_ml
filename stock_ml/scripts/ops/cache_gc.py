@@ -33,7 +33,7 @@ def apply_retention_policy(results_dir: str) -> None:
     from datetime import datetime, timedelta
     import json
 
-    from src.utils.config_loader import load_base_config
+    from stock_ml.src.utils.config_loader import load_base_config
 
     cfg = load_base_config()
     retention = cfg.get("retention", {})
@@ -113,8 +113,8 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    from src.cache.garbage_collector import sweep
-    from src.utils.env import get_results_dir
+    from stock_ml.src.cache.garbage_collector import sweep
+    from stock_ml.src.utils.env import get_results_dir
 
     results_dir = args.results_dir or get_results_dir()
 

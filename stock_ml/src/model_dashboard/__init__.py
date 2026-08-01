@@ -1,4 +1,4 @@
-from src.model_dashboard.schema import (
+from stock_ml.src.model_dashboard.schema import (
     ARTIFACT_KIND_FILENAMES,
     ARTIFACT_ROOT_NAMES,
     ArtifactRecord,
@@ -14,7 +14,7 @@ from src.model_dashboard.schema import (
     leaderboard_row_to_dashboard_bundle,
     model_id_for_row,
 )
-from src.model_dashboard.store import DashboardStore, PurgePlan
+from stock_ml.src.model_dashboard.store import DashboardStore, PurgePlan
 
 __all__ = [
     "ARTIFACT_KIND_FILENAMES",

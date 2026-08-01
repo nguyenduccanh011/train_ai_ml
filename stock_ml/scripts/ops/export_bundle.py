@@ -30,16 +30,15 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT))
-sys.path.insert(0, str(REPO_ROOT / "stock_ml"))
 
 import pandas as pd  # noqa: E402
 
-from src.pipeline.experiment import (  # noqa: E402
+from stock_ml.src.pipeline.experiment import (  # noqa: E402
     ExperimentConfig,
     build_feature_frame,
     train_fold,
 )
-from src.serving.bundle import write_bundle  # noqa: E402
+from stock_ml.src.serving.bundle import write_bundle  # noqa: E402
 
 # Min history bars a serving host must prefetch before a signal date so trailing
 # features (sma_200 etc.) and the 252-bar recombine z-window are warm.
@@ -71,7 +70,7 @@ def _write_parity(bundle_path: Path, *, as_of: str) -> None:
     """
     import hashlib
 
-    from src.serving.resolved import _catalog_fingerprint, _wheel_version
+    from stock_ml.src.serving.resolved import _catalog_fingerprint, _wheel_version
 
     def _sha(p: Path) -> str:
         return hashlib.sha256(p.read_bytes()).hexdigest()
@@ -193,7 +192,7 @@ def main() -> None:
     serve_universe: list[str] | None = None
     serve_year: int | None = None
     if getattr(cfg, "universe_policy", None):
-        from src.data.universe_resolver import resolve_universes
+        from stock_ml.src.data.universe_resolver import resolve_universes
 
         _sp = cfg.split
         fold_years = list(
@@ -218,12 +217,12 @@ def main() -> None:
         f"mode={'replicate-last-fold' if args.replicate_last_fold else 'single-fit'}"
     )
 
-    from src.data.loader import get_loader
+    from stock_ml.src.data.loader import get_loader
 
     # §13.3.1 fetch-on-miss: pull survivorship-correct names the corrected universe (§13.9) surfaces
     # but the local cache lacks, so the export universe matches the trained one (no silent shrink).
     if universe_by_year is not None and str(args.duckdb).endswith(".duckdb"):
-        from src.data.duckdb_loader import ensure_symbols_cached
+        from stock_ml.src.data.duckdb_loader import ensure_symbols_cached
 
         ensure_symbols_cached(args.duckdb, symbols)
 
@@ -269,7 +268,7 @@ def main() -> None:
         # LAST fold (bundle == that model); --fold-models trains ALL folds (§11.9); --fold-models-from-run
         # loads them from the backtest instead of training. Either way the last fold's test_start is the
         # serve cutoff.
-        from src.data.splitter import YearSplitter
+        from stock_ml.src.data.splitter import YearSplitter
 
         sc = cfg.split
         splitter = YearSplitter(
@@ -487,8 +486,8 @@ def main() -> None:
     # Self-sufficient export record (§11.5.1): the 227 resolved engine nodes + z-window + catalog
     # fingerprint + wheel version + data declaration that config.json alone cannot regenerate the
     # signal from. Built from the SAME engine deserializer the backtest uses (R3, 0-number-change).
-    from src.backtest.engine import engine_config_from_dict
-    from src.serving.resolved import build_resolved_config
+    from stock_ml.src.backtest.engine import engine_config_from_dict
+    from stock_ml.src.serving.resolved import build_resolved_config
 
     _engine, _ = engine_config_from_dict(cfg.engine)
     _serve_universe = serve_universe if serve_universe is not None else requested

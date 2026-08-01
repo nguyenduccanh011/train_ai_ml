@@ -118,7 +118,7 @@ def resolve_universes(
     if hyst and sticky:
         raise ValueError("universe_policy: hysteresis and sticky_drop are mutually exclusive")
 
-    from src.data.sieutinhieu import fetch_universe
+    from stock_ml.src.data.sieutinhieu import fetch_universe
 
     test_years = sorted(test_years)
     # One batched call for every prior-year window across all folds (append-only source -> stable).

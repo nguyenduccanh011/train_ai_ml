@@ -21,18 +21,18 @@ from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-sys.path.insert(0, str(REPO_ROOT / "stock_ml"))
+sys.path.insert(0, str(REPO_ROOT))
 
-from src.data.loader import DataLoader
-from src.leaderboard.aggregator import rebuild_leaderboard
-from src.pipeline.experiment import ExperimentConfig, run_experiment
-from src.pipeline.multi_seed import run_experiment_multi_seed
+from stock_ml.src.data.loader import DataLoader
+from stock_ml.src.leaderboard.aggregator import rebuild_leaderboard
+from stock_ml.src.pipeline.experiment import ExperimentConfig, run_experiment
+from stock_ml.src.pipeline.multi_seed import run_experiment_multi_seed
 
 # DB upsert for Phase 0-2 research pipeline
 try:
-    from db.adapters.leaderboard_adapter import row_to_model
-    from db.engine import sync_engine
-    from db.repositories.run_repo import LeaderboardRunRepository
+    from stock_ml.db.adapters.leaderboard_adapter import row_to_model
+    from stock_ml.db.engine import sync_engine
+    from stock_ml.db.repositories.run_repo import LeaderboardRunRepository
     from sqlalchemy.orm import sessionmaker
 
     DB_AVAILABLE = True

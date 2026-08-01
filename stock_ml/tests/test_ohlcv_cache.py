@@ -13,9 +13,9 @@ import duckdb
 import pandas as pd
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(REPO_ROOT / "stock_ml"))
+sys.path.insert(0, str(REPO_ROOT))
 
-from src.data.duckdb_loader import DuckDBLoader, ensure_symbols_cached  # noqa: E402
+from stock_ml.src.data.duckdb_loader import DuckDBLoader, ensure_symbols_cached  # noqa: E402
 
 
 def _seed_duck(path: Path) -> None:
@@ -46,7 +46,7 @@ def _fake_history(symbol: str, **_kw) -> pd.DataFrame:
 
 
 def test_fetch_on_miss_upserts_missing_only(tmp_path, monkeypatch):
-    import src.data.sieutinhieu as sth
+    import stock_ml.src.data.sieutinhieu as sth
 
     monkeypatch.setattr(sth, "fetch_history", _fake_history)
     db = tmp_path / "cache.duckdb"
@@ -67,7 +67,7 @@ def test_fetch_on_miss_upserts_missing_only(tmp_path, monkeypatch):
 
 
 def test_fetch_on_miss_idempotent(tmp_path, monkeypatch):
-    import src.data.sieutinhieu as sth
+    import stock_ml.src.data.sieutinhieu as sth
 
     monkeypatch.setattr(sth, "fetch_history", _fake_history)
     db = tmp_path / "cache.duckdb"
@@ -79,7 +79,7 @@ def test_fetch_on_miss_idempotent(tmp_path, monkeypatch):
 
 def test_fetch_on_miss_tolerates_untradeable_symbol(tmp_path, monkeypatch):
     # A symbol whose /ohlcv/ 500s (no price series) is dropped with a warning; the rest still land.
-    import src.data.sieutinhieu as sth
+    import stock_ml.src.data.sieutinhieu as sth
 
     def _flaky(symbol: str, **kw):
         if symbol == "DEAD":
@@ -97,7 +97,7 @@ def test_fetch_on_miss_tolerates_untradeable_symbol(tmp_path, monkeypatch):
 def test_fetch_on_miss_all_untradeable_no_abort(tmp_path, monkeypatch):
     # When every missing symbol 500s (no price series), proceed with zero fetched — do NOT abort
     # (they are untradeable, not a down source). Regression: the survivorship 7-symbol dyn900 case.
-    import src.data.sieutinhieu as sth
+    import stock_ml.src.data.sieutinhieu as sth
 
     def _all_500(symbol: str, **kw):
         raise RuntimeError("sieutinhieu: GET ohlcv/ failed (HTTP Error 500: Internal Server Error)")
@@ -110,7 +110,7 @@ def test_fetch_on_miss_all_untradeable_no_abort(tmp_path, monkeypatch):
 
 
 def test_fetch_on_miss_aborts_when_source_down(tmp_path, monkeypatch):
-    import src.data.sieutinhieu as sth
+    import stock_ml.src.data.sieutinhieu as sth
 
     def _all_fail(symbol: str, **kw):
         raise RuntimeError("connection refused")

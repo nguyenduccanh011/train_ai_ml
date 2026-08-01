@@ -23,12 +23,11 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT))
-sys.path.insert(0, str(REPO_ROOT / "stock_ml"))
 
 import pandas as pd  # noqa: E402
 
-from src.serving.bundle import load_bundle  # noqa: E402
-from src.serving.inference import generate_signals_from_bundle  # noqa: E402
+from stock_ml.src.serving.bundle import load_bundle  # noqa: E402
+from stock_ml.src.serving.inference import generate_signals_from_bundle  # noqa: E402
 
 
 def main() -> None:
@@ -48,7 +47,7 @@ def main() -> None:
     cutoff_year = pd.Timestamp(bundle.manifest["cutoff_date"]).year
     symbols = bundle.manifest.get("universe") or []
 
-    from src.data.loader import get_loader
+    from stock_ml.src.data.loader import get_loader
 
     loader = get_loader(args.duckdb)
     available = set(loader.list_symbols())

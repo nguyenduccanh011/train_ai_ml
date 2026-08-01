@@ -16,14 +16,14 @@ from pathlib import Path
 import yaml
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-sys.path.insert(0, str(REPO_ROOT / "stock_ml"))
+sys.path.insert(0, str(REPO_ROOT))
 
 
 def backfill_universe_info():
     """Backfill universe info for runs missing it."""
-    from db.engine import sync_engine
-    from db.models.run import LeaderboardRunModel
-    from db.repositories.universe_repo import UniverseRepository
+    from stock_ml.db.engine import sync_engine
+    from stock_ml.db.models.run import LeaderboardRunModel
+    from stock_ml.db.repositories.universe_repo import UniverseRepository
     from sqlalchemy.orm import Session
 
     print("Backfilling universe_slug/version for leaderboard runs...")

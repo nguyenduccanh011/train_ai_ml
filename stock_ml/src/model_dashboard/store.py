@@ -8,8 +8,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from src.leaderboard.schema import LeaderboardRow
-from src.model_dashboard.schema import (
+from stock_ml.src.leaderboard.schema import LeaderboardRow
+from stock_ml.src.model_dashboard.schema import (
     ArtifactRecord,
     AuditLogRecord,
     DashboardBundle,

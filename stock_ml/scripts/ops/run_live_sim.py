@@ -17,13 +17,13 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-sys.path.insert(0, str(REPO_ROOT / "stock_ml"))
+sys.path.insert(0, str(REPO_ROOT))
 
-from src.backtest.engine import CostModel, EngineConfig  # noqa: E402
-from src.data.loader import DataLoader  # noqa: E402
-from src.live_sim.config import LiveSimConfig  # noqa: E402
-from src.live_sim.loop import LiveSimEngine  # noqa: E402
-from src.targets.forward import ForwardReturnTarget  # noqa: E402
+from stock_ml.src.backtest.engine import CostModel, EngineConfig  # noqa: E402
+from stock_ml.src.data.loader import DataLoader  # noqa: E402
+from stock_ml.src.live_sim.config import LiveSimConfig  # noqa: E402
+from stock_ml.src.live_sim.loop import LiveSimEngine  # noqa: E402
+from stock_ml.src.targets.forward import ForwardReturnTarget  # noqa: E402
 
 DEFAULT_DATA_ROOT = str(REPO_ROOT / "portable_data" / "vn_stock_ai_dataset_cleaned")
 

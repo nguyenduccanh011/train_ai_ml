@@ -10,14 +10,14 @@ import pandas as pd
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(REPO_ROOT / "stock_ml"))
+sys.path.insert(0, str(REPO_ROOT))
 
-from src.backtest.engine import CostModel, EngineConfig  # noqa: E402
-from src.live_sim.config import LiveSimConfig  # noqa: E402
-from src.live_sim.executor import EntryExecutor, ExitEvaluator  # noqa: E402
-from src.live_sim.signals import FrozenSignalSet, SignalGenerator  # noqa: E402
-from src.live_sim.state import Position, SimState  # noqa: E402
-from src.models.baseline import BaselineModel  # noqa: E402
+from stock_ml.src.backtest.engine import CostModel, EngineConfig  # noqa: E402
+from stock_ml.src.live_sim.config import LiveSimConfig  # noqa: E402
+from stock_ml.src.live_sim.executor import EntryExecutor, ExitEvaluator  # noqa: E402
+from stock_ml.src.live_sim.signals import FrozenSignalSet, SignalGenerator  # noqa: E402
+from stock_ml.src.live_sim.state import Position, SimState  # noqa: E402
+from stock_ml.src.models.baseline import BaselineModel  # noqa: E402
 
 
 def _synthetic_ohlcv(symbols: list[str], start: str, end: str, seed: int = 0) -> pd.DataFrame:
@@ -52,7 +52,7 @@ def _synthetic_ohlcv(symbols: list[str], start: str, end: str, seed: int = 0) ->
 
 def _build_features(df: pd.DataFrame) -> pd.DataFrame:
     """Minimal feature building for test."""
-    from src.features.resolver import add_features
+    from stock_ml.src.features.resolver import add_features
 
     return add_features(df)
 
@@ -108,7 +108,7 @@ def test_signal_generator_detects_lookahead():
 
 def test_signal_generator_fails_on_nan_features():
     """SignalGenerator must reject NaN features."""
-    from src.features.catalog import set_members
+    from stock_ml.src.features.catalog import set_members
 
     FEATURE_COLS = set_members("basic_v1")
 

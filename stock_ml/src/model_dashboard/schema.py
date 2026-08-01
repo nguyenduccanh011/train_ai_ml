@@ -6,7 +6,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
-from src.leaderboard.schema import LeaderboardRow
+from stock_ml.src.leaderboard.schema import LeaderboardRow
 
 ARTIFACT_ROOT_NAMES: tuple[str, ...] = ("results", "models", "trades", "predictions", "logs")
 ARTIFACT_KIND_FILENAMES: dict[str, str] = {

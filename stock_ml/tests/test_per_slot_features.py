@@ -9,12 +9,12 @@ import numpy as np
 import pandas as pd
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(REPO_ROOT / "stock_ml"))
+sys.path.insert(0, str(REPO_ROOT))
 
-from src.data.splitter import YearSplitter  # noqa: E402
-from src.features.resolver import FeatureResolver  # noqa: E402
-from src.pipeline.experiment import ExperimentConfig, train_fold  # noqa: E402
-from src.targets.forward_regression import ForwardReturnRegressionTarget  # noqa: E402
+from stock_ml.src.data.splitter import YearSplitter  # noqa: E402
+from stock_ml.src.features.resolver import FeatureResolver  # noqa: E402
+from stock_ml.src.pipeline.experiment import ExperimentConfig, train_fold  # noqa: E402
+from stock_ml.src.targets.forward_regression import ForwardReturnRegressionTarget  # noqa: E402
 
 
 def _synthetic_ohlcv(symbols: list[str], start: str, end: str, seed: int = 0) -> pd.DataFrame:

@@ -141,7 +141,7 @@ def ensure_symbols_cached(
     if not missing:
         return []
 
-    from src.data.sieutinhieu import fetch_history
+    from stock_ml.src.data.sieutinhieu import fetch_history
 
     # Per-symbol tolerant: a symbol the universe endpoint ranks (it has matched-flow) but whose /ohlcv/
     # 500s has NO price series on the source — it is UNTRADEABLE (no bars to backtest), so drop it with

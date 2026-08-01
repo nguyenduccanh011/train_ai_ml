@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import pytest
-from src.backtest.pnl import (
+
+from stock_ml.src.backtest.pnl import (
     EquitySpotCalculator,
     FuturesContractCalculator,
     InversePerpCalculator,

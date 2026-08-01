@@ -22,12 +22,11 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO_ROOT))
-sys.path.insert(0, str(REPO_ROOT / "stock_ml"))
 
 import pandas as pd  # noqa: E402
 
-from src.serving.bundle import load_bundle  # noqa: E402
-from src.serving.inference import generate_signals_from_bundle  # noqa: E402
+from stock_ml.src.serving.bundle import load_bundle  # noqa: E402
+from stock_ml.src.serving.inference import generate_signals_from_bundle  # noqa: E402
 
 
 def _serving_chain(bundle, ohlcv: pd.DataFrame) -> pd.DataFrame:
@@ -49,7 +48,7 @@ def main() -> None:
         f"cutoff={bundle.manifest.get('cutoff_date')} models={sorted(bundle.models)}"
     )
 
-    from src.data.loader import get_loader
+    from stock_ml.src.data.loader import get_loader
 
     symbols = bundle.manifest.get("universe") or []
     loader = get_loader(args.duckdb)

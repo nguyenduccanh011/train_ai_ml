@@ -6,8 +6,8 @@ import pytest
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from src.leaderboard.loader import run_dir_to_row
-from src.model_dashboard import DashboardStore
+from stock_ml.src.leaderboard.loader import run_dir_to_row
+from stock_ml.src.model_dashboard import DashboardStore
 
 FIXTURES = Path(__file__).resolve().parents[1] / "leaderboard" / "fixtures"
 

@@ -37,7 +37,6 @@ target-version = "py311"
 extend-exclude = [
     "stock_ml/archive",
     "stock_ml/legacy",
-    "stock_ml/visualization",
     "stock_ml/results",
     "portable_data",
     # Root-level ad-hoc analysis scripts (sẽ move vào stock_ml/analysis/ khi cleanup)

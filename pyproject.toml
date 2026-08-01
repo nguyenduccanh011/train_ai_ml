@@ -4,7 +4,6 @@ target-version = "py311"
 extend-exclude = [
     "stock_ml/archive",
     "stock_ml/legacy",
-    "stock_ml/visualization",
     "stock_ml/results",
     "stock_ml/analysis",
     "portable_data",

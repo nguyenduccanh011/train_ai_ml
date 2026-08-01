@@ -1,8 +1,0 @@
-{
-  "name": "stock-ml-visualization",
-  "version": "1.0.0",
-  "description": "V6 Trading Signals Chart Viewer",
-  "dependencies": {
-    "lightweight-charts": "^5.1.0"
-  }
-}

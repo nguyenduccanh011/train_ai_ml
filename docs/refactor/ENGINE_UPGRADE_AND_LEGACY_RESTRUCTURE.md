@@ -1848,6 +1848,13 @@ Phase 0a** (`PRUNE_BUNDLES=0`, đã đánh dấu XONG bên đó); **serving D4 t
   **8/8 module serving-critical import ở env chỉ-repo_root**, và **chạy thật** `run_template --template-id 999999` đi tới DB
   qua `stock_ml.db.*` (fail "template not found", KHÔNG ImportError) ⇒ double-cache đã hết. (3 script cache_gc/build_leaderboard
   giữ, không phải server — api_server đã xoá ở `bf9579ed`.)
+- ✅ **§1.6 GC FeatureStore-safe by-design + §4.7 xoá FeatureCacheManager — commit `b00da339`.** §1.6: `find_feature_cache_files`
+  glob `features/*/*` chỉ bắt cache kiểu-cũ `features/<set>/<key>.parquet`; FeatureStore `features/store/<expr_hash>/<ver>.parquet`
+  (~51GB/~14.5k file) sâu hơn 1 bậc nên bị bỏ qua **tình cờ**. Biến thành CHỦ ĐÍCH: loại tường minh subtree `store/` +
+  comment (store keyed theo expr_hash ≠ run cache_keys ⇒ nới glob = orphan cả store). 2 test guard (finder không trả store;
+  dry-run sweep không liệt store là orphan). §4.7: xoá `feature_cache.py` (`FeatureCacheManager` 229 dòng, 0 importer, chỉ
+  __init__ re-export; docstring tả layout đã lỗi thời) — __init__ nay trỏ `garbage_collector`. Verify: **318 pass/11 skip** (+2),
+  ruff sạch, cache pkg + FastAPI cache routes import OK.
 - ⏳ **CÒN (liên-kết/nguy hiểm):** drop 8 cột chết `leaderboard_runs` = cơ chế **fairness cũ** §4.4 (ripple ORM/adapter/
   schema/API) · **⚠️ §3 config_hash re-identity** (368M dòng run_signals + 5043 fold dir + sổ tier live — D2 + dry-run
-  bản-sao + checkpoint) · §4.7 FeatureCacheManager (partial-file). Liên quan memory: `phase5-progress-and-identity-danger`.
+  bản-sao + checkpoint). Liên quan memory: `phase5-progress-and-identity-danger`.

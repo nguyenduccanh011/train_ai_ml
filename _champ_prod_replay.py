@@ -87,8 +87,12 @@ for s, g in px.groupby("symbol"):
     g["atrpct"] = tr_.rolling(14).mean() / c
     g["dist_ma50"] = c / c.rolling(50).mean() - 1
     g["ret5"] = c / c.shift(7) - 1  # ret7 (7-day window)
-    parts.append(g[["symbol", "date"] + CS4 + ["atrpct", "dist_ma50", "ret5"]])
+    parts.append(g[["symbol", "date", "volume"] + CS4 + ["atrpct", "dist_ma50", "ret5"]])
 P = pd.concat(parts, ignore_index=True)
+# ghost-bar mask (parity with stock_ml.portfolio.build_market_panel): a non-traded bar
+# (volume<=0) must not vote in the cross-section — NaN its factors before ranking.
+_ghost = P["volume"].fillna(0) <= 0
+P.loc[_ghost, CS4 + ["atrpct", "dist_ma50"]] = np.nan
 for col in CS4 + ["atrpct", "dist_ma50"]:
     P[col + "_r"] = P.groupby("date")[col].rank(pct=True)
 b4 = [c + "_r" for c in CS4]

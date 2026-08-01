@@ -13,8 +13,22 @@ from stock_ml.portfolio.constants import CS4
 
 
 def build_market_panel(px: pd.DataFrame, ret_win: int = 7):
-    """px: columns symbol,date,low,close,high (full market, from market_start).
-    Returns CLO/LO/DIDX/INV price arrays + CSm (conviction) / R5 (ret-gate) maps."""
+    """px: columns symbol,date,low,close,high,volume (full market, from market_start).
+    Returns CLO/LO/DIDX/INV price arrays + CSm (conviction) / R5 (ret-gate) maps.
+
+    The cross-sectional conviction rank must only count bars that ACTUALLY TRADED that day.
+    A wide market store carries ~20–25% "ghost" bars (volume==0, flat price) that would
+    otherwise pollute every date's cross-section with a fake cluster (dist20low=0, ret20=0,
+    rsi14≈50) and shrink real symbols' percentile. We NaN-out ghost bars' factors before
+    ranking so they leave the denominator (pandas rank(pct) skips NaN). `volume` is required
+    — fail loud rather than silently rank ghost bars. Non-stock rows (index/derivative/ETF)
+    must be filtered by the CALLER's declared panel (asset_type is not in OHLCV)."""
+    if "volume" not in px.columns:
+        raise ValueError(
+            "build_market_panel requires a 'volume' column to mask non-traded (ghost) bars "
+            "before cross-sectional ranking — pass the full market_frame (fail-loud, no silent "
+            "ranking of ghost bars). See docs/refactor/CONVICTION_UNIVERSE_UNIFICATION.md §3C."
+        )
     px = px.copy()
     px["date"] = pd.to_datetime(px["date"])
     CLO, LO, DIDX, INV, parts = {}, {}, {}, {}, []
@@ -36,8 +50,11 @@ def build_market_panel(px: pd.DataFrame, ret_win: int = 7):
         g["atrpct"] = tr_.rolling(14).mean() / c
         g["dist_ma50"] = c / c.rolling(50).mean() - 1
         g["ret5"] = c / c.shift(ret_win) - 1  # ret-gate window (champion: 7)
-        parts.append(g[["symbol", "date"] + CS4 + ["atrpct", "dist_ma50", "ret5"]])
+        parts.append(g[["symbol", "date", "volume"] + CS4 + ["atrpct", "dist_ma50", "ret5"]])
     P = pd.concat(parts, ignore_index=True)
+    # ghost-bar mask: a bar that did not trade (volume<=0) must not vote in the cross-section.
+    _ghost = P["volume"].fillna(0) <= 0
+    P.loc[_ghost, CS4 + ["atrpct", "dist_ma50"]] = np.nan
     for col in CS4 + ["atrpct", "dist_ma50"]:
         P[col + "_r"] = P.groupby("date")[col].rank(pct=True)
     P["cs5_ma50"] = P[[c + "_r" for c in CS4] + ["atrpct_r", "dist_ma50_r"]].mean(axis=1)

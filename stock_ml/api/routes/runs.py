@@ -666,6 +666,65 @@ async def get_run_skipped(run_id: str, session: AsyncSession = Depends(get_db)) 
     }
 
 
+_LIFECYCLE_STATES = ("trained", "pinned", "retired")
+
+
+@router.post("/runs/bulk-state")
+async def bulk_set_run_state(body: dict, session: AsyncSession = Depends(get_db)) -> dict:
+    """Change lifecycle state for every run matching a current-state filter.
+
+    Body: ``{"state": "<new>", "filter": {"current_state": "<current>"}}``.
+    Registered before the ``/runs/{run_id:path}`` routes so ``bulk-state`` is not
+    swallowed as a run id by the catch-all.
+    """
+    from sqlalchemy import update
+
+    new_state = str(body.get("state", "")).lower()
+    current_state = str((body.get("filter") or {}).get("current_state", "")).lower()
+    if new_state not in _LIFECYCLE_STATES or current_state not in _LIFECYCLE_STATES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"state and filter.current_state must each be one of: {', '.join(_LIFECYCLE_STATES)}",
+        )
+
+    from stock_ml.db.models.run import LeaderboardRunModel
+
+    result = await session.execute(
+        update(LeaderboardRunModel)
+        .where(LeaderboardRunModel.state == current_state)
+        .values(state=new_state)
+    )
+    await session.commit()
+    return {"state": new_state, "updated": result.rowcount}
+
+
+@router.delete("/runs/bulk")
+async def bulk_delete_runs(body: dict, session: AsyncSession = Depends(get_db)) -> dict:
+    """Delete every retired run from the leaderboard (DB-first: drops the rows).
+
+    Body: ``{"state": "retired", "confirm": true}``. Restricted to ``retired`` so an
+    errant call cannot mass-delete active models. Registered before
+    ``/runs/{run_id:path}`` so ``bulk`` is not treated as a run id.
+    """
+    from sqlalchemy import delete
+
+    if not body.get("confirm"):
+        raise HTTPException(status_code=400, detail="confirm must be true for bulk delete")
+    state = str(body.get("state", "")).lower()
+    if state != "retired":
+        raise HTTPException(status_code=400, detail="bulk delete is only allowed for state=retired")
+
+    from stock_ml.db.models.run import LeaderboardRunModel
+
+    result = await session.execute(
+        delete(LeaderboardRunModel).where(LeaderboardRunModel.state == state)
+    )
+    await session.commit()
+    # DB-first: this drops leaderboard rows only; on-disk artifacts/cache are
+    # reclaimed separately by the GC sweep, so no bytes are freed here.
+    return {"deleted": result.rowcount, "freed_mb": 0}
+
+
 @router.patch("/runs/{run_id:path}/state")
 async def set_run_state(run_id: str, body: dict, session: AsyncSession = Depends(get_db)) -> dict:
     from sqlalchemy import update
@@ -673,9 +732,9 @@ async def set_run_state(run_id: str, body: dict, session: AsyncSession = Depends
     row, _ = await _resolve(session, run_id)
 
     new_state = body.get("state", "").lower()
-    if new_state not in ("trained", "pinned", "retired"):
+    if new_state not in _LIFECYCLE_STATES:
         raise HTTPException(
-            status_code=400, detail="state must be one of: trained, pinned, retired"
+            status_code=400, detail=f"state must be one of: {', '.join(_LIFECYCLE_STATES)}"
         )
 
     from stock_ml.db.models.run import LeaderboardRunModel

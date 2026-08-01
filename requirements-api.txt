@@ -29,6 +29,8 @@ numpy==1.26.3
 pandas==2.1.4
 scipy==1.11.4
 scikit-learn==1.3.2
+lightgbm==4.6.0  # meta-priority LGBM in the Stage-2 overlay sandbox (/runs/{id}/overlay);
+                 # pinned == host so live sandbox scores match the board's cagr_overlay backfill
 pyyaml==6.0.1
 pyarrow==14.0.1  # Required for parquet file I/O in backtest pipelines
 duckdb==1.5.3    # OHLCV OLAP store (read-only) — replaces per-symbol CSV reads

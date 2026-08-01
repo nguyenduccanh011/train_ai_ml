@@ -198,6 +198,17 @@
         </div>
       </div>
       <div class="summary" id="summary"></div>
+      <div class="sandbox" id="sandbox" style="margin:10px 0;padding:10px;border:1px solid var(--border,#2a2f3a);border-radius:8px;font-size:12px;">
+        <div style="font-weight:600;margin-bottom:8px;">🎛️ Overlay tùy chỉnh</div>
+        <label style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;">K (số khe)
+          <input id="sbK" type="number" min="1" max="50" value="10" style="width:72px;"></label>
+        <label style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;" title="Sàn ADV 10 phiên (tỷ VND). Mặc định 1 tỷ.">Sàn TK (tỷ)
+          <input id="sbFloor" type="number" min="0" max="1000" step="0.5" value="1" style="width:72px;"></label>
+        <label style="display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:8px;" title="Ngày bắt đầu vào lệnh (cửa sổ đánh giá).">Bắt đầu
+          <input id="sbDate" type="date" value="2020-01-01" style="width:130px;"></label>
+        <button id="sbRun" class="btn-mini" style="width:100%;">Tính overlay</button>
+        <div id="sbResult" style="margin-top:8px;color:var(--muted,#8b93a7);">Chỉnh K / sàn rồi bấm Tính (≈20s lần đầu, sau đó tức thì).</div>
+      </div>
       <div class="search">
         <input id="search" placeholder="Tìm mã..." autocomplete="off" />
         <select id="sortSel" title="Sắp xếp danh sách mã">
@@ -304,6 +315,44 @@
       document.getElementById('modelName').textContent = 'Thiếu run_id';
     } else {
       init();
+      wireSandbox();
+    }
+
+    // Overlay sandbox: recompute this run's Stage-2 CAGR live under a custom K + liquidity
+    // floor (+ entry-start window). Cheap on repeat (server caches by config hash).
+    function wireSandbox() {
+      const btn = document.getElementById('sbRun');
+      const out = document.getElementById('sbResult');
+      if (!btn) return;
+      btn.addEventListener('click', async () => {
+        const body = {
+          k: parseInt(document.getElementById('sbK').value, 10),
+          liqcol_adv10_ty: parseFloat(document.getElementById('sbFloor').value),
+          liqcol_adv252_ty: 0.0,
+          date_lo: document.getElementById('sbDate').value || '2020-01-01',
+        };
+        btn.disabled = true;
+        out.textContent = 'Đang tính…';
+        try {
+          const res = await fetch(`${API_BASE}/runs/${encodeURIComponent(runId)}/overlay`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          });
+          if (!res.ok) {
+            const e = await res.json().catch(() => ({}));
+            throw new Error(e.detail || `HTTP ${res.status}`);
+          }
+          const d = await res.json();
+          out.innerHTML =
+            `<b>CAGR ${(d.cagr * 100).toFixed(1)}%</b> · NAV ×${d.nav.toFixed(2)} · DD ${(d.maxdd * 100).toFixed(1)}%`
+            + `<br><span style="opacity:.7">K${d.k} · sàn ${d.liqcol_adv10_ty}tỷ · ${d.n_gated}/${d.n_base} lệnh${d.cached ? ' · cache' : ''}</span>`;
+        } catch (err) {
+          out.textContent = 'Lỗi: ' + err.message;
+        } finally {
+          btn.disabled = false;
+        }
+      });
     }
 
     // ====================== bootstrap ======================

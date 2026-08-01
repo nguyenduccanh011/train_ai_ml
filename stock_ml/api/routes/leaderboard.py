@@ -14,40 +14,40 @@ router = APIRouter(prefix="/api/v1", tags=["leaderboard"])
 
 
 async def _nav_metrics_for(session: AsyncSession, run_ids: list[str]) -> dict[str, dict]:
-    """LEFT-JOIN thu cong voi bang leaderboard_nav (CAGR/NAV that tu NAV sim).
+    """NAV/overlay metrics per run from leaderboard_nav (ORM LeaderboardNavModel).
 
-    Bang do script ops/score_nav_leaderboard.py tao rieng (khong co ORM model);
-    neu bang chua ton tai (vd fixture SQLite) thi tra ve rong — cot hien thi '—'.
+    cagr_overlay (stock_ml.portfolio) is the canonical number; nav_adv/cagr_adv/cagr_t2
+    are the LEGACY nh_nav2 yardstick, kept as a labelled fallback while overlay coverage
+    grows. On a fresh DB without the table (e.g. SQLite fixture) this logs and returns
+    empty so the endpoint stays up — but it is a WARNING, not a silent swallow, so a real
+    schema drift is visible.
     """
     if not run_ids:
         return {}
-    from sqlalchemy import bindparam, text
+    from sqlalchemy import select
+
+    from stock_ml.db.models import LeaderboardNavModel
 
     try:
         result = await session.execute(
-            text(
-                "SELECT run_id, nav_adv, cagr_adv, maxdd_nav, cagr_t2, maxdd_t2, "
-                "cagr_overlay, maxdd_overlay, overlay_note "
-                "FROM leaderboard_nav WHERE run_id IN :ids"
-            ).bindparams(bindparam("ids", expanding=True)),
-            {"ids": run_ids},
+            select(LeaderboardNavModel).where(LeaderboardNavModel.run_id.in_(run_ids))
         )
         return {
-            r.run_id: {
-                "nav_adv": r.nav_adv,
-                "cagr_adv": r.cagr_adv,
-                "maxdd_nav": r.maxdd_nav,
-                "cagr_t2": r.cagr_t2,
-                "maxdd_t2": r.maxdd_t2,
-                "cagr_overlay": r.cagr_overlay,
-                "maxdd_overlay": r.maxdd_overlay,
-                "overlay_note": r.overlay_note,
+            m.run_id: {
+                "nav_adv": m.nav_adv,
+                "cagr_adv": m.cagr_adv,
+                "maxdd_nav": m.maxdd_nav,
+                "cagr_t2": m.cagr_t2,
+                "maxdd_t2": m.maxdd_t2,
+                "cagr_overlay": m.cagr_overlay,
+                "maxdd_overlay": m.maxdd_overlay,
+                "overlay_note": m.overlay_note,
             }
-            for r in result.fetchall()
+            for m in result.scalars().all()
         }
-    except Exception:  # bang chua duoc tao — khong duoc lam vo endpoint
+    except Exception:  # missing table on a fresh/fixture DB — stay up, but loudly
         await session.rollback()
-        logger.debug("leaderboard_nav chua kha dung, bo qua NAV metrics")
+        logger.warning("leaderboard_nav unavailable, skipping NAV metrics", exc_info=True)
         return {}
 
 

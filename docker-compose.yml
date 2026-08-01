@@ -39,12 +39,19 @@ services:
       - DATABASE_URL=postgresql+asyncpg://stockml:${POSTGRES_PASSWORD:-stockml_dev}@postgres:5432/stockml
       - DB_ENABLED=true
       - STOCK_DATA_DIR=/app/market_data/market.duckdb
+      # Overlay sandbox: score against the SAME pinned store the board backfill used, so
+      # live sandbox numbers match the leaderboard's cagr_overlay column exactly.
+      - OVERLAY_MARKET_DB=/app/overlay/market_data/market_golden_pin_20260729.duckdb
+      - OVERLAY_OHLCV_DB=/app/overlay/data/ohlcv_golden_pin_20260729.db
+      - OVERLAY_DATE_HI=2026-07-08
     volumes:
       - ./data:/app/data
       - ./results:/app/results
       - ./logs:/app/logs
       - ./portable_data:/portable_data
       - ./market_data:/app/market_data:ro
+      - "C:/Users/DUC CANH PC/Desktop/stock-serving/market_data:/app/overlay/market_data:ro"
+      - "C:/Users/DUC CANH PC/Desktop/stock-serving/data:/app/overlay/data:ro"
     depends_on:
       postgres:
         condition: service_healthy

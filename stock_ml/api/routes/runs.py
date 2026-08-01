@@ -682,6 +682,80 @@ async def get_run_skipped(run_id: str, session: AsyncSession = Depends(get_db)) 
 _LIFECYCLE_STATES = ("trained", "pinned", "retired")
 
 
+# In-process cache for the overlay sandbox: (run_id, config_hash) -> metrics. A slider that
+# returns to a previously-computed (K, floor, window) is instant; a fresh combo costs ~20s.
+_OVERLAY_SANDBOX_CACHE: dict[tuple[str, str], dict] = {}
+_OVERLAY_KNOBS = ("k", "liqcol_adv10_ty", "liqcol_adv252_ty", "date_lo")
+
+
+def _score_overlay_sync(run_id: str, overrides: dict, base_run: str | None) -> dict:
+    """Blocking overlay score (own psycopg2 conn + DuckDB ctx) — call via run_in_threadpool."""
+    import psycopg2
+
+    from stock_ml.db.overlay_scoring import default_context, pg_dsn, reference_config, score_overlay
+
+    C = reference_config(**overrides)
+    con = psycopg2.connect(pg_dsn())
+    try:
+        r = score_overlay(con, run_id, default_context(), C, base_run=base_run)
+    finally:
+        con.close()
+    return {
+        "cagr": r["cagr"],
+        "maxdd": r["maxdd"],
+        "nav": r["nav"],
+        "years": r["years"],
+        "n_gated": r["n_gated"],
+        "n_base": r["n_base"],
+        "k": C.k,
+        "liqcol_adv10_ty": C.liqcol_adv10_ty,
+        "date_lo": C.date_lo,
+    }
+
+
+@router.post("/runs/{run_id:path}/overlay")
+async def compute_run_overlay(run_id: str, body: dict) -> dict:
+    """Live Stage-2 overlay for ONE run under a custom K + liquidity floor (+ entry-start
+    window date_lo). Heavy (~20s cold) so it runs in a threadpool; cached in-process by
+    config hash → repeat sliders return instantly. Body: {k?, liqcol_adv10_ty?,
+    liqcol_adv252_ty?, date_lo?, base_run?}."""
+    from fastapi.concurrency import run_in_threadpool
+
+    from stock_ml.db.overlay_scoring import overlay_config_hash, reference_config
+
+    overrides: dict = {}
+    for kk in _OVERLAY_KNOBS:
+        if body.get(kk) is not None:
+            overrides[kk] = body[kk]
+    if "k" in overrides and not (1 <= int(overrides["k"]) <= 50):
+        raise HTTPException(status_code=400, detail="k must be 1-50")
+    if "liqcol_adv10_ty" in overrides and not (0 <= float(overrides["liqcol_adv10_ty"]) <= 1000):
+        raise HTTPException(status_code=400, detail="liqcol_adv10_ty must be 0-1000 (tỷ VND)")
+    base_run = body.get("base_run")
+
+    try:
+        C = reference_config(**overrides)
+    except TypeError as e:
+        raise HTTPException(status_code=400, detail=f"bad overlay config: {e}")
+    ch = overlay_config_hash(C)
+    key = (run_id, ch)
+    cached = _OVERLAY_SANDBOX_CACHE.get(key)
+    if cached is not None:
+        return {**cached, "config_hash": ch, "cached": True}
+
+    try:
+        res = await run_in_threadpool(_score_overlay_sync, run_id, overrides, base_run)
+    except ValueError as e:  # too few BASE trades / OUTPUT-trades guard
+        raise HTTPException(status_code=422, detail=str(e))
+    except Exception as e:  # noqa: BLE001
+        raise HTTPException(status_code=500, detail=f"overlay failed: {type(e).__name__}: {e}")
+
+    if len(_OVERLAY_SANDBOX_CACHE) > 512:
+        _OVERLAY_SANDBOX_CACHE.clear()
+    _OVERLAY_SANDBOX_CACHE[key] = res
+    return {**res, "config_hash": ch, "cached": False}
+
+
 @router.post("/runs/bulk-state")
 async def bulk_set_run_state(body: dict, session: AsyncSession = Depends(get_db)) -> dict:
     """Change lifecycle state for every run matching a current-state filter.

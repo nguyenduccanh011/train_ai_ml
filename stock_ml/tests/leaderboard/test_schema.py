@@ -63,7 +63,6 @@ def _make_valid_row(**overrides) -> dict:
             "tax": "unknown",
             "slippage": "unknown",
         },
-        "fairness_group_key": "abc123sha1",
         "warnings": [],
     }
     base.update(overrides)

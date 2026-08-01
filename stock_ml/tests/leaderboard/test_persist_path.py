@@ -71,7 +71,6 @@ def _make_row(**overrides) -> LeaderboardRow:
         n_symbols=3,
         first_test_year=2020,
         last_test_year=2024,
-        fairness_group_key="template_vn_stock",
         cost_profile=CostProfile(commission=0.0025, tax=0.001, slippage=0.0015),
         artifacts=Artifacts(),
         state=LifecycleState.trained,

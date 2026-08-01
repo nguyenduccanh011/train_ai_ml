@@ -7,12 +7,6 @@ from collections import defaultdict
 from collections.abc import Iterable
 from pathlib import Path
 
-from stock_ml.src.leaderboard.fairness import (
-    annotate_rows,
-    load_config,
-    resolve_baseline,
-    resolve_baseline_for_market,
-)
 from stock_ml.src.leaderboard.loader import run_dir_to_row
 from stock_ml.src.leaderboard.schema import LeaderboardRow, export_json_schema
 
@@ -87,8 +81,7 @@ def _prepare_rows(rows: Iterable[LeaderboardRow]) -> list[LeaderboardRow]:
         )
         for row in prepared
     ]
-    prepared = sorted(prepared, key=_rank_sort_key, reverse=True)
-    return annotate_rows(prepared, resolve_baseline(prepared, load_config()))
+    return sorted(prepared, key=_rank_sort_key, reverse=True)
 
 
 def _check_duplicate_run_ids(rows: Iterable[LeaderboardRow]) -> None:
@@ -117,7 +110,6 @@ def _dedupe_rows(rows: list[LeaderboardRow]) -> list[LeaderboardRow]:
 
 def _row_signature(row: LeaderboardRow) -> tuple[object, ...]:
     return (
-        row.fairness_group_key,
         row.market,
         row.market_family,
         row.currency,
@@ -207,14 +199,6 @@ def _write_csv(rows: list[LeaderboardRow], path: Path) -> None:
         "cost_commission",
         "cost_tax",
         "cost_slippage",
-        "fairness_group_key",
-        "is_baseline",
-        "same_symbols_as_baseline",
-        "same_window_as_baseline",
-        "same_cost_as_baseline",
-        "same_target_as_baseline",
-        "same_timeframe_as_baseline",
-        "same_market_family_as_baseline",
         "warnings",
     ]
     tmp_path = path.with_suffix(path.suffix + ".tmp")
@@ -250,7 +234,6 @@ def _flatten_row(row: LeaderboardRow) -> dict[str, object]:
 
 def _write_market_splits(rows: list[LeaderboardRow], output_dir: Path) -> None:
     """Write per-market sub-leaderboards under output_dir/by_market/<market>/."""
-    cfg = load_config()
     by_market: dict[str, list[LeaderboardRow]] = defaultdict(list)
     for row in rows:
         by_market[row.market].append(row)
@@ -261,9 +244,7 @@ def _write_market_splits(rows: list[LeaderboardRow], output_dir: Path) -> None:
         market_dir = output_dir / "by_market" / market
         market_dir.mkdir(parents=True, exist_ok=True)
         sorted_rows = sorted(market_rows, key=_rank_sort_key, reverse=True)
-        baseline = resolve_baseline_for_market(sorted_rows, market, cfg)
-        annotated = annotate_rows(sorted_rows, baseline)
-        _write_split_outputs(annotated, market_dir)
+        _write_split_outputs(sorted_rows, market_dir)
 
 
 def _write_market_family_splits(rows: list[LeaderboardRow], output_dir: Path) -> None:
@@ -278,9 +259,7 @@ def _write_market_family_splits(rows: list[LeaderboardRow], output_dir: Path) ->
         family_dir = output_dir / "by_market_family" / family
         family_dir.mkdir(parents=True, exist_ok=True)
         sorted_rows = sorted(family_rows, key=_rank_sort_key, reverse=True)
-        baseline = next((row for row in sorted_rows if row.is_baseline), None)
-        annotated = annotate_rows(sorted_rows, baseline)
-        _write_split_outputs(annotated, family_dir)
+        _write_split_outputs(sorted_rows, family_dir)
 
 
 def _write_split_outputs(rows: list[LeaderboardRow], output_dir: Path) -> None:
@@ -297,20 +276,9 @@ def _write_split_outputs(rows: list[LeaderboardRow], output_dir: Path) -> None:
 
 
 def _summary(rows: list[LeaderboardRow]) -> dict[str, object]:
-    groups: dict[str, list[LeaderboardRow]] = defaultdict(list)
-    for row in rows:
-        groups[row.fairness_group_key].append(row)
-    baseline = next((row for row in rows if row.is_baseline), None)
     return {
         "row_count": len(rows),
         "active_row_count": sum(not row.superseded for row in rows),
-        "fairness_group_count": len(groups),
-        "baseline_run_id": baseline.run_id if baseline else None,
-        "baseline_fairness_group_key": baseline.fairness_group_key if baseline else None,
-        "top_3_per_fairness_group": {
-            key: [row.run_id for row in sorted(group, key=_rank_sort_key, reverse=True)[:3]]
-            for key, group in sorted(groups.items())
-        },
     }
 
 

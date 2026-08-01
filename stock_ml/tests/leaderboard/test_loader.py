@@ -61,14 +61,6 @@ def test_loader_no_trades_fallback():
     assert MISSING_TRADES_WARNING in row.warnings
 
 
-def test_loader_fairness_group_key_stable():
-    row_a = run_dir_to_row(FIXTURES / "v22_run")
-    row_b = run_dir_to_row(FIXTURES / "v22_run")
-
-    assert row_a.fairness_group_key == row_b.fairness_group_key
-    assert len(row_a.fairness_group_key) == 40
-
-
 def test_loader_resolves_derivatives_30m_market_family(tmp_path: Path):
     run_dir = tmp_path / "run"
     run_dir.mkdir(parents=True)

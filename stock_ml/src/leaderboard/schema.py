@@ -103,22 +103,12 @@ class LeaderboardRow(BaseModel):
     composite_score: float
     score_mode: str = Field(default="live", description="'live' | 'legacy'")
 
-    # Fairness metadata
+    # Backtest scope / cost
     n_symbols: int
     first_test_year: int
     last_test_year: int
     backtest_window_key: str = "unknown"
     cost_profile: CostProfile = Field(default_factory=CostProfile)
-    fairness_group_key: str = Field(
-        description="sha1 of {market, currency, schema, symbols_set, window, cost_profile, target}"
-    )
-    is_baseline: bool = False
-    same_symbols_as_baseline: bool | None = None
-    same_window_as_baseline: bool | None = None
-    same_cost_as_baseline: bool | None = None
-    same_target_as_baseline: bool | None = None
-    same_timeframe_as_baseline: bool | None = None
-    same_market_family_as_baseline: bool | None = None
 
     # Experiment metadata (for research iteration tracking)
     experiment_group: str = "ungrouped"

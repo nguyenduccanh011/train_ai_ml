@@ -124,14 +124,6 @@ class LeaderboardRunRepository:
         result = await self._session.execute(q)
         return list(result.scalars().all())
 
-    async def get_by_fairness_group(self, key: str) -> list[LeaderboardRunModel]:
-        result = await self._session.execute(
-            select(LeaderboardRunModel)
-            .where(LeaderboardRunModel.fairness_group_key == key)
-            .order_by(LeaderboardRunModel.composite_score.desc())
-        )
-        return list(result.scalars().all())
-
     async def get_version_chain(self, run_id: str) -> list[LeaderboardRunModel]:
         """Walk parent_run_id chain (newest first)."""
         chain: list[LeaderboardRunModel] = []

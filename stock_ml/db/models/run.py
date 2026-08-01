@@ -43,7 +43,6 @@ class LeaderboardRunModel(Base, TimestampMixin):
         Index("idx_runs_entry_model", "entry_model"),
         Index("idx_runs_timeframe", "timeframe"),
         Index("idx_runs_market_family", "market_family"),
-        Index("idx_runs_fairness_group", "fairness_group_key"),
         Index("idx_runs_bundle_name", "bundle", "run_name", "generated_at"),
     )
 
@@ -101,7 +100,7 @@ class LeaderboardRunModel(Base, TimestampMixin):
     composite_score: Mapped[float] = mapped_column(Double, nullable=False)
     score_mode: Mapped[str] = mapped_column(String(16), default="live", nullable=False)
 
-    # --- Fairness ---
+    # --- Backtest scope / cost ---
     n_symbols: Mapped[int] = mapped_column(Integer, nullable=False)
     first_test_year: Mapped[int] = mapped_column(SmallInteger, nullable=False)
     last_test_year: Mapped[int] = mapped_column(SmallInteger, nullable=False)
@@ -109,14 +108,6 @@ class LeaderboardRunModel(Base, TimestampMixin):
     cost_commission: Mapped[str] = mapped_column(Text, default="unknown", nullable=False)
     cost_tax: Mapped[str] = mapped_column(Text, default="unknown", nullable=False)
     cost_slippage: Mapped[str] = mapped_column(Text, default="unknown", nullable=False)
-    fairness_group_key: Mapped[str] = mapped_column(String(40), nullable=False)
-    is_baseline: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
-    same_symbols_as_baseline: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
-    same_window_as_baseline: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
-    same_cost_as_baseline: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
-    same_target_as_baseline: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
-    same_timeframe_as_baseline: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
-    same_market_family_as_baseline: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
 
     # --- Diagnostics ---
     warnings: Mapped[list] = mapped_column(JSON, default=list, nullable=False)

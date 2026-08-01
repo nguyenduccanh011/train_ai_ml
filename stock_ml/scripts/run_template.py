@@ -436,7 +436,6 @@ def run_template_experiment(
                 first_test_year=first_test_year,
                 last_test_year=last_test_year,
                 backtest_window_key=backtest_window_key,
-                fairness_group_key=f"{bundle}_{summary.get('market', 'unknown')}",
                 composite_score=score,
                 cost_profile=CostProfile(
                     commission=float(engine_cfg.get("commission", 0.0025)),

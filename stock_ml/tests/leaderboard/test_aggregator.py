@@ -119,7 +119,6 @@ def _mock_row(*, run_id: str, schema: str, timeframe: str) -> LeaderboardRow:
         last_test_year=2025,
         backtest_window_key="2020-2025",
         cost_profile={"commission": 0.001, "tax": 0.001, "slippage": 0.001},
-        fairness_group_key="fair-key",
         warnings=[],
     )
 
@@ -158,4 +157,3 @@ def test_csv_includes_market_family_columns(tmp_path):
 
     assert "market_family" in csv_text.splitlines()[0]
     assert "backtest_window_key" in csv_text.splitlines()[0]
-    assert "same_timeframe_as_baseline" in csv_text.splitlines()[0]

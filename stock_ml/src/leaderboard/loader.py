@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import csv
-import hashlib
 import json
 from datetime import UTC, datetime
 from pathlib import Path
@@ -17,11 +16,6 @@ from stock_ml.src.evaluation.scoring import (
     calc_sharpe,
     calc_yearly_consistency,
     composite_score,
-)
-from stock_ml.src.leaderboard.fairness import (
-    backtest_window_key,
-    load_config,
-    resolve_market_family,
 )
 from stock_ml.src.leaderboard.schema import (
     Artifacts,
@@ -180,17 +174,6 @@ def run_dir_to_row(run_dir: str | Path, *, bundle: str | None = None) -> Leaderb
         last_test_year=last_year,
         backtest_window_key=window_key,
         cost_profile=cost_profile,
-        fairness_group_key=_fairness_group_key(
-            symbols,
-            first_year,
-            last_year,
-            cost_profile,
-            target,
-            market_family,
-            currency,
-            schema,
-            universe_slug=universe_slug,
-        ),
         experiment_group=str(_metadata_field(summary, "experiment_group", "ungrouped")),
         variant_type=_metadata_field(summary, "variant_type", None),
         parent_run_id=_metadata_field(summary, "parent_run_id", None),
@@ -352,36 +335,46 @@ def _test_window(
     return int(first_year), int(last_year)
 
 
-def _fairness_group_key(
-    symbols: list[str],
-    first_year: int,
-    last_year: int,
-    cost_profile: CostProfile,
-    target: TargetConfig,
-    market_family: str,
-    currency: str,
-    schema: str,
-    universe_slug: str | None = None,
-) -> str:
-    """Compute fairness group key with optional universe slug (Phase 2a).
+# --- Market/window metadata helpers (moved from the removed fairness.py) -------------------
+DEFAULT_CONFIG = {
+    "market_families": {},
+}
 
-    When universe_slug is not None, it's included in the hash to ensure
-    runs from different universes are in different fairness groups.
-    When None (old runs), universe is not included for backward compat.
-    """
-    key_obj = {
-        "market_family": market_family,
-        "currency": currency,
-        "schema": schema,
-        "symbols": symbols,
-        "window": [first_year, last_year],
-        "cost_profile": cost_profile.model_dump(),
-        "target": target.model_dump(),
-    }
-    if universe_slug is not None:
-        key_obj["universe_slug"] = universe_slug
-    payload = json.dumps(key_obj, sort_keys=True, separators=(",", ":"))
-    return hashlib.sha1(payload.encode("utf-8")).hexdigest()
+
+def _config_path(root: str | Path | None) -> Path:
+    if root is not None:
+        return Path(root) / "config" / "leaderboard.yaml"
+    return Path(__file__).resolve().parents[2] / "config" / "leaderboard.yaml"
+
+
+def load_config(root: str | Path | None = None) -> dict[str, Any]:
+    config_path = _config_path(root)
+    if not config_path.exists():
+        return DEFAULT_CONFIG.copy()
+    data = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+    return {**DEFAULT_CONFIG, **data}
+
+
+def resolve_market_family(
+    market: str, timeframe: str | None = None, config: dict[str, Any] | None = None
+) -> str:
+    cfg = config or DEFAULT_CONFIG
+    market_text = str(market or "unknown")
+    timeframe_text = str(timeframe or "").lower()
+    for family, family_cfg in (cfg.get("market_families") or {}).items():
+        for member in family_cfg.get("members", []) or []:
+            if str(member.get("market")) != market_text:
+                continue
+            member_timeframe = str(member.get("timeframe") or "").lower()
+            if not member_timeframe or not timeframe_text or member_timeframe == timeframe_text:
+                return str(family)
+    return market_text if market_text != "unknown" else "vn_stock"
+
+
+def backtest_window_key(first_year: int, last_year: int) -> str:
+    if first_year <= 0 or last_year <= 0:
+        return "unknown"
+    return f"{first_year}-{last_year}"
 
 
 def _mtime_iso(path: Path) -> str:

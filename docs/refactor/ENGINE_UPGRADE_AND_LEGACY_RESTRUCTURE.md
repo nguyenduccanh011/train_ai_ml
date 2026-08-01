@@ -1874,5 +1874,19 @@ Phase 0a** (`PRUNE_BUNDLES=0`, đã đánh dấu XONG bên đó); **serving D4 t
   (chạy lại config = refresh metrics nhưng KHÔNG reset lifecycle — pinned giữ nguyên); (2) `mark_superseded` bỏ qua
   `state='pinned'` (không tự động retire một pin). +2 test, 320 pass/11 skip, ruff sạch. `_seed_serving_tiers.py` KHÔNG có
   trong repo xưởng (ở serving repo riêng) → hardcode-run_id không phải mối lo xưởng. `raw_config` rỗng 0/3612 = cột chết riêng.
-- ⏳ **CÒN:** Phase 4 deploy container (attest PASS + activate 6/6 sổ khách, §14.3) — **outward-facing tới khách, cần go/no-go
-  tường minh**; drop 8 cột chết fairness đã xong ở migration 0032 (§4.4). Liên quan memory: `phase5-progress-and-identity-danger`.
+- ✅ **Phase 4 DEPLOY container — 6/6 sổ khách LIVE (commit xưởng `893cef8c` bump 0.4.3).** Chủ dự án authorize chạm khách.
+  **Root-cause + fix policy attest** (`ccd12702`, §14.3 revised): recombine áp ngưỡng-cứng z(exit)>2.0; feature cross-sectional
+  dùng-chung cộng-tổng khác-thứ-tự giữa backtest-theo-fold vs serving-đi-tiếp → score lệch float ~1e-8 (trần 4.78e-6 dyn300,
+  2.94e-5 dyn900) → lật vài tín-hiệu sát-vạch ⇒ **bit-exact signal BẤT KHẢ THI**. Đo materiality (212 tie dyn300): 105 rơi
+  bar-không-giao-dịch (0 impact), còn lại ≤0.9% base-trade, đều sát-vạch. ⇒ attest nay = **score-fidelity** (serving tái tạo
+  score nhúng trong bundle trong `--score-tol` 1e-4). **Fix regression §4.5** (`9e82061d`): export_bundle sót `from scripts.*`.
+  **Chuỗi deploy đúng thứ tự** (§793 re-export TRƯỚC gate SAU): (1) re-baseline 3 dyn run (3524/3531/3538) `STOCKML_PERSIST_FOLD_MODELS=1
+  STOCKML_FRESH_FOLDS=1` → persist fold-models; (2) **bump wheel 0.4.2→0.4.3** (tránh §241 same-version-drift; wheel cũ KHÔNG
+  chạy được fold-model bundle — đã verify); (3) export 3 bundle `--fold-models-from-run --history-mode walk_forward --pred-history-csv`
+  (bake 0.4.3 + fold-models) → **attest PASS cả 3** (score-fidelity: dyn300 Δ4.78e-6/212tie, dyn61a2hy Δ1.19e-7/15tie, dyn900
+  Δ2.94e-5/351tie = đúng "đuôi 351"); (4) build wheel 0.4.3 (swap pyproject) + copy serving/dist + sửa requirements/Dockerfile;
+  (5) **rebuild serving container**, test-load 6 bundle (3 fold-model + 3 top150 legacy đều OK — §255 compat verify thực nghiệm);
+  (6) backup bundle cũ → tar, swap 3 dyn → serving/bundles, `docker compose up -d`. Verify LIVE: container wheel 0.4.3, webapp
+  health ok, **6/6 sổ khách recompute 2026-08-01** sinh signal/NAV/lệnh thật (floor5 NAV×1.545/CAGR115.4%/146tr … dyn61a2hy
+  59.1%). deploy.py gate cả 3: bundle-OK + wheel-nhất-quán + **parity PASS (không FORCED)**. **CÒN (nợ nhỏ):** serving repo
+  còn nhiều thay-đổi-dở của chủ dự án (chưa commit — để chủ review); số khách nay = re-baseline (data-drift, đã authorize).

@@ -1354,7 +1354,18 @@ không chỉ đổi blurb.
 
 ### 14.3 Chính sách khớp float cho test tương đương §11.5.3 (Q3)
 
-- **Tầng tín hiệu: bit-exact TUYỆT ĐỐI**, không dung sai (không có wrapper serving-only — §9.6).
+> 🔄 **REVISED 2026-08-01 (Phase 4 triển khai): tiêu chí attest = SCORE-FIDELITY, không phải bit-exact signal.**
+> Điều tra dyn300 (commit `ccd12702`): recombine áp **ngưỡng cứng** `sell khi z(exit) > 2.0`; feature cross-sectional
+> dùng-chung (chỉ số EW/breadth) **cộng-tổng theo thứ tự khác** giữa backtest-theo-fold và serving-đi-tiếp ⇒ score lệch
+> **float non-associativity** (~1e-8, trần đo 4.78e-6). Ở biên ngưỡng, epsilon đó **lật vài tín hiệu sát-vạch** ⇒ bit-exact
+> signal **BẤT KHẢ THI cho pipeline float** (chính vì thế dyn300 kẹt 99.78%, dyn900 99.877%). Đo materiality 212 tie:
+> 105/212 rơi vào bar không-giao-dịch (tác động 0), phần còn lại ≤0.9% base-trade, đều sát-vạch (z≈2.0σ, quyết định vốn
+> mơ hồ). ⇒ Attest nay PASS khi serving tái tạo **điểm số thô** (nhúng trong bundle = `prediction_history`) trong
+> `--score-tol` (mặc định **1e-4** — ~20× trên trần-nhiễu, ~10× dưới hồi-quy-thật nhỏ nhất ~1e-3). parity.json ghi
+> `score_max_diff` + số band-edge-tie. Hồi quy THẬT đẩy score >> tol vẫn FAIL. Bundle legacy không nhúng score → fallback
+> bit-exact signal cũ.
+
+- **Tầng tín hiệu (nguyên tắc gốc, nay hiểu qua score-fidelity): bit-exact TUYỆT ĐỐI** ở tầng điểm-số (score ≡ trong dung sai float); tie-ngưỡng là nhiễu-biên.
 - **Tầng lệnh: bit-exact SAU KHI** cả hai cùng áp `max_hold` + cùng bộ lọc config (whitelist đúng **2** biến
   đổi cố ý — R3/§9.6).
 - **Mặt phẳng: Linux/container DUY NHẤT** authoritative; pin **sklearn + numpy + lightgbm** chính xác + ép

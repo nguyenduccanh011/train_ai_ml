@@ -1803,6 +1803,18 @@ Phase 0a** (`PRUNE_BUNDLES=0`, đã đánh dấu XONG bên đó); **serving D4 t
   0 ref legacy sót, 47 test api+model_dashboard pass, bản phục vụ qua nginx = bản mới (0 lệnh legacy, banner mới, API 200).
   **CÒN §4.6:** `docs/API.md` 6 endpoint 404/405 + route `DELETE /api/v1/runs/bulk` trước catch-all (đổi hành-vi API,
   tách riêng); copy legacy `visualization/leaderboard.{js,html}` (gắn xoá `visualization/` — cần tar backup, §5:385).
+- ✅ **§4.6 route bulk lifecycle — commit `73ef9283`.** Board LIVE **đang gọi thật** `POST /runs/bulk-state` (nút "Retire
+  trained") + `DELETE /runs/bulk` (nút "Delete retired") nhưng **không route nào tồn tại**: bulk-state→405, bulk→rơi
+  catch-all `DELETE /runs/{run_id:path}` như run tên 'bulk' ⇒ `{deleted:false}` **báo sai, KHÔNG xoá gì** (silent-bug
+  doc §4.6 nêu). Thêm 2 route **trước** catch-all (`runs.py`): bulk-state UPDATE mọi row khớp `filter.current_state`;
+  bulk delete **chỉ cho `state=retired` + `confirm=true`** (chặn mass-delete nhầm), DB-first nên `freed_mb=0`. Dùng lại
+  tuple `_LIFECYCLE_STATES` cho cả PATCH đơn. +6 test (routing-không-bị-nuốt, validation 400, seeded happy-path), 73 test
+  api+leaderboard pass, ruff sạch. **Container CHƯA rebuild** (gộp với các route panel còn thiếu).
+  ⚠️ **PHÁT HIỆN gap lớn hơn:** đối chiếu JS-gọi vs route-có → **4 route panel Cache-Mgmt vẫn thiếu**, đều là bề mặt
+  `api_server.py legacy` mới port một phần: `POST /gc/sweep`, `POST /cache/purge-trash`, `DELETE /runs/{id}/cache`
+  (quarantine), `POST /runs/{id}/retrain` (spawn job). ⇒ `docs/API.md` không "nói dối" — nó là **spec đúng của API đích**;
+  việc cần làm là **PORT route** (không phải xoá docs). retrain/gc/purge có side-effect (spawn process, xoá file) ⇒
+  feature-parity riêng, cần chốt trước khi làm.
 - ⏳ **§4.5 (phần couple còn lại — HOÃN, cần verify chạy thật):**
   - **Convergence trọn `src.*`→`stock_ml.src.*`** (bỏ double-cache class/module): đòi MỌI entry có repo_root trên
     path (đổi run_template sys.path + convert model_dashboard/data/pipeline…) — thay đổi phối hợp, verify bằng chạy

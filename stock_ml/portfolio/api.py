@@ -98,12 +98,21 @@ def run_portfolio(
     s_new = (ROUNDTRIP - FEE) / 2.0
     legs_src, skipped = [], []
     raw_w = []
+    # DATA-COVERAGE QC (does NOT change NAV): count trades whose conviction/priority fell to the
+    # neutral defaults because the symbol is ABSENT from the panel (not warmup). A high
+    # conv_miss_frac means the conviction panel doesn't cover this run's universe → the overlay
+    # number is low-fidelity. See docs/refactor/CONVICTION_UNIVERSE_UNIFICATION.md.
+    n_conv_miss = n_prio_miss = 0
     for r in rw.itertuples():
         s = r.symbol
         ed = r.ed
         xd = str(r.exit_date)[:10]
         if ed not in sym_idx.get(s, {}) or xd not in sym_idx.get(s, {}):
             continue
+        if (s, str(r.sigd.date())) not in CSm:
+            n_conv_miss += 1
+        if (s, ed) not in pm:
+            n_prio_miss += 1
         i0, oi1 = sym_idx[s][ed], sym_idx[s][xd]
         e_raw = float(r.entry_price) / (1.0 + S0)
         # match NavSim2 + hb_deploy _prep exactly: extended (T+2 min-hold) legs mark at the raw
@@ -298,4 +307,9 @@ def run_portfolio(
         n_base=len(closed),
         n_gated=len(gated),
         n_skipped=len(skipped),
+        # data-coverage QC (see legs loop). n_offpanel = legs whose symbol is absent from the
+        # conviction panel → sized/gated on a FAKE neutral conviction (0.5).
+        conv_miss_frac=(n_conv_miss / len(legs_src)) if legs_src else 0.0,
+        prio_miss_frac=(n_prio_miss / len(legs_src)) if legs_src else 0.0,
+        n_offpanel=n_conv_miss,
     )

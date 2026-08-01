@@ -93,12 +93,22 @@ def _read_cache_keys(meta_path: Path) -> dict[str, str]:
 
 
 def find_feature_cache_files(features_root: str | Path) -> dict[str, list[Path]]:
-    """Map feature cache key -> list of its files (parquet/pkl/json). Key is filename stem."""
+    """Map feature cache key -> list of its files (parquet/pkl/json). Key is filename stem.
+
+    The FeatureStore subtree ``features/store/<expr_hash>/<ver>.parquet`` is deliberately
+    EXCLUDED (§1.6): it is keyed by expression hash and manages its own lifecycle, not by the
+    run ``cache_keys`` this GC attributes against. Its ``<ver>`` stems match no referenced
+    cache_key, so sweeping it would orphan the entire store (~51 GB / ~14.5k files). Keep the
+    exclusion explicit — do NOT broaden the glob to reclaim it without a store->run attribution
+    design first (test_find_feature_cache_files_excludes_store guards this).
+    """
     root = Path(features_root)
     out: dict[str, list[Path]] = {}
     if not root.is_dir():
         return out
     for path in root.glob("*/*"):
+        if path.relative_to(root).parts[0] == "store":
+            continue  # FeatureStore self-manages — never sweep it (§1.6)
         if path.is_file() and path.suffix in {".parquet", ".pkl", ".json"}:
             out.setdefault(path.stem, []).append(path)
     return out

@@ -7,6 +7,7 @@ from pathlib import Path
 
 from stock_ml.src.cache.garbage_collector import (
     QUARANTINE_DIRNAME,
+    find_feature_cache_files,
     gather_referenced_keys,
     purge_trash,
     sweep,
@@ -134,3 +135,43 @@ def test_purge_trash_keeps_recent_batches(tmp_path: Path) -> None:
     removed = purge_trash(cache, older_than_days=1)
     assert removed == []
     assert batch.exists()
+
+
+def _make_store_file(cache_root: Path, expr_hash: str, ver: str) -> Path:
+    """Create a FeatureStore file: features/store/<expr_hash>/<ver>.parquet."""
+    d = cache_root / "features" / "store" / expr_hash
+    d.mkdir(parents=True, exist_ok=True)
+    p = d / f"{ver}.parquet"
+    p.write_text("x" * 100, encoding="utf-8")
+    return p
+
+
+def test_find_feature_cache_files_excludes_store(tmp_path: Path) -> None:
+    # §1.6: the FeatureStore subtree is keyed by expr_hash, not run cache_keys, so it must
+    # never enter the attributable set — otherwise every <ver> looks orphaned (~51 GB).
+    cache = tmp_path / "cache"
+    _make_feature_cache(cache, "leading", "feat_old")  # old-style -> attributable
+    store_file = _make_store_file(cache, "a1b2c3d4", "deadbeef")
+
+    found = find_feature_cache_files(cache / "features")
+
+    assert "feat_old" in found
+    assert "deadbeef" not in found
+    assert all("store" not in p.parts for files in found.values() for p in files)
+    assert store_file.exists()
+
+
+def test_sweep_never_orphans_featurestore(tmp_path: Path) -> None:
+    # End-to-end §1.6 guard: a store file matching no referenced key is NOT flagged orphan.
+    results = tmp_path / "results"
+    exp = results / "experiments"
+    cache = results / "cache"
+    _make_run(exp, "run1", "feat_live", "")
+    _make_feature_cache(cache, "leading", "feat_live")  # referenced
+    store_file = _make_store_file(cache, "hash1", "ver1")  # unattributable but must be safe
+
+    report = sweep(results, dry_run=True)
+
+    assert store_file not in report.orphan_files
+    assert all("store" not in p.parts for p in report.orphan_files)
+    assert store_file.exists()

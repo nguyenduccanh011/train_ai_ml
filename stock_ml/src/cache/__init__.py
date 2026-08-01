@@ -1,5 +1,5 @@
-"""Caching utilities for experiment pipelines."""
+"""Caching utilities for experiment pipelines.
 
-from .feature_cache import FeatureCacheManager
-
-__all__ = ["FeatureCacheManager"]
+The live surface is :mod:`stock_ml.src.cache.garbage_collector` (orphan sweep +
+FeatureStore-safe attribution, §1.6). Import it directly.
+"""

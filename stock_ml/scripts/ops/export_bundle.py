@@ -52,7 +52,7 @@ def _load_config(args) -> ExperimentConfig:
     if args.template_id is not None:
         import asyncio
 
-        from scripts.run_template import load_template_config
+        from stock_ml.scripts.run_template import load_template_config
 
         if sys.platform == "win32":
             asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())

@@ -19,9 +19,18 @@ from __future__ import annotations
 
 import re
 
-# Indices + derivatives are not tradable equities -> excluded from the pool.
-NONSTOCK_EXACT = {"VNINDEX", "HNX30", "VN30", "HNXINDEX", "UPINDEX", "VNXALL"}
+# Indices + derivatives + ETF/fund-certificates are not tradable equities -> excluded from the pool.
+# The dyn bundles were silently BUYING the basket of their own universe (serving found E1VFVN30 held
+# in 4 customer books, 15 fund-certs in dyn900) because the /symbols/universe source mislabels ETFs
+# and fund-certs as asset_type='stock'. The authoritative discriminator is ICB 8995 (equity
+# investment instruments) / 8985 (non-equity) — which the universe endpoint does NOT expose. Until an
+# ICB source is wired (docs/refactor/SERVING_PANEL_TASKS.md T2), exclude by the unambiguous FUE*/FUC*
+# fund-cert prefixes + E1VFVN30 exact: this hits exactly serving's 17 declared non-stock symbols with
+# no real-ticker collision (no 3-char VN equity starts FUE/FUC; E1VFVN30 is matched EXACTLY so the
+# ^E1 regex trap — which would swallow the real stock E12 — is avoided).
+NONSTOCK_EXACT = {"VNINDEX", "HNX30", "VN30", "HNXINDEX", "UPINDEX", "VNXALL", "E1VFVN30"}
 _DERIVATIVE_RE = re.compile(r"F\d+M$")
+_FUNDCERT_PREFIXES = ("FUE", "FUC")
 
 
 def is_nonstock(symbol: str) -> bool:
@@ -30,6 +39,7 @@ def is_nonstock(symbol: str) -> bool:
         or bool(_DERIVATIVE_RE.search(symbol))
         or symbol.startswith("VN30F")
         or symbol.startswith("VN100F")
+        or symbol.startswith(_FUNDCERT_PREFIXES)
     )
 
 

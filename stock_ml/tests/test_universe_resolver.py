@@ -208,7 +208,14 @@ def test_is_nonstock():
         "VN30F2508",
         "VN100F1M",
         "ABCF1M",
+        "E1VFVN30",
+        "FUEVFVND",
+        "FUESSV50",
+        "FUCTVGF1",
+        "FUCVREIT",
+        "FUETCC50",
     ]:
         assert is_nonstock(s), s
-    for s in ["FPT", "HPG", "VNM", "FIR"]:
+    # real equities must NOT be excluded — incl. E12 (^E1 regex trap) and FIR (F-prefix, not FUE/FUC)
+    for s in ["FPT", "HPG", "VNM", "FIR", "E12", "FCN", "FTS"]:
         assert not is_nonstock(s), s

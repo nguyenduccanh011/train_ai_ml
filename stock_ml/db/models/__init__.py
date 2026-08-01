@@ -6,6 +6,7 @@ from .feature import (
     FeatureSetModel,
 )
 from .job import JobModel
+from .leaderboard_nav import LeaderboardNavModel
 from .portfolio import RunEquityModel, RunPendingModel, RunPortfolioDailyModel, RunSkippedModel
 from .run import LeaderboardRunModel
 from .signal import RunSignalModel
@@ -23,6 +24,7 @@ from .yearly_stat import RunYearlyStatModel
 
 __all__ = [
     "LeaderboardRunModel",
+    "LeaderboardNavModel",
     "RunTradeModel",
     "RunSignalModel",
     "JobModel",

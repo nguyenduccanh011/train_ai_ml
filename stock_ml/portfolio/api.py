@@ -98,11 +98,13 @@ def run_portfolio(
     s_new = (ROUNDTRIP - FEE) / 2.0
     legs_src, skipped = [], []
     raw_w = []
-    # DATA-COVERAGE QC (does NOT change NAV): count trades whose conviction/priority fell to the
-    # neutral defaults because the symbol is ABSENT from the panel (not warmup). A high
-    # conv_miss_frac means the conviction panel doesn't cover this run's universe → the overlay
-    # number is low-fidelity. See docs/refactor/CONVICTION_UNIVERSE_UNIFICATION.md.
-    n_conv_miss = n_prio_miss = 0
+    # DATA-COVERAGE QC (does NOT change NAV). Two DISTINCT kinds of conviction miss — keep apart
+    # (CONVICTION_UNIVERSE_UNIFICATION §3B): (1) symbol ENTIRELY absent from the panel = a data gap
+    # → fail-loud under C.strict_panel; (2) symbol present but its signal-date bar is missing
+    # (halt/suspension) = intrinsic, keep the neutral default, NEVER raise.
+    _conv_syms = {k[0] for k in CSm}
+    n_offpanel = n_halt = n_prio_miss = 0
+    _offpanel_syms: set = set()
     for r in rw.itertuples():
         s = r.symbol
         ed = r.ed
@@ -110,7 +112,11 @@ def run_portfolio(
         if ed not in sym_idx.get(s, {}) or xd not in sym_idx.get(s, {}):
             continue
         if (s, str(r.sigd.date())) not in CSm:
-            n_conv_miss += 1
+            if s in _conv_syms:
+                n_halt += 1
+            else:
+                n_offpanel += 1
+                _offpanel_syms.add(s)
         if (s, ed) not in pm:
             n_prio_miss += 1
         i0, oi1 = sym_idx[s][ed], sym_idx[s][xd]
@@ -151,6 +157,14 @@ def run_portfolio(
                 _w=_w,
                 reason=r.exit_reason,
             )
+        )
+    # fail-loud data-contract guard: refuse to fabricate conviction for symbols the panel does
+    # not cover (only symbol-ABSENT; halt/date-absent of a present symbol is fine). Off by default.
+    if C.strict_panel and n_offpanel:
+        raise ValueError(
+            f"strict_panel: {n_offpanel} trades on {len(_offpanel_syms)} symbol(s) ABSENT from the "
+            f"conviction panel — refusing to size on a fake neutral 0.5 (fail-loud). Prepare panel "
+            f"data for: {sorted(_offpanel_syms)[:20]}. See CONVICTION_UNIVERSE_UNIFICATION §5.2."
         )
     if mu_by is None:
         off = 1.0 - (statistics.mean(raw_w) if raw_w else 1.0)
@@ -307,9 +321,13 @@ def run_portfolio(
         n_base=len(closed),
         n_gated=len(gated),
         n_skipped=len(skipped),
-        # data-coverage QC (see legs loop). n_offpanel = legs whose symbol is absent from the
-        # conviction panel → sized/gated on a FAKE neutral conviction (0.5).
-        conv_miss_frac=(n_conv_miss / len(legs_src)) if legs_src else 0.0,
+        # data-coverage QC (see legs loop). Two kinds of conviction miss kept apart:
+        #   offpanel = symbol ABSENT from panel (data gap; raises under strict_panel)
+        #   halt     = symbol present but signal-date bar missing (halt/suspension; intrinsic)
+        conv_miss_frac=((n_offpanel + n_halt) / len(legs_src)) if legs_src else 0.0,
+        offpanel_frac=(n_offpanel / len(legs_src)) if legs_src else 0.0,
+        halt_frac=(n_halt / len(legs_src)) if legs_src else 0.0,
         prio_miss_frac=(n_prio_miss / len(legs_src)) if legs_src else 0.0,
-        n_offpanel=n_conv_miss,
+        n_offpanel=n_offpanel,
+        n_halt=n_halt,
     )

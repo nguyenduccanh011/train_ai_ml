@@ -93,3 +93,9 @@ class PortfolioConstants:
     w_invvol: float | None = None  # inverse-vol tilt: w *= clip(0.025/vol20, 1/x, x)
     w_liq_full_ty: float | None = None  # liquidity-proportional size: w *= clip(adv10/X_ty, 0.3, 1)
     max_expo: float | None = None  # skip new fills while invested value >= this frac of NAV
+    # data-contract guard (CONVICTION_UNIVERSE_UNIFICATION §5.2): when True, a traded symbol that
+    # is ENTIRELY ABSENT from the conviction panel (not just missing its signal-date bar) aborts
+    # the run instead of being sized on a fake neutral 0.5 — fail-loud, mirrors require_no_nan.
+    # Default False (golden-identical); flip True for board/backtest once the panel covers the
+    # traded universe. Signal-date-absent (halt/suspension) of a PRESENT symbol never raises.
+    strict_panel: bool = False

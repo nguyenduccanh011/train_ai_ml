@@ -9,26 +9,32 @@ stays wheel-pure (all data injected via PortfolioContext).
 
 from __future__ import annotations
 
+import functools
 import hashlib
 import json
 import os
+from pathlib import Path
 
 import pandas as pd
 
 from stock_ml.portfolio import DuckDBContext, PortfolioConstants, run_portfolio
 from stock_ml.portfolio.context import PortfolioContext
 
-# Data context defaults: the pinned serving snapshot (same store the champion golden uses).
-# Override via env so batch/API/tests can point elsewhere without code changes.
+# Data context defaults: the SERVING-DECLARED market panel artifact (SERVING_PANEL_TASKS.md T1) —
+# market.duckdb holds exactly the point-in-time full-market universe serving deploys on (1477
+# stock-only symbols, ICB 8995/8985 excluded), with a sibling manifest {market.duckdb}.panel.json
+# declaring its identity (n_symbols + symbols_sha256). The board scores against THIS so the
+# backtest≡serving band is comparable. NAV marks come from the live ohlcv.db (full coverage to the
+# artifact date). Override via env so tests/replays can point elsewhere without code changes.
 _MARKET_DB = os.environ.get(
     "OVERLAY_MARKET_DB",
-    "C:/Users/DUC CANH PC/Desktop/stock-serving/market_data/market_golden_pin_20260729.duckdb",
+    "C:/Users/DUC CANH PC/Desktop/stock-serving/market_data/market.duckdb",
 )
 _OHLCV_DB = os.environ.get(
     "OVERLAY_OHLCV_DB",
-    "C:/Users/DUC CANH PC/Desktop/stock-serving/data/ohlcv_golden_pin_20260729.db",
+    "C:/Users/DUC CANH PC/Desktop/stock-serving/data/ohlcv.db",
 )
-_DATE_HI = os.environ.get("OVERLAY_DATE_HI", "2026-07-08")
+_DATE_HI = os.environ.get("OVERLAY_DATE_HI", "2026-07-31")
 
 
 def pg_dsn() -> str:
@@ -38,8 +44,63 @@ def pg_dsn() -> str:
     ).replace("postgresql+asyncpg://", "postgresql://")
 
 
+@functools.lru_cache(maxsize=4)
+def panel_identity(market_db: str = _MARKET_DB) -> dict:
+    """Fail-loud guard + identity of the declared market panel artifact.
+
+    The store MUST match its sibling manifest `{market_db}.panel.json` (written by the serving
+    panel build) on n_symbols + symbols_sha256 — this guarantees the board scores on the SAME
+    declared universe serving deploys on (single-declared-artifact principle, CONVICTION_UNIVERSE_
+    UNIFICATION §5.1). Returns {n_symbols, symbols_sha256, panel_fingerprint, filter, max_date};
+    ``panel_fingerprint`` (rows:max_date:Σclose:Σvolume) feeds overlay_config_hash so a re-declared
+    panel forces a board re-score. Memoized per store path (immutable within a process)."""
+    import duckdb
+
+    manifest_path = Path(market_db + ".panel.json")
+    if not manifest_path.exists():
+        raise FileNotFoundError(
+            f"declared panel manifest missing: {manifest_path} — the overlay board requires the "
+            f"serving-declared artifact (SERVING_PANEL_TASKS.md T1). Point OVERLAY_MARKET_DB at "
+            f"the market.duckdb whose sibling .panel.json declares its identity."
+        )
+    manifest = json.loads(manifest_path.read_text())
+    cx = duckdb.connect(market_db, read_only=True)
+    syms = [
+        r[0]
+        for r in cx.execute(
+            "SELECT DISTINCT symbol FROM ohlcv WHERE timeframe='1D' ORDER BY symbol"
+        ).fetchall()
+    ]
+    rows, max_date, sum_close, sum_vol = cx.execute(
+        "SELECT count(*), max(date), sum(close), sum(volume) FROM ohlcv WHERE timeframe='1D'"
+    ).fetchone()
+    cx.close()
+    sha = hashlib.sha256("\n".join(syms).encode()).hexdigest()  # syms already sorted by the query
+    if sha != manifest["symbols_sha256"] or len(syms) != manifest["n_symbols"]:
+        raise ValueError(
+            f"panel identity drift: store {market_db} has {len(syms)} symbols "
+            f"sha={sha[:12]} but manifest declares {manifest['n_symbols']} "
+            f"sha={manifest['symbols_sha256'][:12]}. Re-declare the panel (serving panel build) "
+            f"or repoint OVERLAY_MARKET_DB — the board must score the DECLARED universe."
+        )
+    return {
+        "n_symbols": manifest["n_symbols"],
+        "symbols_sha256": manifest["symbols_sha256"],
+        "panel_fingerprint": f"{rows}:{max_date}:{round(float(sum_close), 2)}:{int(sum_vol)}",
+        "filter": manifest.get("filter"),
+        "max_date": str(max_date),
+    }
+
+
+def panel_fingerprint() -> str:
+    """rows:max_date:Σclose:Σvolume identity of the declared panel (for config_hash + traceability)."""
+    return panel_identity(_MARKET_DB)["panel_fingerprint"]
+
+
 def default_context() -> DuckDBContext:
-    """DuckDBContext (market panel + NAV marks) from the OVERLAY_* env / pinned defaults."""
+    """DuckDBContext (declared market panel + live NAV marks). Asserts the panel matches its
+    manifest (fail-loud) before returning — a drifted/undeclared store aborts here."""
+    panel_identity(_MARKET_DB)  # fail-loud on artifact drift (memoized)
     return DuckDBContext(_MARKET_DB, _OHLCV_DB, date_hi=_DATE_HI)
 
 # Board reference config: every research run scored under the SAME deploy-style policy so
@@ -73,9 +134,16 @@ def reference_config(**overrides) -> PortfolioConstants:
     return PortfolioConstants(**cfg)
 
 
-def overlay_config_hash(C: PortfolioConstants) -> str:
-    """Stable 32-char identity of an overlay config (→ cache key + traceability)."""
+def overlay_config_hash(C: PortfolioConstants, panel_fp: str | None = None) -> str:
+    """Stable 32-char identity of an overlay config (→ cache key + traceability).
+
+    ``panel_fp`` (the declared panel_fingerprint) is folded in so the identity ALSO tracks the
+    universe the run was scored on: a re-declared panel yields a new hash, which makes
+    register_overlay's idempotency skip re-score the board automatically. Pass None for the pure
+    config identity (back-compat)."""
     d = {k: getattr(C, k) for k in _HASH_FIELDS}
+    if panel_fp is not None:
+        d["__panel_fp__"] = panel_fp
     return hashlib.md5(json.dumps(d, sort_keys=True, default=str).encode()).hexdigest()
 
 
@@ -98,10 +166,17 @@ def load_run_frames(conn, run_id: str, base_run: str | None = None):
 
 
 def score_overlay(
-    conn, run_id: str, ctx: PortfolioContext, C: PortfolioConstants, *, base_run: str | None = None
+    conn,
+    run_id: str,
+    ctx: PortfolioContext,
+    C: PortfolioConstants,
+    *,
+    base_run: str | None = None,
+    bundle: dict | None = None,
 ) -> dict:
-    """Load frames + run the Stage-2 overlay. Returns run_portfolio's dict (nav/cagr/maxdd/…)."""
+    """Load frames + run the Stage-2 overlay. Returns run_portfolio's dict (nav/cagr/maxdd/…).
+    Pass ``bundle`` (build_panel_bundle) to reuse a prebuilt market panel across a batch."""
     base, sig = load_run_frames(conn, run_id, base_run)
     if len(base) < 5:
         raise ValueError(f"run {run_id}: only {len(base)} base trades (need >=5)")
-    return run_portfolio(base, sig, ctx=ctx, C=C)
+    return run_portfolio(base, sig, ctx=ctx, C=C, bundle=bundle)

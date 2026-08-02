@@ -53,6 +53,11 @@ class LeaderboardNavModel(Base):
     overlay_k: Mapped[int | None] = mapped_column(Integer(), nullable=True)
     overlay_note: Mapped[str | None] = mapped_column(Text(), nullable=True)
     overlay_config_hash: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    # data-coverage QC (migration 0034): which declared panel scored this row + how much the
+    # traded universe fell outside it (offpanel_frac>0 => STALE run vs the declared panel).
+    overlay_panel_fp: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    conv_miss_frac: Mapped[float | None] = mapped_column(Double(), nullable=True)
+    offpanel_frac: Mapped[float | None] = mapped_column(Double(), nullable=True)
     computed_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, server_default=func.now()
     )

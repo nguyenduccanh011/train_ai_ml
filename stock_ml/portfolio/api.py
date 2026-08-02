@@ -26,14 +26,47 @@ from stock_ml.portfolio.sim import run_sim
 _OVERLAY_EXIT_REASONS = {"preempt", "green_trail", "early_cut"}
 
 
+def _bundle_key(C: PortfolioConstants) -> tuple:
+    """Identity of a panel bundle: the (ctx-implicit) market panel derives ONLY from these."""
+    return (C.market_start, C.ret_win, C.liqcol_adv10_ty is not None or C.w_liq_full_ty is not None)
+
+
+def build_panel_bundle(ctx: PortfolioContext, C: PortfolioConstants) -> dict:
+    """Market-panel-derived structures (cross-sectional conviction rank + traded-value history)
+    that depend ONLY on ctx + (market_start, ret_win, liq-flags) — NOT on any run's trades. A
+    batch scoring many runs under ONE C builds this ONCE and passes it to
+    run_portfolio(..., bundle=...), skipping the ~60s/run rank rebuild. Byte-identical to the
+    inline path (run_portfolio with bundle=None reproduces exactly this)."""
+    mf = ctx.market_frame(C.market_start)
+    CLO, LO, DIDX, INV, CSm, R5 = build_market_panel(mf, ret_win=C.ret_win)
+    # liq-collapse veto data (default off): per-symbol traded-value history
+    _tv = None
+    if C.liqcol_adv10_ty is not None or C.w_liq_full_ty is not None:
+        if "volume" not in mf.columns:
+            raise ValueError("liqcol filter needs ctx.market_frame to include a volume column")
+        _m = mf[["symbol", "date", "close", "volume"]].copy()
+        _m["date"] = pd.to_datetime(_m["date"])
+        _m["tvv"] = _m["close"].astype(float) * _m["volume"].astype(float)
+        _tv = {
+            s: (g["date"].to_numpy(), g["tvv"].to_numpy())
+            for s, g in _m.sort_values(["symbol", "date"]).groupby("symbol")
+        }
+    return {"key": _bundle_key(C), "CLO": CLO, "LO": LO, "DIDX": DIDX, "INV": INV,
+            "CSm": CSm, "R5": R5, "_tv": _tv}  # fmt: skip
+
+
 def run_portfolio(
     base_trades: pd.DataFrame,
     signals: pd.DataFrame,
     *,
     ctx: PortfolioContext,
     C: PortfolioConstants | None = None,
+    bundle: dict | None = None,
 ) -> dict:
-    """Full Stage-2 on BASE (engine-level) trades. Returns metrics + equity/holdings/trades/skipped."""
+    """Full Stage-2 on BASE (engine-level) trades. Returns metrics + equity/holdings/trades/skipped.
+
+    ``bundle`` (from build_panel_bundle) reuses a prebuilt market panel across many runs sharing
+    one C; None (default) builds it inline — byte-identical, golden-safe."""
     C = C or PortfolioConstants()
     bad = set(base_trades["exit_reason"].dropna().unique()) & _OVERLAY_EXIT_REASONS
     if bad:
@@ -51,20 +84,17 @@ def run_portfolio(
 
     syms = sorted(closed.symbol.unique().tolist())
     pm = meta_priority(closed, signals, ctx.meta_frame(syms))
-    mf = ctx.market_frame(C.market_start)
-    CLO, LO, DIDX, INV, CSm, R5 = build_market_panel(mf, ret_win=C.ret_win)
-    # liq-collapse veto data (default off): per-symbol traded-value history
-    _tv = None
-    if C.liqcol_adv10_ty is not None or C.w_liq_full_ty is not None:
-        if "volume" not in mf.columns:
-            raise ValueError("liqcol filter needs ctx.market_frame to include a volume column")
-        _m = mf[["symbol", "date", "close", "volume"]].copy()
-        _m["date"] = pd.to_datetime(_m["date"])
-        _m["tvv"] = _m["close"].astype(float) * _m["volume"].astype(float)
-        _tv = {
-            s: (g["date"].to_numpy(), g["tvv"].to_numpy())
-            for s, g in _m.sort_values(["symbol", "date"]).groupby("symbol")
-        }
+    if bundle is None:
+        bundle = build_panel_bundle(ctx, C)
+    elif bundle["key"] != _bundle_key(C):
+        raise ValueError(
+            f"panel bundle key mismatch: bundle built for {bundle['key']} but this run's C needs "
+            f"{_bundle_key(C)} (market_start/ret_win/liq-flags differ) — rebuild the bundle."
+        )
+    CLO, LO, DIDX, INV, CSm, R5, _tv = (
+        bundle["CLO"], bundle["LO"], bundle["DIDX"], bundle["INV"],
+        bundle["CSm"], bundle["R5"], bundle["_tv"],
+    )  # fmt: skip
     rw = rewrite(closed, CLO, DIDX, INV, C.gt, C.ec_check_bar) if C.rewrite_on else closed.copy()
 
     cm = {(r.symbol, r.ed): CSm.get((r.symbol, str(r.sigd.date())), 0.5) for r in rw.itertuples()}

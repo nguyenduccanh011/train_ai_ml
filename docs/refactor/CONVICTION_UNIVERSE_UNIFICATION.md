@@ -92,16 +92,23 @@ vintage back-adjust** → conviction vẫn khác. Trái hợp đồng fail-loud 
    ⚠️ Đổi số champion NGAY CẢ trên pin488 (pin488 có 1.5% ghost) ⇒ đây là **thay đổi logic có
    chủ đích** → re-pin golden numbers (cả 2 impl đổi cùng nhau, parity giữ) — KHÁC re-pin vì
    đổi store. Đo `n_offpanel` của 3 seed fixture TRƯỚC.
-4. **Adopt panel artifact của serving**: train đọc store + sidecar serving khai (không dùng file
-   1357 rìa-rách riêng). `DuckDBContext`/context board assert `store_fingerprint == sidecar.sha`
-   + market⊇price⊇traded.
-5. **config_hash + persist**: thêm `overlay_panel_hash`; lưu `conv_miss_frac` vào `leaderboard_nav`
-   (migration nhẹ, cột mới). Đổi hash ⇒ re-score.
+4. ✅ **Adopt panel artifact của serving (02/08)**: `overlay_scoring.default_context()` trỏ
+   `market.duckdb` (1477 stock-only) + NAV live `ohlcv.db`, `date_hi=2026-07-31`.
+   `panel_identity()` đọc sidecar `{market_db}.panel.json`, **assert** `n_symbols` +
+   `symbols_sha256` khớp (fail-loud drift), trả `panel_fingerprint` =
+   `4421162:2026-07-31:58109396.84:1654095309512`. KHÔNG dùng file 1357 rìa-rách riêng.
+5. ✅ **Panel-caching + config_hash + persist (02/08)**: `build_panel_bundle(ctx,C)` dựng panel
+   1 lần/batch (rank xsec ~60s/run là chi phí chính) → `run_portfolio(...,bundle=)` tái dùng;
+   `bundle=None` = build inline **byte-identical** (golden an toàn). `overlay_config_hash(C,
+   panel_fp)` gấp fingerprint vào định danh ⇒ panel đổi thì hash đổi ⇒ tự re-score. Migration
+   **0034** thêm `overlay_panel_fp/conv_miss_frac/offpanel_frac` vào `leaderboard_nav`;
+   `register_overlay` persist QC + in `OFFPANEL%` khi >0 (run dyn cũ mua fund-cert = STALE).
 6. **Đo lại SKIP mu**: `skip_mu_ref=0.644` hiệu chỉnh cho panel ~200 (`constants.py`) với
-   `skip_gain=2.0`. Panel ~1494 + bỏ 0.5 giả **dịch mu** ⇒ đo mu theo năm trước/sau; **không**
+   `skip_gain=2.0`. Panel 1477 + bỏ 0.5 giả **dịch mu** ⇒ đo mu theo năm trước/sau; **không**
    kết luận sớm "gates.py không cần sửa".
-7. **Bật `strict_panel=True`** cho board/backtest CHỈ SAU khi (4) đạt `n_offpanel==0`. Rồi
-   **re-score board** dưới panel khai báo.
+7. **Re-score board** dưới panel 1477 (bundle-cached) → so band backtest≡serving; run
+   `offpanel_frac>0` gắn cờ STALE (chờ universe re-pin sau fix `is_nonstock`). Bật
+   `strict_panel=True` cho registration MỚI (universe ⊆ 1477); board cũ giữ False + đo QC.
 
 ## 6. Serving — trạng thái + việc còn lại (handoff, đã cập nhật)
 

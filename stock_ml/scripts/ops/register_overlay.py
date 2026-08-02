@@ -30,21 +30,27 @@ import psycopg2
 from stock_ml.db.overlay_scoring import (
     default_context,
     overlay_config_hash,
+    panel_fingerprint,
     pg_dsn,
     reference_config,
     score_overlay,
 )
+from stock_ml.portfolio import build_panel_bundle
 
 _UPSERT = """
 INSERT INTO leaderboard_nav
-    (run_id, cagr_overlay, maxdd_overlay, overlay_k, overlay_note, overlay_config_hash, computed_at)
-VALUES (%s, %s, %s, %s, %s, %s, now())
+    (run_id, cagr_overlay, maxdd_overlay, overlay_k, overlay_note, overlay_config_hash,
+     overlay_panel_fp, conv_miss_frac, offpanel_frac, computed_at)
+VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, now())
 ON CONFLICT (run_id) DO UPDATE SET
     cagr_overlay = EXCLUDED.cagr_overlay,
     maxdd_overlay = EXCLUDED.maxdd_overlay,
     overlay_k = EXCLUDED.overlay_k,
     overlay_note = EXCLUDED.overlay_note,
     overlay_config_hash = EXCLUDED.overlay_config_hash,
+    overlay_panel_fp = EXCLUDED.overlay_panel_fp,
+    conv_miss_frac = EXCLUDED.conv_miss_frac,
+    offpanel_frac = EXCLUDED.offpanel_frac,
     computed_at = now()
 """
 
@@ -126,10 +132,14 @@ def main():
     if args.date_lo is not None:
         overrides["date_lo"] = args.date_lo
     C = reference_config(**overrides)
-    cfg_hash = overlay_config_hash(C)
+    ctx = default_context()  # asserts the declared-panel artifact identity (fail-loud)
+    panel_fp = panel_fingerprint()
+    cfg_hash = overlay_config_hash(C, panel_fp)  # identity now tracks the scored universe
     note = build_note(C)
 
-    ctx = default_context()
+    # Build the market panel ONCE and reuse across the whole batch (all runs share this C) — the
+    # cross-sectional rank is the ~60s/run cost; a batch of thousands is infeasible without this.
+    bundle = build_panel_bundle(ctx, C)
     con = psycopg2.connect(pg_dsn())
     cur = con.cursor()
 
@@ -154,18 +164,24 @@ def main():
             continue
         t0 = time.time()
         try:
-            r = score_overlay(con, run_id, ctx, C, base_run=args.base_run)
+            r = score_overlay(con, run_id, ctx, C, base_run=args.base_run, bundle=bundle)
         except Exception as exc:  # noqa: BLE001 — one bad run must not kill the batch
             n_err += 1
             print(f"[{i}/{len(run_ids)}] ERR {run_id}: {type(exc).__name__}: {exc}", flush=True)
             con.rollback()
             continue
-        cur.execute(_UPSERT, (run_id, r["cagr"], r["maxdd"], C.k, note, cfg_hash))
+        cur.execute(
+            _UPSERT,
+            (run_id, r["cagr"], r["maxdd"], C.k, note, cfg_hash,
+             panel_fp, r["conv_miss_frac"], r["offpanel_frac"]),
+        )  # fmt: skip
         con.commit()
         n_ok += 1
+        off = f" OFFPANEL={r['offpanel_frac'] * 100:.0f}%" if r["offpanel_frac"] > 0 else ""
         print(
             f"[{i}/{len(run_ids)}] {run_id}: CAGR {r['cagr'] * 100:.1f}% DD {r['maxdd'] * 100:.1f}% "
-            f"(n_gated={r['n_gated']}/{r['n_base']}, {time.time() - t0:.1f}s)",
+            f"(n_gated={r['n_gated']}/{r['n_base']}, conv_miss={r['conv_miss_frac'] * 100:.0f}%{off}, "
+            f"{time.time() - t0:.1f}s)",
             flush=True,
         )
 

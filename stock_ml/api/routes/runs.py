@@ -721,7 +721,11 @@ async def compute_run_overlay(run_id: str, body: dict) -> dict:
     liqcol_adv252_ty?, date_lo?, base_run?}."""
     from fastapi.concurrency import run_in_threadpool
 
-    from stock_ml.db.overlay_scoring import overlay_config_hash, reference_config
+    from stock_ml.db.overlay_scoring import (
+        overlay_config_hash,
+        panel_fingerprint,
+        reference_config,
+    )
 
     overrides: dict = {}
     for kk in _OVERLAY_KNOBS:
@@ -737,7 +741,7 @@ async def compute_run_overlay(run_id: str, body: dict) -> dict:
         C = reference_config(**overrides)
     except TypeError as e:
         raise HTTPException(status_code=400, detail=f"bad overlay config: {e}")
-    ch = overlay_config_hash(C)
+    ch = overlay_config_hash(C, panel_fingerprint())  # identity tracks the declared panel too
     key = (run_id, ch)
     cached = _OVERLAY_SANDBOX_CACHE.get(key)
     if cached is not None:

@@ -51,6 +51,12 @@ class PortfolioConstants:
     # parity-preserved — causal-ize post-refactor, see design doc §6)
     date_lo: str = "2020-01-01"
     market_start: str = "2018-06-01"
+    # resting pullback order book (run_pending tab): a buy signal rests a limit at
+    # close[signal]*(1-pull_pct) for pull_win trading bars. Defaults = champion (hb_portfolio_fix
+    # PB_PCT/PB_WIN). Display-only — does NOT touch NAV/holdings/trades (sim.py); surfaced by
+    # run_portfolio(..., emit_pending=True). Folded into overlay_config_hash (identity).
+    pull_pct: float = 0.045
+    pull_win: int = 40
     # research-lever knobs (defaults = champion gtos behaviour, golden-guarded):
     rewrite_on: bool = True  # False = no exit rewrite at all (ret5g/ret7g variants)
     ec_check_bar: int = 2  # early-cut checks close[entry+N] red, cuts at N+1 (gt1 uses 1)

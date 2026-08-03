@@ -51,6 +51,36 @@ async def _nav_metrics_for(session: AsyncSession, run_ids: list[str]) -> dict[st
         return {}
 
 
+async def _overlay_counts_for(session: AsyncSession, run_ids: list[str]) -> dict[str, int]:
+    """How many Stage-2 strategies each run owns (run_overlay).
+
+    The leaderboard ranks SIGNAL quality under one reference policy, so a row is a MODEL. But a
+    model with six named books and one with none look identical here, and the portfolio page is
+    the only place that difference shows — which is how twelve rows that were one model with
+    twelve policies went unnoticed for months. A count column makes that visible where people
+    actually look.
+    """
+    if not run_ids:
+        return {}
+    from sqlalchemy import text
+
+    try:
+        rows = (
+            await session.execute(
+                text(
+                    "SELECT run_id, count(*) FROM run_overlay WHERE run_id = ANY(:ids) "
+                    "GROUP BY run_id"
+                ),
+                {"ids": run_ids},
+            )
+        ).fetchall()
+        return {r[0]: int(r[1]) for r in rows}
+    except Exception:  # table absent on a fixture DB — the column just shows nothing
+        await session.rollback()
+        logger.warning("run_overlay unavailable, skipping strategy counts", exc_info=True)
+        return {}
+
+
 async def _leaderboard_from_db(
     session: AsyncSession,
     market: str | None = None,
@@ -75,7 +105,14 @@ async def _leaderboard_from_db(
         limit=limit,
         offset=offset,
     )
-    nav_map = await _nav_metrics_for(session, [m.run_id for m in models])
+    _ids = [m.run_id for m in models]
+    nav_map = await _nav_metrics_for(session, _ids)
+    ov_map = await _overlay_counts_for(session, _ids)
+    # a folded placeholder owns no book of its own — surface the parent's count so the row does
+    # not read as "no portfolio" when the portfolio simply moved
+    ov_parent = await _overlay_counts_for(
+        session, sorted({m.parent_run_id for m in models if m.parent_run_id})
+    )
     rows = [
         {
             "run_id": m.run_id,
@@ -117,6 +154,16 @@ async def _leaderboard_from_db(
             "experiment_group": m.experiment_group,
             "variant_type": m.variant_type,
             "metadata_notes": m.metadata_notes,
+            # Stage-2 books this model owns. `folded_into` is set when the row is a retired
+            # placeholder whose books moved onto a parent — the UI links there instead of
+            # showing an empty portfolio.
+            "parent_run_id": m.parent_run_id,
+            "n_overlays": ov_map.get(m.run_id, 0)
+            or (ov_parent.get(m.parent_run_id, 0) if m.parent_run_id else 0),
+            # "retired + has a parent" IS the fold marker, regardless of whether the row also
+            # kept a reference book of its own. Tying this to book-ownership hid the note on
+            # exactly the 12 rows it exists for: "retired" with no destination reads as deleted.
+            "folded_into": m.parent_run_id if (m.state == "retired" and m.parent_run_id) else None,
             # NAV sim metrics (bang leaderboard_nav, cham boi
             # stock_ml/scripts/ops/score_nav_leaderboard.py) — None neu chua cham.
             "nav_adv": nav_map.get(m.run_id, {}).get("nav_adv"),

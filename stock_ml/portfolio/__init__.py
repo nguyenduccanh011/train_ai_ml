@@ -8,6 +8,7 @@ See docs/refactor/PORTFOLIO_LAYER_UNIFICATION.md.
 from stock_ml.portfolio.api import build_panel_bundle, run_portfolio
 from stock_ml.portfolio.constants import PortfolioConstants
 from stock_ml.portfolio.context import DuckDBContext, PortfolioContext
+from stock_ml.portfolio.identity import overlay_key, scoring_hash
 
 __all__ = [
     "run_portfolio",
@@ -15,4 +16,6 @@ __all__ = [
     "PortfolioConstants",
     "PortfolioContext",
     "DuckDBContext",
+    "overlay_key",
+    "scoring_hash",
 ]

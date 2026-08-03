@@ -7,9 +7,12 @@ see stock_ml.db.overlay_scoring.REFERENCE_CONSTANTS) so the leaderboard ranks SI
 under one deploy-style portfolio policy. Per-strategy overrides (K / liquidity / window) are
 passed via flags; the same knobs power the live sandbox endpoint.
 
-Writes ONLY the overlay columns of leaderboard_nav (cagr_overlay/maxdd_overlay/overlay_k/
-overlay_note/overlay_config_hash) — nh_nav2 nav/t2 columns are left untouched. Idempotent: a
-run already scored under the SAME overlay_config_hash is skipped unless --force.
+Writes one ``run_overlay`` row per (run, strategy) — keyed by ``overlay_key`` (the config
+identity), so scoring a second strategy ADDS a book instead of deleting the first. The
+``leaderboard_nav`` overlay columns are written ONLY for the board reference strategy, which is
+what keeps the ranking a comparison of SIGNAL quality rather than a mix of portfolio policies.
+Idempotent per strategy: same ``scoring_hash`` (config + declared panel) is skipped unless
+--force, and a prior metrics-only score never satisfies a --detail request.
 
 Data context (market panel + NAV price marks) is injected via DuckDBContext; point it at the
 market.duckdb + ohlcv.db to score against (defaults to the pinned serving snapshot).
@@ -27,32 +30,15 @@ import time
 
 import psycopg2
 
+from stock_ml.db.overlay_persist import persist_overlay
 from stock_ml.db.overlay_scoring import (
     default_context,
-    overlay_config_hash,
     panel_fingerprint,
     pg_dsn,
     reference_config,
     score_overlay,
 )
-from stock_ml.portfolio import build_panel_bundle
-
-_UPSERT = """
-INSERT INTO leaderboard_nav
-    (run_id, cagr_overlay, maxdd_overlay, overlay_k, overlay_note, overlay_config_hash,
-     overlay_panel_fp, conv_miss_frac, offpanel_frac, computed_at)
-VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, now())
-ON CONFLICT (run_id) DO UPDATE SET
-    cagr_overlay = EXCLUDED.cagr_overlay,
-    maxdd_overlay = EXCLUDED.maxdd_overlay,
-    overlay_k = EXCLUDED.overlay_k,
-    overlay_note = EXCLUDED.overlay_note,
-    overlay_config_hash = EXCLUDED.overlay_config_hash,
-    overlay_panel_fp = EXCLUDED.overlay_panel_fp,
-    conv_miss_frac = EXCLUDED.conv_miss_frac,
-    offpanel_frac = EXCLUDED.offpanel_frac,
-    computed_at = now()
-"""
+from stock_ml.portfolio import build_panel_bundle, overlay_key, scoring_hash
 
 
 def fetch_batch(cur, *, pinned_only, limit, run_like, order_by="composite", only_missing=False):
@@ -85,10 +71,22 @@ def fetch_batch(cur, *, pinned_only, limit, run_like, order_by="composite", only
     return [r[0] for r in cur.fetchall()]
 
 
-def existing_hash(cur, run_id):
-    cur.execute("SELECT overlay_config_hash FROM leaderboard_nav WHERE run_id = %s", (run_id,))
+def already_scored(cur, run_id: str, key: str, cfg_hash: str, *, detail: bool) -> bool:
+    """Has THIS strategy of THIS run already been scored on THIS panel?
+
+    Scoped by ``(run_id, overlay_key)`` — the old check read leaderboard_nav, which holds one row
+    per run, so scoring a second strategy either skipped wrongly or overwrote the first. And a
+    prior METRICS-ONLY score must not satisfy a ``--detail`` request: that is precisely how the
+    board ended up with fresh numbers sitting on top of month-old books.
+    """
+    cur.execute(
+        "SELECT scoring_hash, has_detail FROM run_overlay WHERE run_id=%s AND overlay_key=%s",
+        (run_id, key),
+    )
     row = cur.fetchone()
-    return row[0] if row else None
+    if not row or row[0] != cfg_hash:
+        return False
+    return bool(row[1]) or not detail
 
 
 def build_note(C):
@@ -115,11 +113,20 @@ def main():
         "--only-missing", action="store_true", help="batch: skip runs that already have any overlay"
     )
     ap.add_argument("--force", action="store_true", help="re-score even if same config_hash")
+    # detail tab: write the 5 detail tables (equity/holdings/trades/skipped/pending) as well as
+    # metrics. Default = single-run / pinned scoring gets the full tab; a broad board batch stays
+    # metrics-only (keeps run_portfolio_daily from exploding). Override either way.
+    ap.add_argument("--detail", dest="detail", action="store_true", default=None,
+                    help="force-write the full danh-mục detail tables")
+    ap.add_argument("--no-detail", dest="detail", action="store_false",
+                    help="force metrics-only (skip detail tables)")
     # per-strategy overlay overrides (default = board reference config)
     ap.add_argument("--k", type=int, default=None)
     ap.add_argument("--liqcol-adv10-ty", type=float, default=None)
     ap.add_argument("--liqcol-adv252-ty", type=float, default=None)
     ap.add_argument("--date-lo", default=None, help="entry-start window (default 2020-01-01)")
+    ap.add_argument("--label", default=None,
+                    help="human name of this strategy in the danh-mục picker (default: the note)")
     args = ap.parse_args()
 
     overrides = {}
@@ -134,8 +141,10 @@ def main():
     C = reference_config(**overrides)
     ctx = default_context()  # asserts the declared-panel artifact identity (fail-loud)
     panel_fp = panel_fingerprint()
-    cfg_hash = overlay_config_hash(C, panel_fp)  # identity now tracks the scored universe
+    key = overlay_key(C)  # WHICH strategy (config only) — the book's primary key
+    cfg_hash = scoring_hash(C, panel_fp)  # WHICH scoring (config + panel) — idempotency
     note = build_note(C)
+    label = args.label or note
 
     # Build the market panel ONCE and reuse across the whole batch (all runs share this C) — the
     # cross-sectional rank is the ~60s/run cost; a batch of thousands is infeasible without this.
@@ -154,27 +163,33 @@ def main():
             order_by=args.order_by,
             only_missing=args.only_missing,
         )
-    print(f"config_hash={cfg_hash} note='{note}' | runs={len(run_ids)}", flush=True)
+    # default: single run or a pinned batch gets the full detail tab; a broad board batch is
+    # metrics-only. --detail / --no-detail override.
+    detail = args.detail if args.detail is not None else (bool(args.run_id) or args.pinned)
+    print(
+        f"overlay_key={key} scoring_hash={cfg_hash} label='{label}' | runs={len(run_ids)} | "
+        f"detail={detail} | panel={panel_fp}",
+        flush=True,
+    )
 
     n_ok = n_skip = n_err = 0
     t_start = time.time()
     for i, run_id in enumerate(run_ids, 1):
-        if not args.force and existing_hash(cur, run_id) == cfg_hash:
+        if not args.force and already_scored(cur, run_id, key, cfg_hash, detail=detail):
             n_skip += 1
             continue
         t0 = time.time()
         try:
-            r = score_overlay(con, run_id, ctx, C, base_run=args.base_run, bundle=bundle)
+            r = score_overlay(
+                con, run_id, ctx, C, base_run=args.base_run, bundle=bundle, emit_pending=detail
+            )
+            persist_overlay(con, run_id, r, C, cfg_hash, panel_fp, note, detail=detail,
+                            label=label, base_run=args.base_run)
         except Exception as exc:  # noqa: BLE001 — one bad run must not kill the batch
             n_err += 1
             print(f"[{i}/{len(run_ids)}] ERR {run_id}: {type(exc).__name__}: {exc}", flush=True)
             con.rollback()
             continue
-        cur.execute(
-            _UPSERT,
-            (run_id, r["cagr"], r["maxdd"], C.k, note, cfg_hash,
-             panel_fp, r["conv_miss_frac"], r["offpanel_frac"]),
-        )  # fmt: skip
         con.commit()
         n_ok += 1
         off = f" OFFPANEL={r['offpanel_frac'] * 100:.0f}%" if r["offpanel_frac"] > 0 else ""

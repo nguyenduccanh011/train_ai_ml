@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import calendar
+import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -14,6 +15,7 @@ from stock_ml.db.dependencies import get_db
 from stock_ml.db.repositories.run_repo import LeaderboardRunRepository
 from stock_ml.db.repositories.trade_repo import RunTradeRepository
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1", tags=["runs"])
 
 
@@ -108,27 +110,44 @@ async def get_run_state(run_id: str, session: AsyncSession = Depends(get_db)) ->
 
 
 @router.get("/runs/{run_id:path}/trades")
-async def get_run_trades(run_id: str, session: AsyncSession = Depends(get_db)) -> dict:
-    """B4 (PORTFOLIO_REGISTRATION_PIPELINE.md): prefer the PORTFOLIO layer
-    (run_trades_overlay) when this run has one; fall back to engine BASE trades.
-    `layer` tells the UI which one it is looking at."""
+async def get_run_trades(
+    run_id: str,
+    overlay: str | None = None,
+    layer: str = "auto",
+    session: AsyncSession = Depends(get_db),
+) -> dict:
+    """Trades of this run at a CHOSEN layer. `layer` tells the caller which one came back.
+
+    Two different things get called "a trade" and the difference is enormous — measured on
+    `_dyn900_onerun`/SHP: 1049 buy signals -> **36** engine BASE trades -> **1** that the K-slot
+    portfolio actually took. Defaulting to the portfolio layer (``auto``) and never saying the
+    base layer exists made the detail page look like the model barely traded.
+
+      base    = the engine's own trades (run_trades), before any portfolio selection
+      overlay = what ONE Stage-2 strategy took (run_trades_overlay, per overlay_key)
+      auto    = overlay when this run has one, else base — the historical default
+    """
+    if layer not in ("auto", "base", "overlay"):
+        raise HTTPException(status_code=400, detail="layer must be auto|base|overlay")
     await _resolve(session, run_id)  # 404 for unknown run, consistent with /state
     from sqlalchemy import text
 
-    try:
-        ov = (
-            await session.execute(
-                text(
-                    "SELECT symbol, entry_date, exit_date, entry_price, exit_price, "
-                    "holding_days, pnl_pct, exit_reason FROM run_trades_overlay "
-                    "WHERE run_id=:rid ORDER BY entry_date"
-                ),
-                {"rid": run_id},
-            )
-        ).fetchall()
-    except Exception:
-        await session.rollback()
-        ov = []
+    ov = []
+    if layer in ("auto", "overlay"):
+        try:
+            ov = (
+                await session.execute(
+                    text(
+                        "SELECT symbol, entry_date, exit_date, entry_price, exit_price, "
+                        "holding_days, pnl_pct, exit_reason FROM run_trades_overlay "
+                        "WHERE run_id=:rid AND overlay_key=:ok ORDER BY entry_date"
+                    ),
+                    {"rid": run_id, "ok": await _resolve_overlay(session, run_id, overlay)},
+                )
+            ).fetchall()
+        except Exception:
+            await session.rollback()
+            ov = []
     if ov:
         return {
             "run_id": run_id,
@@ -151,6 +170,10 @@ async def get_run_trades(run_id: str, session: AsyncSession = Depends(get_db)) -
             ],
             "total_trades": len(ov),
         }
+    if layer == "overlay":
+        # asked for the portfolio layer and it has nothing: say so. Falling back to base here
+        # would hand back 36 engine trades labelled as the 1 the portfolio took.
+        return {"run_id": run_id, "layer": "overlay", "trades": [], "total_trades": 0}
     repo = RunTradeRepository(session)
     trades = await repo.get_by_run_id(run_id)
     return {
@@ -271,27 +294,162 @@ async def get_run_symbol_stats(run_id: str, session: AsyncSession = Depends(get_
     }
 
 
-@router.get("/runs/{run_id:path}/portfolio/equity")
-async def get_run_portfolio_equity(run_id: str, session: AsyncSession = Depends(get_db)) -> dict:
-    """Daily NAV / exposure / position-count timeline for the portfolio-execution overlay.
-    Empty when the run has no persisted portfolio (only combo/portfolio runs populate run_equity)."""
+# ---------------------------------------------------------------------------------------
+# Overlay (Stage-2 book) selection. A book is (run_id, overlay_key) — see
+# docs/refactor/OVERLAY_IDENTITY_RESTRUCTURE.md. Every detail endpoint takes an optional
+# ``overlay`` key; omitting it must keep old links working, so we resolve a default.
+# ---------------------------------------------------------------------------------------
+async def _resolve_overlay(session, run_id: str, overlay: str | None) -> str | None:
+    """Which book to read. Explicit key wins; else the run's own default.
+
+    Default = the board reference strategy when this run has one, otherwise the single book it
+    owns. With MORE than one book and no reference we take the oldest rather than "the newest",
+    so a re-score landing does not silently swap which strategy the page shows.
+
+    Returns None when the run indexes NO book. ``run_overlay`` is the index of what exists, so a
+    run missing from it has nothing to serve — reading detail rows anyway would resurrect exactly
+    the un-described books this restructure replaced. Un-rescorable old books are DECLARED rows
+    (``rescore_books --adopt-orphans``), not an implicit fallback key.
+    """
     from sqlalchemy import text
 
+    if overlay:
+        return overlay
+    rows = (
+        await session.execute(
+            text("SELECT overlay_key FROM run_overlay WHERE run_id=:rid ORDER BY computed_at"),
+            {"rid": run_id},
+        )
+    ).fetchall()
+    keys = [r[0] for r in rows]
+    if not keys:
+        return None
+    if len(keys) == 1:
+        return keys[0]
+    from stock_ml.db.overlay_scoring import reference_key
+
+    ref = reference_key()
+    return ref if ref in keys else keys[0]
+
+
+def _panel_now() -> str | None:
+    """Current declared panel fingerprint, or None if the artifact is unreadable — a staleness
+    check that cannot run must report 'unknown', never 'fresh'."""
+    try:
+        from stock_ml.db.overlay_scoring import panel_fingerprint
+
+        return panel_fingerprint()
+    except Exception:  # noqa: BLE001 — the page still works without the badge
+        return None
+
+
+@router.get("/runs/{run_id:path}/overlays")
+async def list_run_overlays(run_id: str, session: AsyncSession = Depends(get_db)) -> dict:
+    """Every Stage-2 strategy scored on this run — what the danh-mục picker lists.
+
+    ``stale`` compares the book's panel against the currently declared one: a strategy whose
+    number was re-scored on a new panel while its book was left behind must SAY so, because the
+    two disagreeing silently is the defect this table was created to end.
+    """
+    from sqlalchemy import text
+
+    await _resolve(session, run_id)
+    _SEL = (
+        "SELECT overlay_key, label, config, base_run, cagr, maxdd, nav, years, n_trades, "
+        "k, scoring_hash, panel_fp, conv_miss_frac, offpanel_frac, has_detail, computed_at, "
+        "source_run FROM run_overlay WHERE run_id=:rid ORDER BY computed_at"
+    )
+    rows = (await session.execute(text(_SEL), {"rid": run_id})).fetchall()
+    # A folded placeholder (the old overlay/* rows) owns no book any more — its content moved onto
+    # the parent run under a proper key. Hand back the parent's list plus where it went, so an old
+    # link lands on the real books instead of an empty tab that looks like "no data".
+    moved_to = moved_key = None
+    if not rows:
+        par = (
+            await session.execute(
+                text("SELECT parent_run_id FROM leaderboard_runs WHERE run_id=:rid"),
+                {"rid": run_id},
+            )
+        ).fetchone()
+        if par and par[0]:
+            parent_rows = (await session.execute(text(_SEL), {"rid": par[0]})).fetchall()
+            if parent_rows:
+                moved_to, rows = par[0], parent_rows
+                # WHICH of the parent's strategies this placeholder was. Without it the old link
+                # lands on the parent's DEFAULT book — a different strategy than the one clicked.
+                moved_key = next((r[16] and r[0] for r in parent_rows if r[16] == run_id), None)
+    now_fp = _panel_now()
+    from stock_ml.db.overlay_scoring import reference_key
+
+    try:
+        ref = reference_key()
+    except Exception:  # noqa: BLE001
+        ref = None
+    return {
+        "run_id": run_id,
+        "panel_fp": now_fp,
+        # non-null => these books belong to `moved_to`, not to run_id: the caller must link there
+        "moved_to": moved_to,
+        "moved_to_key": moved_key,
+        "overlays": [
+            {
+                "overlay_key": r[0],
+                "label": r[1],
+                "config": r[2],
+                "base_run": r[3],
+                "cagr": r[4],
+                "maxdd": r[5],
+                "nav": r[6],
+                "years": r[7],
+                "n_trades": r[8],
+                "k": r[9],
+                "scoring_hash": r[10],
+                "panel_fp": r[11],
+                "conv_miss_frac": r[12],
+                "offpanel_frac": r[13],
+                "has_detail": bool(r[14]),
+                "computed_at": str(r[15]) if r[15] else None,
+                "source_run": r[16],
+                "is_reference": r[0] == ref,
+                # tri-state on purpose: None = we could not read the declared panel, which is
+                # NOT the same as "fresh". A boolean here would turn an unreadable artifact into
+                # a green badge — the exact shape of failure this restructure exists to remove.
+                "stale": None if (now_fp is None or r[11] is None) else (r[11] != now_fp),
+            }
+            for r in rows
+        ],
+    }
+
+
+@router.get("/runs/{run_id:path}/portfolio/equity")
+async def get_run_portfolio_equity(
+    run_id: str, overlay: str | None = None, session: AsyncSession = Depends(get_db)
+) -> dict:
+    """Daily NAV / exposure / position-count timeline for ONE Stage-2 strategy of this run.
+    ``overlay`` selects the book (see /overlays); omitted = the run's default one."""
+    from sqlalchemy import text
+
+    key = await _resolve_overlay(session, run_id, overlay)
     try:
         rows = (
             await session.execute(
                 text(
                     "SELECT date, nav, exposure, n_positions FROM run_equity "
-                    "WHERE run_id=:rid ORDER BY date"
+                    "WHERE run_id=:rid AND overlay_key=:ok ORDER BY date"
                 ),
-                {"rid": run_id},
+                {"rid": run_id, "ok": key},
             )
         ).fetchall()
     except Exception:
+        # a genuine query failure — do NOT swallow it as "empty" (that hid real breakage as a blank
+        # tab). An UN-populated run is the 0-rows case below (populated=false), not an exception.
         await session.rollback()
-        return {"run_id": run_id, "equity": []}
+        logger.exception("portfolio/equity query failed for run_id=%s", run_id)
+        raise HTTPException(status_code=500, detail="run_equity query failed")
     return {
         "run_id": run_id,
+        "overlay_key": key,
+        "populated": bool(rows),
         "equity": [
             {"date": str(r[0]), "nav": r[1], "exposure": r[2], "n_positions": r[3]} for r in rows
         ],
@@ -300,11 +458,12 @@ async def get_run_portfolio_equity(run_id: str, session: AsyncSession = Depends(
 
 @router.get("/runs/{run_id:path}/portfolio/day")
 async def get_run_portfolio_day(
-    run_id: str, date: str, session: AsyncSession = Depends(get_db)
+    run_id: str, date: str, overlay: str | None = None, session: AsyncSession = Depends(get_db)
 ) -> dict:
-    """Holdings (with ACTUAL weights) + entries + exits on a given date for the portfolio overlay."""
+    """Holdings (with ACTUAL weights) + entries + exits on a date, for ONE Stage-2 strategy."""
     from sqlalchemy import text
 
+    key = await _resolve_overlay(session, run_id, overlay)
     try:
         # asyncpg binds date columns to datetime.date objects, not strings -> parse first.
         d_obj = datetime.strptime(date, "%Y-%m-%d").date()
@@ -313,8 +472,11 @@ async def get_run_portfolio_day(
             _has_ov = bool(
                 (
                     await session.execute(
-                        text("SELECT 1 FROM run_trades_overlay WHERE run_id=:rid LIMIT 1"),
-                        {"rid": run_id},
+                        text(
+                            "SELECT 1 FROM run_trades_overlay WHERE run_id=:rid "
+                            "AND overlay_key=:ok LIMIT 1"
+                        ),
+                        {"rid": run_id, "ok": key},
                     )
                 ).fetchone()
             )
@@ -322,15 +484,18 @@ async def get_run_portfolio_day(
             await session.rollback()
             _has_ov = False
         _ttbl = "run_trades_overlay" if _has_ov else "run_trades"
+        # run_trades is BASE-only (migration 0033) and has NO overlay_key — only the overlay
+        # table is per-strategy, so the predicate must follow the table we actually chose.
+        _ovf = " AND overlay_key=:ok" if _has_ov else ""
         rows = (
             await session.execute(
                 text(
                     "SELECT symbol, weight, entry_date, days_held, is_new, is_exit, exit_reason, conv, "
                     "entry_weight, unreal_pnl "
-                    "FROM run_portfolio_daily WHERE run_id=:rid AND date=:d "
+                    "FROM run_portfolio_daily WHERE run_id=:rid AND overlay_key=:ok AND date=:d "
                     "ORDER BY is_exit, entry_weight DESC NULLS LAST"
                 ),
-                {"rid": run_id, "d": d_obj},
+                {"rid": run_id, "d": d_obj, "ok": key},
             )
         ).fetchall()
         sig = (
@@ -350,11 +515,12 @@ async def get_run_portfolio_day(
         sells = (
             await session.execute(
                 text(
-                    f"SELECT symbol, exit_reason FROM {_ttbl} WHERE run_id=:rid "
+                    f"SELECT symbol, exit_reason FROM {_ttbl} WHERE run_id=:rid{_ovf} "
                     "AND entry_date <= :d AND exit_date > :d "
-                    "AND exit_date = (SELECT min(date) FROM run_equity WHERE run_id=:rid AND date > :d)"
+                    "AND exit_date = (SELECT min(date) FROM run_equity WHERE run_id=:rid "
+                    "AND overlay_key=:ok AND date > :d)"
                 ),
-                {"rid": run_id, "d": d_obj},
+                {"rid": run_id, "d": d_obj, "ok": key},
             )
         ).fetchall()
         # PENDING pullback queue (CAUSAL resting book): buy signals still waiting to fill as of D.
@@ -362,17 +528,20 @@ async def get_run_portfolio_day(
             await session.execute(
                 text(
                     "SELECT symbol, signal_date, days_waiting, limit_price, ref_price, pct_to_limit, "
-                    "outcome, result_date FROM run_pending WHERE run_id=:rid AND date=:d "
+                    "outcome, result_date FROM run_pending "
+                    "WHERE run_id=:rid AND overlay_key=:ok AND date=:d "
                     "ORDER BY days_waiting DESC"
                 ),
-                {"rid": run_id, "d": d_obj},
+                {"rid": run_id, "d": d_obj, "ok": key},
             )
         ).fetchall()
         # NAV on D (to express portfolio unrealized P&L as a fraction of NAV).
         nav_row = (
             await session.execute(
-                text("SELECT nav FROM run_equity WHERE run_id=:rid AND date=:d"),
-                {"rid": run_id, "d": d_obj},
+                text(
+                    "SELECT nav FROM run_equity WHERE run_id=:rid AND overlay_key=:ok AND date=:d"
+                ),
+                {"rid": run_id, "d": d_obj, "ok": key},
             )
         ).fetchone()
         # CLOSED trades exiting exactly on D -> realized P&L + buy/sell price + dates + sessions held.
@@ -380,9 +549,9 @@ async def get_run_portfolio_day(
             await session.execute(
                 text(
                     f"SELECT symbol, entry_date, entry_price, exit_price, pnl_pct, holding_days, exit_reason "
-                    f"FROM {_ttbl} WHERE run_id=:rid AND exit_date=:d"
+                    f"FROM {_ttbl} WHERE run_id=:rid{_ovf} AND exit_date=:d"
                 ),
-                {"rid": run_id, "d": d_obj},
+                {"rid": run_id, "d": d_obj, "ok": key},
             )
         ).fetchall()
         # entry_price of positions OPEN on D (held) -> show buy price on the holdings table.
@@ -390,24 +559,16 @@ async def get_run_portfolio_day(
             await session.execute(
                 text(
                     f"SELECT symbol, entry_date, entry_price FROM {_ttbl} "
-                    f"WHERE run_id=:rid AND entry_date<=:d AND exit_date>:d"
+                    f"WHERE run_id=:rid{_ovf} AND entry_date<=:d AND exit_date>:d"
                 ),
-                {"rid": run_id, "d": d_obj},
+                {"rid": run_id, "d": d_obj, "ok": key},
             )
         ).fetchall()
     except Exception:
+        # fail-loud: a real query error must not masquerade as an empty (un-populated) tab.
         await session.rollback()
-        return {
-            "run_id": run_id,
-            "date": date,
-            "holdings": [],
-            "entries": [],
-            "exits": [],
-            "signals": [],
-            "sell_next": [],
-            "pending": [],
-            "unrealized": None,
-        }
+        logger.exception("portfolio/day query failed for run_id=%s date=%s", run_id, date)
+        raise HTTPException(status_code=500, detail="portfolio/day query failed")
     # buy-price lookup for held positions (symbol -> entry_price), keyed by (symbol, entry_date).
     buy_px = {(o[0], str(o[1])): o[2] for o in open_tr}
     # full detail for trades closing today (symbol -> row).
@@ -483,6 +644,7 @@ async def get_run_portfolio_day(
     return {
         "run_id": run_id,
         "date": date,
+        "populated": bool(rows),
         "holdings": holdings,
         "entries": entries,
         "exits": exits,
@@ -531,7 +693,7 @@ async def get_run_signal_symbols(run_id: str, session: AsyncSession = Depends(ge
 
 @router.get("/runs/{run_id:path}/symbol/{symbol}/portfolio-fate")
 async def get_symbol_portfolio_fate(
-    run_id: str, symbol: str, session: AsyncSession = Depends(get_db)
+    run_id: str, symbol: str, overlay: str | None = None, session: AsyncSession = Depends(get_db)
 ) -> dict:
     """B7 (PORTFOLIO_REGISTRATION_PIPELINE.md): one row per fired BUY signal of `symbol`,
     joined to its fate — became a base trade? filled into the portfolio? skipped why?
@@ -552,6 +714,9 @@ async def get_symbol_portfolio_fate(
             return []
 
     p = {"rid": run_id, "sym": symbol}
+    # the fate of a signal is a property of ONE strategy: the same buy can be filled by the K=16
+    # book and conv-skipped by the K=6 one, so this must read the selected book, not "any".
+    po = {**p, "ok": await _resolve_overlay(session, run_id, overlay)}
     sig = await _rows(
         "SELECT date, score FROM run_signals "
         "WHERE run_id=:rid AND symbol=:sym AND signal=1 ORDER BY date",
@@ -564,13 +729,14 @@ async def get_symbol_portfolio_fate(
     )
     overlay = await _rows(
         "SELECT entry_date, exit_date, pnl_pct, exit_reason "
-        "FROM run_trades_overlay WHERE run_id=:rid AND symbol=:sym ORDER BY entry_date",
-        p,
+        "FROM run_trades_overlay WHERE run_id=:rid AND overlay_key=:ok AND symbol=:sym "
+        "ORDER BY entry_date",
+        po,
     )
     skipped = await _rows(
         "SELECT signal_date, entry_date, skip_reason FROM run_skipped "
-        "WHERE run_id=:rid AND symbol=:sym",
-        p,
+        "WHERE run_id=:rid AND overlay_key=:ok AND symbol=:sym",
+        po,
     )
 
     # Layer is a property of the RUN, not the symbol — a signals-only symbol has no
@@ -645,19 +811,23 @@ async def get_symbol_portfolio_fate(
 
 
 @router.get("/runs/{run_id:path}/skipped")
-async def get_run_skipped(run_id: str, session: AsyncSession = Depends(get_db)) -> dict:
-    """Opportunity-cost ledger: signals the portfolio DID NOT take (conv-skip / capacity) with the base
-    backtest's REALIZED return — 'was skipping right?'. Empty when the run has no skipped ledger."""
+async def get_run_skipped(
+    run_id: str, overlay: str | None = None, session: AsyncSession = Depends(get_db)
+) -> dict:
+    """Opportunity-cost ledger of ONE strategy: signals the portfolio DID NOT take (conv-skip /
+    capacity) with the base backtest's REALIZED return — 'was skipping right?'."""
     from sqlalchemy import text
 
+    key = await _resolve_overlay(session, run_id, overlay)
     try:
         rows = (
             await session.execute(
                 text(
                     "SELECT symbol, signal_date, entry_date, pnl_pct, conv, skip_reason "
-                    "FROM run_skipped WHERE run_id=:rid ORDER BY signal_date DESC NULLS LAST"
+                    "FROM run_skipped WHERE run_id=:rid AND overlay_key=:ok "
+                    "ORDER BY signal_date DESC NULLS LAST"
                 ),
-                {"rid": run_id},
+                {"rid": run_id, "ok": key},
             )
         ).fetchall()
     except Exception:

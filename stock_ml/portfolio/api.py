@@ -8,7 +8,9 @@ Golden-guarded byte-exact vs the champion production replay
 
 from __future__ import annotations
 
+import bisect
 import statistics
+from collections import defaultdict
 
 import numpy as np
 import pandas as pd
@@ -55,6 +57,83 @@ def build_panel_bundle(ctx: PortfolioContext, C: PortfolioConstants) -> dict:
             "CSm": CSm, "R5": R5, "_tv": _tv}  # fmt: skip
 
 
+def _compute_pending(signals, CLO, LO, DIDX, caldates, held_by_date, pull_pct, pull_win):
+    """CAUSAL resting-pullback order book (PANEL plane) — rows for run_pending.
+
+    For each date, the BUY signals (signal==1) still WAITING to fill: a resting limit at
+    close[signal]*(1-pull_pct), within pull_win trading bars of the signal, not yet touched, and
+    not currently held. low/close come from the market panel (bundle CLO/LO/DIDX) — the SAME plane
+    conviction is ranked on. A signal on a symbol ABSENT from the panel yields NO row (off-panel;
+    declared-universe contract — see docs/refactor/PORTFOLIO_WRITE_UNIFICATION_IMPL.md §3).
+
+    Verbatim port of hb_portfolio_fix.compute_pending; hb read the FULL market duckdb ad-hoc, this
+    reuses the already-built panel arrays (byte-identical for panel symbols, drops off-panel).
+    Returns list of 9-tuples matching run_pending columns (date, symbol, signal_date, days_waiting,
+    limit_price, ref_price, pct_to_limit, outcome, result_date). NAV/holdings/trades are untouched."""
+    nD = len(caldates)
+    ds_list = [pd.Timestamp(d).strftime("%Y-%m-%d") for d in caldates]
+    bar_of = {ds: i for i, ds in enumerate(ds_list)}
+    buy = signals[signals["signal"] == 1] if "signal" in getattr(signals, "columns", []) else signals
+    sig_bars: dict = defaultdict(list)
+    for r in buy.itertuples():
+        b = bar_of.get(pd.Timestamp(r.date).strftime("%Y-%m-%d"))
+        if b is not None:
+            sig_bars[r.symbol].append(b)
+    # per-signal-symbol low/close aligned to the equity calendar bars, sourced from the panel
+    low_arr, close_arr = {}, {}
+    for sym in sig_bars:
+        sig_bars[sym].sort()
+        didx = DIDX.get(sym)
+        if didx is None:
+            continue  # off-panel -> no pending row (contract)
+        clo, lo = CLO[sym], LO[sym]
+        la = np.full(nD, np.nan)
+        ca = np.full(nD, np.nan)
+        for b, ds in enumerate(ds_list):
+            j = didx.get(ds)
+            if j is not None:
+                la[b] = lo[j]
+                ca[b] = clo[j]
+        low_arr[sym] = la
+        close_arr[sym] = ca
+    out = []
+    for sym, sbars in sig_bars.items():
+        la = low_arr.get(sym)
+        ca = close_arr.get(sym)
+        if la is None:
+            continue
+        for d in range(nD):
+            li = bisect.bisect_right(sbars, d - pull_win)
+            ri = bisect.bisect_right(sbars, d)
+            if li >= ri:
+                continue
+            S = sbars[ri - 1]
+            cS = ca[S]
+            if np.isnan(cS):
+                continue
+            limit = cS * (1.0 - pull_pct)
+            seg_sd = la[S : d + 1]
+            if seg_sd.size and np.nanmin(seg_sd) <= limit:
+                continue  # limit already touched between signal and d -> filled, not pending
+            ds = ds_list[d]
+            if sym in held_by_date.get(ds, ()):
+                continue
+            cD = ca[d]
+            if np.isnan(cD):
+                continue
+            pctL = limit / cD - 1.0
+            hi = min(S + pull_win, nD - 1)
+            touch = np.where(la[S : hi + 1] <= limit)[0]
+            if touch.size:
+                outc, rdate = "fill", ds_list[S + int(touch[0])]
+            else:
+                outc, rdate = "expire", ds_list[hi]
+            out.append(
+                (ds, sym, ds_list[S], d - S, float(limit), float(cD), float(pctL), outc, rdate)
+            )
+    return out
+
+
 def run_portfolio(
     base_trades: pd.DataFrame,
     signals: pd.DataFrame,
@@ -62,11 +141,15 @@ def run_portfolio(
     ctx: PortfolioContext,
     C: PortfolioConstants | None = None,
     bundle: dict | None = None,
+    emit_pending: bool = False,
 ) -> dict:
     """Full Stage-2 on BASE (engine-level) trades. Returns metrics + equity/holdings/trades/skipped.
 
     ``bundle`` (from build_panel_bundle) reuses a prebuilt market panel across many runs sharing
-    one C; None (default) builds it inline — byte-identical, golden-safe."""
+    one C; None (default) builds it inline — byte-identical, golden-safe.
+    ``emit_pending`` (default False): also compute the resting-pullback order book (run_pending).
+    OFF by default so the golden + interactive sandbox path skip the O(symbols×days) pending scan;
+    only the DB persist path turns it on."""
     C = C or PortfolioConstants()
     bad = set(base_trades["exit_reason"].dropna().unique()) & _OVERLAY_EXIT_REASONS
     if bad:
@@ -184,6 +267,7 @@ def run_portfolio(
                 net=net,
                 prio=prio,
                 conv=conv,
+                sigd=str(r.sigd.date()),
                 _w=_w,
                 reason=r.exit_reason,
             )
@@ -238,6 +322,13 @@ def run_portfolio(
         h = tvs[:i]
         return float(h[-10:].mean()) if len(h) >= 10 else None
 
+    def _skip(leg, reason):
+        # run_skipped row (opportunity-cost ledger): symbol, signal_date, entry_date, base pnl,
+        # conviction, reason. pnl_pct = the base leg's net return the portfolio forwent.
+        skipped.append(
+            (leg["symbol"], leg["sigd"], leg["entry_date"], float(leg["net"]), float(leg["conv"]), reason)
+        )
+
     gated = []
     for leg in legs_src:
         leg["w"] = max(
@@ -258,16 +349,16 @@ def run_portfolio(
         conv = leg["conv"]
         key = (leg["symbol"], leg["entry_date"])
         if conv < skip_for(skip_by_year, C, leg["entry_date"]):
-            skipped.append((leg["symbol"], leg["entry_date"], "conv_skip"))
+            _skip(leg, "conv_skip")
             continue
         v = r5.get(key, np.nan)
         if not np.isnan(v) and v < C.r5thr:
-            skipped.append((leg["symbol"], leg["entry_date"], "ret7_gate"))
+            _skip(leg, "ret7_gate")
             continue
         ov = osm.get(key)
         thr = osthr if osthr_by is None else osthr_by.get(int(leg["entry_date"][:4]), np.inf)
         if ov is not None and ov > thr:
-            skipped.append((leg["symbol"], leg["entry_date"], "overshoot_fallknife"))
+            _skip(leg, "overshoot_fallknife")
             continue
         if _tv is not None and C.liqcol_adv10_ty is not None:
             arr = _tv.get(leg["symbol"])
@@ -280,7 +371,7 @@ def run_portfolio(
                     and float(_h[-10:].mean()) < C.liqcol_adv10_ty * 1e6
                     and float(_h[-252:].mean()) >= C.liqcol_adv252_ty * 1e6
                 ):
-                    skipped.append((leg["symbol"], leg["entry_date"], "liq_collapse"))
+                    _skip(leg, "liq_collapse")
                     continue
         gated.append(leg)
 
@@ -335,6 +426,14 @@ def run_portfolio(
     yrs = (eq["date"].iloc[-1] - eq["date"].iloc[0]).days / 365.25
     cagr = fin ** (1 / yrs) - 1 if yrs > 0 else 0.0
     dd = float((nav / nav.cummax() - 1).min())
+    # resting-pullback order book (display-only; OFF by default -> golden byte-identical).
+    # None = NOT computed (emit_pending False); [] = computed-but-empty. The writer relies on this
+    # sentinel to refuse a detail persist that would DELETE run_pending without re-inserting.
+    pending = (
+        _compute_pending(signals, CLO, LO, DIDX, list(eq["date"]), hbd, C.pull_pct, C.pull_win)
+        if emit_pending
+        else None
+    )
     return dict(
         nav=fin,
         cagr=cagr,
@@ -347,6 +446,8 @@ def run_portfolio(
         holdings=holdings,
         trades=trades,
         skipped=skipped,
+        held_by_date=hbd,
+        pending=pending,
         rewritten=rw,
         n_base=len(closed),
         n_gated=len(gated),

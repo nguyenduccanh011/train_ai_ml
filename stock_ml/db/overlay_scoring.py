@@ -17,8 +17,15 @@ from pathlib import Path
 
 import pandas as pd
 
-from stock_ml.portfolio import DuckDBContext, PortfolioConstants, run_portfolio
+from stock_ml.portfolio import (
+    DuckDBContext,
+    PortfolioConstants,
+    overlay_key,
+    run_portfolio,
+    scoring_hash,
+)
 from stock_ml.portfolio.context import PortfolioContext
+from stock_ml.src.data.universe_resolver import is_nonstock
 
 # Data context defaults: the SERVING-DECLARED market panel artifact (SERVING_PANEL_TASKS.md T1) —
 # market.duckdb holds exactly the point-in-time full-market universe serving deploys on (1477
@@ -113,19 +120,6 @@ REFERENCE_CONSTANTS = dict(
     k=10, tplus=2, stat_mode="causal", liqcol_adv10_ty=1.0, liqcol_adv252_ty=0.0
 )
 
-# Fields that define the overlay identity → overlay_config_hash (32-char md5, matches the
-# leaderboard_nav.overlay_config_hash column). Every knob the sandbox may expose (K, the
-# liquidity floor, the entry-start window date_lo, gates, sizing) is included so a different
-# config yields a different hash → correct cache key. Keep in sync with the sandbox inputs.
-_HASH_FIELDS = (
-    "k", "tplus", "stat_mode", "skip", "skip_mode", "skip_gain", "skip_mu_ref",
-    "kconv", "r5thr", "gt", "os_pct", "date_lo", "market_start", "rewrite_on",
-    "ec_check_bar", "ret_win", "liqcol_adv10_ty", "liqcol_adv252_ty", "w_invvol",
-    "w_liq_full_ty", "max_expo", "vol_cap_q", "crash_pause_ret5", "riskoff_ret5",
-    "regime_w_scale",
-)  # fmt: skip
-
-
 def reference_config(**overrides) -> PortfolioConstants:
     """Board reference PortfolioConstants; pass overrides (e.g. k=6, liqcol_adv10_ty=5.0)
     for the sandbox / per-strategy configs."""
@@ -135,16 +129,22 @@ def reference_config(**overrides) -> PortfolioConstants:
 
 
 def overlay_config_hash(C: PortfolioConstants, panel_fp: str | None = None) -> str:
-    """Stable 32-char identity of an overlay config (→ cache key + traceability).
+    """Back-compat alias. The identity now lives in the WHEEL (stock_ml.portfolio.identity) so
+    serving computes the SAME key for its tiers.yaml strategies without a side agreement.
 
-    ``panel_fp`` (the declared panel_fingerprint) is folded in so the identity ALSO tracks the
-    universe the run was scored on: a re-declared panel yields a new hash, which makes
-    register_overlay's idempotency skip re-score the board automatically. Pass None for the pure
-    config identity (back-compat)."""
-    d = {k: getattr(C, k) for k in _HASH_FIELDS}
-    if panel_fp is not None:
-        d["__panel_fp__"] = panel_fp
-    return hashlib.md5(json.dumps(d, sort_keys=True, default=str).encode()).hexdigest()
+    Prefer the explicit names at call sites — they are two different questions:
+      ``overlay_key(C)``            WHICH strategy  -> primary key of a book, panel-independent
+      ``scoring_hash(C, panel_fp)`` WHICH scoring   -> idempotency, moves when the panel is re-declared
+    See docs/refactor/OVERLAY_IDENTITY_RESTRUCTURE.md §3.1.
+    """
+    return overlay_key(C) if panel_fp is None else scoring_hash(C, panel_fp)
+
+
+def reference_key() -> str:
+    """overlay_key of the BOARD REFERENCE config — the one strategy leaderboard_nav may hold.
+    Every other strategy lives in run_overlay only, so a per-strategy score can no longer
+    overwrite the board's signal-quality ranking."""
+    return overlay_key(reference_config())
 
 
 def load_run_frames(conn, run_id: str, base_run: str | None = None):
@@ -162,6 +162,12 @@ def load_run_frames(conn, run_id: str, base_run: str | None = None):
         conn,
         params=(run_id,),
     )
+    # Drop ETF/fund-cert legs (ICB 8995/8985) the pre-fix universe_resolver let into some bases —
+    # ONE chokepoint for BOTH the board (score_overlay) and the deploy-tier scorer, so both size on
+    # the SAME stock-only leg set (else a CCQ leg is sized on a fake neutral 0.5 conviction). Mirrors
+    # serving core._drop_non_stock_trades. Forward: the universe re-pin regenerates a clean base.
+    # (PORTFOLIO_WRITE_UNIFICATION_IMPL §5.1)
+    base = base[~base["symbol"].map(is_nonstock)].reset_index(drop=True)
     return base, sig
 
 
@@ -173,10 +179,12 @@ def score_overlay(
     *,
     base_run: str | None = None,
     bundle: dict | None = None,
+    emit_pending: bool = False,
 ) -> dict:
     """Load frames + run the Stage-2 overlay. Returns run_portfolio's dict (nav/cagr/maxdd/…).
-    Pass ``bundle`` (build_panel_bundle) to reuse a prebuilt market panel across a batch."""
+    Pass ``bundle`` (build_panel_bundle) to reuse a prebuilt market panel across a batch.
+    ``emit_pending`` forwards to run_portfolio (set when the caller will persist the detail tab)."""
     base, sig = load_run_frames(conn, run_id, base_run)
     if len(base) < 5:
         raise ValueError(f"run {run_id}: only {len(base)} base trades (need >=5)")
-    return run_portfolio(base, sig, ctx=ctx, C=C, bundle=bundle)
+    return run_portfolio(base, sig, ctx=ctx, C=C, bundle=bundle, emit_pending=emit_pending)

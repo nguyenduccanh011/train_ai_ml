@@ -109,10 +109,14 @@ def run_sim(
     for di, dt in enumerate(calendar):
         cash += pend.pop(dt, 0.0)
         pt = sum(pend.values())
+        # coarse display reason per symbol exiting today -> run_portfolio_daily is_exit rows
+        # (the real per-trade reason lives in run_trades_overlay; this tab marks "sold today").
+        exit_today = {}
         for leg in list(exits.get(dt, ())):
             if leg in legs:
                 cash += leg["invested"] * (1.0 + leg["net"]) * (1.0 - ADVANCE_FEE)
                 legs.remove(leg)
+                exit_today[leg["symbol"]] = "signal"
                 emit(leg, dt, di, False)
         # risk-off sell-down (default off): force-exit sellable held legs on market-stress
         # days; fills skip today but resume next day (V-bottom entries stay monetized).
@@ -127,11 +131,11 @@ def run_sim(
                 legs.remove(l)
                 if l in exits.get(l["exit_date"], ()):
                     exits[l["exit_date"]].remove(l)
+                exit_today[l["symbol"]] = "risk_off"
                 emit(l, dt, di, True, reason_override="risk_off")
         pos = sum(lv(l, dt) for l in legs)
         nav_now = cash + pt + pos
         new_today = set()
-        exit_today = {}
         for t in entries.get(dt, ()):
             # DD valves (default off): market crash-pause + high-vol book cap
             if paused is not None and dt in paused:
@@ -189,15 +193,19 @@ def run_sim(
                 (
                     dt,
                     leg["symbol"],
-                    float(val / nav if nav > 0 else 0.0),
-                    float(val / leg["invested"] - 1.0 if leg["invested"] else 0.0),
+                    float(val / nav if nav > 0 else 0.0),  # weight (drifts)
+                    float(leg["invested"] / leg["nav_at"] if leg["nav_at"] else 0.0),  # entry_weight
+                    float(val / leg["invested"] - 1.0 if leg["invested"] else 0.0),  # unreal_pnl
                     leg["entry_dt"],
                     int(di - leg["be_di"]),
                     leg["symbol"] in new_today,
+                    False,  # is_exit
+                    None,  # exit_reason
                     float(leg["conv"]),
-                    float(leg["prio"]),
                 )
             )
+        for sym, reason in exit_today.items():
+            holdings.append((dt, sym, 0.0, 0.0, 0.0, dt, 0, False, True, reason, None))
         held_by_date[dt] = {leg["symbol"] for leg in legs}
     for leg in legs:
         emit(leg, calendar[-1], len(calendar) - 1, False)

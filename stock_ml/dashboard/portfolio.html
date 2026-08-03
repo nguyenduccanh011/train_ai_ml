@@ -58,6 +58,13 @@
     .dualrange #startSlider::-moz-range-thumb { background: #2ea043; }
     .dr-track { position: absolute; left: 0; right: 0; top: 10px; height: 4px; background: #30363d; border-radius: 2px; }
     .dr-fill { position: absolute; top: 10px; height: 4px; background: #1f6feb; border-radius: 2px; }
+    /* strategy picker + provenance: a book must say WHICH strategy and WHICH panel made it */
+    .prov { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:12px;
+            font-size:11px; color:#7d8590; }
+    .prov code { color:#8b949e; }
+    .warnbar { background:#3d1d1d; border:1px solid #7d2b2b; color:#ffb4b4; border-radius:6px;
+               padding:8px 12px; margin-bottom:12px; font-size:12px; }
+    .warnbar b { color:#ff8f8f; }
   </style>
 </head>
 <body>
@@ -78,6 +85,12 @@
       <label style="color:#f0883e">Ngày xem: <select id="dateSel"></select></label>
       <span class="hint">nút xanh = ngày bắt đầu đầu tư (NAV/lãi/DD rebase) · nút cam = ngày đang xem</span>
     </div>
+    <div class="bar" id="ovBar" style="display:none">
+      <label>Chiến lược: <select id="ovSel"></select></label>
+      <span class="hint" id="ovMeta"></span>
+    </div>
+    <div id="ovWarn"></div>
+    <div class="prov" id="ovProv"></div>
     <div class="kpi" id="kpi"></div>
     <div class="card">
       <h3>Đường vốn (NAV theo ngày)
@@ -133,6 +146,11 @@
     document.getElementById('rid').textContent = runId || '(thiếu run_id)';
     document.getElementById('detailLink').href = `model-details.html?run_id=${encodeURIComponent(runId || '')}`;
     let dates = [], equity = {}, allTrades = [], curDate = null;
+    // A Stage-2 book is (run_id, overlay_key) — the strategy is NOT a property of the run.
+    // Keep it in the URL so a shared link points at the book someone actually looked at.
+    let overlayKey = params.get('overlay') || null;
+    let overlays = [];
+    const q = () => (overlayKey ? `&overlay=${encodeURIComponent(overlayKey)}` : '');
     let startIdx = 0;      // mốc "bắt đầu đầu tư" — NAV/KPI/chart rebase từ đây
     let eqScale = 'log';   // 'log' | 'lin' — toggle trên card đường vốn
     const baseNav = () => (equity[dates[startIdx]] && equity[dates[startIdx]].nav) || 1;
@@ -153,10 +171,71 @@
     const cls = x => (x == null ? '' : x > 0 ? 'pos' : x < 0 ? 'neg' : '');
     const esc = s => (s == null ? '' : String(s));
 
+    // Strategy picker. The page used to take run_id alone, so it could only ever show whichever
+    // book was written last — and after a metrics-only re-score that book belonged to an older
+    // panel than the number on the leaderboard, with nothing saying so.
+    async function loadOverlays() {
+      let r;
+      try { r = await j(`${API_BASE}/runs/${encodeURIComponent(runId)}/overlays`); }
+      catch (e) { return; }
+      overlays = r.overlays || [];
+      const bar = document.getElementById('ovBar'), sel = document.getElementById('ovSel');
+      if (!overlays.length) { renderProvenance(null, r.panel_fp); return; }
+      if (!overlayKey || !overlays.some(o => o.overlay_key === overlayKey)) {
+        const ref = overlays.find(o => o.is_reference);
+        overlayKey = (ref || overlays[0]).overlay_key;
+      }
+      if (overlays.length > 1) {
+        bar.style.display = '';
+        sel.innerHTML = overlays.map(o => {
+          const name = o.label || o.overlay_key.slice(0, 8);
+          const perf = o.cagr != null ? ` — CAGR ${(o.cagr * 100).toFixed(0)}%` : '';
+          const flags = (o.is_reference ? ' ★' : '') + (o.has_detail ? '' : ' (chưa có sổ)');
+          return `<option value="${o.overlay_key}"${o.overlay_key === overlayKey ? ' selected' : ''}>${name}${perf}${flags}</option>`;
+        }).join('');
+        sel.onchange = () => {
+          const u = new URL(window.location.href);
+          u.searchParams.set('overlay', sel.value);
+          window.location.href = u.toString();   // full reload: every panel below is per-book
+        };
+      }
+      renderProvenance(overlays.find(o => o.overlay_key === overlayKey), r.panel_fp);
+    }
+
+    function renderProvenance(ov, panelNow) {
+      const prov = document.getElementById('ovProv'), warn = document.getElementById('ovWarn');
+      document.getElementById('ovMeta').textContent =
+        overlays.length > 1 ? `${overlays.length} chiến lược trên cùng bộ tín hiệu` : '';
+      if (!ov) {
+        warn.innerHTML = `<div class="warnbar"><b>Sổ chưa khai chiến lược.</b> Nó được ghi trước khi
+          mỗi sổ mang khoá riêng, nên KHÔNG biết cấu hình và panel nào tạo ra nó — đừng so số này với
+          bảng xếp hạng. Chạy <code>rescore_books.py</code> để dựng lại.</div>`;
+        prov.innerHTML = '';
+        return;
+      }
+      const cfg = ov.config || {};
+      const bits = [`K=${ov.k ?? cfg.k ?? '?'}`, `T+${cfg.tplus ?? '?'}`, cfg.stat_mode || '',
+                    cfg.liqcol_adv10_ty != null ? `sàn ${cfg.liqcol_adv10_ty} tỷ` : '',
+                    cfg.date_lo ? `từ ${cfg.date_lo}` : ''].filter(Boolean);
+      prov.innerHTML = `<span>${bits.join(' · ')}</span>
+        <span>panel <code>${(ov.panel_fp || '—').slice(0, 28)}</code></span>
+        <span>chấm <code>${(ov.computed_at || '—').slice(0, 16)}</code></span>
+        ${ov.offpanel_frac ? `<span class="neg">off-panel ${(ov.offpanel_frac * 100).toFixed(0)}%</span>` : ''}`;
+      warn.innerHTML = ov.stale === true
+        ? `<div class="warnbar"><b>Sổ này thuộc panel CŨ.</b> Số trên bảng xếp hạng đã được chấm
+           lại trên panel hiện hành (<code>${(panelNow || '').slice(0, 28)}</code>) nhưng sổ chi tiết
+           thì chưa — hai bên không so được với nhau. Chạy lại với <code>--detail</code>.</div>`
+        : ov.stale === null
+        ? `<div class="warnbar">Không đọc được panel đang khai nên <b>KHÔNG kiểm được</b> sổ này
+           còn đúng vintage hay không — đừng đọc đây là "đã kiểm, sạch".</div>`
+        : '';
+    }
+
     async function init() {
       if (!runId) { document.getElementById('holdings').innerHTML = '<span class="neg">Thiếu run_id</span>'; return; }
+      await loadOverlays();
       let eq;
-      try { eq = await j(`${API_BASE}/runs/${encodeURIComponent(runId)}/portfolio/equity`); }
+      try { eq = await j(`${API_BASE}/runs/${encodeURIComponent(runId)}/portfolio/equity?_=1${q()}`); }
       catch (e) { document.getElementById('holdings').innerHTML = '<span class="neg">Lỗi tải equity</span>'; return; }
       const rows = (eq.equity || []).filter(r => r.n_positions > 0);
       if (!rows.length) { document.getElementById('holdings').innerHTML = '<span class="muted">Model này chưa có dữ liệu danh mục (chỉ champion combo có).</span>'; return; }
@@ -183,7 +262,7 @@
       sel.onchange = () => { sl.value = Math.max(Math.max(0, dates.indexOf(sel.value)), +ssl.value); apply(); };
       syncUI();
       // trade ledger (actual combo trades)
-      try { const tr = await j(`${API_BASE}/runs/${encodeURIComponent(runId)}/trades`); allTrades = tr.trades || []; } catch (e) {}
+      try { const tr = await j(`${API_BASE}/runs/${encodeURIComponent(runId)}/trades?_=1${q()}`); allTrades = tr.trades || []; } catch (e) {}
       document.getElementById('ledgerSearch').oninput = renderLedger;
       document.getElementById('asOfView').onchange = renderLedger;
       renderLedger();
@@ -193,7 +272,7 @@
 
     async function renderSkipped() {
       let sk = [];
-      try { sk = (await j(`${API_BASE}/runs/${encodeURIComponent(runId)}/skipped`)).skipped || []; } catch (e) {}
+      try { sk = (await j(`${API_BASE}/runs/${encodeURIComponent(runId)}/skipped?_=1${q()}`)).skipped || []; } catch (e) {}
       const tb = document.querySelector('#skipped tbody');
       if (!sk.length) { tb.innerHTML = '<tr><td colspan="5" class="muted">Không có lệnh bị bỏ.</td></tr>'; return; }
       const wins = sk.filter(s => (s.pnl_pct || 0) > 0).length;
@@ -299,7 +378,7 @@
       const navX = e.nav != null ? e.nav / b0 : null;   // ×vốn TỪ MỐC BẮT ĐẦU
       const cumRet = navX != null ? navX - 1 : null;
       let d;
-      try { d = await j(`${API_BASE}/runs/${encodeURIComponent(runId)}/portfolio/day?date=${date}`); }
+      try { d = await j(`${API_BASE}/runs/${encodeURIComponent(runId)}/portfolio/day?date=${date}${q()}`); }
       catch (err) { d = {}; }
       const u = d.unrealized;
       document.getElementById('kpi').innerHTML = `

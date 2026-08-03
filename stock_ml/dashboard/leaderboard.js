@@ -309,12 +309,25 @@ function renderTable() {
     const commission = row.cost_commission || (row.cost_profile ? row.cost_profile.commission : 'unknown');
     const costDisplay = commission && commission !== 'unknown' ? escapeHtml(String(commission)) : '—';
     const detailsUrl = `model-details.html?run_id=${encodeURIComponent(row.run_id)}`;
+    // Stage-2 books. A row is a MODEL; its portfolio policies live in run_overlay, so show how
+    // many exist and link straight there — otherwise a model with six named strategies is
+    // indistinguishable here from one with none.
+    const nOv = Number(row.n_overlays) || 0;
+    const ovTarget = row.folded_into || row.run_id;
+    const overlayCell = nOv
+      ? `<a href="portfolio.html?run_id=${encodeURIComponent(ovTarget)}" title="${nOv} chiến lược danh mục${row.folded_into ? ' — nằm ở run gốc ' + escapeHtml(row.folded_into) : ''}" style="color:#2962ff;text-decoration:none">${nOv}${row.folded_into ? '↗' : ''}</a>`
+      : '<span class="muted">—</span>';
+    // A retired duplicate must say WHERE it went; "retired" alone reads as "deleted".
+    const foldNote = row.folded_into
+      ? ` <span class="muted" style="font-size:10px" title="Trùng tín hiệu + lệnh gốc với run này; chính sách danh mục giờ là chiến lược có tên ở đó">→ gộp vào ${escapeHtml(row.folded_into)}</span>`
+      : '';
     return `
       <tr class="${rowClass(row)}">
         <td>${rankBadge(row.rank)}</td>
         <td>${row.state || 'trained'}</td>
         <td class="num positive">${formatNum(row.composite_score, 2)}</td>
-        <td class="run-name" title="${escapeHtml(row.name)}">${escapeHtml(row.name)}</td>
+        <td class="run-name" title="${escapeHtml(row.name)}">${escapeHtml(row.name)}${foldNote}</td>
+        <td class="num">${overlayCell}</td>
         <td><a href="${detailsUrl}" style="color: #2962ff; text-decoration: none; font-size: 12px;">Chi tiết →</a></td>
         <td title="${escapeHtml(row.metadata_notes || '')}">${groupBadge}</td>
         <td>${typeBadge}</td>

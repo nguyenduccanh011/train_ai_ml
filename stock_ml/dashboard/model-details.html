@@ -231,6 +231,13 @@
           <button id="scopeSymbol" class="active">Mã này</button>
           <button id="scopeAll">Toàn danh mục</button>
         </div>
+        <!-- Layer picker: "lệnh" means two different things. SHP on _dyn900_onerun = 1049 tín
+             hiệu mua -> 36 lệnh engine -> 1 lệnh vào danh mục. Showing only the last one with no
+             way to see the others made the model look like it barely traded. -->
+        <div class="scope-toggle" style="margin-left:8px;" title="Tầng lệnh đang xem">
+          <button id="layerOverlay" class="active">Lệnh vào danh mục</button>
+          <button id="layerBase">Lệnh gốc (engine)</button>
+        </div>
         <div class="status" id="status">Đang tải...</div>
       </div>
 
@@ -293,6 +300,7 @@
                                    // context) lives on the PARENT run; trades/portfolio stay own
     let isIntraday = false;        // intraday model (15m/1H) -> bar-level candles + markers
     let allTrades = [];
+    let tradeLayer = 'auto';   // auto = sổ danh mục nếu có; 'base' = lệnh engine trước khi lọc
     let symbolStats = [];
     let yearlyStats = [];
     let selectedSymbol = '';
@@ -369,19 +377,37 @@
           (model.parent_run_id ? ` — biến thể overlay, tín hiệu từ run gốc` : '');
         renderSummary(model);
         setupPin(model.state || 'trained');
-        // Show the "Danh mục" (daily portfolio) tab only when this run has a persisted
-        // portfolio-execution overlay (run_equity populated) — links to the dedicated page.
-        fetchJson(`${API_BASE}/runs/${encodeURIComponent(runId)}/portfolio/equity`)
-          .then(pf => {
-            if (pf && (pf.equity || []).length) {
-              const b = document.getElementById('btnPortfolio');
-              b.href = `portfolio.html?run_id=${encodeURIComponent(runId)}`;
-              b.style.display = '';
-            }
+        // Show the "Danh mục" tab when a Stage-2 book exists for this run. Ask /overlays, not
+        // /portfolio/equity: a book is now (run_id, overlay_key), and a run whose books were
+        // folded onto a parent owns none of its own — probing equity would hide the tab and read
+        // as "no data" when the data simply moved.
+        fetchJson(`${API_BASE}/runs/${encodeURIComponent(runId)}/overlays`)
+          .then(ov => {
+            const list = (ov && ov.overlays) || [];
+            if (!list.length) return;
+            const target = ov.moved_to || runId;
+            // Carry the exact strategy when this row is a folded placeholder, otherwise the link
+            // lands on the parent's DEFAULT book — the board reference, not the tier you clicked.
+            const q = ov.moved_to_key ? `&overlay=${encodeURIComponent(ov.moved_to_key)}` : '';
+            const mine = ov.moved_to_key && list.find(o => o.overlay_key === ov.moved_to_key);
+            const b = document.getElementById('btnPortfolio');
+            b.href = `portfolio.html?run_id=${encodeURIComponent(target)}${q}`;
+            b.textContent = mine
+              ? `📊 Danh mục: ${mine.label} →`
+              : (ov.moved_to ? `Danh mục (${list.length} chiến lược, ở run gốc) →`
+                             : (list.length > 1 ? `Danh mục (${list.length} chiến lược) →`
+                                                : b.textContent));
+            b.title = ov.moved_to
+              ? `Chiến lược này giờ là một sổ có tên trên run gốc ${ov.moved_to}`
+              : '';
+            b.style.display = '';
+            // A placeholder owns no trades of its own — read the parent's book so the page shows
+            // the 1507 lệnh of THIS strategy instead of an empty table that reads as "chưa chạy".
+            if (ov.moved_to) loadTradesFrom(target, ov.moved_to_key);
           }).catch(() => {});
 
         const [tradesRes, symRes, yearRes, sigSymRes] = await Promise.all([
-          fetchJson(`${API_BASE}/runs/${encodeURIComponent(runId)}/trades`).catch(() => ({ trades: [] })),
+          fetchJson(`${API_BASE}/runs/${encodeURIComponent(runId)}/trades?layer=${tradeLayer}`).catch(() => ({ trades: [] })),
           fetchJson(`${API_BASE}/runs/${encodeURIComponent(stage1Id)}/symbol-stats`).catch(() => ({ symbol_stats: [] })),
           fetchJson(`${API_BASE}/runs/${encodeURIComponent(stage1Id)}/yearly-stats`).catch(() => ({ yearly_stats: [] })),
           fetchJson(`${API_BASE}/runs/${encodeURIComponent(stage1Id)}/signal-symbols`).catch(() => ({ symbols: [] })),
@@ -514,6 +540,8 @@
 
       document.getElementById('scopeSymbol').addEventListener('click', () => setScope('symbol'));
       document.getElementById('scopeAll').addEventListener('click', () => setScope('all'));
+      document.getElementById('layerOverlay').addEventListener('click', () => setLayer('auto'));
+      document.getElementById('layerBase').addEventListener('click', () => setLayer('base'));
 
       document.querySelectorAll('#viewSeg button').forEach(b =>
         b.addEventListener('click', () => setView(b.dataset.view)));
@@ -528,6 +556,33 @@
       document.getElementById('scopeAll').classList.toggle('active', s === 'all');
       renderStats(); renderAnalytics(); renderTrades(); updateOpenTag();
     }
+    async function loadTradesFrom(targetRun, overlayKey) {
+      const q = overlayKey ? `&overlay=${encodeURIComponent(overlayKey)}` : '';
+      const r = await fetchJson(
+        `${API_BASE}/runs/${encodeURIComponent(targetRun)}/trades?layer=${tradeLayer}${q}`
+      ).catch(() => null);
+      if (!r || !(r.trades || []).length) return;
+      allTrades = r.trades.map(t => ({ ...t, pnl_pct: numOrNull(t.pnl_pct) }));
+      renderStats(); renderAnalytics(); renderTrades(); updateOpenTag();
+      if (selectedSymbol) renderPriceChart(selectedSymbol);
+    }
+
+    async function setLayer(l) {
+      if (l === tradeLayer) return;
+      tradeLayer = l;
+      document.getElementById('layerOverlay').classList.toggle('active', l !== 'base');
+      document.getElementById('layerBase').classList.toggle('active', l === 'base');
+      setStatus('Đang tải lệnh…');
+      const r = await fetchJson(`${API_BASE}/runs/${encodeURIComponent(runId)}/trades?layer=${l}`)
+        .catch(() => ({ trades: [], layer: l }));
+      allTrades = (r.trades || []).map(t => ({ ...t, pnl_pct: numOrNull(t.pnl_pct) }));
+      // Say which layer actually came back, not which was asked for: `auto` silently resolves to
+      // base on a run with no portfolio, and a reader comparing two runs must see that.
+      setStatus(`${allTrades.length} lệnh · tầng ${r.layer === 'overlay' ? 'DANH MỤC' : 'GỐC (engine)'}`);
+      renderStats(); renderAnalytics(); renderTrades(); updateOpenTag();
+      if (selectedSymbol) renderPriceChart(selectedSymbol);
+    }
+
     function setView(v) {
       analyticsView = v;
       document.querySelectorAll('#viewSeg button').forEach(b => b.classList.toggle('active', b.dataset.view === v));

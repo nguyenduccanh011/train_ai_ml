@@ -39,11 +39,15 @@ services:
       - DATABASE_URL=postgresql+asyncpg://stockml:${POSTGRES_PASSWORD:-stockml_dev}@postgres:5432/stockml
       - DB_ENABLED=true
       - STOCK_DATA_DIR=/app/market_data/market.duckdb
-      # Overlay sandbox: score against the SAME pinned store the board backfill used, so
-      # live sandbox numbers match the leaderboard's cagr_overlay column exactly.
-      - OVERLAY_MARKET_DB=/app/overlay/market_data/market_golden_pin_20260729.duckdb
-      - OVERLAY_OHLCV_DB=/app/overlay/data/ohlcv_golden_pin_20260729.db
-      - OVERLAY_DATE_HI=2026-07-08
+      # Overlay sandbox + staleness badge: the SERVING-DECLARED panel artifact — the same one
+      # overlay_scoring's host defaults use, so a sandbox number and a board number are the same
+      # measurement. Pointing this at the old 488 golden pin (as it did until 2026-08-03) meant
+      # the container scored a DIFFERENT universe than every row on the leaderboard, and the
+      # panel-staleness check silently returned "unknown" because that snapshot has no
+      # .panel.json beside it. One artifact, both sides (CONVICTION_UNIVERSE_UNIFICATION §5).
+      - OVERLAY_MARKET_DB=/app/overlay/market_data/market.duckdb
+      - OVERLAY_OHLCV_DB=/app/overlay/data/ohlcv.db
+      - OVERLAY_DATE_HI=2026-07-31
     volumes:
       - ./data:/app/data
       - ./results:/app/results

@@ -323,6 +323,12 @@ def purge_legacy(con, cur, *, dry_run: bool) -> None:
             f"DELETE FROM {tbl} WHERE overlay_key=%s AND run_id = ANY(%s)", (LEGACY_KEY, replaced)
         )
         n += cur.rowcount
+    # ...and the index row itself, else the book survives in run_overlay as a has_detail=true
+    # row with zero detail — a ghost the danh-mục picker still lists.
+    cur.execute(
+        "DELETE FROM run_overlay WHERE overlay_key=%s AND run_id = ANY(%s)", (LEGACY_KEY, replaced)
+    )
+    n += cur.rowcount
     con.commit()
     print(f"đã xoá {n} dòng sổ cũ trên {len(replaced)} run (đều đã có bản khai đầy đủ)", flush=True)
 

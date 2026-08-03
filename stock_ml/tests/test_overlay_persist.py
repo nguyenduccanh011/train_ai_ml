@@ -61,7 +61,7 @@ def test_detail_rows_arity_matches_inserts():
         skipped=[("BBB", "2024-01-02", "2024-01-03", -0.02, 0.3, "conv_skip")],
         pending=[("2024-01-04", "CCC", "2024-01-02", 2, 9.0, 10.0, -0.1, "fill", "2024-01-06")],
     )
-    rows = _detail_rows("run/x", result)
+    rows = _detail_rows("run/x", "ovk", result)
     for tbl, sql in _INSERTS.items():
         want = _insert_arity(sql)
         assert rows[tbl], f"{tbl} produced no rows"
